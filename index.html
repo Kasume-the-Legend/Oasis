@@ -409,6 +409,7 @@
             <div class="sm-body">
                 <div data-panel="emotes" id="emote-panel"></div>
                 <div data-panel="color" class="hidden">
+                    <div class="flex items-center justify-center gap-2 mb-3"><label for="sm-name-input" class="text-[11px] text-gray-400">Your name</label><input id="sm-name-input" type="text" maxlength="16" autocomplete="off" class="w-44 bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-psGlow"><button id="sm-name-save" type="button" class="px-3 py-1.5 rounded-lg text-xs bg-psGlow hover:bg-blue-600 transition">Save</button></div>
                     <div class="text-center py-3 mb-4"><div id="sm-prev" class="sm-prev">This is your chat bubble</div></div>
                     <div class="flex flex-wrap gap-3 justify-center"><button type="button" class="sm-sw" data-color="#ffffff" style="background:#ffffff" aria-label="Bubble colour #ffffff"></button><button type="button" class="sm-sw" data-color="#fde68a" style="background:#fde68a" aria-label="Bubble colour #fde68a"></button><button type="button" class="sm-sw" data-color="#fca5a5" style="background:#fca5a5" aria-label="Bubble colour #fca5a5"></button><button type="button" class="sm-sw" data-color="#f9a8d4" style="background:#f9a8d4" aria-label="Bubble colour #f9a8d4"></button><button type="button" class="sm-sw" data-color="#d8b4fe" style="background:#d8b4fe" aria-label="Bubble colour #d8b4fe"></button><button type="button" class="sm-sw" data-color="#a5b4fc" style="background:#a5b4fc" aria-label="Bubble colour #a5b4fc"></button><button type="button" class="sm-sw" data-color="#7dd3fc" style="background:#7dd3fc" aria-label="Bubble colour #7dd3fc"></button><button type="button" class="sm-sw" data-color="#6ee7b7" style="background:#6ee7b7" aria-label="Bubble colour #6ee7b7"></button><button type="button" class="sm-sw" data-color="#bef264" style="background:#bef264" aria-label="Bubble colour #bef264"></button><button type="button" class="sm-sw" data-color="#fdba74" style="background:#fdba74" aria-label="Bubble colour #fdba74"></button><button type="button" class="sm-sw" data-color="#38bdf8" style="background:#38bdf8" aria-label="Bubble colour #38bdf8"></button><button type="button" class="sm-sw" data-color="#0f172a" style="background:#0f172a" aria-label="Bubble colour #0f172a"></button><label class="sm-sw flex items-center justify-center cursor-pointer overflow-hidden relative" style="background:conic-gradient(#f87171,#fbbf24,#4ade80,#38bdf8,#a78bfa,#f87171)" title="Pick any colour"><input id="sm-custom" type="color" value="#38bdf8" style="opacity:0;position:absolute;inset:0;width:100%;height:100%;cursor:pointer"></label></div>
                     <p class="text-[11px] text-gray-400 text-center mt-4">Everyone in the room sees your bubbles in this colour.</p>
@@ -499,7 +500,7 @@
             <h2 class="font-orbitron text-xl font-bold text-psGlow mb-1 flex items-center gap-2">
                 <img data-oasis alt="" style="height:16px;width:auto;display:inline-block;vertical-align:-3px"> The Oasis
             </h2>
-            <p class="text-xs text-gray-400 mb-5">Pick a name, then jump into a public district or host a private room for friends.</p>
+            <p class="text-xs text-gray-400 mb-5">Pick a name, then create a private room and send your friends its code.</p>
 
             <label class="text-xs text-gray-400 block mb-1">Display name</label>
             <input id="name-input" type="text" maxlength="16" autocomplete="off" class="w-full mb-5 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-psGlow" placeholder="Your name">
@@ -513,11 +514,9 @@
                 <button id="enter-loft" class="shrink-0 bg-psGlow hover:bg-blue-600 px-4 py-1.5 rounded-lg text-xs font-semibold transition">Enter</button>
             </div>
 
-            <h3 class="font-orbitron text-xs tracking-wider text-blue-300 uppercase mb-2">Public Districts</h3>
-            <p id="lobby-online" class="text-[11px] text-gray-400 mb-2"></p>
-            <div id="district-list" class="space-y-2 mb-5"></div>
+            <div class="hidden"><p id="lobby-online"></p><div id="district-list"></div></div>
 
-            <h3 class="font-orbitron text-xs tracking-wider text-blue-300 uppercase mb-2">Private Rooms</h3>
+            <h3 class="font-orbitron text-xs tracking-wider text-blue-300 uppercase mb-2">Rooms (private, by code)</h3>
             <div class="grid grid-cols-2 gap-2 mb-2">
                 <button id="pm-mall" class="py-2 rounded-xl text-xs font-semibold transition">Central Mall</button>
                 <button id="pm-loft" class="py-2 rounded-xl text-xs font-semibold transition">Harbor Studio</button>
@@ -526,7 +525,7 @@
                 <button id="create-private" class="flex-1 bg-psGlow hover:bg-blue-600 py-2.5 rounded-xl text-xs font-semibold transition"><i class="fa-solid fa-lock mr-1"></i> <span id="create-private-label">Create private room</span></button>
             </div>
             <div class="flex gap-2">
-                <input id="code-input" type="text" maxlength="8" autocomplete="off" placeholder="Room code" class="flex-1 uppercase bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono tracking-widest text-white placeholder-gray-400 focus:outline-none focus:border-psGlow">
+                <input id="code-input" type="text" maxlength="20" autocomplete="off" placeholder="Room code (MABC-DEFG-HJKL)" class="flex-1 uppercase bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono tracking-widest text-white placeholder-gray-400 focus:outline-none focus:border-psGlow">
                 <button id="join-private" class="bg-white/10 hover:bg-white/20 px-4 rounded-xl text-xs font-semibold transition">Join</button>
             </div>
             <p id="lobby-note" class="text-[11px] text-gray-500 mt-4 leading-relaxed"></p>
@@ -557,6 +556,12 @@
                 <p class="text-[11px] text-gray-400 mb-2 leading-relaxed">Can't see a friend on another device? Run the test while you are both in the same room. It tells you what is blocking the connection.</p>
                 <button id="net-test-btn" class="w-full bg-white/10 hover:bg-white/20 py-2 rounded-lg text-xs font-semibold text-white transition">Run network test</button>
                 <pre id="net-test-out" class="hidden mt-2 text-[11px] leading-relaxed text-gray-200 whitespace-pre-wrap break-words font-mono max-h-56 overflow-y-auto custom-scrollbar"></pre>
+                <details class="mt-3"><summary class="cursor-pointer text-gray-400 hover:text-white">Optional: your own relay server (works on any network)</summary>
+                    <p class="text-[11px] text-gray-500 my-2 leading-relaxed">Run <span class="font-mono">oasis-server.mjs</span> somewhere and paste its address. Everything is still encrypted with the room code, so the server only copies scrambled data. Stored in this browser only. Rejoin the room after saving.</p>
+                    <input id="srv-url" placeholder="wss://relay.example.com" autocomplete="off" class="w-full mb-1 bg-white/10 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-psGlow">
+                    <label class="flex items-center gap-2 text-[11px] text-gray-300 mb-1"><input id="srv-only" type="checkbox"> Use only the server (no direct connections, hides IP addresses; the retro-game video needs direct connections)</label>
+                    <div class="flex gap-1 mb-1"><button id="srv-save" class="flex-1 bg-psGlow hover:bg-blue-600 py-1.5 rounded-lg text-[11px] font-semibold text-white transition">Save</button><button id="srv-clear" class="flex-1 bg-white/10 hover:bg-white/20 py-1.5 rounded-lg text-[11px] font-semibold text-white transition">Remove</button></div>
+                </details>
                 <details class="mt-3"><summary class="cursor-pointer text-gray-400 hover:text-white">Optional: TURN relay server (for strict networks)</summary>
                     <p class="text-[11px] text-gray-500 my-2 leading-relaxed">Only needed when the test says your network blocks direct connections. Stored in this browser only. Rejoin the room after saving.</p>
                     <input id="turn-urls" placeholder="turn:host:3478  (several: separate with commas)" autocomplete="off" class="w-full mb-1 bg-white/10 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-psGlow">
@@ -2312,6 +2317,15 @@
                 } catch (e) { /* none saved */ }
                 return [];
             })(),
+            // Optional relay server (oasis-server.mjs). Paste its address here to bake it into this file, or set it per browser in Space Info > Network, or use ?server=wss://...
+            server: (() => {
+                const ok = (u) => (/^wss?:\/\/[^\s]+$/i.test(String(u || '').trim()) ? String(u).trim() : '');
+                try { const q = ok(new URLSearchParams(location.search).get('server')); if (q) return q; } catch (e) { /* no query */ }
+                try { const t = JSON.parse(localStorage.getItem('psHomeServer') || 'null'); if (t && ok(t.url)) return ok(t.url); } catch (e) { /* none saved */ }
+                return ok('');                                    // <- your wss:// address here
+            })(),
+            serverOnly: (() => { try { const t = JSON.parse(localStorage.getItem('psHomeServer') || 'null'); return !!(t && t.only); } catch (e) { return false; } })(),   // only the server: no direct connections, so players never see each other's IP
+            roomCap: 15,                                           // most players in one room (others are refused)
             maxJson: 2e6, maxBinary: 48e6, maxReceive: 400e6,      // (maxReceive: how much incoming data one room may be receiving at once; avatars from several players arrive together)
             rate: { burst: 160, perSec: 120 }          // messages a single peer may send us; more than that is dropped
         };
@@ -2387,9 +2401,89 @@
             } catch (e) { return null; }
         }
 
+        // ---- relay-server link: the same interface a peer-to-peer "room" has, so the rest of Net does not care which it is using.
+        // Everything sent is encrypted in the browser (AES-GCM, key made from the room code) and the room is named by a hash of the code,
+        // so the server only ever copies opaque bytes between the members of one room.
+        const hexOf = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
+        async function serverKeys(secret) {
+            const enc = new TextEncoder();
+            const roomKey = hexOf(await crypto.subtle.digest('SHA-256', enc.encode('oasis-room:' + secret)));
+            const base = await crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey']);
+            const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc.encode('oasis-v1:' + roomKey), iterations: 150000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+            return { roomKey, key };
+        }
+        function makeServerLink(url, secret, ownId, isClosed) {
+            const enc = new TextEncoder(), dec = new TextDecoder();
+            const link = { name: 'server', ws: true, sock: null, peers: new Set(), error: '', chain: Promise.resolve(), closing: false };
+            link.strat = { getRelaySockets: () => ({ [url]: link.sock }) };
+            const handlers = { join: (id) => link.room.onPeerJoin && link.room.onPeerJoin(id), leave: (id) => link.room.onPeerLeave && link.room.onPeerLeave(id) };
+            link.room = { onPeerJoin: null, onPeerLeave: null, onPeerStream: null, getPeers: () => ({}), leave: () => { link.closing = true; try { link.sock && link.sock.close(); } catch (e) { /* closed */ } } };
+            link.text = { onMessage: null, send: (data, { target } = {}) => link.push(0, enc.encode(String(data)), target) };
+            link.bin = { onMessage: null, onReceiveProgress: null, send: (payload, { target, metadata } = {}) => {
+                const meta = enc.encode(JSON.stringify(metadata || {})), body = new Uint8Array(payload.buffer ? payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength) : payload);
+                const plain = new Uint8Array(4 + meta.length + body.length); new DataView(plain.buffer).setUint32(0, meta.length); plain.set(meta, 4); plain.set(body, 4 + meta.length);
+                return link.push(1, plain, target);
+            } };
+            let keys = null;
+            link.push = (kind, bytes, target) => {                       // encrypt then send, strictly in order
+                link.chain = link.chain.then(async () => {
+                    const sock = link.sock; if (!keys || !sock || sock.readyState !== 1) return;
+                    const plain = new Uint8Array(1 + bytes.length); plain[0] = kind; plain.set(bytes, 1);
+                    const iv = crypto.getRandomValues(new Uint8Array(12));
+                    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, keys.key, plain));
+                    const head = enc.encode(JSON.stringify(target && target.length ? { to: target } : {}));
+                    const out = new Uint8Array(4 + head.length + 12 + ct.length);
+                    new DataView(out.buffer).setUint32(0, head.length); out.set(head, 4); out.set(iv, 4 + head.length); out.set(ct, 4 + head.length + 12);
+                    sock.send(out);
+                }).catch((e) => console.warn('server send failed', e));
+                return link.chain;
+            };
+            const onFrame = async (buf) => {
+                const u = new Uint8Array(buf); if (u.length < 4 + 12 + 17) return;
+                const hlen = new DataView(buf).getUint32(0); if (hlen > 2048 || 4 + hlen + 12 + 17 > u.length) return;
+                let from; try { from = JSON.parse(dec.decode(u.subarray(4, 4 + hlen))).f; } catch (e) { return; }
+                if (typeof from !== 'string') return;
+                let plain; try { plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.subarray(4 + hlen, 16 + hlen) }, keys.key, u.subarray(16 + hlen))); } catch (e) { return; }   // wrong key / tampered: dropped
+                if (plain[0] === 0) link.text.onMessage && link.text.onMessage(dec.decode(plain.subarray(1)), { peerId: from });
+                else if (plain[0] === 1 && plain.length >= 5) {
+                    const mlen = new DataView(plain.buffer, plain.byteOffset).getUint32(1); if (5 + mlen > plain.length) return;
+                    let metadata; try { metadata = JSON.parse(dec.decode(plain.subarray(5, 5 + mlen))); } catch (e) { return; }
+                    link.bin.onMessage && link.bin.onMessage(plain.subarray(5 + mlen), { peerId: from, metadata });
+                }
+            };
+            link.start = async () => {
+                keys = await serverKeys(secret);
+                let delay = 1500;
+                const open = () => {
+                    if (link.closing || isClosed()) return;
+                    let sock; try { sock = new WebSocket(url.replace(/\/?$/, '/') + '?r=' + keys.roomKey + '&id=' + encodeURIComponent(ownId)); } catch (e) { link.error = 'bad server address'; return; }
+                    sock.binaryType = 'arraybuffer'; link.sock = sock;
+                    sock.onopen = () => { delay = 1500; link.error = ''; };
+                    sock.onmessage = (e) => {
+                        if (typeof e.data === 'string') {
+                            let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+                            if (m.t === 'peers' && Array.isArray(m.ids)) m.ids.forEach((id) => { if (typeof id === 'string' && !link.peers.has(id)) handlers.join(id); });
+                            else if (m.t === 'join' && typeof m.id === 'string' && !link.peers.has(m.id)) handlers.join(m.id);
+                            else if (m.t === 'leave' && typeof m.id === 'string') handlers.leave(m.id);
+                        } else onFrame(e.data);
+                    };
+                    sock.onclose = (e) => {
+                        for (const id of [...link.peers]) handlers.leave(id);       // everyone behind this connection is gone until it is back
+                        if (link.closing || isClosed()) return;
+                        link.error = e.code === 4001 ? 'room full' : e.code === 4002 ? 'already connected from another tab' : e.code === 4003 ? 'server busy' : 'cannot reach the server';
+                        if (e.code === 4001 || e.code === 4002) return;
+                        setTimeout(open, delay); delay = Math.min(15000, delay * 1.7);
+                    };
+                    sock.onerror = () => { /* onclose follows */ };
+                };
+                open();
+            };
+            return link;
+        }
+
         class Net {
             constructor(roomId, onMessage, { password = null, onPeer = null, onStream = null, onStatus = null, onProgress = null, quiet = false, maxPeers = 0 } = {}) {
-                Object.assign(this, { roomId, onMessage, onPeer, onStream, onStatus, onProgress, quiet, maxPeers, seq: 0, ses: uid(), seen: new Map(), bucket: new Map(), bcSeen: new Map(), links: [], route: new Map(), closed: false, mode: hasBC ? 'tabs' : 'offline', note: '', timer: null, started: Date.now(), joinErrors: 0 });
+                Object.assign(this, { roomId, onMessage, onPeer, onStream, onStatus, onProgress, quiet, maxPeers, seq: 0, ses: uid(), nb: new Map(), nbKey: '', nbAt: 0, seen: new Map(), bucket: new Map(), bcSeen: new Map(), links: [], route: new Map(), closed: false, mode: hasBC ? 'tabs' : 'offline', note: '', timer: null, started: Date.now(), joinErrors: 0 });
                 if (hasBC) { this.ch = new BroadcastChannel('ps-home-room-' + roomId); this.ch.onmessage = (e) => this.receive(e.data, null); }
                 this.connect(password);
             }
@@ -2402,18 +2496,23 @@
                     return { name: l.name, open: urls.filter((u) => u.open).length, total: urls.length, urls, peers: l.peers.size, error: l.error };
                 });
                 const open = detail.reduce((n, d) => n + d.open, 0), total = detail.reduce((n, d) => n + d.total, 0);
-                return { mode: this.mode, relays: { open, total }, peers: this.route.size, note: this.note, detail };
+                const viaServer = [...this.route.values()].some((l) => l.ws), viaDirect = [...this.route.values()].some((l) => !l.ws);
+                return { mode: this.mode, server: viaServer, direct: viaDirect, relays: { open, total }, peers: this.route.size, note: this.note, detail };
             }
             async connect(password) {
-                const lib = await loadP2P();
+                const lib = await loadP2P();                                                    // (also gives this browser its id)
                 if (this.closed) return;
-                if (!lib) { this.mode = hasBC ? 'tabs' : 'offline'; this.note = 'Peer-to-peer could not start: ' + (p2pError || 'unknown reason') + '. Only tabs of this browser can see each other.'; this.report(); return; }
+                const useServer = !!NET.server && !!(window.crypto && crypto.subtle);
+                if (!lib && !useServer) { this.mode = hasBC ? 'tabs' : 'offline'; this.note = 'Peer-to-peer could not start: ' + (p2pError || 'unknown reason') + '. Only tabs of this browser can see each other.'; this.report(); return; }
                 this.mode = 'connecting'; this.report();
-                for (const name of NET.strategies) {
+                if (useServer) {                                                               // the relay server: works through networks that block direct connections
+                    try { const l = makeServerLink(NET.server, password || this.roomId, me.id, () => this.closed); this.wireLink(l); l.start().catch((e) => { l.error = 'could not start: ' + String((e && e.message) || e).slice(0, 60); console.warn('relay server link failed to start', e); }); } catch (e) { console.warn('Could not start the relay-server link', e); }
+                }
+                if (lib && !(useServer && NET.serverOnly)) for (const name of NET.strategies) {
                     try { this.addLink(name, lib[name], password); } catch (e) { console.warn('Could not start matchmaking via ' + name, e); }
                 }
                 if (!this.links.length) { this.note = 'Peer-to-peer failed to start.'; this.report(); return; }
-                this.timer = setInterval(() => this.tick(), 2500);
+                this.timer = setInterval(() => { this.tick(); this.gossip(false); }, 2500);
                 this.tick();
             }
             addLink(name, strat, password) {
@@ -2431,22 +2530,26 @@
                 link.text = link.room.makeAction('m');
                 link.bin = link.room.makeAction('b', { onReceive: ({ byteLength }) => byteLength <= NET.maxBinary + 1e5 });
                 link.bin.onReceiveProgress = (pct, { peerId }) => { if (this.onProgress) this.onProgress(peerId, pct); };
+                this.wireLink(link);
+            }
+            wireLink(link) {
                 link.text.onMessage = (data, { peerId }) => this.receive(unpackMessage(data), peerId);
                 link.bin.onMessage = (payload, { peerId, metadata }) => this.receive(unpackMessage(metadata && metadata.j, payload, metadata && metadata.s), peerId);
                 link.room.onPeerStream = (stream, id) => { if (this.onStream) this.onStream(stream, id); };
                 link.room.onPeerJoin = (id) => {
                     link.peers.add(id);
-                    if (!this.route.has(id)) {                                                                 // the first network to connect carries this player's traffic; the others are spares
-                        this.route.set(id, link); this.mode = 'online'; this.note = ''; this.report();
+                    const cur = this.route.get(id);
+                    if (!cur) {                                                                                // the first network to connect carries this player's traffic; the others are spares
+                        this.route.set(id, link); this.mode = 'online'; this.note = ''; this.report(); setTimeout(() => this.gossip(true), 250);
                         if (this.onPeer) this.onPeer(id);
-                    } else this.report();
+                    } else { if (cur.ws && !link.ws) this.route.set(id, link); this.report(); }                // (a direct connection is faster than the relay server: move over to it)
                 };
                 link.room.onPeerLeave = (id) => {
                     link.peers.delete(id);
                     if (this.route.get(id) !== link) return;
                     const alt = this.links.find((l) => l !== link && l.peers.has(id));
                     if (alt) { this.route.set(id, alt); this.report(); return; }
-                    this.route.delete(id); this.seen.delete(id); this.bucket.delete(id);
+                    this.route.delete(id); this.seen.delete(id); this.bucket.delete(id); this.nb.delete(id); setTimeout(() => this.gossip(true), 250);
                     if (!this.route.size) this.mode = this.describe().relays.open > 0 ? 'waiting' : 'connecting';
                     this.report();
                     if (Date.now() - (this.bcSeen.get(id) || 0) > 3000) this.onMessage({ t: 'bye', from: id });      // (still reachable through a tab of this browser: not gone)
@@ -2463,23 +2566,49 @@
                 if (this.mode === 'waiting' && /Cannot reach/.test(this.note)) this.note = '';
                 this.report();
             }
+            // Players who cannot connect to each other directly can often both reach a third player. Everyone tells their direct neighbours who
+            // they are connected to (_nb); a message that cannot go straight to someone is handed to a neighbour who can reach them, and that
+            // neighbour passes it on. Messages carry their original sender and number, so a copy arriving twice is dropped as usual.
+            relayFor(id) { for (const [r, set] of this.nb) if (this.route.has(r) && set.has(id)) return r; return null; }
+            unreachable() { const u = new Set(); for (const [r, set] of this.nb) { if (!this.route.has(r)) continue; for (const id of set) if (id !== me.id && !this.route.has(id)) u.add(id); } return u; }
+            gossip(force) {
+                const ids = [...this.route.keys()].sort(), key = ids.join(',');
+                for (const k of [...this.nb.keys()]) if (!this.route.has(k)) this.nb.delete(k);
+                const now = Date.now();
+                if (!force && key === this.nbKey && now - this.nbAt < 7000) return;
+                this.nbKey = key; this.nbAt = now;
+                for (const id of ids) this._out({ t: '_nb', ids: ids.filter((x) => x !== id).slice(0, 40), from: me.id, seq: ++this.seq, ses: this.ses }, [id]);
+            }
             send(msg) {
                 if (this.closed) return;
                 const full = { ...msg, from: me.id, seq: ++this.seq, ses: this.ses };
                 if (this.ch) { try { this.ch.postMessage(full); } catch (e) { console.warn(e); } }
                 if (!this.route.size) return;
-                const targets = full.to ? (this.route.has(full.to) ? [full.to] : []) : [...this.route.keys()];      // (addressed to someone only reachable through a tab: nothing to send)
+                let targets;
+                if (full.to) {
+                    if (this.route.has(full.to)) targets = [full.to];
+                    else { const r = this.relayFor(full.to); if (!r) return; targets = [r]; full._fw = 1; }      // (not directly connected: ask a neighbour who is to pass it on)
+                } else { targets = [...this.route.keys()]; if (this.unreachable().size) full._fw = 1; }
+                return this._out(full, targets);
+            }
+            _out(full, targets) {
                 if (!targets.length) return;
                 let packed; try { packed = packMessage(full); } catch (e) { console.warn('could not pack message', e); return; }
                 const { text, payload, spans } = packed;
                 if (payload ? payload.byteLength > NET.maxBinary : text.length > NET.maxJson) { console.warn('Not sending: too large'); return; }
                 const by = new Map();
-                for (const id of targets) { const l = this.route.get(id); if (!by.has(l)) by.set(l, []); by.get(l).push(id); }
+                for (const id of targets) { const l = this.route.get(id); if (!l) continue; if (!by.has(l)) by.set(l, []); by.get(l).push(id); }
                 const jobs = [];
                 for (const [l, ids] of by) {
                     try { jobs.push(payload ? l.bin.send(payload, { target: ids, metadata: { j: text, s: spans } }) : l.text.send(text, { target: ids })); } catch (e) { console.warn('send failed', e); }
                 }
                 return Promise.all(jobs);                                                                       // settles when the data has gone out (big files take a while)
+            }
+            forward(m, origin) {                                                                               // a neighbour asked us to pass this on
+                const c = { ...m }; delete c._fw; c._via = 1;
+                const theirs = this.nb.get(origin) || new Set();
+                const targets = m.to ? (m.to !== me.id && m.to !== origin && this.route.has(m.to) ? [m.to] : []) : [...this.route.keys()].filter((id) => id !== origin && !theirs.has(id));
+                this._out(c, targets);
             }
             allow(from) {                                                                                      // a token bucket per sender
                 const now = Date.now(); let b = this.bucket.get(from);
@@ -2490,7 +2619,8 @@
             }
             receive(m, peerId) {
                 if (this.closed || !m || typeof m !== 'object' || Array.isArray(m)) return;
-                if (peerId) m.from = peerId;                                                                   // over the internet the sender is whoever the connection says it is
+                const claimed = typeof m.from === 'string' ? m.from : '';
+                if (peerId) m.from = m._via && claimed && claimed !== peerId ? claimed : peerId;                // over the internet the sender is whoever the connection says it is (a passed-on message names its first sender)
                 else if (typeof m.from === 'string') this.bcSeen.set(m.from, Date.now());
                 if (typeof m.from !== 'string' || !m.from || m.from === me.id) return;
                 if (!this.allow(m.from)) return;
@@ -2502,6 +2632,9 @@
                     const now = Date.now(); s.got.set(m.seq, now);
                     if (s.got.size > 1500) for (const [k, t] of s.got) { if (now - t > 120000) s.got.delete(k); else break; }
                 }
+                if (m.t === '_nb') { if (peerId && Array.isArray(m.ids)) { this.nb.set(peerId, new Set(m.ids.filter((x) => typeof x === 'string' && x.length < 64).slice(0, 40))); } return; }
+                if (m._fw && peerId) this.forward(m, peerId);
+                delete m._fw; delete m._via;
                 this.onMessage(m);
             }
             close() {
@@ -2533,6 +2666,7 @@
                     }
                 }
             } else log('\u2022 Join a room first to test the matchmaking relays.');
+            log(`\u2022 Relay server: ${NET.server ? NET.server + (NET.serverOnly ? ' (server only)' : '') : 'none configured'}`);
             log(`\u2022 TURN relay: ${NET.turn.length ? 'configured' : 'none configured'}`);
             // can this device find its public address (STUN)? without it, devices on different networks usually cannot connect
             log('\u2022 Checking direct-connection ability (about 5 seconds)...');
@@ -3178,6 +3312,7 @@
             screenReset();
             lastNetNote = '';
             const mine = net = new Net(id, onNetMessage, {
+                maxPeers: NET.roomCap,
                 password: isPrivate ? code : null,                                             // the room code doubles as the encryption password
                 onPeer: (pid) => { if (net === mine) { net.send({ ...helloMsg(false), to: pid }); emuOnPeer(pid); } },
                 onStream: (stream, pid) => { if (net === mine) emuOnStream(stream, pid); },     // someone's connection just came up: introduce ourselves
@@ -3199,10 +3334,10 @@
 
             $('room-label').textContent = label;
             const codeBtn = $('room-code-btn');
-            if (isPrivate) { codeBtn.textContent = code; codeBtn.classList.remove('hidden'); } else codeBtn.classList.add('hidden');
+            if (isPrivate) { codeBtn.textContent = fmtCode(code); codeBtn.classList.remove('hidden'); } else codeBtn.classList.add('hidden');
             $('chat-title').innerHTML = '<i class="fa-solid fa-comments"></i> ' + (isPrivate ? 'Private Room' : 'Lounge Chat');
             $('chat-feed').innerHTML = '';
-            sysChat(`Entered ${label}.` + (isPrivate ? ` Share code ${code} with friends.` : ''));
+            sysChat(`Entered ${label}.` + (isPrivate ? ` Share code ${fmtCode(code)} with friends.` : ''));
 
             net.send(helloMsg(false));
             announceRoom(1);
@@ -3214,7 +3349,7 @@
         // What the network is doing, in words: the Space Info panel, the dot by the room name, and a chat note when something is wrong
         let lastNetNote = '';
         function showNetStatus(st) {
-            const label = { online: 'Online (peer-to-peer)', waiting: 'Waiting for friends (matchmaking connected)', connecting: 'Connecting to the matchmaking relays...', tabs: 'This browser only (tabs)', offline: 'Offline' }[st.mode] || st.mode;
+            const label = { online: st.server ? (st.direct ? 'Online (relay server + direct)' : 'Online (relay server)') : 'Online (peer-to-peer)', waiting: 'Waiting for friends (matchmaking connected)', connecting: 'Connecting to the matchmaking relays...', tabs: 'This browser only (tabs)', offline: 'Offline' }[st.mode] || st.mode;
             const detail = `${label} \u2022 ${st.peers} connected` + (st.relays.total ? ` \u2022 relays ${st.relays.open}/${st.relays.total}` : '');
             if ($('net-mode')) $('net-mode').textContent = detail;
             const dot = $('net-dot');
@@ -3313,7 +3448,11 @@
 
         const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         // The first letter of a private code says which map it opens: L = Harbor Studio, anything else = Central Mall.
-        const makeCode = (map = 'mall') => (map === 'loft' ? 'L' : 'M') + Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+        // 11 random characters (55 bits) after the map letter: too many to guess, so the code is a real key (it also encrypts the room's traffic)
+        const makeCode = (map = 'mall') => (map === 'loft' ? 'L' : 'M') + Array.from(crypto.getRandomValues(new Uint8Array(11)), (b) => CODE_CHARS[b % 32]).join('');
+        const normCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const validCode = (c) => /^[ML][A-Z0-9]{10,14}$/.test(c);
+        const fmtCode = (c) => (String(c).match(/.{1,4}/g) || [String(c)]).join('-');
         const mapOfCode = (code) => (String(code)[0] === 'L' ? 'loft' : 'mall');
         function joinPrivate(code) {
             const map = mapOfCode(code);
@@ -3322,7 +3461,7 @@
         // Everyone has a loft of their own: a stable code per browser, so friends can come back to the same place
         function myLoftCode() {
             let c = localStorage.getItem('psHomeLoft');
-            if (!c || !/^L[A-Z0-9]{3,7}$/.test(c)) { c = makeCode('loft'); localStorage.setItem('psHomeLoft', c); }
+            if (!c || !/^L[A-Z0-9]{11}$/.test(c)) { c = makeCode('loft'); localStorage.setItem('psHomeLoft', c); }
             return c;
         }
         let privateMap = 'mall';
@@ -3332,7 +3471,7 @@
             $('pm-mall').className = privateMap === 'mall' ? on : off;
             $('pm-loft').className = privateMap === 'loft' ? on : off;
             $('create-private-label').textContent = privateMap === 'loft' ? 'Create private studio' : 'Create private room';
-            $('loft-code').textContent = myLoftCode();
+            $('loft-code').textContent = fmtCode(myLoftCode());
         }
 
         /* ------------------------------------------------------------------ *
@@ -6201,8 +6340,25 @@
             sysChat(`${EMU_SYS[sys]}: "${EMU.name}" is on the TV. You are player 1. Friends can plug in from the TV panel (F). Press P to play, Esc to step away.`);
         }
         function emuAddStreamTo(pid) {
-            const l = net && net.route.get(pid);
+            const l = net && net.links.find((x) => x.peers.has(pid) && x.room.addStream);     // video needs a direct connection (the relay server only carries messages)
             if (l && EMU.stream) { try { l.room.addStream(EMU.stream, { target: pid }); } catch (e) { console.warn('could not send the game picture', e); } }
+            for (const ms of [400, 1500, 4000]) setTimeout(() => emuTuneSender(pid), ms);
+        }
+        // ask the browser to keep the game picture at 60 fps and a high bitrate (it defaults to a low, adaptive one that drops frames)
+        function emuTuneSender(pid) {
+            try {
+                const l = net && net.links.find((x) => x.peers.has(pid) && x.room.addStream); const pc = l && l.room.getPeers && l.room.getPeers()[pid];
+                if (!pc || !pc.getSenders) return;
+                for (const sd of pc.getSenders()) {
+                    if (!sd.track || sd.track.kind !== 'video') continue;
+                    try { sd.track.contentHint = 'motion'; } catch (e) { /* unsupported */ }
+                    const prm = sd.getParameters();
+                    if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}];
+                    prm.encodings[0].maxFramerate = 60; prm.encodings[0].maxBitrate = 8000000;
+                    prm.degradationPreference = 'maintain-framerate';
+                    sd.setParameters(prm).catch(() => {});
+                }
+            } catch (e) { /* best effort */ }
         }
         function emuOnPeer(pid) { if (EMU.on && EMU.isHost) { emuBroadcast(pid); emuAddStreamTo(pid); } }
         function emuOnStream(stream, pid) {
@@ -6307,7 +6463,7 @@
             const prev = EMU.applied[slot] || { m: 0, a: [0, 0, 0, 0] };
             try {
                 for (let i = 0; i < 16; i++) { const n = (mask >> i) & 1, o = (prev.m >> i) & 1; if (n !== o) gm.simulateInput(slot, i, n); }
-                if (EMU.sys === 'n64' || EMU.sys === 'psx') for (let k = 0; k < 4; k++) if (ax[k] !== prev.a[k]) { const v = Math.round(ax[k] * 32767); gm.simulateInput(slot, 16 + k * 2, v > 0 ? v : 0); gm.simulateInput(slot, 17 + k * 2, v < 0 ? -v : 0); }
+                if (EMU.sys === 'n64' || EMU.sys === 'psx') for (let k = 0; k < 4; k++) if (ax[k] !== prev.a[k]) { const v = Math.round(ax[k] * 32767); gm.simulateInput(slot, 17 + k * 2, v > 0 ? v : 0); gm.simulateInput(slot, 16 + k * 2, v < 0 ? -v : 0); }
             } catch (e) { console.warn('emulator input failed', e); }
             EMU.applied[slot] = { m: mask, a: ax.slice() };
         }
@@ -6336,7 +6492,7 @@
         function emuPadSample(gp, b, dt) {
             let m = 0; for (const [i, bit] of EMU_PAD) if (b[i]) m |= 1 << bit;
             const ax = [0, 1, 2, 3].map((i) => { const v = gp.axes[i] || 0; return Math.abs(v) < PAD.dead ? 0 : clamp(v, -1, 1); });
-            if (ax[0] < -0.5) m |= 1 << 6; if (ax[0] > 0.5) m |= 1 << 7; if (ax[1] < -0.5) m |= 1 << 4; if (ax[1] > 0.5) m |= 1 << 5;
+            if (EMU.sys !== 'n64') { if (ax[0] < -0.5) m |= 1 << 6; if (ax[0] > 0.5) m |= 1 << 7; if (ax[1] < -0.5) m |= 1 << 4; if (ax[1] > 0.5) m |= 1 << 5; }   // the stick doubles as a D-pad, except on N64 where it is the analog stick
             EMU.padMask = m; EMU.padAx = ax.map((v) => Math.round(v * 127));
             if (b[8]) { EMU.padHold += dt; if (EMU.padHold > 1.2) { emuSetPlaying(false); return; } } else EMU.padHold = 0;   // hold Back / Select to step away from the game
             emuPush();
@@ -7066,9 +7222,23 @@
 
         /* ---- Oasis style chat: Enter opens a pop-up bar; what you send pops up as a speech bubble over your head ---- */
         let lastChat = 0, lastTypingSent = 0;
+        // change your name while in a room: updates your plate, the lists and tells everyone straight away
+        function setMyName(raw) {
+            const n = String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+            if (!n || n === me.name) return false;
+            me.name = n;
+            try { localStorage.setItem('psHomeName', n); } catch (e) { /* storage unavailable */ }
+            localActor && localActor.setName(n);
+            $('name-input').value = n; $('sm-name').textContent = n; $('sm-name-input').value = n;
+            renderPlayers();
+            net && net.send(helloMsg(false));
+            sysChat('You are now ' + n + '.');
+            return true;
+        }
         function sendChat(raw) {
             const text = String(raw || '').trim().slice(0, 140);
             if (!text) return false;
+            { const mm = /^\/name\s+(.+)$/i.exec(text); if (mm) { setMyName(mm[1]); return true; } }
             if (text.startsWith('/') && EMOTES[text.slice(1)]) { performEmote(text.slice(1)); return true; }
             if (Date.now() - lastChat < 400) return false;
             lastChat = Date.now();
@@ -7121,7 +7291,7 @@
         function openStart(tab) {
             closeScreenPanel && closeScreenPanel(); closeChatBar();
             Object.keys(keys).forEach((k) => (keys[k] = false));
-            $('sm-name').textContent = me.name;
+            $('sm-name').textContent = me.name; $('sm-name-input').value = me.name;
             setStartTab(tab || $('start-menu').dataset.tab || 'emotes'); renderBubbleColor();
             $('start-menu').classList.remove('hidden');
         }
@@ -7213,7 +7383,7 @@
             const canvas = renderer.domElement;
             const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
             let down = null;
-            canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now(), b: e.button }; });
+            canvas.addEventListener('pointerdown', (e) => { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) ae.blur(); down = { x: e.clientX, y: e.clientY, t: performance.now(), b: e.button }; });
             canvas.addEventListener('pointerup', (e) => {
                 if (!down || down.b !== 0) return;
                 const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
@@ -7369,9 +7539,15 @@
                 const text = input.value;
                 input.value = '';
                 sendChat(text);
+                input.blur();                         // hand the keyboard back to the world, or WASD would keep typing into the box
             };
             $('chat-input').addEventListener('keydown', (e) => { if (isEnterKey(e) && !isComposingKey(e)) { e.preventDefault(); submitSide(); } });
             $('chat-send').addEventListener('click', submitSide);
+            $('sm-name-save').addEventListener('click', () => setMyName($('sm-name-input').value));
+            $('sm-name-input').addEventListener('keydown', (e) => { if (isEnterKey(e) && !isComposingKey(e)) { e.preventDefault(); setMyName($('sm-name-input').value); e.target.blur(); } });
+            $('name-input').addEventListener('change', () => { if (room) setMyName($('name-input').value); });   // renaming from the lobby box while already in a room
+            // focusing any text box drops held movement keys, so the avatar never keeps walking (or looks stuck) after you click in and out of chat
+            document.addEventListener('focusin', (e) => { const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) Object.keys(keys).forEach((k) => (keys[k] = false)); });
 
             // Central TV panel
             $('screen-close').addEventListener('click', closeScreenPanel);
@@ -7417,8 +7593,8 @@
             $('enter-loft').addEventListener('click', () => { const code = myLoftCode(); joinRoom('private-' + code, { label: 'My Harbor Studio', isPrivate: true, code, map: 'loft' }); });
             renderPrivateMap();
             const joinByCode = () => {
-                const code = $('code-input').value.trim().toUpperCase();
-                if (!/^[A-Z0-9]{4,8}$/.test(code)) { $('lobby-note').textContent = 'Room codes are 4 to 8 letters or numbers.'; return; }
+                const code = normCode($('code-input').value);
+                if (!validCode(code)) { $('lobby-note').textContent = 'That is not a full room code. Codes are 12 letters and numbers (like MABC-DEFG-HJKL); older short codes no longer work.'; return; }
                 joinPrivate(code);
             };
             $('join-private').addEventListener('click', joinByCode);
@@ -7426,6 +7602,13 @@
             // Space Info > Network
             $('net-version').textContent = NET.version;
             try { const t = JSON.parse(localStorage.getItem('psHomeTurn') || 'null'); if (t) { $('turn-urls').value = t.urls || ''; $('turn-user').value = t.username || ''; $('turn-pass').value = t.credential || ''; } } catch (e) { /* none */ }
+            try { const t = JSON.parse(localStorage.getItem('psHomeServer') || 'null'); if (t) { $('srv-url').value = t.url || ''; $('srv-only').checked = !!t.only; } } catch (e) { /* none */ }
+            $('srv-save').addEventListener('click', () => {
+                const url = $('srv-url').value.trim();
+                if (!/^wss?:\/\/\S+$/i.test(url)) { sysChat('A server address starts with wss:// (or ws:// for testing), for example wss://relay.example.com'); return; }
+                try { localStorage.setItem('psHomeServer', JSON.stringify({ url, only: $('srv-only').checked })); sysChat('Relay server saved. Reload the page, then rejoin your room.'); } catch (e) { sysChat('Could not save (browser storage is blocked).'); }
+            });
+            $('srv-clear').addEventListener('click', () => { try { localStorage.removeItem('psHomeServer'); } catch (e) { /* ignore */ } $('srv-url').value = ''; $('srv-only').checked = false; sysChat('Relay server removed. Reload the page, then rejoin your room.'); });
             $('turn-save').addEventListener('click', () => {
                 const urls = $('turn-urls').value.trim();
                 if (!/^turns?:/i.test(urls)) { sysChat('A TURN address starts with turn: or turns: (for example turn:myserver.com:3478).'); return; }
@@ -7442,13 +7625,13 @@
 
             $('room-code-btn').addEventListener('click', () => {                 // copies a link that takes friends straight into this room
                 if (!room || !room.code) return;
-                let link = room.code;
-                try { if (/^https?:$/.test(location.protocol)) link = location.origin + location.pathname + '?room=' + encodeURIComponent(room.code); } catch (e) { /* keep the bare code */ }
-                const done = () => sysChat(link === room.code ? `Room code ${room.code} copied.` : `Invite link copied: ${link} (room code ${room.code})`);
+                let link = room.code;      // (the code goes after the #, so it is never sent to a web server)
+                try { if (/^https?:$/.test(location.protocol)) link = location.origin + location.pathname + '#room=' + encodeURIComponent(room.code); } catch (e) { /* keep the bare code */ }
+                const done = () => sysChat(link === room.code ? `Room code ${fmtCode(room.code)} copied.` : `Invite link copied: ${link}`);
                 if (navigator.clipboard) navigator.clipboard.writeText(link).then(done).catch(() => sysChat(`Share this: ${link}`)); else sysChat(`Share this: ${link}`);
             });
 
-            $('lobby-note').textContent = 'Rooms connect directly between devices (peer-to-peer), so your friends can be on any device. Create a private room, then send them the room code or the invite link from the code button at the top. Public channels are open to anyone who opens this page. The online counts come from the browsers of the other players (up to 14 connections each): they only share which public room you are in, never private room names. As in any peer-to-peer game, players you are connected to can technically see your IP address.';
+            $('lobby-note').textContent = 'Every room is private: it has a long random code that doubles as the encryption key for the room, and there is no public list. Create a room and send friends the code, or the invite link from the code button at the top. Connections go directly between devices (peer-to-peer) unless a relay server is set up in Space Info > Network, so players in the same room can technically see each other\'s IP address.';
 
             setInterval(() => announceRoom(), 2000);
             setInterval(() => {
@@ -7579,11 +7762,10 @@
                 }
             } catch (err) { console.warn('Could not restore saved avatar', err); }
 
-            startPresence();
             window.__homeReady = true;
             document.getElementById('load-error').classList.add('hidden');   // a slow device may have shown the warning before start-up finished
-            const invite = (() => { try { return (new URLSearchParams(location.search).get('room') || '').trim().toUpperCase(); } catch (e) { return ''; } })();
-            if (/^[A-Z0-9]{3,8}$/.test(invite)) joinPrivate(invite);          // an invite link (?room=CODE) goes straight into that room
+            const invite = (() => { try { return normCode(new URLSearchParams(location.hash.replace(/^#/, '')).get('room') || new URLSearchParams(location.search).get('room')); } catch (e) { return ''; } })();
+            if (validCode(invite)) joinPrivate(invite);          // an invite link (#room=CODE) goes straight into that room
             else openLobby();
             if (!restored) openCharacterSetup(null, { welcome: true });   // first visit: choose a character
         }
