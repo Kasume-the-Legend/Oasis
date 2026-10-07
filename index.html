@@ -6870,7 +6870,7 @@
 
         /* ------------------------------------------------------------------ *
          *  Game controller support (wired USB or Bluetooth: Xbox, PlayStation, Switch Pro and most others via the browser Gamepad API)
-         *  In the world:  left stick move | right stick camera | RT/LT/L3 run | A jump | Y show/hide the bottom bar | LB cheer | RB sit
+         *  In the world:  left stick move | right stick camera | RT/LT/L3 run | A jump | Y show/hide the bottom bar
          *                 D-pad up/down zoom | Y: bottom bar | Back: walk style | R3: TV panel | Start: Start menu (emotes, bubble colour, lobby)
          *  In menus:      D-pad or left stick move the highlight | A press | B back
          * ------------------------------------------------------------------ */
@@ -6923,7 +6923,7 @@
             const [lx, ly] = padStick(ax(0), ax(1)), [rx, ry] = padStick(ax(2), ax(3));
             const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) && document.activeElement.type !== 'range' && document.activeElement.type !== 'checkbox';
             const over = padOverlay();
-            if (!PAD.active) { PAD.active = true; PAD.name = (gp.id || 'controller').replace(/\(.*?\)/g, '').trim().slice(0, 40); try { sysChat('Controller connected: ' + PAD.name + '. Left stick moves, right stick turns the camera, A jumps, Y shows or hides the bottom bar, LB cheers, RB sits, Start opens the menu.'); } catch (e) { /* chat not ready */ } }
+            if (!PAD.active) { PAD.active = true; PAD.name = (gp.id || 'controller').replace(/\(.*?\)/g, '').trim().slice(0, 40); try { sysChat('Controller connected: ' + PAD.name + '. Left stick moves, right stick turns the camera, A jumps, Y shows or hides the bottom bar, Start opens the menu.'); } catch (e) { /* chat not ready */ } }
             padMove.x = padMove.z = 0; padMove.run = false;
             if (EMU.playing) { PAD.rx = PAD.ry = PAD.zoom = 0; emuPadSample(gp, b, dt); PAD.prev = b; return; }       // game mode: the controller belongs to the game
 
@@ -6946,8 +6946,6 @@
                 PAD.rx = rx; PAD.ry = ry; PAD.zoom = (b[13] ? 1 : 0) - (b[12] ? 1 : 0);
                 if (hit(0) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }
                 if (hit(3)) toggleDock();                                  // Y / Triangle: show or hide the bottom bar
-                if (hit(4)) performEmote('cheer');
-                if (hit(5)) performEmote('sit');
                 if (hit(8)) toggleStrafe();
                 if (hit(11)) toggleScreenPanel();
                 if (hit(9)) openStart('emotes');
