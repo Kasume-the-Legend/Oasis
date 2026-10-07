@@ -683,6 +683,7 @@
     <div id="screen-hint" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-30 glass-panel rounded-full px-4 py-1.5 text-xs text-gray-200 border border-white/20 pointer-events-none">
         <kbd class="px-2 py-0.5 bg-white/10 rounded font-mono text-white">F</kbd> Central TV <span class="text-gray-400">&middot; or click it, double-click for full screen</span>
     </div>
+    <div id="emu-hud" class="hidden fixed top-3 left-1/2 -translate-x-1/2 z-40 px-4 py-1.5 rounded-full glass-panel border border-white/15 text-xs text-white pointer-events-none"></div>
     <div id="screen-panel" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-40 w-[min(94vw,34rem)] max-h-[70vh] overflow-y-auto custom-scrollbar glass-panel rounded-2xl p-4 border border-white/15 shadow-2xl">
         <div class="flex items-center justify-between mb-2">
             <h3 class="font-orbitron text-sm font-semibold text-psGlow flex items-center gap-2"><i class="fa-solid fa-tv"></i> Central TV <span id="tv-badge" class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-gray-400">OFF</span></h3>
@@ -713,6 +714,21 @@
             <button id="screen-fade" type="button" title="Quieter the further you stand from the screen" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-psGlow text-white">Fade</button>
         </div>
         <div id="tv-recent" class="hidden flex flex-wrap gap-1.5 mb-2"></div>
+        <div id="emu-box" class="mt-3 pt-3 border-t border-white/10">
+            <h4 class="text-xs font-semibold text-psGlow mb-1"><i class="fa-solid fa-gamepad"></i> Retro games <span class="text-gray-400 font-normal">&middot; up to 4 players on the TV</span></h4>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+                <select id="emu-sys" class="bg-white/10 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white max-w-[11rem]"></select>
+                <button id="emu-load" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-white/10 hover:bg-white/20"><i class="fa-solid fa-folder-open mr-1"></i> Load a game&hellip;</button>
+                <button id="emu-biosbtn" type="button" class="px-2 py-1.5 rounded-lg text-[11px] transition bg-white/5 hover:bg-white/15 text-gray-300" title="Optional: some consoles need a BIOS file you own">BIOS&hellip;</button>
+                <span id="emu-biosname" class="text-[10px] text-gray-400"></span>
+                <button id="emu-stop" type="button" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-white/10 hover:bg-rose-600/70">Stop game</button>
+                <input id="emu-file" type="file" class="hidden"><input id="emu-bios" type="file" class="hidden">
+            </div>
+            <div id="emu-slots" class="grid grid-cols-4 gap-1.5 mb-2"></div>
+            <div class="mb-2"><button id="emu-play" type="button" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600/80 hover:bg-emerald-500">Play</button></div>
+            <p id="emu-status" class="text-[11px] text-amber-300/90 break-words mb-1"></p>
+            <p class="text-[10px] text-gray-400 leading-relaxed">Load a game file you own. It runs on your computer and streams to the room; everyone who plugs in plays on the same TV. <b>Keyboard:</b> arrows or WASD, Z/X = B/A, C/V = Y/X, Q/E = L/R, Enter = Start, Shift = Select. A <b>controller</b> works too (hold Back to step away). Press <b>P</b> to pick the controls back up, <b>Esc</b> to walk around again.</p>
+        </div>
         <p id="screen-note" class="text-[11px] text-amber-300/90 leading-relaxed break-words"></p>
         <a id="screen-open" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" class="inline-block mt-1 text-[11px] text-gray-400 hover:text-white underline">Open in a new tab</a>
     </div>
@@ -2249,8 +2265,8 @@
         }
 
         class Net {
-            constructor(roomId, onMessage, { password = null, onPeer = null, onStatus = null, onProgress = null, quiet = false, maxPeers = 0 } = {}) {
-                Object.assign(this, { roomId, onMessage, onPeer, onStatus, onProgress, quiet, maxPeers, seq: 0, ses: uid(), seen: new Map(), bucket: new Map(), bcSeen: new Map(), links: [], route: new Map(), closed: false, mode: hasBC ? 'tabs' : 'offline', note: '', timer: null, started: Date.now(), joinErrors: 0 });
+            constructor(roomId, onMessage, { password = null, onPeer = null, onStream = null, onStatus = null, onProgress = null, quiet = false, maxPeers = 0 } = {}) {
+                Object.assign(this, { roomId, onMessage, onPeer, onStream, onStatus, onProgress, quiet, maxPeers, seq: 0, ses: uid(), seen: new Map(), bucket: new Map(), bcSeen: new Map(), links: [], route: new Map(), closed: false, mode: hasBC ? 'tabs' : 'offline', note: '', timer: null, started: Date.now(), joinErrors: 0 });
                 if (hasBC) { this.ch = new BroadcastChannel('ps-home-room-' + roomId); this.ch.onmessage = (e) => this.receive(e.data, null); }
                 this.connect(password);
             }
@@ -2294,6 +2310,7 @@
                 link.bin.onReceiveProgress = (pct, { peerId }) => { if (this.onProgress) this.onProgress(peerId, pct); };
                 link.text.onMessage = (data, { peerId }) => this.receive(unpackMessage(data), peerId);
                 link.bin.onMessage = (payload, { peerId, metadata }) => this.receive(unpackMessage(metadata && metadata.j, payload, metadata && metadata.s), peerId);
+                link.room.onPeerStream = (stream, id) => { if (this.onStream) this.onStream(stream, id); };
                 link.room.onPeerJoin = (id) => {
                     link.peers.add(id);
                     if (!this.route.has(id)) {                                                                 // the first network to connect carries this player's traffic; the others are spares
@@ -2472,6 +2489,7 @@
             if (p.av && p.av.state === 'loading') avActive = Math.max(0, avActive - 1);
             p.actor.dispose();
             peers.delete(id);
+            emuPeerGone(id);
             if (announce) sysChat(`${p.name} left the room.`);
             renderPlayers();
             announceRoom();
@@ -3015,6 +3033,10 @@
                     stopTv({ from: p.name });
                     break;
                 }
+                case 'emu': emuOnState(from, m); break;
+                case 'emujoin': emuOnJoin(from, m); break;
+                case 'emuleave': emuOnLeave(from); break;
+                case 'emuin': emuOnInput(from, m); break;
                 case 'bye':
                     removePeer(from);
                     break;
@@ -3034,7 +3056,8 @@
             lastNetNote = '';
             const mine = net = new Net(id, onNetMessage, {
                 password: isPrivate ? code : null,                                             // the room code doubles as the encryption password
-                onPeer: (pid) => { if (net === mine) net.send({ ...helloMsg(false), to: pid }); },     // someone's connection just came up: introduce ourselves
+                onPeer: (pid) => { if (net === mine) { net.send({ ...helloMsg(false), to: pid }); emuOnPeer(pid); } },
+                onStream: (stream, pid) => { if (net === mine) emuOnStream(stream, pid); },     // someone's connection just came up: introduce ourselves
                 onProgress: (pid, pct) => { const q = peers.get(pid); if (q) { q.last = Date.now(); if (q.av) { q.av.pct = pct; q.av.progress = Date.now(); renderPlayersSoon(); } } },     // a big avatar is arriving: that player is alive, and we can show how far it is
                 onStatus: showNetStatus
             });
@@ -3083,6 +3106,7 @@
 
         function leaveRoom() {
             if (!room) return;
+            emuReset();
             net.send({ t: 'bye' });
             net.close();
             [...peers.keys()].forEach((id) => removePeer(id, false));
@@ -5600,7 +5624,7 @@
             if (kind === 'vdo') return sanitizeVdo(m);
             return null;
         }
-        const wireOf = (s) => (s.kind === 'yt' ? { kind: 'yt', id: s.id, start: Math.floor(screenOffsetNow(s)) } : { kind: 'vdo', view: s.view, room: s.room, password: s.password, scene: s.scene });
+        const wireOf = (s) => (s.kind === 'game' ? null : s.kind === 'yt' ? { kind: 'yt', id: s.id, start: Math.floor(screenOffsetNow(s)) } : { kind: 'vdo', view: s.view, room: s.room, password: s.password, scene: s.scene });
         const screenOffsetNow = (s) => (s.start || 0) + (Date.now() - s.at) / 1000;
         // The id is validated against a strict pattern before it ever reaches a URL.
         function ytEmbedUrl(id, start) {
@@ -5611,6 +5635,7 @@
         function srcLabel(s) {
             if (s.kind === 'yt') return 'YouTube \u00b7 youtube.com/watch?v=' + s.id;
             if (s.kind === 'vdo') return 'vdo.ninja \u00b7 ' + (s.view ? 'view ' + s.view : 'room ' + s.room + (s.scene !== null ? ' (scene)' : ''));
+            if (s.kind === 'game') return 'Retro game \u00b7 ' + s.name + ' (' + (EMU_SYS[s.sys] || '') + ')';
             if (s.kind === 'file') return s.name + (screenState.queue.length > 1 ? `  (${screenState.qi + 1} of ${screenState.queue.length})` : '');
             try { return (s.kind === 'video' ? 'Video \u00b7 ' : 'Web page \u00b7 ') + new URL(s.url).host; } catch (e) { return s.url; }
         }
@@ -5652,11 +5677,18 @@
         }
         function disposeFrame() {
             if (!screenFrame) return;
-            if (screenFrame.tagName === 'VIDEO') { screenFrame.pause(); screenFrame.removeAttribute('src'); screenFrame.load(); } else screenFrame.src = 'about:blank';
+            if (screenFrame.tagName === 'VIDEO') { screenFrame.pause(); screenFrame.srcObject = null; screenFrame.removeAttribute('src'); screenFrame.load(); } else screenFrame.src = 'about:blank';
             screenFrame.remove();
             screenFrame = null;
         }
         function buildMedia(src) {
+            if (src.kind === 'game') {                                  // the room's game: a live picture-and-sound stream
+                const v = document.createElement('video');
+                v.autoplay = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.muted = screenState.muted; v.volume = clamp(screenState.volume / 100, 0, 1);
+                v.style.cssText = 'width:1280px;height:720px;display:block;background:#000;object-fit:contain;image-rendering:pixelated;';
+                if (EMU.stream) v.srcObject = EMU.stream;
+                return v;
+            }
             if (src.kind === 'video' || src.kind === 'file') {
                 const v = document.createElement('video');
                 v.src = src.url; v.autoplay = true; v.preload = 'auto'; v.playsInline = true; v.setAttribute('playsinline', '');
@@ -5739,6 +5771,7 @@
         // the TV's power button: first stops what only I am watching, then (if nothing private is on) stops the shared feed for everyone
         function stopTv({ from = null, quiet = false } = {}) {
             if (!from) {
+                if (!screenState.local && screenState.shared && screenState.shared.kind === 'game') { emuStop(); return; }
                 if (screenState.local) clearLocal();
                 else if (screenState.shared) { screenState.shared = null; net && net.send({ t: 'screenStop' }); }
                 else return;
@@ -5926,11 +5959,11 @@
             $('screen-fade').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition ' + (screenState.fade ? 'bg-psGlow text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20');
             $('screen-vol').value = screenState.volume;
             $('tv-full').disabled = !src; $('tv-full').classList.toggle('opacity-40', !src);
-            $('tv-transport').classList.toggle('hidden', !tvVideo());
+            $('tv-transport').classList.toggle('hidden', !tvVideo() || !!(src && src.kind === 'game'));
             const multi = screenState.queue.length > 1 && src && src.kind === 'file';
             $('tv-prev').classList.toggle('hidden', !multi); $('tv-next').classList.toggle('hidden', !multi);
             const open = $('screen-open');
-            const href = !src ? 'https://www.youtube.com/' : src.kind === 'yt' ? `https://www.youtube.com/watch?v=${src.id}&t=${Math.floor(screenOffsetNow(src))}s` : src.kind === 'vdo' ? vdoUrl(src).replace(/&?cleanoutput=&autostart=$/, '') : src.kind === 'file' ? null : src.url;
+            const href = !src ? 'https://www.youtube.com/' : src.kind === 'yt' ? `https://www.youtube.com/watch?v=${src.id}&t=${Math.floor(screenOffsetNow(src))}s` : src.kind === 'vdo' ? vdoUrl(src).replace(/&?cleanoutput=&autostart=$/, '') : src.kind === 'file' || src.kind === 'game' ? null : src.url;
             open.classList.toggle('hidden', !href); if (href) open.href = href;
             const rec = tvRecent(), box = $('tv-recent');
             box.classList.toggle('hidden', !rec.length);
@@ -5967,6 +6000,269 @@
             if (Math.hypot(localActor.group.position.x - SCREEN.x, localActor.group.position.z - SCREEN.z) > SCREEN.reach) { sysChat('Walk closer to the TV and press F.'); return; }
             openScreenPanel();
         }
+
+        /* ------------------------------------------------------------------ *
+         *  Retro games on the TV. One person loads a game they own (EmulatorJS, a browser emulator, runs in a hidden frame on their machine);
+         *  its picture and sound are streamed to everyone in the room over the same peer-to-peer connections, and each person who "plugs in"
+         *  as player 1-4 sends their own keyboard / controller presses back to the host, who feeds them into that player's port.
+         * ------------------------------------------------------------------ */
+        const EMU_SYS = { nes: 'Nintendo (NES)', snes: 'Super Nintendo', segaMD: 'Sega Genesis / Mega Drive', segaMS: 'Sega Master System', gb: 'Game Boy / Color', gba: 'Game Boy Advance', n64: 'Nintendo 64', psx: 'PlayStation', arcade: 'Arcade / Neo Geo' };
+        const EMU_EXT = { nes: 'nes', fds: 'nes', unf: 'nes', sfc: 'snes', smc: 'snes', fig: 'snes', md: 'segaMD', gen: 'segaMD', smd: 'segaMD', sms: 'segaMS', gb: 'gb', gbc: 'gb', gba: 'gba', z64: 'n64', n64: 'n64', v64: 'n64', cue: 'psx', pbp: 'psx', chd: 'psx', iso: 'psx', zip: 'arcade' };
+        // keyboard -> RetroPad button numbers (0 B, 1 Y, 2 Select, 3 Start, 4-7 up/down/left/right, 8 A, 9 X, 10 L, 11 R, 12 L2, 13 R2, 14 L3, 15 R3)
+        const EMU_KEYS = { ArrowUp: 4, KeyW: 4, ArrowDown: 5, KeyS: 5, ArrowLeft: 6, KeyA: 6, ArrowRight: 7, KeyD: 7, KeyZ: 0, KeyJ: 0, KeyX: 8, KeyK: 8, KeyC: 1, KeyU: 1, KeyV: 9, KeyI: 9, KeyQ: 10, KeyE: 11, Digit1: 12, Digit3: 13, Enter: 3, Space: 3, ShiftLeft: 2, ShiftRight: 2, Backspace: 2 };
+        const EMU_PAD = [[0, 0], [1, 8], [2, 1], [3, 9], [4, 10], [5, 11], [6, 12], [7, 13], [8, 2], [9, 3], [10, 14], [11, 15], [12, 4], [13, 5], [14, 6], [15, 7]];   // standard gamepad button -> RetroPad button
+        const EMU_CDN = 'https://cdn.emulatorjs.org/stable/data/';
+        const EMU = { on: false, isHost: false, host: null, hostName: '', sys: '', name: '', slots: ['', '', '', ''], mine: -1, playing: false, wantPlay: false, frame: null, stream: null, streams: new Map(), urls: [], applied: [], last: '', lastAt: 0, kb: new Set(), padMask: 0, padAx: [0, 0, 0, 0], padHold: 0, bios: null, status: '', token: 0, timer: null, started: false };
+        const emuSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        const emuNameOf = (id) => (id === me.id ? me.name : ((peers.get(id) || {}).name || 'Player'));
+        const emuSetStatus = (t) => { EMU.status = t || ''; renderEmu(); };
+
+        // runs INSIDE the hidden frame, before the emulator loads: settings for the emulator, and a tap on its audio so it can be streamed
+        function emuInner(cfg) {
+            var Orig = AudioNode.prototype.connect; window.__taps = [];
+            function setup(c) {
+                if (c.__oasis) return; c.__oasis = true;
+                var d = c.createMediaStreamDestination(), g = c.createGain(); g.gain.value = 0; Orig.call(g, c.destination);
+                c.__tap = d; c.__sil = g; window.__taps.push(d.stream);
+            }
+            AudioNode.prototype.connect = function (dest) {
+                try { var c = this.context; if (dest && c && dest === c.destination && c.createMediaStreamDestination) { setup(c); Orig.call(this, c.__tap); Orig.call(this, c.__sil); return dest; } } catch (e) { /* fall through */ }
+                return Orig.apply(this, arguments);
+            };
+            window.EJS_player = '#g'; window.EJS_core = cfg.core; window.EJS_gameUrl = cfg.url; window.EJS_gameName = cfg.name; window.EJS_pathtodata = cfg.data;
+            window.EJS_startOnLoaded = true; window.EJS_threads = false; window.EJS_volume = 1;
+            window.EJS_defaultControls = { 0: {}, 1: {}, 2: {}, 3: {} };            // the emulator's own key / pad handling is off: Oasis feeds it every player's presses
+            if (cfg.bios) window.EJS_biosUrl = cfg.bios;
+            window.EJS_onGameStart = function () { parent.postMessage({ oasisEmu: 'start' }, '*'); };
+        }
+        function emuDoc(cfg) {
+            const j = JSON.stringify(cfg).replace(/</g, '\\u003c');
+            return '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#g{width:100%;height:100%}</style></head><body><div id="g"></div><script>(' + emuInner.toString() + ')(' + j + ');<\/script><script src="' + cfg.loader.replace(/"/g, '') + '"><\/script></body></html>';
+        }
+        const emuGM = () => { const w = EMU.frame && EMU.frame.contentWindow; return w && w.EJS_emulator && w.EJS_emulator.gameManager && w.EJS_emulator.gameManager.simulateInput ? w.EJS_emulator.gameManager : null; };
+        window.addEventListener('message', (e) => { if (EMU.frame && e.source === EMU.frame.contentWindow && e.data && e.data.oasisEmu === 'start') EMU.started = true; });
+
+        // ---- host: load the game, capture its picture and sound
+        async function emuStart(file) {
+            if (!file) return;
+            if (!room || !hasScreen()) { emuSetStatus('Go to a room with a TV first (the Central Mall or your Harbor Studio).'); return; }
+            if (EMU.on) { emuSetStatus(EMU.isHost ? 'Stop the current game first.' : `${EMU.hostName} already has a game on. Ask them to stop it first.`); return; }
+            const sys = $('emu-sys').value || EMU_EXT[(file.name.split('.').pop() || '').toLowerCase()] || '';
+            if (!sys) { emuSetStatus('I cannot tell which console that file is for. Pick the console from the list, then load it again.'); return; }
+            if (file.size > 1.2e9) { emuSetStatus('That file is over 1.2 GB, which is too large.'); return; }
+            const token = ++EMU.token;
+            const url = URL.createObjectURL(file), urls = [url]; let bios = '';
+            if (EMU.bios) { bios = URL.createObjectURL(EMU.bios); urls.push(bios); }
+            Object.assign(EMU, { on: true, isHost: true, host: me.id, hostName: me.name, sys, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), slots: [me.id, '', '', ''], mine: 0, wantPlay: false, urls, stream: null, started: false, applied: [], last: '' });
+            const f = document.createElement('iframe');
+            f.id = 'emu-frame'; f.setAttribute('allow', 'autoplay; gamepad; fullscreen');
+            f.style.cssText = 'position:fixed;left:-700px;top:0;width:640px;height:480px;border:0;pointer-events:none;';
+            f.srcdoc = emuDoc({ core: sys, url, bios, name: EMU.name, data: window.__EMU_DATA || EMU_CDN, loader: window.__EMU_LOADER || EMU_CDN + 'loader.js' });
+            document.body.appendChild(f); EMU.frame = f;
+            emuShowOnTv(me.name); emuBroadcast(); renderEmu();
+            emuSetStatus(`Loading ${EMU_SYS[sys]}... the first time, the emulator core downloads from cdn.emulatorjs.org (a few MB).`);
+            const t0 = Date.now();
+            while (EMU.token === token && !EMU.started && Date.now() - t0 < 240000) await emuSleep(400);
+            if (EMU.token !== token) return;
+            const cv = EMU.started && f.contentDocument && f.contentDocument.querySelector('canvas');
+            if (!cv || !cv.captureStream) { emuSetStatus('The game did not start (the core may not support that file, or a BIOS is missing). Stop and try another file.'); return; }
+            const tracks = [...cv.captureStream(60).getVideoTracks()];
+            for (let i = 0; i < 12 && !(f.contentWindow.__taps || []).length; i++) await emuSleep(300);
+            if (EMU.token !== token) return;
+            for (const s of f.contentWindow.__taps || []) tracks.push(...s.getAudioTracks());
+            EMU.stream = new MediaStream(tracks);
+            if (net) for (const id of net.route.keys()) emuAddStreamTo(id);
+            emuAttach();
+            clearInterval(EMU.timer); EMU.timer = setInterval(() => { if (EMU.on && EMU.isHost) emuBroadcast(); }, 5000);
+            emuSetStatus('');
+            sysChat(`${EMU_SYS[sys]}: "${EMU.name}" is on the TV. You are player 1. Friends can plug in from the TV panel (F). Press P to play, Esc to step away.`);
+        }
+        function emuAddStreamTo(pid) {
+            const l = net && net.route.get(pid);
+            if (l && EMU.stream) { try { l.room.addStream(EMU.stream, { target: pid }); } catch (e) { console.warn('could not send the game picture', e); } }
+        }
+        function emuOnPeer(pid) { if (EMU.on && EMU.isHost) { emuBroadcast(pid); emuAddStreamTo(pid); } }
+        function emuOnStream(stream, pid) {
+            EMU.streams.set(pid, stream);
+            if (EMU.on && !EMU.isHost && EMU.host === pid) { EMU.stream = stream; emuAttach(); }
+        }
+        function emuAttach() {                                       // point the TV's video at the stream
+            const s = activeSrc();
+            if (screenFrame && screenFrame.tagName === 'VIDEO' && s && s.kind === 'game' && EMU.stream && screenFrame.srcObject !== EMU.stream) { screenFrame.srcObject = EMU.stream; screenFrame.play().catch(() => { screenFrame.muted = true; screenState.muted = true; screenFrame.play().catch(() => {}); renderScreenPanel(); }); }
+        }
+        function emuShowOnTv(by) {
+            if (screenState.local) clearLocal();
+            screenState.shared = { kind: 'game', name: EMU.name, sys: EMU.sys, host: EMU.host, by, at: Date.now(), seq: ++screenState.seq };
+            screenState.muted = false;
+            applyScreen(); screenApplyAudio(); renderScreenPanel();
+        }
+        function emuHideFromTv() {
+            if (screenState.shared && screenState.shared.kind === 'game') { screenState.shared = null; applyScreen(); screenApplyAudio(); renderScreenPanel(); }
+        }
+        function emuBroadcast(to) { if (net && EMU.on && EMU.isHost) net.send({ t: 'emu', on: true, sys: EMU.sys, name: EMU.name, slots: EMU.slots, ...(to ? { to } : {}) }); }
+        function emuStop() {
+            if (!EMU.on) return;
+            if (!EMU.isHost) { sysChat(`Only ${EMU.hostName} can stop the game. You can unplug your controller from the TV panel.`); return; }
+            net && net.send({ t: 'emu', on: false });
+            emuTeardown();
+            sysChat('You stopped the game.');
+        }
+        function emuTeardown() {
+            clearInterval(EMU.timer); EMU.timer = null; EMU.token++;
+            emuSetPlaying(false);
+            if (EMU.isHost && EMU.stream && net) for (const [id, l] of net.route) { try { l.room.removeStream(EMU.stream, { target: id }); } catch (e) { /* gone */ } }
+            if (EMU.isHost && EMU.stream) EMU.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) { /* ended */ } });
+            if (EMU.frame) { EMU.frame.remove(); EMU.frame = null; }
+            EMU.urls.forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* none */ } }); EMU.urls = [];
+            Object.assign(EMU, { on: false, isHost: false, host: null, hostName: '', sys: '', name: '', slots: ['', '', '', ''], mine: -1, wantPlay: false, stream: null, applied: [], last: '', started: false, status: '' });
+            emuHideFromTv(); renderEmu();
+        }
+        const emuReset = () => { if (!EMU.on) return; if (EMU.isHost && net) net.send({ t: 'emu', on: false }); emuTeardown(); };
+
+        // ---- plugging in
+        function emuAssign(id, slot) {
+            if (!EMU.on || !EMU.isHost) return false;
+            const want = Number.isInteger(slot) && slot >= 0 && slot < 4 ? slot : -1;
+            if (want >= 0 && EMU.slots[want] && EMU.slots[want] !== id) return false;
+            const s = want >= 0 ? want : (EMU.slots.includes(id) ? EMU.slots.indexOf(id) : EMU.slots.indexOf(''));
+            if (s < 0) return false;
+            emuFree(id, true);
+            EMU.slots[s] = id;
+            if (id === me.id) { EMU.mine = s; if (EMU.wantPlay) { EMU.wantPlay = false; emuSetPlaying(true); } }
+            emuBroadcast(); renderEmu(); return true;
+        }
+        function emuFree(id, quiet) {
+            const s = EMU.slots.indexOf(id);
+            if (s < 0) return;
+            EMU.slots[s] = ''; emuApply(s, 0, [0, 0, 0, 0]); EMU.applied[s] = null;
+            if (id === me.id) { EMU.mine = -1; emuSetPlaying(false); }
+            if (!quiet) { emuBroadcast(); renderEmu(); }
+        }
+        function emuJoin(slot) {
+            if (!EMU.on) return;
+            EMU.wantPlay = true;
+            if (EMU.isHost) { if (!emuAssign(me.id, slot)) { EMU.wantPlay = false; emuSetStatus('That player slot is taken.'); } }
+            else net && net.send({ t: 'emujoin', slot, to: EMU.host });
+        }
+        function emuLeaveSlot() {
+            if (EMU.mine < 0) return;
+            EMU.wantPlay = false; emuSetPlaying(false);
+            if (EMU.isHost) emuFree(me.id); else net && net.send({ t: 'emuleave', to: EMU.host });
+        }
+        function emuPeerGone(id) {
+            if (!EMU.on) return;
+            if (EMU.isHost) { if (EMU.slots.includes(id)) emuFree(id); }
+            else if (EMU.host === id) { sysChat(`${EMU.hostName} left, so the game ended.`); emuTeardown(); }
+        }
+        function emuOnState(from, m) {
+            const p = peers.get(from);
+            if (!p || !room || !SCREEN_SITES[room.map]) return;
+            if (m.on === false) { if (EMU.on && !EMU.isHost && EMU.host === from) { sysChat(`${p.name} stopped the game.`); emuTeardown(); } return; }
+            if (EMU.on && (EMU.isHost || EMU.host !== from)) return;                 // somebody is already hosting
+            const sys = typeof m.sys === 'string' && EMU_SYS[m.sys] ? m.sys : '';
+            if (!sys) return;
+            const slots = (Array.isArray(m.slots) ? m.slots : []).slice(0, 4).map((id) => (typeof id === 'string' && id.length < 40 && (id === me.id || peers.has(id)) ? id : ''));
+            while (slots.length < 4) slots.push('');
+            const fresh = !EMU.on, prev = EMU.mine;
+            Object.assign(EMU, { on: true, isHost: false, host: from, hostName: p.name, sys, name: String(m.name || 'Game').slice(0, 60), slots, mine: slots.indexOf(me.id) });
+            if (fresh) { EMU.stream = EMU.streams.get(from) || null; emuShowOnTv(p.name); sysChat(`${p.name} put "${EMU.name}" (${EMU_SYS[sys]}) on the TV. Open the TV panel (F) to plug in as a player.`); emuAttach(); }
+            if (EMU.mine >= 0 && prev < 0 && EMU.wantPlay) { EMU.wantPlay = false; emuSetPlaying(true); }
+            if (EMU.mine < 0 && prev >= 0) emuSetPlaying(false);
+            renderEmu();
+        }
+        function emuOnJoin(from, m) { if (EMU.on && EMU.isHost && peers.has(from)) emuAssign(from, m.slot); }
+        function emuOnLeave(from) { if (EMU.on && EMU.isHost) emuFree(from); }
+        function emuOnInput(from, m) {
+            if (!EMU.on || !EMU.isHost) return;
+            const s = EMU.slots.indexOf(from); if (s < 0) return;
+            const a = Array.isArray(m.a) ? m.a : [];
+            emuApply(s, Number.isInteger(m.m) ? m.m & 0xffff : 0, [0, 1, 2, 3].map((i) => (Number.isFinite(a[i]) ? clamp(Math.round(a[i]), -127, 127) / 127 : 0)));
+        }
+        // host: press / release this player's buttons in the emulator
+        function emuApply(slot, mask, ax) {
+            const gm = emuGM(); if (!gm || slot < 0) return;
+            const prev = EMU.applied[slot] || { m: 0, a: [0, 0, 0, 0] };
+            try {
+                for (let i = 0; i < 16; i++) { const n = (mask >> i) & 1, o = (prev.m >> i) & 1; if (n !== o) gm.simulateInput(slot, i, n); }
+                if (EMU.sys === 'n64' || EMU.sys === 'psx') for (let k = 0; k < 4; k++) if (ax[k] !== prev.a[k]) { const v = Math.round(ax[k] * 32767); gm.simulateInput(slot, 16 + k * 2, v > 0 ? v : 0); gm.simulateInput(slot, 17 + k * 2, v < 0 ? -v : 0); }
+            } catch (e) { console.warn('emulator input failed', e); }
+            EMU.applied[slot] = { m: mask, a: ax.slice() };
+        }
+
+        // ---- my own keyboard / controller
+        function emuPush(force) {
+            let m = 0; EMU.kb.forEach((c) => { m |= 1 << EMU_KEYS[c]; }); m |= EMU.padMask;
+            if (!EMU.playing) m = 0;
+            const ax = EMU.playing ? EMU.padAx.map((v) => Math.round(v / 16) * 16) : [0, 0, 0, 0], key = m + '|' + ax.join(',');
+            if (!force && key === EMU.last) return;
+            const now = performance.now(), axOnly = EMU.last.split('|')[0] === String(m);
+            if (!force && axOnly && now - EMU.lastAt < 33) return;
+            EMU.last = key; EMU.lastAt = now;
+            if (EMU.mine < 0 || !EMU.on) return;
+            if (EMU.isHost) emuApply(EMU.mine, m, ax.map((v) => v / 127));
+            else net && net.send({ t: 'emuin', to: EMU.host, m, a: ax });
+        }
+        function emuSetPlaying(on) {
+            if (on && (!EMU.on || EMU.mine < 0)) return;
+            if (EMU.playing === on) return;
+            EMU.playing = on;
+            if (on) { closeScreenPanel(); closeStart(); closeChatBar && closeChatBar(); Object.keys(keys).forEach((k) => (keys[k] = false)); }
+            else { EMU.kb.clear(); EMU.padMask = 0; EMU.padAx = [0, 0, 0, 0]; EMU.padHold = 0; }
+            emuPush(true); renderEmu();
+        }
+        function emuPadSample(gp, b, dt) {
+            let m = 0; for (const [i, bit] of EMU_PAD) if (b[i]) m |= 1 << bit;
+            const ax = [0, 1, 2, 3].map((i) => { const v = gp.axes[i] || 0; return Math.abs(v) < PAD.dead ? 0 : clamp(v, -1, 1); });
+            if (ax[0] < -0.5) m |= 1 << 6; if (ax[0] > 0.5) m |= 1 << 7; if (ax[1] < -0.5) m |= 1 << 4; if (ax[1] > 0.5) m |= 1 << 5;
+            EMU.padMask = m; EMU.padAx = ax.map((v) => Math.round(v * 127));
+            if (b[8]) { EMU.padHold += dt; if (EMU.padHold > 1.2) { emuSetPlaying(false); return; } } else EMU.padHold = 0;   // hold Back / Select to step away from the game
+            emuPush();
+        }
+        function emuKeyDown(e) {
+            if (!EMU.playing || isTyping(e)) return;
+            e.preventDefault(); e.stopImmediatePropagation();
+            if (e.code === 'Escape') { emuSetPlaying(false); return; }
+            if (EMU_KEYS[e.code] !== undefined && !e.repeat) { EMU.kb.add(e.code); emuPush(); }
+        }
+        function emuKeyUp(e) {
+            if (EMU.kb.has(e.code)) { EMU.kb.delete(e.code); emuPush(); }
+            if (EMU.playing) { e.preventDefault(); e.stopImmediatePropagation(); }
+        }
+
+        // ---- the TV panel's "Retro games" box and the on-screen hint
+        function renderEmu() {
+            const box = $('emu-box'); if (!box) return;
+            $('emu-status').textContent = EMU.status;
+            $('emu-load').disabled = EMU.on; $('emu-load').classList.toggle('opacity-40', EMU.on);
+            $('emu-stop').classList.toggle('hidden', !(EMU.on && EMU.isHost));
+            $('emu-biosname').textContent = EMU.bios ? EMU.bios.name.slice(0, 24) : '';
+            const row = $('emu-slots'); row.replaceChildren();
+            for (let i = 0; i < 4; i++) {
+                const id = EMU.slots[i], mine = id && id === me.id, b = document.createElement('button');
+                b.type = 'button'; b.disabled = !EMU.on || (!!id && !mine);
+                b.className = 'px-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition truncate ' + (mine ? 'bg-psGlow text-white' : id ? 'bg-white/15 text-gray-200' : 'bg-white/10 hover:bg-white/20 text-gray-300') + (b.disabled && !id ? ' opacity-40' : '');
+                b.textContent = `P${i + 1} · ` + (id ? emuNameOf(id) : (EMU.on ? 'plug in' : 'free'));
+                b.title = mine ? 'Click to unplug' : id ? 'Taken' : 'Plug in as player ' + (i + 1);
+                b.addEventListener('click', () => { if (mine) emuLeaveSlot(); else emuJoin(i); });
+                row.append(b);
+            }
+            const play = $('emu-play'); play.classList.toggle('hidden', !(EMU.on && EMU.mine >= 0));
+            play.textContent = EMU.playing ? 'Step away (Esc)' : `Play as P${EMU.mine + 1}`;
+            const hud = $('emu-hud'); hud.classList.toggle('hidden', !EMU.playing);
+            hud.textContent = `🎮 Player ${EMU.mine + 1} · ${EMU.name} · Esc (or hold Back on a controller) to step away`;
+        }
+        function setupEmu() {
+            window.addEventListener('keydown', emuKeyDown, true); window.addEventListener('keyup', emuKeyUp, true);
+            $('emu-sys').replaceChildren(...[['', 'Auto-detect console'], ...Object.entries(EMU_SYS)].map(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; o.style.color = '#000'; return o; }));
+            $('emu-load').addEventListener('click', () => $('emu-file').click());
+            $('emu-file').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) emuStart(f); });
+            $('emu-biosbtn').addEventListener('click', () => $('emu-bios').click());
+            $('emu-bios').addEventListener('change', (e) => { EMU.bios = e.target.files[0] || null; e.target.value = ''; renderEmu(); });
+            $('emu-stop').addEventListener('click', emuStop);
+            $('emu-play').addEventListener('click', () => emuSetPlaying(!EMU.playing));
+            renderEmu();
+        }
+        window.__emu = { state: () => ({ on: EMU.on, host: EMU.isHost, slots: EMU.slots.slice(), mine: EMU.mine, playing: EMU.playing, sys: EMU.sys, stream: !!EMU.stream, tracks: EMU.stream ? EMU.stream.getTracks().map((t) => t.kind) : [], status: EMU.status }), start: emuStart, join: emuJoin, play: (v) => emuSetPlaying(v !== false), stop: emuStop, calls: () => { const w = EMU.frame && EMU.frame.contentWindow; return w && w.__calls ? w.__calls.slice() : []; } };
 
         function buildParticleEffects() {
             const count = 220;
@@ -6505,6 +6801,7 @@
             const over = padOverlay();
             if (!PAD.active) { PAD.active = true; PAD.name = (gp.id || 'controller').replace(/\(.*?\)/g, '').trim().slice(0, 40); try { sysChat('Controller connected: ' + PAD.name + '. Left stick moves, right stick turns the camera, A jumps, X/Y/B/LB/RB are emotes, Start opens the menu.'); } catch (e) { /* chat not ready */ } }
             padMove.x = padMove.z = 0; padMove.run = false;
+            if (EMU.playing) { PAD.rx = PAD.ry = PAD.zoom = 0; emuPadSample(gp, b, dt); PAD.prev = b; return; }       // game mode: the controller belongs to the game
 
             if (over || typing) {
                 // menu mode: move a highlight around the open window
@@ -6729,7 +7026,7 @@
         }
 
         function setupInputListeners() {
-            setupEquip();
+            setupEquip(); setupEmu();
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'Escape') {
                     closeStart(); closeEquip();
@@ -6768,6 +7065,7 @@
                     case 'Digit4': performEmote('spin'); break;
                     case 'Digit5': performEmote('sit'); break;
                     case 'KeyF': toggleScreenPanel(); break;
+                    case 'KeyP': emuSetPlaying(true); break;
                 }
             });
 
