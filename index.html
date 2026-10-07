@@ -634,7 +634,7 @@
             </div>
             <div class="eq-foot"><span>G: open / close &nbsp;·&nbsp; D-pad: move &nbsp;·&nbsp; A: select &nbsp;·&nbsp; B: back</span><span>VRM or GLB items</span></div>
         </div>
-        <input id="eq-file" type="file" accept=".vrm,.glb" multiple class="hidden">
+        <input id="eq-file" type="file" accept=".vrm,.glb,.vroidcustomitem" multiple class="hidden">
     </div>
 
 <div id="char-modal" class="hidden fixed inset-0 z-[58] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -1662,6 +1662,14 @@
         const BONE_NAMES = ['hips', 'spine', 'chest', 'head', 'leftUpperArm', 'leftLowerArm', 'rightUpperArm', 'rightLowerArm',
             'leftUpperLeg', 'leftLowerLeg', 'rightUpperLeg', 'rightLowerLeg'];
 
+        const _lkA = new THREE.Vector3(), _lkB = new THREE.Vector3(), _lkE = new THREE.Euler(), _lkQ = new THREE.Quaternion();
+        const actorById = (id) => (id === me.id ? localActor : (peers.get(id) || {}).actor || null);
+        function lookPoint(a, out) {
+            const hb = a.bones && a.bones.head;
+            if (hb) { a.group.updateWorldMatrix(true, false); hb.getWorldPosition(out); out.y += 0.06; }
+            else out.set(a.group.position.x, a.group.position.y + 1.5, a.group.position.z);
+            return out;
+        }
         class Actor {
             constructor(id, name) {
                 this.id = id;
@@ -1687,6 +1695,7 @@
                 this.customAnims = null;   // { slot: { src: 'custom'|'male'|'female', ... } } chosen for this character
                 this.emoteW = 0; this.emoteT = 0; this.emoteClip = null; this.sitSmooth = 0;   // clip-based emote layer (sit)
                 this.snap = {}; this.snapHipsY = 0; this.tmpQ = new THREE.Quaternion();
+                this.lookId = null; this.lk = { y: 0, p: 0, vy: 0, vp: 0, raw: 0, w: 0, delay: 0, had: false, ey: 0, ep: 0, seed: Math.random() * 100 };   // who this character is looking at, and the smoothed head state
 
                 this.phase = Math.random() * 6;
                 this.walkAmt = 0;
@@ -2175,8 +2184,41 @@
                 r.root.position.y = p.bob - 0.58 * sit;
             }
 
+
+            // Where the head should point so it looks at lookId: yaw/pitch relative to the body, eased and limited so it reads as a person glancing, not a turret
+            updateLook(dt, now) {
+                const L = this.lk, b = this.bones;
+                let ty = 0, tp = 0, has = false;
+                const other = this.lookId ? actorById(this.lookId) : null;
+                if (other && other !== this && other.group.parent && !this.emote) {
+                    const a = lookPoint(other, _lkA), me2 = lookPoint(this, _lkB);
+                    const dx = a.x - me2.x, dz = a.z - me2.z, dy = a.y - me2.y, hd = Math.hypot(dx, dz);
+                    if (hd < 30 && hd > 0.15) {
+                        let yaw = Math.atan2(dx, dz) - this.group.rotation.y;
+                        yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
+                        L.raw = yaw;
+                        if (Math.abs(yaw) < 2.1) {       // can't look behind yourself: the head eases back to centre instead
+                            has = true;
+                            ty = clamp(yaw, -1.2, 1.2);
+                            tp = clamp(Math.atan2(dy, hd), -0.5, 0.42);
+                        }
+                    }
+                }
+                if (!has) L.raw = 0;
+                if (has && !L.had) L.delay = 0.18 + Math.random() * 0.2;   // a beat before reacting
+                L.had = has;
+                if (L.delay > 0) { L.delay -= dt; ty = L.y; tp = L.p; }
+                // slight drift so it never freezes dead-still on the target
+                if (has) { ty += Math.sin(now * 0.9 + L.seed) * 0.018; tp += Math.sin(now * 1.3 + L.seed * 2) * 0.012; }
+                // critically damped spring: quick start, soft landing, no overshoot
+                const om = has ? 9 : 5;
+                const sp = (x, v, t) => { const e = Math.exp(-om * dt), d = x - t, nv = (v + om * d) * dt; return [t + (d + nv) * e, (v - om * nv) * e]; };
+                [L.y, L.vy] = sp(L.y, L.vy, ty); [L.p, L.vp] = sp(L.p, L.vp, tp);
+                L.w += ((has ? 1 : 0) - L.w) * (1 - Math.exp(-dt * 6));
+            }
             applyVRM(p, dt, now) {
                 const b = this.bones, f = this.flip, half = Math.PI / 2;
+                this.updateLook(dt, now);
 
                 // Base animation layer (idle / walk / run / strafe / jump) was written by updateBase();
                 // emotes (and the fallback when a clip is missing) blend the procedural pose over it.
@@ -2219,6 +2261,23 @@
                         b[n].quaternion.copy(this.snap[n]).slerp(this.tmpQ, 1 - w);
                     }
                     if (b.hips) b.hips.position.set(this.hipsRest.x, lerp(this.snapHipsY, b.hips.position.y, 1 - w), this.hipsRest.z);
+                }
+
+                // Look layer: yaw/pitch shared along chest -> neck -> head, then the eyes lead a little
+                if (Math.abs(this.lk.y) + Math.abs(this.lk.p) > 0.002) {
+                    const parts = [['chest', 0.14, 0.08], ['upperChest', 0.0, 0.0], ['neck', 0.30, 0.30], ['head', 0.50, 0.55]];
+                    for (const [n, ys, ps] of parts) {
+                        if (!b[n] || (!ys && !ps)) continue;
+                        _lkE.set(-this.lk.p * ps * f, this.lk.y * ys, 0, 'YXZ');
+                        _lkQ.setFromEuler(_lkE);
+                        b[n].quaternion.premultiply(_lkQ);
+                    }
+                }
+                if (this.vrm.lookAt && this.vrm.lookAt.applier) {
+                    const la = this.vrm.lookAt, k = 1 - Math.exp(-dt * 14);
+                    this.lk.ey += (clamp(this.lk.y * 0.3, -0.35, 0.35) - this.lk.ey) * k;
+                    this.lk.ep += (clamp(this.lk.p * 0.3, -0.25, 0.25) - this.lk.ep) * k;
+                    la.yaw = this.lk.ey * 57.2958; la.pitch = this.lk.ep * 57.2958;
                 }
 
                 const em = this.vrm.expressionManager;
@@ -2729,7 +2788,7 @@
             if (dirCh && room && !room.isPrivate) dirCh.postMessage({ room: room.id, count: count ?? peers.size + 1 });
         }
 
-        const helloMsg = (reply = false) => ({ t: 'hello', name: me.name, avatarId: myAvatar ? myAvatar.id : null, gender: myAvatar && myAvatar.gender ? myAvatar.gender : 'male', animVer: myAnimVer, eq: eqWire(), scr: screenState.shared ? wireOf(screenState.shared) : null, reply });
+        const helloMsg = (reply = false) => ({ t: 'hello', name: me.name, avatarId: myAvatar ? myAvatar.id : null, gender: myAvatar && myAvatar.gender ? myAvatar.gender : 'male', animVer: myAnimVer, eq: eqWire(), scr: screenState.shared ? wireOf(screenState.shared) : null, lk: localActor && localActor.lookId || null, reply });
 
         function addPeer(id, name) {
             const actor = new Actor(id, name);
@@ -2809,6 +2868,7 @@
          * ------------------------------------------------------------------ */
         const EQ = {
             slots: [
+                { k: 'hair',  n: 'Hair',      ico: '💇', bone: 'head',          fit: 0.30, oy: 0.08, rx: /hair|wig|bangs|ponytail/ },
                 { k: 'head',  n: 'Head',      ico: '🎩', bone: 'head',          fit: 0.30, oy: 0.10, rx: /hat|cap|helm|hood|ribbon|horn|headband|hairpin|crown|tiara|headwear|head/ },
                 { k: 'ears',  n: 'Ears',      ico: '👂', bone: 'head',          fit: 0.07, oy: 0.09, pair: 'leftHand', rx: /ear/ },
                 { k: 'body',  n: 'Body',      ico: '👕', bone: 'chest',         fit: 0.55, rx: /tops|onepiece|jacket|shirt|dress|coat|sweater|uniform|bra|cloth_?body|body_?cloth|robe|armor|armour/ },
@@ -2824,15 +2884,35 @@
             ],
             // which of the avatar's own clothing materials a skinned item replaces (hidden automatically unless turned off)
             hideRx: {
-                head: /hat|cap|helm|headwear|ribbon|horn|headband/, body: /tops|onepiece|jacket|shirt|dress|coat|sweater|uniform|bra|robe/,
+                hair: /hair/, head: /hat|cap|helm|headwear|ribbon|horn|headband/, body: /tops|onepiece|jacket|shirt|dress|coat|sweater|uniform|bra|robe/,
                 legs: /bottoms|pants|skirt|short|trouser|onepiece/, feet: /shoes|boots|socks|sandal/, hands: /glove|gauntlet/
             },
-            maxItemBytes: 24e6, wire: { maxSlots: 12, maxHide: 40 },
+            maxItemBytes: 24e6, wire: { maxSlots: 13, maxHide: 40 },
             bones: ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'leftEye', 'rightEye', 'jaw', 'leftShoulder', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightShoulder', 'rightUpperArm', 'rightLowerArm', 'rightHand',
                 'leftUpperLeg', 'leftLowerLeg', 'leftFoot', 'leftToes', 'rightUpperLeg', 'rightLowerLeg', 'rightFoot', 'rightToes',
                 ...['left', 'right'].flatMap((s) => ['Thumb', 'Index', 'Middle', 'Ring', 'Little'].flatMap((f) => (f === 'Thumb' ? ['Metacarpal', 'Proximal', 'Intermediate', 'Distal'] : ['Proximal', 'Intermediate', 'Distal']).map((p) => s + f + p)))]
         };
         const eqSlot = (k) => EQ.slots.find((s) => s.k === k);
+        // VRoid Studio exports whole avatars: body, face, eyes, hair and clothes in one file. For clothing we keep only the clothing meshes,
+        // so the item does not drag a second head and body onto the wearer. (Hair slot keeps only the hair.)
+        const EQ_BODYMAT = /skin|face|eye|brow|lash|mouth|teeth|tooth|tongue|highlight|iris|white/i;
+        const eqIsHairMat = (n) => /hair/i.test(n);
+        const eqMatNames = (o) => (Array.isArray(o.material) ? o.material : [o.material]).map((m) => String((m && m.name) || '').replace(/ \(Outline\)$/, ''));
+        function eqFilterItem(scene, slot) {
+            const meshes = []; scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
+            const all = meshes.flatMap(eqMatNames);
+            const vroidLike = all.some((n) => /N\d\d_\d+|_(CLOTH|SKIN|HAIR|EYE|FACE)\b/.test(n)) || meshes.some((o) => /^(body|face|hair)(\.|_|$)/i.test(o.name));
+            if (!vroidLike) return { dropped: 0, kept: meshes.length };
+            let dropped = 0;
+            for (const o of meshes) {
+                const ns = eqMatNames(o), n = ns.join('|'), nm = o.name || '';
+                const body = ns.every((x) => EQ_BODYMAT.test(x)) || (!n.trim() && /^(body|face)$/i.test(nm));
+                const hair = ns.some(eqIsHairMat) || /^hair/i.test(nm);
+                const drop = slot === 'hair' ? !hair : (body || hair);
+                if (drop) { o.removeFromParent(); dropped++; }
+            }
+            return { dropped, kept: meshes.length - dropped };
+        }
         let eqItems = [];                                   // the index of items in this browser's storage: { id, name, slot, mode, mats, size, added }
         let eqState = { slots: {}, hide: [], auto: true };  // what the current character wears: slots[k] = { id, tw }
         let eqSel = 'body', eqFor = null, eqAll = false;
@@ -2881,6 +2961,7 @@
         async function eqBuild(actor, k, w, rec) {
             const sl = eqSlot(k), gltf = await new Promise((res, rej) => gltfLoader.parse(inlineGlbImages(rec.buffer), '', res, rej));
             const ivrm = gltf.userData.vrm || null, scene = gltf.scene, hum = actor.vrm.humanoid;
+            if (ivrm) eqFilterItem(scene, k);
             const skinned = [], bonesSeen = new Set(); scene.updateMatrixWorld(true);
             scene.traverse((o) => { if (o.isSkinnedMesh) skinned.push(o); });
             const objs = [], matRefs = [];
@@ -2966,13 +3047,20 @@
         }
         async function eqImportBuffer(name, buffer, slot) {
             if (buffer.byteLength > EQ.maxItemBytes) throw new Error(`"${name}" is ${(buffer.byteLength / 1e6).toFixed(0)} MB; items can be at most ${(EQ.maxItemBytes / 1e6).toFixed(0)} MB.`);
+            { const h = new Uint8Array(buffer, 0, Math.min(4, buffer.byteLength));
+              if (h[0] === 0x50 && h[1] === 0x4b) throw new Error(/\.vroidcustomitem$/i.test(name)
+                  ? `"${name}" is a VRoid Studio custom item. Those files only hold VRoid's own paint-and-shape settings, not a 3D model, so they cannot be worn directly. In VRoid Studio put the item on a model and use Export > VRM (or open the Hair/Clothing editor on that model and export it), then import that .vrm here: only the clothing is taken from it`
+                  : `"${name}" is a zip archive, not a 3D model. Unzip it and import the .vrm or .glb inside`);
+              if (!(h[0] === 0x67 && h[1] === 0x6c && h[2] === 0x54 && h[3] === 0x46) && !/^\s*[{]/.test(new TextDecoder().decode(new Uint8Array(buffer, 0, Math.min(16, buffer.byteLength))))) throw new Error(`"${name}" is not a .vrm / .glb 3D model`); }
             const gltf = await new Promise((res, rej) => gltfLoader.parse(inlineGlbImages(buffer), '', res, rej));
+            let filt = null;
+            if (gltf.userData.vrm) { filt = eqFilterItem(gltf.scene, slot); if (!filt.kept && filt.dropped) { eqDispose(gltf.scene); throw new Error(`"${name}" only contains a ${slot === 'hair' ? 'body with no hair' : 'body, face and hair'} and no ${slot === 'hair' ? 'hair' : 'clothing'} for the ${slot} slot`); } }
             let skin = false; const mats = new Set(); let meshes = 0;
             gltf.scene.traverse((o) => { if (o.isMesh) { meshes++; if (o.isSkinnedMesh) skin = true; (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { const n = String(m.name || '').replace(/ \(Outline\)$/, ''); if (n) mats.add(n); }); } });
             eqDispose(gltf.scene);
             if (!meshes) throw new Error(`"${name}" has no 3D mesh in it.`);
             const id = uid() + uid();
-            const entry = { id, name: name.replace(/\.(vrm|glb)$/i, '').slice(0, 40), slot, mode: skin ? 'skin' : 'attach', mats: [...mats].slice(0, 80), size: buffer.byteLength, added: Date.now() };
+            const entry = { id, name: name.replace(/\.(vrm|glb|vroidcustomitem)$/i, '').slice(0, 40), slot, mode: skin ? 'skin' : 'attach', mats: [...mats].slice(0, 80), size: buffer.byteLength, added: Date.now() };
             await store.put('item:' + id, { id, buffer });
             eqBuf.set(id, buffer); eqItems.push(entry); eqSaveIndex();
             return entry;
@@ -3182,6 +3270,7 @@
                         p.avatarId = null; p.av = null;
                         p.actor.setRobot();
                     } else if (m.avatarId && p.av && p.av.state === 'failed' && Date.now() - p.av.at > 60000) queueAvatar(p);       // asked again later: another try
+                    if (m.lk !== undefined) p.actor.lookId = typeof m.lk === 'string' ? m.lk.slice(0, 40) : null;
                     if (m.eq !== undefined) eqPeerSet(p, m.eq);
                     if (!m.reply) net.send({ ...helloMsg(true), to: from });
                     break;
@@ -3207,6 +3296,11 @@
                         p.actor.resetSprings();
                         p.placed = true;
                     }
+                    break;
+                }
+                case 'look': {
+                    const p = peers.get(from);
+                    if (p) p.actor.lookId = typeof m.id === 'string' && m.id ? m.id.slice(0, 40) : null;
                     break;
                 }
                 case 'chat': {
@@ -6626,7 +6720,7 @@
          *  skylight that throws a patch of real sun on the floor, a glass sliding-door wall onto a deck with a pool, a TV on the wall.
          * ------------------------------------------------------------------ */
         const LOFT = {
-            X0: -4.5, X1: 4.5, Z0: -7, Z1: 7, H: 3.4,                        // the room (metres): 9 wide, 14 long, 3.4 high
+            X0: -4.5, X1: 4.5, Z0: -7, Z1: 7, H: 4.0,                        // the room (metres): 9 wide, 14 long, 4 high
             door: { x0: 2.7, x1: 3.7, z: 6.55 },                              // front door in the near wall: stepping through opens the lobby
             open: { x0: 1.5, x1: 3.0 },                                       // the sliding door that stands open onto the deck
             yard: { x0: -8.9, x1: 8.9, z0: -15.3 },                           // walkable outdoors: the patio, up to the railing at z = -16
@@ -6989,6 +7083,7 @@
         // so it keeps the angle you chose and just gets closer when a wall is behind it. On the deck or in the garden it is free.
         function keepCameraInRoom() {
             if (activeMap !== 'loft') return;
+            if (camera.position.y < 0.25) camera.position.y = 0.25;                       // looking up from low down is allowed, but never from under the floor
             const g = localActor.group.position, c = camera.position, t = controls.target, m = 0.3, { X0, X1, Z0, Z1, H } = LOFT;
             if (g.x < X0 || g.x > X1 || g.z < Z0 + 0.4 || g.z > Z1 + 0.2 || g.y > H) return;
             const lo = [X0 + m, 0.3, Z0 + m], hi = [X1 - m, H - 0.3, Z1 - m], o = [t.x, t.y, t.z], d = [c.x - t.x, c.y - t.y, c.z - t.z];
@@ -7015,7 +7110,7 @@
             if (camera) { camera.far = id === 'loft' ? 1000 : 400; camera.updateProjectionMatrix(); }
             if (id === 'loft') { scene.background = new THREE.Color(0xe9dcc0); scene.fog = new THREE.FogExp2(0xe9dcc0, 0.0042); }
             else { scene.background = new THREE.Color(0x030712); scene.fog = new THREE.FogExp2(0x030712, 0.011); }
-            if (controls) controls.maxDistance = id === 'loft' ? 14 : 20;
+            if (controls) { controls.maxDistance = id === 'loft' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
             selectScreenSite(id);                                    // the TV of the room we are in
             applyScreen();                                          // leaving a room with a TV silences and removes the player
         }
@@ -7032,6 +7127,7 @@
          * ------------------------------------------------------------------ */
         window.__emote = (n) => performEmote(n);
         window.__tp = (x, z) => { if (localActor) localActor.group.position.set(x, 0, z); };
+        window.__cam = (x, y, z) => { camera.position.set(x, y, z); controls.update(); };   // (handy for tests)
         window.__myPos = () => (localActor ? { x: localActor.group.position.x, y: localActor.group.position.y, z: localActor.group.position.z, cam: camera.position.toArray() } : null);   // (handy for tests)
         const padMove = { x: 0, z: 0, run: false };
         const PAD = { dead: 0.2, prev: [], uiHold: 0, uiDir: '', active: false, name: '' };
@@ -7123,6 +7219,7 @@
         window.addEventListener('gamepaddisconnected', () => { PAD.active = false; padMove.x = padMove.z = 0; padMove.run = false; });
 
         const _mv = new THREE.Vector3();
+        let lookTurning = false;
         function updateLocalPlayer(dt) {
             const g = localActor.group;
             _mv.set(0, 0, 0);
@@ -7154,6 +7251,11 @@
                 if (moveIdle > 0.25) moveSpeed = WALK_SPEED;   // a real stop restarts the ramp; a quick tap-turn keeps it
                 const spin = (keys.turnL ? 1 : 0) - (keys.turnR ? 1 : 0);   // Q / E: turn on the spot
                 if (spin) g.rotation.y += spin * TURN_RATE * dt;
+                else if (localActor.lookId && !localActor.emote) {          // looking at someone off to the side: the body follows once the head runs out of range
+                    const raw = localActor.lk.raw;
+                    if (Math.abs(raw) > 0.95) lookTurning = true; else if (Math.abs(raw) < 0.3) lookTurning = false;
+                    if (lookTurning) g.rotation.y += Math.sign(raw) * Math.min(2.6, Math.abs(raw) * 2.2 + 0.4) * dt;
+                }
             }
 
             // Per-map collisions (columns, walls, furniture) and walkable area
@@ -7307,6 +7409,45 @@
             document.querySelectorAll('#start-menu .sm-go').forEach((b) => b.addEventListener('click', () => { closeStart(); if (b.dataset.go === 'tv') toggleScreenPanel(); else $(b.dataset.go).click(); }));
         }
 
+        /* ---- Look targeting: click a player (or press T to cycle) and your head turns to them; others see it too ---- */
+        let lookMarker = null;
+        function setLookTarget(id, announce = true) {
+            id = id && id !== me.id && peers.has(id) ? id : null;
+            if (localActor.lookId === id) return;
+            localActor.lookId = id;
+            net && net.send({ t: 'look', id });
+            if (announce) sysChat(id ? `Looking at ${peers.get(id).name}. (T to switch, click them again to stop)` : 'Stopped looking.');
+        }
+        function cycleLookTarget() {
+            const here = localActor.group.position;
+            const list = [...peers.values()].filter((p) => p.actor.group.parent).sort((a, b) => a.actor.group.position.distanceTo(here) - b.actor.group.position.distanceTo(here));
+            if (!list.length) { sysChat('There is nobody here to look at.'); return; }
+            const i = list.findIndex((p) => p.id === localActor.lookId);
+            setLookTarget(i + 1 < list.length ? list[i + 1].id : (i < 0 ? list[0].id : null));
+        }
+        function updateLookMarker() {
+            const other = localActor && localActor.lookId ? actorById(localActor.lookId) : null;
+            if (localActor && localActor.lookId && !other) setLookTarget(null, false);   // they left
+            if (!other) { if (lookMarker) lookMarker.visible = false; return; }
+            if (!lookMarker) {
+                const c = document.createElement('canvas'); c.width = c.height = 64;
+                const x = c.getContext('2d'); x.fillStyle = '#38bdf8'; x.strokeStyle = '#fff'; x.lineWidth = 5;
+                x.beginPath(); x.moveTo(10, 14); x.lineTo(54, 14); x.lineTo(32, 54); x.closePath(); x.stroke(); x.fill();
+                const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+                lookMarker = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+                lookMarker.scale.set(0.2, 0.2, 1); lookMarker.renderOrder = 999; scene.add(lookMarker);
+            }
+            const hp = lookPoint(other, _lkA);
+            lookMarker.visible = true;
+            lookMarker.position.set(hp.x, hp.y + 0.62 * Math.max(1, other.tweak.scale) + Math.sin(performance.now() / 300) * 0.03, hp.z);
+        }
+        window.__look = { set: setLookTarget, cycle: cycleLookTarget,
+            dbg: () => {   // (handy for tests) head-forward vs direction-to-target angle, in degrees
+                const ang = (a) => { const o = a.lookId && actorById(a.lookId); if (!o || !a.bones.head) return null; const hp = lookPoint(a, new THREE.Vector3()), tp = lookPoint(o, new THREE.Vector3());
+                    const q = a.bones.head.getWorldQuaternion(new THREE.Quaternion()), fw = new THREE.Vector3(0, 0, a.flip).applyQuaternion(q), d = tp.sub(hp).normalize(); return +(Math.acos(clamp(fw.dot(d), -1, 1)) * 57.2958).toFixed(1); };
+                return { id: me.id, me: { lookId: localActor.lookId, y: +localActor.lk.y.toFixed(3), p: +localActor.lk.p.toFixed(3), ang: ang(localActor), ey: +localActor.lk.ey.toFixed(3) }, peers: [...peers.values()].map((p) => ({ id: p.id, lookId: p.actor.lookId, y: +p.actor.lk.y.toFixed(3), ang: ang(p.actor), rot: +p.actor.group.rotation.y.toFixed(2) })) };
+            } };
+
         function performEmote(name) {
             if (!EMOTES[name]) return;
             if (EMOTES[name].hold && localActor.emote === name) name = 'stand';   // using Sit again gets you up
@@ -7357,6 +7498,7 @@
                     case 'KeyQ': keys.turnL = true; break;
                     case 'KeyE': keys.turnR = true; break;
                     case 'KeyV': toggleStrafe(); break;
+                    case 'KeyT': cycleLookTarget(); break;
                     case 'Digit1': performEmote('cheer'); break;
                     case 'Digit2': performEmote('sit'); break;
                     case 'KeyF': toggleScreenPanel(); break;
@@ -7392,6 +7534,11 @@
                 ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
                 ray.setFromCamera(ndc, camera);
                 if (hasScreen() && SCREEN.hit.length && ray.intersectObjects(SCREEN.hit, false).length) { openScreenPanel(); return; }   // click the screen
+                { const pls = [...peers.values()].filter((p) => p.actor.group.parent), hitP = ray.intersectObjects(pls.map((p) => p.actor.group), true)[0], hitProp = ray.intersectObjects(props, true)[0];
+                  if (hitP && (!hitProp || hitP.distance < hitProp.distance)) {
+                      const pp = pls.find((p) => { let o = hitP.object; while (o) { if (o === p.actor.group) return true; o = o.parent; } return false; });
+                      if (pp) { setLookTarget(localActor.lookId === pp.id ? null : pp.id); return; }
+                  } }
                 const hit = ray.intersectObjects(props, true)[0];
                 if (hit) {
                     let o = hit.object;
@@ -7659,6 +7806,7 @@
 
             padUpdate(dt);
             updateLocalPlayer(dt);
+            updateLookMarker();
             localActor.update(dt);
 
             const k = 1 - Math.exp(-dt * 14);
