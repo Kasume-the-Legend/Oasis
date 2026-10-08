@@ -952,6 +952,9 @@
         #chat-panel.home-log #chat-form { border-top: 1px solid rgba(196,224,255,.18) !important; background: rgba(0,0,0,.35) !important; padding: 4px 6px; }
         #chat-panel.home-log #chat-input { font-size: 12.5px !important; padding: 6px 8px !important; font-weight: 600; }
         #chat-panel.home-log #chat-send { color: var(--hm-a) !important; }
+        /* phones: chat sits in the bottom-left corner of the screen frame, beside the bottom bar */
+        html.dc-compact #chat-panel.home-log { left: 8px !important; bottom: 8px !important; width: min(300px, calc(39 * var(--svw))) !important; height: 7.6rem !important; border-radius: 14px !important; }
+        html.dc-compact #chat-panel.home-log #chat-feed { font-size: 11px !important; padding: 5px 8px !important; }
         .hm-say { display: flex; align-items: center; gap: 12px; padding: 7px 8px 7px 8px; border-radius: 999px; background: linear-gradient(180deg, rgba(255,255,255,.22) 0, rgba(255,255,255,.04) 48%, rgba(255,255,255,0) 52%), linear-gradient(180deg, rgba(38,50,76,.94), rgba(9,13,22,.97)); border: 1px solid rgba(196,224,255,.45); box-shadow: 0 16px 44px rgba(0,0,0,.6), 0 0 0 4px rgba(83,189,255,.14), inset 0 1px 0 rgba(255,255,255,.34); backdrop-filter: blur(16px); animation: hmSay .16s ease-out; }
         @keyframes hmSay { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
         .hm-say .hm-sico { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 15px; background: radial-gradient(circle at 50% 100%, #59c3ff, #1560c0 80%); border: 2px solid rgba(255,255,255,.6); box-shadow: inset 0 -3px 6px rgba(0,0,0,.3); }
@@ -1023,6 +1026,20 @@
         .dc-chip { font-weight: 800; } .dc-chip.on { background: linear-gradient(180deg, #4fb8ff, #1470cf) !important; border-color: #bfe6ff !important; }
         #dc-bar { border-radius: 999px !important; bottom: 7.2rem !important; padding: 9px 16px !important; }
         .dc-name { color: #fff !important; letter-spacing: .08em; }
+        /* small screens (phones): slim panel on the left, controls column on the right, panel steps aside while a piece is selected so the piece stays visible and draggable */
+        html.dc-compact #dc-panel { left: 8px !important; top: 66px !important; width: min(250px, calc(44 * var(--svw))) !important; max-height: calc(calc(100 * var(--svh)) - 150px) !important; font-size: 11.5px !important; }
+        html.dc-compact #dc-panel.dc-away { display: none !important; }
+        html.dc-compact .dc-head { padding: 7px 9px !important; gap: 6px !important; flex-wrap: wrap; }
+        html.dc-compact .dc-head b { font-size: 11px !important; letter-spacing: .1em; }
+        html.dc-compact .dc-tabs { padding: 6px 8px 0 !important; gap: 3px !important; }
+        html.dc-compact .dc-tab { font-size: 9.5px !important; padding: 6px 1px !important; letter-spacing: 0; }
+        html.dc-compact .dc-body { padding: 8px 9px 10px; }
+        html.dc-compact .dc-tile { padding: 6px 1px; } html.dc-compact .dc-tile span { font-size: 18px; } html.dc-compact .dc-tile em { font-size: 9.5px; }
+        html.dc-compact .dc-btn, html.dc-compact .dc-chip { min-height: 32px; }
+        html.dc-compact #dc-bar { left: auto !important; right: 8px !important; top: 66px !important; bottom: auto !important; transform: none !important; width: min(230px, calc(40 * var(--svw))) !important; max-width: none !important; max-height: calc(calc(100 * var(--svh)) - 128px); overflow-y: auto; flex-direction: column; align-items: stretch !important; gap: 7px !important; border-radius: 18px !important; padding: 10px 12px !important; touch-action: pan-y; }
+        html.dc-compact .dc-name { max-width: none; }
+        html.dc-compact .dc-bl { display: grid; grid-template-columns: 52px 1fr 48px; gap: 6px; } html.dc-compact .dc-bl input[type=range] { width: 100%; min-width: 0; } html.dc-compact .dc-bl.chk { display: flex; }
+        html.dc-compact .dc-brow { flex-wrap: wrap; }
 
         /* ---------- lobby, character, animations, space info: content blocks ---------- */
         .hm-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: 18px; background: linear-gradient(90deg, rgba(83,189,255,.2), rgba(83,189,255,.05) 60%), rgba(8,13,24,.7); border: 1px solid rgba(196,224,255,.3); box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 14px rgba(0,0,0,.35); }
@@ -1121,7 +1138,7 @@
         const AIR_TIME = 2 * JUMP_FORCE / GRAVITY;   // seconds a jump spends in the air; jump clips are timed to this
         const TURN_RATE = 1.4;                       // rad/s when turning in place with Q / E
         let moveSpeed = WALK_SPEED, moveIdle = 0;   // current ground speed ramp for the local player
-        let strafePref = localStorage.getItem('psHomeStrafe') !== '0';   // face the camera and strafe/backpedal (needs directional clips)
+        let strafePref = localStorage.getItem('psHomeStrafe2') === '1';   // face the camera and strafe/backpedal (needs directional clips)
         // Mall layout: a long east-west hall (HX x HZ) with a circular atrium crossing the middle
         const HX = 36, HZ = 12, ATR_R = 15, CEIL = 12;
         const COLLIDERS = [];   // circular obstacles { x, z, r }, filled in by buildMall()
@@ -3864,7 +3881,7 @@
         /* ---- Stock base characters (embedded). Players can pick one or upload their own VRM. ---- */
         const BASE_CHARACTERS = {
             female: { id: 'base:female', name: 'Base Female', gender: 'female', el: 'base-female-vrm' },
-            male: null   // no stock male yet
+            male: { id: 'base:male', name: 'Base Male', gender: 'male', el: 'base-female-vrm' }   // same stock model, male animation set, until you pin your own
         };
         const baseBuffers = {};
         // My Characters: every VRM you upload is kept in the browser (IndexedDB) so you can swap back any time.
@@ -4023,9 +4040,9 @@
         }
         function renderBaseButtons() {
             const entry = pins.male && library.find((c) => c.id === pins.male);
-            $('base-male').disabled = !entry;
-            $('base-male').className = 'py-3 rounded-xl text-sm font-semibold transition ' + (entry ? 'bg-white/10 hover:bg-psGlow' : 'bg-white/5 text-gray-500 cursor-not-allowed');
-            $('base-male-sub').textContent = entry ? entry.name.replace(/\.vrm$/i, '') : 'pin a character below';
+            $('base-male').disabled = false;
+            $('base-male').className = 'py-3 rounded-xl text-sm font-semibold transition bg-white/10 hover:bg-psGlow';
+            $('base-male-sub').textContent = entry ? entry.name.replace(/\.vrm$/i, '') : 'stock character';
         }
 
         function renderLibrary() {
@@ -4122,7 +4139,7 @@
 
         async function chooseBaseMale() {
             const entry = pins.male && library.find((c) => c.id === pins.male);
-            if (!entry) return;
+            if (!entry) { chooseBase('male'); return; }
             closeCharacterSetup();
             if (myAvatar && myAvatar.id === entry.id) return;
             sysChat(`Loading ${entry.name}...`);
@@ -6582,7 +6599,10 @@
             const near = inMall && Math.hypot(localActor.group.position.x - SCREEN.x, localActor.group.position.z - SCREEN.z) < SCREEN.near;
             const hint = $('screen-hint');
             if (hint) {
-                const wantHint = near && !screenPanelOpen();
+                if (!near) SCREEN.hintDone = false;
+                let wantHint = near && !screenPanelOpen() && !SCREEN.hintDone;
+                if (wantHint && !SCREEN.hintShown) SCREEN.hintAt = t;
+                if (wantHint && t - SCREEN.hintAt > 5) { SCREEN.hintDone = true; wantHint = false; }   // the pop-up leaves after 5 seconds; it comes back next time you walk up to the TV
                 if (wantHint !== SCREEN.hintShown) { SCREEN.hintShown = wantHint; hint.classList.toggle('hidden', !wantHint); }
             }
             if (screenFrame && t - SCREEN.volAt > 0.4) {
@@ -7983,7 +8003,7 @@
             if (!DC.edit) dcSelect(null);
             if (DC.edit) { Object.keys(keys).forEach((k) => (keys[k] = false)); closeStart && closeStart(); dcRenderPanel(); dcRenderBar(); dcGrid(); }
             dcGrid();
-            if (DC.edit && !DC.hinted) { DC.hinted = true; sysChat('Decorate mode: click a piece to select it, drag to move it. R turns it, Delete removes it. Photos stick to walls.'); }
+            if (DC.edit && !DC.hinted) { DC.hinted = true; sysChat('Decorate mode: tap a piece to select it, drag to move it. Use the turn buttons (or R) to rotate and Delete to remove it. Photos stick to walls.'); }
         }
         function dcGrid() {
             if (DC.gridG) { DC.gridG.removeFromParent(); DC.gridG.geometry.dispose(); DC.gridG = null; }
@@ -8122,8 +8142,11 @@
         function dcPickImageFor(key) { dcPickFile('image/*', false, async (f) => { const e = await dcImportImage(f); const st = DC.style[key]; st.k = 'img'; st.a = e.id; st.c = '#ffffff'; st.t = DC_DEF.img.t; dcStyleChanged(); }); }
         let dcStyleSkipRender = false;
         function dcStyleChanged(live) { dcApplyStyle(); if (live) { clearTimeout(DC.saveT); DC.saveT = setTimeout(dcSave, 600); dcBroadcastSoon(); } else { dcChanged(); dcRenderPanel(); } }
+        function dcCompactCheck() { const st = window.__stage, h = st ? st.h : innerHeight; document.documentElement.classList.toggle('dc-compact', h < 620 || (st ? st.w : innerWidth) < 760); }
+        window.addEventListener('resize', () => { dcCompactCheck(); });
         function dcRenderBar() {
             if (!DC.ui) return; const bar = DC.ui.bar, it = DC.sel && DC.items.get(DC.sel);
+            dcCompactCheck(); DC.ui.panel.classList.toggle('dc-away', !!(DC.edit && it));
             bar.classList.toggle('hidden', !DC.edit || !it); if (!it) return;
             bar.textContent = '';
             const cat = it.t === 'b' ? dcCat(it.k) : null, tint = it.t === 'b';
@@ -8188,7 +8211,7 @@
         async function dcInit() {
             DC.root = new THREE.Group(); DC.root.userData.noOutline = true; loftGroup.add(DC.root);
             DC.style = dcDefaultStyle();
-            dcBuildWalls(); dcInitUI(); dcSetupInput(); await dcLibLoad();
+            dcCompactCheck(); dcBuildWalls(); dcInitUI(); dcSetupInput(); await dcLibLoad();
             $('btn-decorate').addEventListener('click', () => dcSetEdit(!DC.edit));
             window.addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && !isTyping(e) && !lobbyOpen() && !charModalOpen() && !equipOpen()) { e.preventDefault(); dcSetEdit(!DC.edit); } });
         }
@@ -8214,7 +8237,7 @@
         /* ------------------------------------------------------------------ *
          *  Game controller support (wired USB or Bluetooth: Xbox, PlayStation, Switch Pro and most others via the browser Gamepad API)
          *  In the world:  left stick move | right stick camera | RT/LT/L3 run | A jump | Y show/hide the bottom bar
-         *                 D-pad up/down zoom | Y: bottom bar | Back: walk style | R3: TV panel | Start: Start menu (emotes, bubble colour, lobby)
+         *                 D-pad up/down zoom | D-pad left/right: target next/previous player, B clears | LB + right stick: zoom | Y: bottom bar | Back: walk style | R3: TV panel | Start: Start menu (emotes, bubble colour, lobby)
          *  In menus:      D-pad or left stick move the highlight | A press | B back
          * ------------------------------------------------------------------ */
         window.__emote = (n) => performEmote(n);
@@ -8289,6 +8312,10 @@
                 padMove.x = lx; padMove.z = ly;
                 padMove.run = !!(b[7] || b[6] || b[10]) || gp.buttons[7] && gp.buttons[7].value > 0.4;
                 PAD.rx = rx; PAD.ry = ry; PAD.zoom = (b[13] ? 1 : 0) - (b[12] ? 1 : 0);
+                if (b[4]) { PAD.zoom = clamp(PAD.zoom + ry, -1, 1); PAD.ry = 0; }          // hold L1 / LB and push the right stick up to zoom in, down to zoom out
+                if (hit(14)) cycleLookTarget(-1);                           // D-pad left / right: target the previous / next player (head turns to them), like FFXIV
+                if (hit(15)) cycleLookTarget(1);
+                if (hit(1) && localActor.lookId) setLookTarget(null);       // B / Circle: clear the target
                 if (hit(0) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }
                 if (hit(3)) toggleDock();                                  // Y / Triangle: show or hide the bottom bar
                 if (hit(8)) toggleStrafe();
@@ -8413,7 +8440,7 @@
         }
         function setStrafe(v, announce = false) {
             strafePref = v;
-            localStorage.setItem('psHomeStrafe', v ? '1' : '0');
+            localStorage.setItem('psHomeStrafe2', v ? '1' : '0');
             renderStrafeButtons();
             if (announce) sysChat(v ? (localActor.hasLoco() ? 'Strafe mode on: you face the camera direction and side-step / back-pedal.' : 'Strafe mode on (it applies to characters with directional animations).') : 'Free mode on: your character turns to face where it walks.');
         }
@@ -8586,13 +8613,14 @@
             if (localActor.lookId === id) return;
             localActor.lookId = id;
             net && net.send({ t: 'look', id });
-            if (announce) sysChat(id ? `Looking at ${peers.get(id).name}. (T to switch, click them again to stop)` : 'Stopped looking.');
+            if (announce) sysChat(id ? `Targeting ${peers.get(id).name}. (D-pad left/right or T to switch, B or click them again to clear)` : 'Target cleared.');
         }
-        function cycleLookTarget() {
+        function cycleLookTarget(dir = 0) {
             const here = localActor.group.position;
             const list = [...peers.values()].filter((p) => p.actor.group.parent).sort((a, b) => a.actor.group.position.distanceTo(here) - b.actor.group.position.distanceTo(here));
-            if (!list.length) { sysChat('There is nobody here to look at.'); return; }
+            if (!list.length) { sysChat('There is nobody here to target.'); return; }
             const i = list.findIndex((p) => p.id === localActor.lookId);
+            if (dir) { setLookTarget(list[i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length].id); return; }   // controller: D-pad left / right steps through everyone, nearest first, and wraps round
             setLookTarget(i + 1 < list.length ? list[i + 1].id : (i < 0 ? list[0].id : null));
         }
         function updateLookMarker() {
