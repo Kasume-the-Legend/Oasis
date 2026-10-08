@@ -82,6 +82,28 @@ Press **`B`** (or Start menu > More > Decorate) inside your own studio.
 - **Room tab:** floor (oak, maple, cherry, walnut, ebony, parquet, tile, marble, concrete, carpet, solid colour or **your own image**), inner walls (paint, stripes, dots, lattice, brick, tiles, boards, concrete or **your own wallpaper image**) and ceiling colour, each with a colour and a tile-size slider.
 - Pieces marked **Solid** stop people walking through them. Your layout is saved in this browser per studio, and **visitors see it** (your photos and models are sent to them when they arrive). Only the studio's owner can edit.
 
+### Harbor Studio, penthouse edition
+- You are at the top of an apartment tower. The front door is centred and is a working **elevator** (step in to open the lobby).
+- The studio **comes empty**. The kitchen counter, island, fridge, bar stools, tall bookcase and six realistic plants (monstera, fiddle-leaf fig, snake plant, areca palm, bird of paradise, fern) are **Decorate furniture** you place where you like (`B`).
+- Bigger oval skylight with glass, rings and ribs, warm cove lighting and skirting boards.
+- The view from the windows is still the old harbor backdrop; it will be replaced to match Destiny City once the city is finished.
+- Also in this version: house sizes (S/M/L), levelling, a menu hologram, D-pad player targeting and LB + right stick zoom.
+
+### Destiny City (new map; the lobby has a Destiny City card with a Join button, and a Destiny City option for private rooms)
+A Tokyo-inspired harbor district on a tropical island, built to keep growing. Join **Destiny City** from the elevator lobby.
+- **The Scramble**: a big crossing with zebra stripes, traffic lights that really change, cars that stop and go, giant LED screens on the corner towers.
+- **Streets and shops**: Japanese-style storefronts (konbini, ramen, izakaya, cafe, arcade, pharmacy, sushi, books), vending machines, bicycles, utility poles with sagging wires, neon blade signs, and an izakaya alley hung with red lanterns.
+- **The Paopu plaza**: a sunburst compass plaza with a star-shaped fountain and a floating golden paopu fruit, palms and benches.
+- **Elevated rail line** with moving trains and Destiny Station, **Destiny Tower** (a red-and-white lattice tower), a **Ferris wheel**, food stalls, and **Mount Fuji** on the horizon.
+- **Destiny Islands theme**: a beach, a wooden bridge out to Destiny Islet with the leaning paopu tree, an east pier with a gazebo and lighthouse, small islands, sailboats and a bay bridge.
+- **Shrine park** to the north: torii gates, stone lanterns, a shrine hall, a koi pond with a red arched bridge, cherry blossoms and drifting petals.
+- Everything is drawn in code (no image files). The city builds the first time you enter it, which can take a moment on a phone.
+
+### Inventory and trading
+- **Inventory** (`I`, or Avatar > Inventory): a 60-slot bag. Store **.vrm** models and **PNG / JPG / GIF / WebP** images (other file types are refused; files are checked by their contents, not just their names). Your Equipment clothes and items show up in the bag too. You can **download** anything back out, set a stored .vrm as your avatar, or delete things. The bag lives in your browser.
+- **Trading**: click a player and press **Trade** on their profile card (or target them and press *Trade with target* in the Inventory). They get an accept / decline prompt. Both players put up to six items in the offer, both **lock**, both **confirm**, and then the files travel directly from player to player into each other's bag. Anything the other player gives you (a .vrm, an image, or gear) is yours to download. Changing an offer unlocks both sides, either player can cancel until the end, and a trade is cancelled automatically if someone leaves. Limits: .vrm up to 40 MB, images up to 8 MB.
+- **Asset folder**: in the Inventory, press *Choose asset folder* and pick any folder on your computer (desktop Chrome / Edge). Downloads are then filed into `Models/`, `Images/` and `Gear/` inside it, never loose, with duplicates numbered. Items you receive in a trade are filed automatically into `Models/From <player>/` (and likewise for images and gear); *Auto-save trades* can be switched off. The browser may ask you to re-allow the folder after a restart; press Download once to re-allow it. Phones and Firefox/Safari cannot pick folders, so there downloads go to the normal Downloads folder, named `Oasis_models_…` / `Oasis_images_…`.
+
 ### Interface
 The whole UI follows the PlayStation Home look: a round location card with the room code, a player-count pill with a who's-here list, an XMB-style menu along the bottom (hover, click or `Tab`; `H` hides it), a pill-shaped chat bar, and graphite-glass windows with round close buttons. Typing in chat never pauses the world.
 
@@ -116,6 +138,7 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 | `Tab` | Bottom menu (XMB): ←/→ category, ↑/↓ items, `Enter` select, `Esc` or `Tab` leave |
 | `M` | Start menu |
 | `G` | Equipment |
+| `I` | Inventory (bag, files, trading) |
 | `F` | TV panel (retro games live here) |
 | `P` | Pick up the game controls (when plugged in) |
 | `V` | Toggle walk style |
