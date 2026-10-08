@@ -30,6 +30,7 @@ Bring your own VRM avatar, dress it, hang out in the Central Mall or your own Ha
 |---|---|
 | `Oasis.html` | The whole app: open it or host it as `index.html`. |
 | `README.md` | This page. |
+| `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png` | Optional. Upload them next to `Oasis.html` so Android can install The Oasis from the browser menu and open it fullscreen (no browser bars). Nothing breaks without them. |
 | `oasis-server.mjs` | Optional Node relay server for networks that block direct connections. |
 | `cloudflare/` | Optional Cloudflare Worker: Cloudflare TURN (hides players' IP addresses, keeps video working) and a relay. See `cloudflare/DEPLOY-NO-TERMINAL.md` (browser only) or `cloudflare/DEPLOY.md` (terminal). |
 
@@ -109,7 +110,7 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 | `W A S D` / arrows | Move |
 | `Shift` | Run |
 | `Q` / `E` | Turn on the spot |
-| `Space` | Jump |
+| `Space` | Jump (also onto beds, tables and mall benches) |
 | `1` `2` | Cheer, sit |
 | `Enter` | Chat (arrow keys keep walking while you type) |
 | `Tab` | Bottom menu (XMB): ←/→ category, ↑/↓ items, `Enter` select, `Esc` or `Tab` leave |
@@ -120,9 +121,16 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 | `V` | Toggle walk style |
 | `B` | Decorate your studio |
 | `T` | Look at the next player (click a player to look at them) |
+| Click a player | Open their profile card (RetroAchievements stats, Look at) |
 | Mouse drag | Orbit camera |
 
 **Game controllers** (wired or Bluetooth, any browser-supported gamepad): left stick moves, right stick turns the camera (up looks up, and in the studio it can dip below eye level like the mouse), `A` jumps, `Y` shows or hides the bottom bar, triggers run, `Start` opens the Start menu and the D-pad navigates menus.
+
+**Player profiles:** click someone to see a card built from their public RetroAchievements profile (points, rank, recently played). Set yours in Start menu > Profile by pasting your profile link (optional, shared only with people in your room). No API keys are involved. Reading the page goes through the Cloudflare helper, which only reads retroachievements.org; see `cloudflare/DEPLOY-NO-TERMINAL.md`.
+
+**Furniture:** low pieces in Harbor Studio (sofas, armchairs, ottomans, coffee and side tables) can be walked over, taller ones (bed, TV console, mall benches) need a jump, and bookshelves stay solid. Stand on a piece and press `2` to sit, or pick a lying pose from the Start menu, and the pose happens at the height of the surface. Pieces now have fabric, leather, wood and wool surfaces, all drawn in code (no image files).
+
+**Screen fit (console style):** three modes, changed from the bottom menu (Info > Screen Fit) and remembered. **Wide** (default on touch screens): the 3D picture fills your whole screen at the same height as on a PC, so you see a bit more to the sides, while the menus and HUD stay in a centred 16:9 frame. **16:9**: everything in a 16:9 frame with black bars. **Fill** (default on desktop): everything uses the whole window. On a touch screen a fullscreen button sits next to the player count (also Info > Fullscreen); on iPhone use Share > Add to Home Screen, and on Android you can install it from the browser menu to open without browser bars.
 
 ## Run it
 

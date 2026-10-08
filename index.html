@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="theme-color" content="#030712">
+    <link rel="manifest" href="manifest.webmanifest">
     <title>The Oasis</title>
 
     <!-- Tailwind CSS -->
@@ -42,35 +44,39 @@
     </script>
 
     <script>
-        // Console-style screen fit. The whole game lives in <body>; in "16:9" mode body becomes a centred 16:9 frame (black bars on wider or
-        // taller screens) so the picture and HUD frame the same on a phone as on a PC. "Fill" uses the whole screen.
+        // Console-style screen fit. The whole game lives in <body>.
+        //   "wide" (default on touch): the HUD sits in a centred 16:9 frame, while the 3D picture fills the whole screen (same height, so more to the sides)
+        //   "169":  a centred 16:9 frame with black bars, the picture and HUD framed exactly like a PC
+        //   "fill": everything uses the whole screen
         (function () {
             var MIN = 0.5, root = document.documentElement;
             function mode() {
                 var m = null; try { m = localStorage.getItem('psHomeFit'); } catch (e) { /* storage blocked */ }
-                if (m === '169' || m === 'fill') return m;
-                try { return window.matchMedia('(pointer: coarse)').matches ? '169' : 'fill'; } catch (e) { return 'fill'; }
+                if (m === '169' || m === 'fill' || m === 'wide') return m;
+                try { return window.matchMedia('(pointer: coarse)').matches ? 'wide' : 'fill'; } catch (e) { return 'fill'; }
             }
             function apply() {
-                var W = window.innerWidth, H = window.innerHeight, w = W, h = H, x = 0, y = 0, m = mode();
-                if (m === '169' && Math.abs(W / H - 16 / 9) > 0.03) {
+                var W = window.innerWidth, H = window.innerHeight, w = W, h = H, x = 0, y = 0, m = mode(), wide = m === 'wide';
+                if ((m === '169' || wide) && Math.abs(W / H - 16 / 9) > 0.03) {
                     w = W; h = Math.round(W * 9 / 16);
                     if (h > H) { h = H; w = Math.round(H * 16 / 9); }
                     x = (W - w) >> 1; y = (H - h) >> 1;
                 }
-                var framed = m === '169' && (w !== W || h !== H), b = document.body;
+                var framed = (m === '169' || wide) && (w !== W || h !== H), wideOn = wide && framed, b = document.body;
                 root.classList.toggle('stage169', framed);
-                if (b) { if (framed) { b.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;contain:layout paint;overflow:hidden'; } else { b.style.cssText = ''; } }
+                root.classList.toggle('stagewide', wideOn);
+                if (b) { if (framed) { b.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;contain:' + (wideOn ? 'layout' : 'layout paint') + ';overflow:' + (wideOn ? 'visible' : 'hidden'); } else { b.style.cssText = ''; } }
                 root.style.setProperty('--svw', framed ? (w / 100) + 'px' : '1vw');
                 root.style.setProperty('--svh', framed ? (h / 100) + 'px' : '1vh');
-                window.__stage = { w: w, h: h, x: x, y: y, mode: m, framed: framed };
+                root.style.setProperty('--wx', (-x) + 'px'); root.style.setProperty('--wy', (-y) + 'px'); root.style.setProperty('--ww', W + 'px'); root.style.setProperty('--wh', H + 'px');
+                window.__stage = { w: w, h: h, x: x, y: y, mode: m, framed: framed, vw: wideOn ? W : w, vh: wideOn ? H : h };
                 // HUD scale: 1 on a normal desktop window, smaller on a short or narrow one (measured on the frame)
                 var z = Math.min(1, h / 600, w / 1000);
                 z = z > 0.93 ? 1 : Math.max(MIN, Math.round(z * 100) / 100);
                 root.style.setProperty('--ui-zoom', String(z));
                 root.classList.toggle('ui-wide', w / z >= 1024);
             }
-            window.__stage = { w: window.innerWidth, h: window.innerHeight, x: 0, y: 0, mode: 'fill', framed: false };
+            window.__stage = { w: window.innerWidth, h: window.innerHeight, x: 0, y: 0, mode: 'fill', framed: false, vw: window.innerWidth, vh: window.innerHeight };
             window.__fitApply = apply;
             window.__setFit = function (m) { try { localStorage.setItem('psHomeFit', m); } catch (e) { /* storage blocked */ } apply(); window.dispatchEvent(new Event('resize')); };
             window.__fitMode = mode;
@@ -78,6 +84,7 @@
             document.addEventListener('DOMContentLoaded', apply);
             window.addEventListener('resize', apply);
             window.addEventListener('orientationchange', function () { setTimeout(function () { apply(); window.dispatchEvent(new Event('resize')); }, 250); });
+            document.addEventListener('fullscreenchange', function () { setTimeout(apply, 120); });
         })();
     </script>
 
@@ -148,6 +155,12 @@
            desktop window. --ui-zoom is set by the script in <head>; `zoom` also scales vh/vw lengths, so those are divided back out. */
         :root { --ui-zoom: 1; --svw: 1vw; --svh: 1vh; }
         html.stage169 { background: #000; }
+        html.stagewide body { background: transparent !important; }
+        html.stagewide [class*="inset-0"][class*="bg-black/45"] { box-shadow: 0 0 0 150vmax rgba(0,0,0,.45); }   /* pop-up backdrops dim the whole screen, not just the frame */
+        html.stagewide [class*="inset-0"][class*="bg-black/55"] { box-shadow: 0 0 0 150vmax rgba(0,0,0,.55); }
+        html.stagewide [class*="inset-0"][class*="bg-black/60"] { box-shadow: 0 0 0 150vmax rgba(0,0,0,.6); }
+        html.stagewide [class*="inset-0"][class*="bg-black/70"] { box-shadow: 0 0 0 150vmax rgba(0,0,0,.7); }
+        html.stagewide #canvas-container, html.stagewide #css3d-layer { left: var(--wx) !important; top: var(--wy) !important; width: var(--ww) !important; height: var(--wh) !important; }   /* the 3D picture fills the whole screen, the HUD stays in the 16:9 frame */
         header, nav, #chat-panel, #inspector-modal, #chatbar, #screen-hint, #screen-panel, #load-error,
         #lobby > div, #char-modal > div, #anim-modal > div, #space-info-modal > div, #start-menu > div, #sprite-modal > div, #zip3d-modal > div { zoom: var(--ui-zoom); }
         #lobby > div, #char-modal > div, #anim-modal > div, #sprite-modal > div, #zip3d-modal > div { max-height: calc(calc(92 * var(--svh)) / var(--ui-zoom)) !important; }
@@ -293,6 +306,7 @@
         </div>
         <div class="hm-keys hidden xl:flex glass-panel pointer-events-auto"><span><kbd>WASD</kbd> Move</span><i></i><span><kbd>SHIFT</kbd> Run</span><i></i><span><kbd>Q/E</kbd> Turn</span><i></i><span><kbd>SPACE</kbd> Jump</span><i></i><span><kbd>1-2</kbd> Emotes</span><i></i><span><kbd>ENTER</kbd> Chat</span><i></i><span><kbd>DRAG</kbd> Camera</span></div>
         <div class="hm-top-r pointer-events-auto">
+            <button id="hud-fs" type="button" class="hm-pill glass-panel" title="Fullscreen" aria-label="Fullscreen" style="display:none;margin-right:8px;padding:0 13px"><i class="fa-solid fa-expand"></i></button>
             <button id="hud-players" type="button" class="hm-pill glass-panel" title="Who is here"><i class="fa-solid fa-user-group"></i><span id="hud-count">1</span></button>
             <div id="hud-plist" class="hm-pop hidden"></div>
         </div>
@@ -2327,6 +2341,7 @@
                 let vx = 0, vz = 0;
                 if (!this.firstFrame) { vx = (pos.x - this.prev.x) / Math.max(dt, 1e-4); vz = (pos.z - this.prev.z) / Math.max(dt, 1e-4); }
                 else { this.sv.x = 0; this.sv.z = 0; }
+                const vyA = this.firstFrame ? 0 : (pos.y - this.prev.y) / Math.max(dt, 1e-4);   // vertical speed: tells a jump (rising) from stepping or walking off a ledge
                 this.firstFrame = false;
                 this.prev.copy(pos);
                 const speed = Math.hypot(vx, vz);
@@ -2336,7 +2351,10 @@
                 this.sv.z += (vz - this.sv.z) * ks;
                 this.walkAmt += (clamp(speed / 4, 0, 1) - this.walkAmt) * (1 - Math.exp(-dt * 10));
                 this.phase += dt * (4 + speed * 1.1);
-                const air = pos.y - getGroundHeight(pos.x, pos.z, pos.y) > 0.08;
+                const gap = pos.y - getGroundHeight(pos.x, pos.z, pos.y);
+                if (gap <= 0.08) this.hopped = false; else if (vyA > 2) this.hopped = true;
+                const air = gap > 0.08 && (this.hopped || gap > 1.1);
+                this.inAir = air;   // walking off a sofa or bed is not a jump: only a real jump (or a big drop) plays the air pose
 
                 // --- emote timeline ---
                 let e = 0, et = 0;
@@ -6288,7 +6306,7 @@
         function setupScreenLayer(container) {
             cssScene = new THREE.Scene();
             cssRenderer = new CSS3DRenderer();
-            cssRenderer.setSize(window.__stage.w, window.__stage.h);
+            cssRenderer.setSize(window.__stage.vw, window.__stage.vh);
             const layer = document.createElement('div');
             layer.id = 'css3d-layer';
             layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:hidden;';
@@ -8200,6 +8218,7 @@
          *  In menus:      D-pad or left stick move the highlight | A press | B back
          * ------------------------------------------------------------------ */
         window.__emote = (n) => performEmote(n);
+        window.__inAir = () => !!(localActor && localActor.inAir);   // (handy for tests)
         window.__tp = (x, z) => { if (localActor) localActor.group.position.set(x, 0, z); };
         window.__cam = (x, y, z) => { camera.position.set(x, y, z); controls.update(); };   // (handy for tests)
         window.__myPos = () => (localActor ? { x: localActor.group.position.x, y: localActor.group.position.y, z: localActor.group.position.z, cam: camera.position.toArray() } : null);   // (handy for tests)
@@ -8290,6 +8309,7 @@
             _po.set(Math.sin(ph) * Math.sin(th) * r, Math.cos(ph) * r, Math.sin(ph) * Math.cos(th) * r);
             camera.position.copy(controls.target).add(_po);
         }
+        try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* not available */ }
         window.addEventListener('gamepaddisconnected', () => { PAD.active = false; padMove.x = padMove.z = 0; padMove.run = false; });
 
         const _mv = new THREE.Vector3();
@@ -8875,15 +8895,27 @@
             const spaceModal = $('space-info-modal');
             $('btn-space').addEventListener('click', () => spaceModal.classList.remove('hidden'));
             $('btn-tv').addEventListener('click', () => toggleScreenPanel());
-            const fitSub = () => { const el = $('btn-fit').querySelector('small'); if (el) el.textContent = window.__stage.mode === '169' ? 'Console 16:9 frame (tap to fill)' : 'Filling the screen (tap for 16:9)'; };
-            $('btn-fit').addEventListener('click', () => { window.__setFit(window.__stage.mode === '169' ? 'fill' : '169'); fitSub(); sysChat(window.__stage.mode === '169' ? 'Screen fit: console 16:9 frame (black bars on wider or taller screens).' : 'Screen fit: filling the whole screen.'); });
+            const FIT_NEXT = { wide: '169', '169': 'fill', fill: 'wide' };
+            const FIT_TXT = { wide: ['Wide: picture fills the screen (tap to change)', 'Screen fit: wide. The picture fills your whole screen and the menus stay in a 16:9 frame.'], '169': ['Console 16:9 frame (tap to change)', 'Screen fit: console 16:9 frame (black bars on wider or taller screens).'], fill: ['Filling the screen (tap to change)', 'Screen fit: filling the whole screen.'] };
+            const fitSub = () => { const el = $('btn-fit').querySelector('small'); if (el) el.textContent = FIT_TXT[window.__stage.mode][0]; };
+            $('btn-fit').addEventListener('click', () => { window.__setFit(FIT_NEXT[window.__stage.mode] || 'wide'); fitSub(); sysChat(FIT_TXT[window.__stage.mode][1]); });
             fitSub();
-            $('btn-fullscreen').addEventListener('click', async () => {
-                try {
-                    if (document.fullscreenElement) await document.exitFullscreen();
-                    else { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); try { await screen.orientation.lock('landscape'); } catch (e) { /* not supported here */ } }
-                } catch (e) { sysChat('Fullscreen is not available in this browser. On iPhone use Share > Add to Home Screen.'); }
-            });
+            const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+            const inApp = () => (window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches)) || navigator.standalone === true;
+            const fsSupported = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+            function toggleFullscreen() {          // must run straight from a tap (no await before the request) or the browser refuses
+                if (fsEl()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+                if (!fsSupported()) { sysChat('This browser cannot go fullscreen from a page. On iPhone use Share > Add to Home Screen, then open The Oasis from your home screen. On Android you can also use the browser menu > Add to Home screen.'); return; }
+                const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+                let r; try { r = req.call(el, { navigationUI: 'hide' }); } catch (e) { r = null; }
+                Promise.resolve(r).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* not supported here */ } })
+                    .catch(() => sysChat('Fullscreen was blocked. Try the button again, or use the browser menu > Add to Home screen and open The Oasis from there.'));
+            }
+            $('btn-fullscreen').addEventListener('click', toggleFullscreen);
+            { const hb = $('hud-fs');          // a one-tap fullscreen button for touch screens
+              const sync = () => { const touch = matchMedia('(pointer: coarse)').matches; hb.style.display = !touch || inApp() ? 'none' : ''; hb.querySelector('i').className = fsEl() ? 'fa-solid fa-compress' : 'fa-solid fa-expand'; };
+              hb.addEventListener('click', (e) => { e.stopPropagation(); toggleFullscreen(); });
+              document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync); sync(); }
             xmbInit();
             $('close-space-info').addEventListener('click', () => spaceModal.classList.add('hidden'));
             $('space-info-ok').addEventListener('click', () => spaceModal.classList.add('hidden'));
@@ -9004,10 +9036,10 @@
          *  Main loop
          * ------------------------------------------------------------------ */
         function onWindowResize() {
-            camera.aspect = window.__stage.w / window.__stage.h;
+            camera.aspect = window.__stage.vw / window.__stage.vh;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.__stage.w, window.__stage.h);
-            if (cssRenderer) cssRenderer.setSize(window.__stage.w, window.__stage.h);
+            renderer.setSize(window.__stage.vw, window.__stage.vh);
+            if (cssRenderer) cssRenderer.setSize(window.__stage.vw, window.__stage.vh);
         }
 
         function animate() {
@@ -9057,11 +9089,11 @@
             scene.background = new THREE.Color(0x030712);
             scene.fog = new THREE.FogExp2(0x030712, 0.011);
 
-            camera = new THREE.PerspectiveCamera(60, window.__stage.w / window.__stage.h, 0.05, 400);
+            camera = new THREE.PerspectiveCamera(60, window.__stage.vw / window.__stage.vh, 0.05, 400);
             camera.position.set(0, 4, 9);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-            renderer.setSize(window.__stage.w, window.__stage.h);
+            renderer.setSize(window.__stage.vw, window.__stage.vh);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
