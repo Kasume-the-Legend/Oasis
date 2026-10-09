@@ -11959,7 +11959,7 @@
             const [lx, ly] = padStick(ax(0), ax(1)), [rx, ry] = padStick(ax(2), ax(3));
             const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) && document.activeElement.type !== 'range' && document.activeElement.type !== 'checkbox';
             const over = padOverlay();
-            if (!PAD.active) { PAD.active = true; PAD.name = (gp.id || 'controller').replace(/\(.*?\)/g, '').trim().slice(0, 40); try { sysChat('Controller connected: ' + PAD.name + '. Hold LT or RT for the hotbars, RB changes set, LB auto-runs, Back selects the bottom bar, Start opens the menu, A selects a target, X opens the map, R3 changes camera.'); } catch (e) { /* chat not ready */ } }
+            if (!PAD.active) { PAD.active = true; PAD.name = (gp.id || 'controller').replace(/\(.*?\)/g, '').trim().slice(0, 40); try { sysChat('Controller connected: ' + PAD.name + '. Hold LT or RT for the hotbars, RB changes set, hold LB + R3 auto-runs (LB + right stick zooms), Back selects the bottom bar, Start opens the menu, A selects a target, X opens the map, R3 changes camera.'); } catch (e) { /* chat not ready */ } }
             padMove.x = padMove.z = 0; padMove.run = false;
             if (OB.open) { PAD.rx = PAD.ry = PAD.zoom = 0; PAD.prev = b; padBarDraw(false, ''); return; }       // the O-Boy's own emulator reads the pad
             if (EMU.playing) { PAD.rx = PAD.ry = PAD.zoom = 0; emuPadSample(gp, b, dt); PAD.prev = b; padBarDraw(false, ''); return; }       // game mode: the controller belongs to the game
@@ -12001,8 +12001,9 @@
             if (b[4] && !PAD.prev[4]) PAD.l1Zoom = false;
             const zoomHold = b[4] && !tagNow && !fpOn;                       // hold L1 + right stick up / down = zoom in / out
             if (zoomHold && Math.abs(ry) > 0.05) PAD.l1Zoom = true;
-            if (!b[4] && PAD.prev[4] && !PAD.l1Zoom && !tagNow) { if (PAD.auto) PAD.auto = false; else if (mag > 0.3) { PAD.auto = true; PAD.autoDir = [lx / mag, ly / mag]; padToast('Auto-run'); } }       // LB tapped (on release, so holding it for the zoom never starts auto-run)
-            if (mag < 0.3 && !PAD.auto) PAD.sprint = false;                   // stopping ends a sprint
+            if (b[4] && hit(11) && !tagNow) { PAD.l1Zoom = true; if (PAD.auto) PAD.auto = false; else if (mag > 0.3) { PAD.auto = true; PAD.autoDir = [lx / mag, ly / mag]; padToast('Auto-run'); } }       // hold L1 + press R3: auto-run on / off
+            if (mag > 0.12) PAD.sprintIdleAt = 0; else if (!PAD.sprintIdleAt) PAD.sprintIdleAt = nowS(); PAD.sprintIdle = PAD.sprintIdleAt ? nowS() - PAD.sprintIdleAt : 0;
+            if (PAD.sprint && !PAD.auto && PAD.sprintIdle > 0.45) PAD.sprint = false;                   // a sprint carries on through turns and light stick pushes, and ends once you let the stick go
             if (PAD.auto) {
                 if (mag > 0.3 && lx * PAD.autoDir[0] + ly * PAD.autoDir[1] < -0.5 * mag) PAD.auto = false;          // pull the stick back to stop
                 else { if (mag > 0.3) PAD.autoDir = [lx / mag, ly / mag]; mx = PAD.autoDir[0]; mz = PAD.autoDir[1]; padMove.run = true; }
@@ -12023,16 +12024,16 @@
                 if (hit(13) && !grace) padCycleParty(1);
                 if (hit(14) && !grace) cycleLookTarget(-1);
                 if (hit(15) && !grace) cycleLookTarget(1);
-                if (hit(0) && !grace) { if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (loftLtNear()) loftLtToggle(); else if (mag > 0.3) { PAD.sprint = true; tapSprint(); } else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
+                if (hit(0) && !grace) { if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12 || PAD.sprint) { if (!PAD.sprint) padToast('Sprint'); PAD.sprint = true; PAD.sprintIdleAt = 0; PAD.sprintIdle = 0; tapSprint(); } else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
                 if (hit(1) && !grace) { if (activeMap === 'diner' && KC.plate) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (!padCancelAll()) PAD.auto = false; }     // B: cancel (Kitchen Clash: drop the plate)
-                if (hit(2) && !grace) { if (mag > 0.3) { PAD.sprint = true; tapSprint(); } else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
+                if (hit(2) && !grace) { if (mag > 0.12 || PAD.sprint) { PAD.sprint = true; PAD.sprintIdleAt = 0; PAD.sprintIdle = 0; tapSprint(); } else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y: jump
             }
             if ((PAD.prev[6] || PAD.prev[7]) && !(b[6] || b[7])) PAD.trigUp = nowS();
             if (hit(8)) { if (dockHidden) toggleDock(false); press('Tab'); }              // Back: select HUD
             if (hit(9)) openStart('emotes');                                              // Start: main menu
             if (hit(10)) padLockToggle();                                                 // L3: lock on
-            if (hit(11) && activeMap === 'tag' && tgMine()) { TG.adsT = !TG.adsT; padToast(TG.adsT ? 'Aim: on' : 'Aim: off'); } else if (hit(11)) { if (!$('screen-panel').classList.contains('hidden')) closeScreenPanel(); else padCamCycle(); }   // R3: camera
+            if (hit(11) && b[4] && !(activeMap === 'tag' && tgMine())) { /* L1 + R3 = auto-run (handled above) */ } else if (hit(11) && activeMap === 'tag' && tgMine()) { TG.adsT = !TG.adsT; padToast(TG.adsT ? 'Aim: on' : 'Aim: off'); } else if (hit(11)) { if (!$('screen-panel').classList.contains('hidden')) closeScreenPanel(); else padCamCycle(); }   // R3: camera
             if (PAD.lockId && (!peers.has(PAD.lockId) || !peers.get(PAD.lockId).actor.group.parent)) { PAD.lockId = null; padToast('Lock-on lost'); }
             padBarDraw(!(OB.open || EMU.playing), held);
             PAD.prev = b;
