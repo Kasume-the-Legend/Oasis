@@ -12024,9 +12024,9 @@
                 if (hit(13) && !grace) padCycleParty(1);
                 if (hit(14) && !grace) cycleLookTarget(-1);
                 if (hit(15) && !grace) cycleLookTarget(1);
-                if (hit(0) && !grace) { if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12 || PAD.sprint) { if (!PAD.sprint) padToast('Sprint'); PAD.sprint = true; PAD.sprintIdleAt = 0; PAD.sprintIdle = 0; tapSprint(); } else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
+                if (hit(0) && !grace) { if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
                 if (hit(1) && !grace) { if (activeMap === 'diner' && KC.plate) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (!padCancelAll()) PAD.auto = false; }     // B: cancel (Kitchen Clash: drop the plate)
-                if (hit(2) && !grace) { if (mag > 0.12 || PAD.sprint) { PAD.sprint = true; PAD.sprintIdleAt = 0; PAD.sprintIdle = 0; tapSprint(); } else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
+                if (hit(2) && !grace) { if (mag > 0.12) tapSprint(); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y: jump
             }
             if ((PAD.prev[6] || PAD.prev[7]) && !(b[6] || b[7])) PAD.trigUp = nowS();
