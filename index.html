@@ -11997,13 +11997,19 @@
             // ---- the world ----
             const mag = Math.hypot(lx, ly);
             let mx = lx, mz = ly;
-            if (hit(4) && !(activeMap === 'tag' && tgMine())) { if (PAD.auto) PAD.auto = false; else if (mag > 0.3) { PAD.auto = true; PAD.autoDir = [lx / mag, ly / mag]; padToast('Auto-run'); } }       // LB
+            const tagNow = activeMap === 'tag' && tgMine();
+            if (b[4] && !PAD.prev[4]) PAD.l1Zoom = false;
+            const zoomHold = b[4] && !tagNow && !fpOn;                       // hold L1 + right stick up / down = zoom in / out
+            if (zoomHold && Math.abs(ry) > 0.05) PAD.l1Zoom = true;
+            if (!b[4] && PAD.prev[4] && !PAD.l1Zoom && !tagNow) { if (PAD.auto) PAD.auto = false; else if (mag > 0.3) { PAD.auto = true; PAD.autoDir = [lx / mag, ly / mag]; padToast('Auto-run'); } }       // LB tapped (on release, so holding it for the zoom never starts auto-run)
+            if (mag < 0.3 && !PAD.auto) PAD.sprint = false;                   // stopping ends a sprint
             if (PAD.auto) {
                 if (mag > 0.3 && lx * PAD.autoDir[0] + ly * PAD.autoDir[1] < -0.5 * mag) PAD.auto = false;          // pull the stick back to stop
                 else { if (mag > 0.3) PAD.autoDir = [lx / mag, ly / mag]; mx = PAD.autoDir[0]; mz = PAD.autoDir[1]; padMove.run = true; }
             }
             padMove.x = mx; padMove.z = mz;
-            PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = ry; PAD.zoom = 0;
+            PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = zoomHold ? 0 : ry; PAD.zoom = zoomHold ? ry : 0;
+            if (PAD.sprint) padMove.run = true;
             if (hit(5) && !(activeMap === 'tag' && tgMine())) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
             const tagMode = activeMap === 'tag' && tgMine();      // laser tag: the triggers are weapons, not hotbars
             const held = tagMode ? '' : b[6] && !b[7] ? 'L' : b[7] && !b[6] ? 'R' : '';
@@ -12017,9 +12023,9 @@
                 if (hit(13) && !grace) padCycleParty(1);
                 if (hit(14) && !grace) cycleLookTarget(-1);
                 if (hit(15) && !grace) cycleLookTarget(1);
-                if (hit(0) && !grace) { if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (loftLtNear()) loftLtToggle(); else padConfirm(); }                 // A: confirm / select target (Kitchen Clash: use / grab)
+                if (hit(0) && !grace) { if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (loftLtNear()) loftLtToggle(); else if (mag > 0.3) { PAD.sprint = true; tapSprint(); } else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
                 if (hit(1) && !grace) { if (activeMap === 'diner' && KC.plate) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (!padCancelAll()) PAD.auto = false; }     // B: cancel (Kitchen Clash: drop the plate)
-                if (hit(2) && !grace) openLobby();                           // X: map / rooms
+                if (hit(2) && !grace) { if (mag > 0.3) { PAD.sprint = true; tapSprint(); } else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y: jump
             }
             if ((PAD.prev[6] || PAD.prev[7]) && !(b[6] || b[7])) PAD.trigUp = nowS();

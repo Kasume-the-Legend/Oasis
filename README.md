@@ -256,7 +256,7 @@ Outdoors, snow lying on the ground (see Weather) turns steps into a crunch, and 
 | Input | Action |
 |---|---|
 | `W A S D` / arrows | Move |
-| `Shift` | Run (hold), or tap it repeatedly to sprint like GTA. On a controller use LB auto-run |
+| `Shift` | Run (hold), or tap it repeatedly to sprint like GTA. On a controller hold LB and click R3 for auto-run |
 | `Q` / `E` | Turn on the spot |
 | `Space` | Jump (also onto beds, tables and mall benches) |
 | `1` `2` | Cheer, sit |
@@ -287,17 +287,17 @@ Outdoors, snow lying on the ground (see Weather) turns steps into a crunch, and 
 | L3 (click left stick) | Lock the camera on your target (or the nearest player); press again to release | |
 | R3 (click right stick) | Change camera: near, far, first person | |
 | LT / RT (L2 / R2) | Hold to bring up the left / right hotbar | |
-| LB (L1) | Auto-run: press while moving; it keeps going until you press LB again, pull the stick back, or press B | Previous tab |
+| LB (L1) | **Hold LB and push the right stick up / down to zoom in / out. Hold LB and click the right stick (R3) while moving: auto-run on / off** (it also stops if you pull the stick back or press B) | Previous tab |
 | RB (R1) | Change hotbar set (3 sets) | Next tab |
 | D-pad | Left / right: cycle targets. Up / down: cycle you and your party members | Move the highlight |
-| A (Cross) | Select target (nearest player), then open their profile; Kitchen Clash: use / grab | Confirm |
+| A (Cross) | While moving: sprint. Standing still: select target (nearest player), then open their profile; Kitchen Clash: use / grab | Confirm |
 | B (Circle) | Cancel: clear target, release lock-on, stop auto-run; Kitchen Clash: drop plate | Back |
-| X (Square) | Open the map (rooms) | |
+| X (Square) | While moving: sprint. Standing still: open the map (rooms) | |
 | Y (Triangle) | Jump | |
 | Back (Select) | Select the HUD: D-pad moves around the bottom bar, A opens, B leaves | |
 | Start (Options) | Main menu (emotes, bubble colour, lobby) | Close |
 
-**Hotbars.** Hold LT for the left bar or RT for the right bar, then press a D-pad direction or A / B / X / Y to use that slot (8 slots per bar, 16 per set). The crossbar sits at the bottom centre and only appears when a controller is connected. The three default sets are Social (cheer, sit, target yourself, clear target, emotes, O-Boy, hoverboard, board colour; chat, party, TV, strafe, equipment, inventory, map, weather), View (zoom, camera, lock on, hide bar, fullscreen; decorate, profile, bubble colour...) and Home (decorate, inventory, equipment, party, map, TV, weather, O-Boy; hoverboard, sit, cheer, emotes, profile, chat). Slots can be rebound from the browser console with `__pad.bind(set, 'L' or 'R', slot, 'actionName')` (set 0-2, slot 0-7 = D-pad up, right, down, left, then Y, B, A, X; `__pad.acts()` lists the action names); the choice is saved in this browser. Tapping A or R1 to sprint is gone: use LB auto-run (sprint speed) or `Shift` on a keyboard.
+**Hotbars.** Hold LT for the left bar or RT for the right bar, then press a D-pad direction or A / B / X / Y to use that slot (8 slots per bar, 16 per set). The crossbar sits at the bottom centre and only appears when a controller is connected. The three default sets are Social (cheer, sit, target yourself, clear target, emotes, O-Boy, hoverboard, board colour; chat, party, TV, strafe, equipment, inventory, map, weather), View (zoom, camera, lock on, hide bar, fullscreen; decorate, profile, bubble colour...) and Home (decorate, inventory, equipment, party, map, TV, weather, O-Boy; hoverboard, sit, cheer, emotes, profile, chat). Slots can be rebound from the browser console with `__pad.bind(set, 'L' or 'R', slot, 'actionName')` (set 0-2, slot 0-7 = D-pad up, right, down, left, then Y, B, A, X; `__pad.acts()` lists the action names); the choice is saved in this browser. **Sprint:** while the left stick is moving, tap A (Cross) or X (Square) to sprint until you stop; standing still, A selects a target and X opens the map as before. Auto-run (LB + R3) and `Shift` also sprint.
 
 **Player profiles:** click someone to see a card built from their public RetroAchievements profile (points, rank, recently played). Set yours in Start menu > Profile by pasting your profile link (optional, shared only with people in your room). No API keys are involved. Reading the page goes through the Cloudflare helper, which only reads retroachievements.org; see `cloudflare/DEPLOY-NO-TERMINAL.md`.
 
