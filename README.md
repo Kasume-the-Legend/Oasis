@@ -36,6 +36,10 @@ Bring your own VRM avatar, dress it, hang out in the Central Mall or your own Ha
 
 ### Changelog
 
+**Unreleased** (2026-10-09)
+- Seasons and weather (radar, accumulating snow, rain, storms, fog), Oasis Galleria, Key's Diner and Dive, Oasis Industries, O-Boy held pose and player targeting (including yourself).
+- Earlier unreleased: Builder's Plot, party system, new sky, 45 more furniture pieces, colour recents.
+
 **1.0.0** (2026-10-07), first tagged release
 - Characters: VRM, glTF/GLB, FBX, OBJ, Blockbench and sprite characters; custom animations.
 - Equipment: 13 slots, VRoid clothing and hair from a `.vrm`, items seen by other players, drag-and-drop import, Booth search shortcuts.
@@ -57,7 +61,7 @@ The Oasis is a single-file web app (`Oasis.html`) inspired by the classic consol
 - **Other 3D models.** `.glb`, `.gltf`, `.fbx`, `.obj` and **3D character zips** work too. If the model has a humanoid skeleton it is detected automatically and uses the standard animations.
 - **Blockbench characters** (`.bbmodel`). Cubes, meshes and embedded textures are rebuilt on a humanoid skeleton (parts are sorted into head, body, arms and legs by name or position), so they walk and emote like any other avatar. Pixel-art textures stay crisp. Blockbench animations are not imported.
 - **2D sprite characters** can be imported from a sprite sheet.
-- **My Characters** keeps everything you have uploaded in your browser, with stock characters to start from.
+- **My Characters** keeps everything you have uploaded in your browser, with two stock characters to start from, **Base Male** and **Base Female**, both built into the file so they are there from the first launch.
 - **Custom animations.** Replace any base animation slot (idle, walk, run, jump and so on) with your own clip.
 
 ### Equipment (FFXIV-style)
@@ -82,6 +86,35 @@ Press **`B`** (or Start menu > More > Decorate) inside your own studio.
 - **Room tab:** floor (oak, maple, cherry, walnut, ebony, parquet, tile, marble, concrete, carpet, solid colour or **your own image**), inner walls (paint, stripes, dots, lattice, brick, tiles, boards, concrete or **your own wallpaper image**) and ceiling colour, each with a colour and a tile-size slider.
 - Pieces marked **Solid** stop people walking through them. Your layout is saved in this browser per studio, and **visitors see it** (your photos and models are sent to them when they arrive). Only the studio's owner can edit.
 
+**Wallpaper and floor images:** the tile size slider now goes up to 16 m, so one picture can cover a whole wall. Under Floor and Walls, **My image layers** lets you stack up to 5 of your own images on each, every layer with its own size (up to 30 m), stretch, opacity and position, and up/down to reorder. Layers are saved with the room and shown to visitors.
+
+**Lock furniture:** select an item and press **Lock in place** (or `L`). A locked item can't be dragged, turned, resized, recoloured or deleted by accident, and shows a padlock; select it and press Unlock to change it again. Locks are saved with the room.
+
+**Colour anything, with recent colours:** every colour picker in Decorate (furniture, floor, walls, ceiling, structures) remembers your recent colours as swatches. Click one to reuse it.
+
+**More furniture (about 45 new pieces):** chairs, benches and poufs; dining, round and work tables, desks; nightstand, dresser, wardrobe, cabinet and chest; lamps (table, arc, pendant, lantern, neon, candles) that really light the room at night (the four nearest lamps cast light at a time to keep phones smooth); **fish tanks** (a wall tank, a table tank, a tall column and a coral tank, with animated fish); oven, bathtub, toilet and sink; vases, books, a mirror, a grandfather clock and a piano; and a **survival** set (crates, barrels, fire barrel, workbench, metal shelf, cot, locker, sandbags, tires, pallet, generator, camp stove). Use the category chips at the top of the Furniture tab.
+
+**Sky in the studio:** the Harbor Studio windows now show the same sky as Destiny City: sun, moon, stars and drifting clouds on the same day and night cycle.
+
+### Builder's Plot (build a house, Sims and Once Human style)
+A new kind of private space. In the lobby, under **Your Builder's Plots**, press **New plot**; each plot has its own code (starts with **P**) that you share like any room code.
+- You arrive on a wild hillside with pines, rocks, a campfire and a sign. Press **`B`** and open the **Build** tab.
+- **Pieces:** foundations, floors, walls, doorways, doors, window walls, pillars, stairs, roofs, fences and more. They snap to a 2 m grid; each level is 3 m high and you can build up to three levels (use the **Level** buttons in the selection bar).
+- **Materials:** wood, stone, metal or concrete, each with its own texture, and a colour picker with recent colours.
+- **Templates:** one click places a starter cabin (flat or pitched roof) to build from.
+- **Cutaway:** stand under a roof and the floors above hide so you can see inside.
+- All the furniture, lamps, fish tanks and photos work inside your house, and the sky changes with day and night.
+- Limit: 1100 pieces per plot. Only the owner builds; visitors see the house and walk in it.
+
+### Party (up to 8 friends)
+Press **`J`** (or Social > Party).
+- **Create a party** and share its code (starts with **Q**) or the **Copy link** invite. A friend pastes the code or opens the link and joins from anywhere.
+- **Invite from this room:** anyone standing in your room appears in the list with an Invite button; they get a Join / No thanks prompt.
+- **Call party to my room** sends everyone a button that takes them to your room (public room, private room, studio or plot).
+- Members see each other's level, room and a leader crown; **Go to** jumps to a member's room. The leader can run a **ready check**, make someone leader or remove someone.
+- **`/p message`** chats with the party only.
+- A party is its own small encrypted room (the party code is the key). If you invite someone inside a public room, the invite crosses that room unencrypted, so use a private room or the code/link for anything sensitive.
+
 ### Harbor Studio, penthouse edition
 - You are at the top of an apartment tower. The front door is centred and is a working **elevator** (step in to open the lobby).
 - The studio **comes empty**. The kitchen counter, island, fridge, bar stools, tall bookcase and six realistic plants (monstera, fiddle-leaf fig, snake plant, areca palm, bird of paradise, fern) are **Decorate furniture** you place where you like (`B`).
@@ -97,7 +130,46 @@ A Tokyo-inspired harbor district on a tropical island, built to keep growing. Jo
 - **Elevated rail line** with moving trains and Destiny Station, **Destiny Tower** (a red-and-white lattice tower), a **Ferris wheel**, food stalls, and **Mount Fuji** on the horizon.
 - **Destiny Islands theme**: a beach, a wooden bridge out to Destiny Islet with the leaning paopu tree, an east pier with a gazebo and lighthouse, small islands, sailboats and a bay bridge.
 - **Shrine park** to the north: torii gates, stone lanterns, a shrine hall, a koi pond with a red arched bridge, cherry blossoms and drifting petals.
+- **Rebuilt architecture (v2)**: every building now has a podium or shopfront at street level and a tower or block above it. Styles are glass curtain-wall towers, tiled mid-rises with ribbon windows, apartment blocks with balconies and sliding doors, narrow tenant buildings (a different business on each floor) and older brick buildings. Heights step down from the centre, with setbacks, roof plant, antennas and aircraft-warning lights. Streets are lined with fascia and blade signs, awnings and street trees.
+- **A one-hour day**: the city runs a full 24-hour cycle every real hour, taken from the clock, so everyone in the same city sees the same time of day. Sunrise, midday, sunset, dusk and night each have their own sky, fog and lighting. Windows light up at night and shopfronts glow, with lamps, neon haloes and pools of coloured light on the pavement.
+- **Sky**: a procedural sky with a sun and halo, drifting clouds (cumulus and high cirrus), and at night about 150 real bright stars in their correct places plus thousands of fainter ones that twinkle, a Milky Way and a moon whose phase changes day to day. Stars fade out near the horizon and when the moon is bright.
+- **Roads that lead somewhere**: Destiny Ave. (east-west) and Harbor St. leave the district through tunnel mouths in concrete walls, with green highway boards (Tokyo / Shinjuku, Odaiba, Yokohama), overhead gantry signs and street-name plates at every junction. Sakura St. and Port St. run north to tunnels signed for Hakone / Mt. Fuji and Chiba / Narita. The shrine avenue ends at the shrine, with a U-turn at each end.
+- **Walk-in shops**: the shopping streets outside the main grid have real shops with a door, glass front, awning, lights and an interior you can walk into: konbini (shelves, fridge wall, register), ramen bar (counter, stools, noren, lanterns), cafe, arcade (glowing cabinets), bookshop, florist, boutique and izakaya, each with flats above.
+- **Street details**: bins and recycling bins, post boxes, benches, bike racks with bikes, planters, hedges, bus shelters, A-frame signs and manholes.
+- **Traffic** only drives on the roads (no parked cars), stops at the Scramble lights, and turns around at the ends of the shrine avenue.
+- **Cars** are shaped sedans, kei cars, vans, taxis and a bus, with glass, wheels and head and tail lights that cast light on the road after dark.
 - Everything is drawn in code (no image files). The city builds the first time you enter it, which can take a moment on a phone.
+
+### Seasons and weather (Destiny City, Builder's Plot, Harbor Studio sky, Oasis Galleria garden)
+The year follows game time: a one-hour real day, and the seasons turn every few real days, so everyone in a room sees the same sky. Weather is a believable model, not a random roll: a seasonal temperature curve, a day and night swing, slow pressure waves, and weather systems that arrive in half-day bins, so a front gives you a clear spell, then thickening cloud, then rain or snow, then clearing. Rain turns to sleet and snow by temperature (snow at about 0 °C or below), thunderstorms need warmth, and fog forms on cold, still mornings.
+- **Snow settles like a game engine would show it**: ground, roofs, cars, trees, benches and bins gather snow on their upward-facing surfaces, patchy at first and thicker over hours, and it melts when it warms. Rain wets and darkens surfaces. Interiors (shops, houses with roofs, the Galleria hall) stay dry, and precipitation stops when you are under a roof or in a tunnel.
+- **Radar and forecast**: press `U` (or Home > Weather) for a radar that sweeps west to east, a 12-hour forecast, the season and temperature. Weather systems in the radar are the same ones that reach you.
+- **Seasons** change tree colours, grass, falling petals and leaves (cherry blossom in spring, red-orange in autumn, bare in winter), and the sun's path and the stars.
+- **Preview**: `/weather clear|cloudy|rain|snow|storm|fog|auto` and `/season spring|summer|autumn|winter|auto` change only what you see. The panel can also use your real local weather (Open-Meteo) when the network allows.
+- Sound: rain, wind and thunder.
+
+### Oasis Galleria (new map, the big mall)
+A glass-roofed shopping hall in the spirit of a PlayStation Home mall: white curved pillars carrying big screens that cycle ads, a brick back wall with arched windows, shop fronts on two levels with balconies, a fountain plaza with a turning sculpture and spray, benches and planted trees, and a great arch out to a **garden** (lawn, paved paths, a pond, a gazebo, hedges and flower beds, and the weather and seasons).
+- Join it from the lobby (the **Oasis Galleria** card) or create a private Galleria room (codes start with `G`).
+- **Key's Diner and Dive** (left) and **Oasis Industries** (right) are the glowing doors near the entrance: walk into the doorway and the game or the lab opens.
+- Ten more shop fronts (boutique, bubble tea, records, gadgets, home, arcade, books, sweets) are decoration for now.
+- The hall is under a roof, so it stays dry in the weather; the garden does not.
+
+### Key's Diner and Dive (cooking game)
+A rush-hour shift game as a full-screen overlay: order tickets arrive with a patience bar; cook patties on the grill (raw, medium, well, burnt), fries in the fryer, hot dogs and pancakes; build burgers topping by topping; pour soda, coffee and milkshakes; serve from the tray before the customer leaves. Perfect orders earn tips and a streak bonus. Each day unlocks more of the menu (onions, pickles, coffee, hot dogs, shakes, pancakes, pie, bacon) and gets faster; two stars or the money goal unlocks the next day. Progress and best scores are saved in this browser, a finished shift earns XP, and **Share to chat** posts your result.
+Open it from the Galleria doorway, Home > Key's Diner, or `/diner`. `Esc` pauses. This is my own take on a "cooking rush" game (I did not have the Discord game to copy), so tell me which rules to change.
+
+### Oasis Industries (hoverboard lab)
+Ported from your Extreme Gear customizer. A live 3D lab (own preview, orbit and five camera views) with nine presets, three paint colours (body, trim, plasma), six deck decals (Racing, Flame, Cyber, Checker, Stars, Oasis), length, width and nose-flare sliders, exhaust density, hover height, a boost demo with engine sound and speed lines, and OBJ export. Eight save slots; **Save & ride** makes it your board in the world, and other players see your custom board. `Shift+X` also cycles through your saved boards after the five stock colourways.
+Open it from the Galleria doorway, Home > Oasis Industries, or `/industries`. Changes I made while porting: the decal now covers the whole deck (in the original it only showed on one corner), the foot pads and straps sit on top of the deck instead of inside it, and the OBJ export includes the deck faces.
+
+### Hoverboards
+Press `X` (or the wind button at the top right, or X / Square on a controller) to hop on a jet-pod hoverboard: faster than running, with a glide when you let go, banking in turns, a hover bob and a pool of light under it. `Shift+X` cycles five colourways (Cyan Streak, Solar Flare, Sakura Drift, Venom Wing, Midnight). Other players see your board. They are not allowed in the Harbor Studio. The board is an original design, and the rider uses a skateboarding pose (a crouched, sideways stance). Boards you design in **Oasis Industries** join the cycle.
+
+### O-Boy (portable screen)
+Press `O` (or the gamepad button at the top right) for a personal handheld. **Load game** takes a ROM you own (NES, SNES, Genesis, Master System, Game Boy / Color / Advance, N64, PlayStation, arcade) and runs it in its own emulator, separate from the TV and not shared with anyone. It opens held up in front of your view (first person); **Full screen** shows only the game. Keys: arrows or WASD, `Z` = B, `X` = A, `Enter` = Start, `Shift` = Select, `Esc` closes; a controller works, and the on-screen buttons work by touch. **Colour** takes any colour you like (picker plus swatches) and is remembered. The emulator core downloads from cdn.emulatorjs.org the first time. **Others can see you playing**: your character holds a small version of the device in both hands with its screen lit in your colour (and the game's frames are not shared), so people know you are busy rather than standing still.
+
+**Targeting**: `T` cycles through nearby players, then yourself, then off. Targeting someone shows a floating, see-through card at them (name, level, and whether they are playing O-Boy or just online); targeting yourself shows your own card. On a controller, tap D-pad down to target yourself (hold it to zoom out) and B clears.
 
 ### Inventory and trading
 - **Inventory** (`I`, or Avatar > Inventory): a 60-slot bag. Store **.vrm** models and **PNG / JPG / GIF / WebP** images (other file types are refused; files are checked by their contents, not just their names). Your Equipment clothes and items show up in the bag too. You can **download** anything back out, set a stored .vrm as your avatar, or delete things. The bag lives in your browser.
@@ -122,6 +194,7 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 - **Text styles** (Discord-style, in chat and speech bubbles): `*italic*` or `_italic_`, `**bold**`, `***bold italic***`, `__underline__`, `~~strike~~`, `` `code` ``, `||spoiler||` (click to reveal in the chat feed; hidden in the bubble). Put `\` before a symbol to type it literally.
 - **Look at someone:** click a player (or press `T` to cycle through the room, and once more to stop) and your head and eyes turn to them with a short reaction delay and soft limits, and your body follows if they are off to the side. A small marker shows who you are looking at, and everyone in the room sees it.
 - **Emotes:** cheer and sit on keys `1` and `2`, plus seven dances (Bboy, Rumba, Twerk, Hip Hop, Gangnam Style, Slide, Snake) and eight poses (standing, sitting, laying) in the Start menu. Dances loop and poses hold until you move or pick them again. Non-VRM avatars use a generic dance or sit.
+- **Theater button** on the TV panel (and a "Screen blank? Watch it here" button that appears on phones while YouTube is playing) lifts the picture out of the 3D scene and shows it flat. YouTube's free movies with ads are copy-protected, and phones cannot draw protected video inside the tilted 3D screen, so it shows blank there; Theater and Full screen both fix it.
 - **Retro games on the TV, 1-4 players.** Load a game file you own (NES, SNES, Genesis, Master System, Game Boy / Color, GBA, N64, PlayStation, arcade / Neo Geo) from the TV panel. It runs in an emulator ([EmulatorJS](https://emulatorjs.org)) on the host's computer and its picture and sound stream to everyone in the room. Anyone can **plug in as Player 1-4** from the panel and play with their own keyboard or Bluetooth / USB controller. No game files are included or uploaded anywhere.
 - **Shared TV.** Play a video on the big screen and the room watches together.
 - Name plates carry the Oasis mark.
@@ -130,24 +203,28 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 | Input | Action |
 |---|---|
 | `W A S D` / arrows | Move |
-| `Shift` | Run |
+| `Shift` | Run (hold), or tap it repeatedly to sprint like GTA; R1 / RB taps on a controller |
 | `Q` / `E` | Turn on the spot |
 | `Space` | Jump (also onto beds, tables and mall benches) |
 | `1` `2` | Cheer, sit |
 | `Enter` | Chat (arrow keys keep walking while you type) |
 | `Tab` | Bottom menu (XMB): ←/→ category, ↑/↓ items, `Enter` select, `Esc` or `Tab` leave |
 | `M` | Start menu |
+| `O` | O-Boy portable screen |
+| `C` | First person view on/off (controller: click the right stick) |
+| `X` | Hoverboard on/off (`Shift+X` changes colour). Not in the studio. Controller: X / Square |
 | `G` | Equipment |
 | `I` | Inventory (bag, files, trading) |
 | `F` | TV panel (retro games live here) |
 | `P` | Pick up the game controls (when plugged in) |
 | `V` | Toggle walk style |
 | `B` | Decorate your studio |
-| `T` | Look at the next player (click a player to look at them) |
+| `T` | Target the next player, then yourself, then off (click a player to target them) |
+| `U` | Weather panel (radar, forecast, season) |
 | Click a player | Open their profile card (RetroAchievements stats, Look at) |
 | Mouse drag | Orbit camera |
 
-**Game controllers** (wired or Bluetooth, any browser-supported gamepad): left stick moves, right stick turns the camera (up looks up, and in the studio it can dip below eye level like the mouse), `A` jumps, `Y` shows or hides the bottom bar, triggers run, `Start` opens the Start menu and the D-pad navigates menus.
+**Game controllers** (wired or Bluetooth, any browser-supported gamepad): left stick moves, right stick turns the camera (up looks up, and in the studio it can dip below eye level like the mouse), `Y` jumps, tap `A` (or R1) to sprint, click the right stick for first person, triggers run, `Start` opens the Start menu and the D-pad navigates menus.
 
 **Player profiles:** click someone to see a card built from their public RetroAchievements profile (points, rank, recently played). Set yours in Start menu > Profile by pasting your profile link (optional, shared only with people in your room). No API keys are involved. Reading the page goes through the Cloudflare helper, which only reads retroachievements.org; see `cloudflare/DEPLOY-NO-TERMINAL.md`.
 
@@ -219,7 +296,11 @@ For the retro-game video on networks that block direct connections, run a TURN s
 - Without your own relay server, internet multiplayer depends on public matchmaking relays and on your network; use **Run network test** if friends cannot connect. About 10-20% of networks need a relay server or TURN.
 - A player relaying for others could in principle forge messages from someone in the room (the code keeps strangers out, not members honest). Relaying through your own server does not have that weakness.
 - Decorating: there is no undo yet; pictures only go on the studio's inner walls; pieces do not stack automatically (use the Height slider); layouts live in this browser, so clearing site data or switching browsers loses them (export is not built yet).
+- Weather, seasons, the Galleria, the diner, Oasis Industries, the O-Boy pose and targeting were tested only in an emulated desktop browser (one or two tabs), not on a phone or with a controller. Not yet verified: how heavy the snow, rain and the Galleria are on a phone; the live-weather option (needs network access); thunder and lightning, and the weather sounds; the D-pad down self-target on a real controller; touch play of the diner.
+- Weather and seasons do not reach inside interiors (shops, roofed houses, the Galleria hall); the Harbor Studio only gets the sky, light and lightning. The weather you see follows the game calendar, so in real October you see autumn unless you preview another season.
+- The Galleria's other shop fronts are decoration; the diner and the lab are overlays, not rooms you walk around in.
 - There is no kick or ban yet; if a code leaks, make a new room.
+- Builder's Plot, party and the new sky were tested only in an emulated desktop browser with two tabs, not on a phone. Very large builds may be slow on phones. Stairs, upper levels and walking on floors still need real-world testing.
 
 ## Credits
 
