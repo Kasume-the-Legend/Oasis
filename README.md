@@ -38,6 +38,12 @@ Bring your own VRM avatar, dress it, hang out in the Central Mall or your own Ha
 
 **Unreleased** (2026-10-09)
 - Seasons and weather (radar, accumulating snow, rain, storms, fog), Oasis Galleria, Key's Diner and Dive, Oasis Industries, O-Boy held pose and player targeting (including yourself).
+- First person view fixed: movement now follows where you look, you can look straight up and down, and Q/E turn the camera.
+- Decorate: **undo / redo** (also `Ctrl+Z` / `Ctrl+Y`), a **Delete** button, previous / next piece buttons and a **Placed** tab that lists everything with a delete (✕) on each row, plus a two-step Delete everything. Locked pieces can be deleted from their bar too.
+- Builder's Plot: the Harbor Studio floor and wall finishes (oak, parquet, tile, marble, carpet, brick, subway tile, stripes, dots, lattice, boards, paint) join wood, stone, metal and concrete.
+- Uploads (photos and 3D models) can have a **name and description**; people who walk up to an item see its description.
+- Harbor Studio: the real Destiny City now stands across the bay as the skyline.
+- **Kitchen Clash:** a 3D, multiplayer cooking contest map in Key's Diner and Dive (see below).
 - Earlier unreleased: Builder's Plot, party system, new sky, 45 more furniture pieces, colour recents.
 
 **1.0.0** (2026-10-07), first tagged release
@@ -83,6 +89,8 @@ Press **`B`** (or Start menu > More > Decorate) inside your own studio.
 - **Place and adjust:** click a piece to select it, drag it across the floor, turn it (`R`, or the slider), resize it (`+` / `-`, or the slider), raise it, duplicate it or delete it (`Delete`). **Grid snap** can be turned on or off, with 10 cm, 20 cm, 50 cm or 1 m cells; with snap on, turning goes in 15 degree steps.
 - **Photos:** import your own pictures and hang them on any inner wall (they stick to the wall you drag across). Pick a frame: none, black, white, wood or gold.
 - **Your own 3D models:** import `.glb`, `.gltf` (single file), `.vrm` or `.obj` as furniture. Models keep their real size when it is plausible. Up to 16 MB each.
+- **Names and descriptions:** after you import a photo or model a small window asks for a name and an optional description (up to 240 characters). Edit it later with the ✎ button in the library or the Description box in the item bar. Visitors who stand near an item see its name and description at the bottom of the screen.
+- **Undo, redo and delete:** the toolbar at the top of the Decorate panel (and the item bar) has Undo, Redo, ◀ ▶ (select the previous or next piece) and Delete. `Ctrl+Z` undoes, `Ctrl+Y` or `Ctrl+Shift+Z` redoes (up to 80 steps; dragging a slider counts as one step). The **Placed** tab lists every piece with ✕ to delete it.
 - **Room tab:** floor (oak, maple, cherry, walnut, ebony, parquet, tile, marble, concrete, carpet, solid colour or **your own image**), inner walls (paint, stripes, dots, lattice, brick, tiles, boards, concrete or **your own wallpaper image**) and ceiling colour, each with a colour and a tile-size slider.
 - Pieces marked **Solid** stop people walking through them. Your layout is saved in this browser per studio, and **visitors see it** (your photos and models are sent to them when they arrive). Only the studio's owner can edit.
 
@@ -100,7 +108,7 @@ Press **`B`** (or Start menu > More > Decorate) inside your own studio.
 A new kind of private space. In the lobby, under **Your Builder's Plots**, press **New plot**; each plot has its own code (starts with **P**) that you share like any room code.
 - You arrive on a wild hillside with pines, rocks, a campfire and a sign. Press **`B`** and open the **Build** tab.
 - **Pieces:** foundations, floors, walls, doorways, doors, window walls, pillars, stairs, roofs, fences and more. They snap to a 2 m grid; each level is 3 m high and you can build up to three levels (use the **Level** buttons in the selection bar).
-- **Materials:** wood, stone, metal or concrete, each with its own texture, and a colour picker with recent colours.
+- **Materials:** wood, stone, metal and concrete, plus the Harbor Studio floors and walls: oak, parquet, tile, marble, carpet, brick, subway tile, stripes, dots, lattice, boards and plain paint. Each can be recoloured, with recent colours.
 - **Templates:** one click places a starter cabin (flat or pitched roof) to build from.
 - **Cutaway:** stand under a roof and the floors above hide so you can see inside.
 - All the furniture, lamps, fish tanks and photos work inside your house, and the sky changes with day and night.
@@ -119,7 +127,7 @@ Press **`J`** (or Social > Party).
 - You are at the top of an apartment tower. The front door is centred and is a working **elevator** (step in to open the lobby).
 - The studio **comes empty**. The kitchen counter, island, fridge, bar stools, tall bookcase and six realistic plants (monstera, fiddle-leaf fig, snake plant, areca palm, bird of paradise, fern) are **Decorate furniture** you place where you like (`B`).
 - Bigger oval skylight with glass, rings and ribs, warm cove lighting and skirting boards.
-- The view from the windows is still the old harbor backdrop; it will be replaced to match Destiny City once the city is finished.
+- The view from the windows is the real **Destiny City** skyline across the bay (the city's own buildings, merged into 11 draw calls; on phones the heaviest window layers are left out). It follows the same day, night and sky as the rest of the studio.
 - Also in this version: house sizes (S/M/L), levelling, a menu hologram, D-pad player targeting and LB + right stick zoom.
 
 ### Destiny City (new map; the lobby has a Destiny City card with a Join button, and a Destiny City option for private rooms)
@@ -157,7 +165,15 @@ A glass-roofed shopping hall in the spirit of a PlayStation Home mall: white cur
 
 ### Key's Diner and Dive (cooking game)
 A rush-hour shift game as a full-screen overlay: order tickets arrive with a patience bar; cook patties on the grill (raw, medium, well, burnt), fries in the fryer, hot dogs and pancakes; build burgers topping by topping; pour soda, coffee and milkshakes; serve from the tray before the customer leaves. Perfect orders earn tips and a streak bonus. Each day unlocks more of the menu (onions, pickles, coffee, hot dogs, shakes, pancakes, pie, bacon) and gets faster; two stars or the money goal unlocks the next day. Progress and best scores are saved in this browser, a finished shift earns XP, and **Share to chat** posts your result.
-Open it from the Galleria doorway, Home > Key's Diner, or `/diner`. `Esc` pauses. This is my own take on a "cooking rush" game (I did not have the Discord game to copy), so tell me which rules to change.
+### Kitchen Clash (3D, multiplayer)
+On the Key's Diner title screen press **Kitchen Clash**, or pick **Key's Kitchen Clash** in the lobby (public channel) or **Kitchen Clash** under private rooms (code starts with **K**, so friends can join the same match). It is a real 3D room with your own character: a **Red** kitchen on the left, a **Blue** kitchen on the right and a dining floor with a **START** console.
+- Walk into a kitchen with your friends and press START (button, console, or `F` at the console). Both teams cook the **same orders** for **2:30**, and everyone on a team shares the same grill and fryer. Alone, or with nobody on the other side, you cook against **Chef Key's crew**.
+- Per dish: grab a **plate**, put a **patty** on the grill (raw, medium, well, burnt: watch the bar above it), take it when it is done, add **toppings** from the bins, take **fries** from the fryer, pour a **soda** or **shake**, then **serve** it at the pass. Burnt food has to be scraped off. You carry one plate at a time and other players see it.
+- **Scoring is done by the game, 0 to 100 per dish:** patty doneness (30), toppings (15, extras cost points), fries ready (25), drink (15), and a speed bonus (up to 12) for serving before the ticket's patience runs out; ranks D, C, B, A and S. A plate is judged against the order it fits best. The team with the higher total wins; the results show each chef's points, dishes and best rank.
+- Controls: `F` use / grab, `K` drop plate, big on-screen **USE** button on touch, controller X to use and B to drop.
+- Opening the title screen still gives you the original solo shift game.
+
+Open the solo game from the Galleria doorway, Home > Key's Diner, or `/diner`. `Esc` pauses. This is my own take on a "cooking rush" game (I did not have the Discord game to copy), so tell me which rules to change.
 
 ### Oasis Industries (hoverboard lab)
 Ported from your Extreme Gear customizer. A live 3D lab (own preview, orbit and five camera views) with nine presets, three paint colours (body, trim, plasma), six deck decals (Racing, Flame, Cyber, Checker, Stars, Oasis), length, width and nose-flare sliders, exhaust density, hover height, a boost demo with engine sound and speed lines, and OBJ export. Eight save slots; **Save & ride** makes it your board in the world, and other players see your custom board. `Shift+X` also cycles through your saved boards after the five stock colourways.
@@ -215,7 +231,8 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 | `X` | Hoverboard on/off (`Shift+X` changes colour). Not in the studio. Controller: X / Square |
 | `G` | Equipment |
 | `I` | Inventory (bag, files, trading) |
-| `F` | TV panel (retro games live here) |
+| `F` | TV panel (retro games live here). In the Kitchen Clash: use / grab |
+| `K` | Drop your plate (Kitchen Clash) |
 | `P` | Pick up the game controls (when plugged in) |
 | `V` | Toggle walk style |
 | `B` | Decorate your studio |
@@ -295,10 +312,12 @@ For the retro-game video on networks that block direct connections, run a TURN s
 - A character's skin can poke through tight clothing.
 - Without your own relay server, internet multiplayer depends on public matchmaking relays and on your network; use **Run network test** if friends cannot connect. About 10-20% of networks need a relay server or TURN.
 - A player relaying for others could in principle forge messages from someone in the room (the code keeps strangers out, not members honest). Relaying through your own server does not have that weakness.
-- Decorating: there is no undo yet; pictures only go on the studio's inner walls; pieces do not stack automatically (use the Height slider); layouts live in this browser, so clearing site data or switching browsers loses them (export is not built yet).
+- Decorating: undo covers up to 80 steps in this session (it is cleared when you re-enter the room); pictures only go on the studio's inner walls; pieces do not stack automatically (use the Height slider); layouts live in this browser, so clearing site data or switching browsers loses them (export is not built yet).
 - Weather, seasons, the Galleria, the diner, Oasis Industries, the O-Boy pose and targeting were tested only in an emulated desktop browser (one or two tabs), not on a phone or with a controller. Not yet verified: how heavy the snow, rain and the Galleria are on a phone; the live-weather option (needs network access); thunder and lightning, and the weather sounds; the D-pad down self-target on a real controller; touch play of the diner.
+- First person, Decorate undo/redo and delete, upload descriptions, the plot's studio textures and the studio's Destiny City skyline were checked in an emulated desktop browser only. Not yet checked: touch and controller feel in first person, and how heavy the studio skyline is on a phone (it is about 11 draw calls and 360k vertices; the heaviest window layers are skipped on touch screens).
 - Weather and seasons do not reach inside interiors (shops, roofed houses, the Galleria hall); the Harbor Studio only gets the sky, light and lightning. The weather you see follows the game calendar, so in real October you see autumn unless you preview another season.
-- The Galleria's other shop fronts are decoration; the diner and the lab are overlays, not rooms you walk around in.
+- The Galleria's other shop fronts are decoration; the solo diner shift and the lab are overlays, but the Kitchen Clash is a real room.
+- Kitchen Clash: tested in an emulated desktop browser only (one player against Chef Key's crew, serving and scoring checked by script). Not yet tried: two or more real players over the network, phones, or a controller. Team match results are computed on each player's own device from the points everyone broadcasts, so a lost network message could make two devices show slightly different totals. Players who walk in after a match has started spectate until the next one. Stations are shared by teammates, but if two teammates grab the same patty in the same instant one of them just gets nothing.
 - There is no kick or ban yet; if a code leaks, make a new room.
 - Builder's Plot, party and the new sky were tested only in an emulated desktop browser with two tabs, not on a phone. Very large builds may be slow on phones. Stairs, upper levels and walking on floors still need real-world testing.
 

@@ -554,6 +554,7 @@
                 <button id="pm-loft" class="py-2 rounded-xl text-xs font-semibold transition">Harbor Studio</button>
                 <button id="pm-city" class="py-2 rounded-xl text-xs font-semibold transition">Destiny City</button>
                 <button id="pm-galleria" class="py-2 rounded-xl text-xs font-semibold transition">Oasis Galleria</button>
+                <button id="pm-diner" class="col-span-2 py-2 rounded-xl text-xs font-semibold transition">Kitchen Clash (cooking contest)</button>
             </div>
             <div class="flex gap-2 mb-2">
                 <button id="create-private" class="flex-1 bg-psGlow hover:bg-blue-600 py-2.5 rounded-xl text-xs font-semibold transition"><i class="fa-solid fa-lock mr-1"></i> <span id="create-private-label">Create private room</span></button>
@@ -1607,7 +1608,8 @@
             { id: 'plaza-02', name: 'Central Mall', tag: 'Channel 2' },
             { id: 'plaza-03', name: 'Central Mall', tag: 'Channel 3' },
             { id: 'city-01', name: 'Destiny City', tag: 'Channel 1', map: 'city' },
-            { id: 'galleria-01', name: 'Oasis Galleria', tag: 'Channel 1', map: 'galleria' }
+            { id: 'galleria-01', name: 'Oasis Galleria', tag: 'Channel 1', map: 'galleria' },
+            { id: 'diner-01', name: "Key's Kitchen Clash", tag: 'Channel 1', map: 'diner' }
         ];
 
         function inWalkable(x, z) {
@@ -3752,6 +3754,7 @@
                     if (!m.reply) net.send({ ...helloMsg(true), to: from });
                     break;
                 }
+                case 'kc': { try { kcOnMsg(from, m); } catch (e) { console.warn('kitchen message', e); } break; }
                 case 'hbd': { const p = peers.get(from); if (p) { p.hbd = hbdClean(m.d); p.hbdJ = p.hbd ? JSON.stringify(p.hbd) : ''; } break; }
                 case 'state': {
                     const p = peers.get(from);
@@ -4019,7 +4022,7 @@
             const pc = presCounts(), pm = presNet ? presNet.describe() : null;
             $('lobby-online').textContent = pm && pm.mode === 'online' || pc.total > 1 ? `${pc.total} player${pc.total === 1 ? '' : 's'} online right now` : pm && (pm.mode === 'connecting' || pm.mode === 'waiting') ? (pm.mode === 'waiting' ? 'You are the only one online right now' : 'Looking for other players...') : 'Online count unavailable (peer-to-peer is blocked here)';
             for (const d of DISTRICTS) {
-                if (d.map !== 'city' && d.map !== 'galleria') continue;   // the Central Mall channels stay out of the list
+                if (d.map !== 'city' && d.map !== 'galleria' && d.map !== 'diner') continue;   // the Central Mall channels stay out of the list
                 const seen = dirSeen.get(d.id);
                 let count = Math.max(seen && Date.now() - seen.ts < 6000 ? seen.count : 0, pc.byRoom[d.id] || 0);      // tabs of this browser, and what other players report
                 if (room && room.id === d.id) count = Math.max(count, peers.size + 1);
@@ -4043,14 +4046,14 @@
         const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         // The first letter of a private code says which map it opens: L = Harbor Studio, anything else = Central Mall.
         // 11 random characters (55 bits) after the map letter: too many to guess, so the code is a real key (it also encrypts the room's traffic)
-        const makeCode = (map = 'mall') => (map === 'loft' ? 'L' : map === 'city' ? 'C' : map === 'galleria' ? 'G' : map === 'plot' ? 'P' : map === 'party' ? 'Q' : 'M') + Array.from(crypto.getRandomValues(new Uint8Array(11)), (b) => CODE_CHARS[b % 32]).join('');
+        const makeCode = (map = 'mall') => (map === 'loft' ? 'L' : map === 'city' ? 'C' : map === 'galleria' ? 'G' : map === 'diner' ? 'K' : map === 'plot' ? 'P' : map === 'party' ? 'Q' : 'M') + Array.from(crypto.getRandomValues(new Uint8Array(11)), (b) => CODE_CHARS[b % 32]).join('');
         const normCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const validCode = (c) => /^[MLCPG][A-Z0-9]{10,14}$/.test(c);
+        const validCode = (c) => /^[MLCPGK][A-Z0-9]{10,14}$/.test(c);
         const fmtCode = (c) => (String(c).match(/.{1,4}/g) || [String(c)]).join('-');
-        const mapOfCode = (code) => (String(code)[0] === 'L' ? 'loft' : String(code)[0] === 'C' ? 'city' : String(code)[0] === 'G' ? 'galleria' : String(code)[0] === 'P' ? 'plot' : 'mall');
+        const mapOfCode = (code) => (String(code)[0] === 'L' ? 'loft' : String(code)[0] === 'C' ? 'city' : String(code)[0] === 'G' ? 'galleria' : String(code)[0] === 'K' ? 'diner' : String(code)[0] === 'P' ? 'plot' : 'mall');
         function joinPrivate(code) {
             const map = mapOfCode(code);
-            joinRoom('private-' + code, { label: map === 'loft' ? 'Private Harbor Studio' : map === 'city' ? 'Private Destiny City' : map === 'galleria' ? 'Private Oasis Galleria' : map === 'plot' ? (myPlots().find((x) => x.code === code) || {}).name || "Builder's Plot" : 'Private Room', isPrivate: true, code, map });
+            joinRoom('private-' + code, { label: map === 'loft' ? 'Private Harbor Studio' : map === 'city' ? 'Private Destiny City' : map === 'galleria' ? 'Private Oasis Galleria' : map === 'diner' ? 'Private Kitchen Clash' : map === 'plot' ? (myPlots().find((x) => x.code === code) || {}).name || "Builder's Plot" : 'Private Room', isPrivate: true, code, map });
         }
         // Everyone has a loft of their own: a stable code per browser, so friends can come back to the same place
         function myLoftCode() {
@@ -4066,7 +4069,8 @@
             $('pm-loft').className = privateMap === 'loft' ? on : off;
             $('pm-city').className = (privateMap === 'city' ? on : off);
             $('pm-galleria').className = (privateMap === 'galleria' ? on : off);
-            $('create-private-label').textContent = privateMap === 'loft' ? 'Create private studio' : privateMap === 'city' ? 'Create private city room' : privateMap === 'galleria' ? 'Create private Galleria room' : 'Create private room';
+            $('pm-diner').className = 'col-span-2 ' + (privateMap === 'diner' ? on : off);
+            $('create-private-label').textContent = privateMap === 'loft' ? 'Create private studio' : privateMap === 'city' ? 'Create private city room' : privateMap === 'galleria' ? 'Create private Galleria room' : privateMap === 'diner' ? 'Create private Kitchen Clash' : 'Create private room';
             $('loft-code').textContent = fmtCode(myLoftCode());
         }
 
@@ -7715,9 +7719,10 @@
                 g.traverse((m) => { m.userData.noOutline = true; });
                 return g;
             };
-            for (let i = 0; i < 34; i++) {              // the skyline across the bay
+            LOFT.farTowers = [];
+            for (let i = 0; i < 34; i++) {              // the skyline across the bay (stands in until Destiny City itself is ready; see loftDestinyBg)
                 const a = (-72 + 144 * (i / 33) + (TR() - 0.5) * 6) * Math.PI / 180, R_ = 290 + TR() * 150, hgt = 70 + TR() * 130 * (1 - Math.abs(a) * 0.4);
-                tower(Math.sin(a) * R_, -Math.cos(a) * R_ - 40, 16 + TR() * 20, 16 + TR() * 18, hgt, ['glass', 'white', 'neon'][Math.floor(TR() * 3)]);
+                LOFT.farTowers.push(tower(Math.sin(a) * R_, -Math.cos(a) * R_ - 40, 16 + TR() * 20, 16 + TR() * 18, hgt, ['glass', 'white', 'neon'][Math.floor(TR() * 3)]));
             }
             for (let i = 0; i < 12; i++) {              // neighbours either side: apartment blocks, some taller than us
                 const side = i % 2 ? 1 : -1, x = side * (95 + TR() * 90), z = -20 - TR() * 80, hgt = 30 + TR() * 55;
@@ -7749,6 +7754,39 @@
               const bl = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), new THREE.MeshStandardMaterial({ map: canvasTex(512, 256, (g, w, h) => { g.fillStyle = '#e9eef5'; g.fillRect(0, 0, w, h); g.fillStyle = '#10163a'; g.fillRect(40, 70, w - 80, 116); g.font = '800 64px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = '#ff3fa4'; g.shadowBlur = 16; g.fillStyle = '#ff7ac6'; g.fillText('THE OASIS', w / 2, h / 2 + 2); }), roughness: 0.5 })); bl.scale.set(26, 9, 9); bl.position.set(-120, 62, -230); scn.add(bl); anim.blimp = bl;
             }
             scn.traverse((m) => { m.userData.noOutline = true; });
+        }
+        // Destiny City itself, across the bay: the real city's buildings and streets (shared geometry and materials, so it costs draw calls but almost no memory)
+        function loftDestinyBg() {
+            if (LOFT.cityBg || !LOFT.dome || !LOFT.dome.parent) return; ensureCity(); if (!CITY.ready || !CITY.group) return;
+            const root = LOFT.dome.parent, bg = new THREE.Group(), buckets = new Map(); bg.name = 'loft_destiny'; let n = 0, v = 0, calls = 0;
+            const mobile = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || innerWidth < 820;
+            for (const c of CITY.group.children) {
+                if (!c.isMesh || c.isInstancedMesh || !c.geometry || !c.geometry.attributes.position) continue;
+                const gb = c.geometry.boundingBox || (c.geometry.computeBoundingBox(), c.geometry.boundingBox), w = Math.max(gb.max.x - gb.min.x, gb.max.z - gb.min.z), hgt = gb.max.y - gb.min.y;
+                if (w > 300) continue;
+                const nm = c.name || '', bldg = /^cy_(fac|roofC|conc|metal|vc)@/.test(nm), flat = w >= 100 && hgt < 1.5;
+                if (!bldg && !flat) continue;
+                if (mobile && /^cy_vc@/.test(nm) && c.geometry.attributes.position.count > 12000) continue;       // the heaviest window layers stay off phones
+                c.updateMatrix(); (buckets.get(c.material) || buckets.set(c.material, []).get(c.material)).push(c); n++; v += c.geometry.attributes.position.count;
+            }
+            if (!n) return;
+            for (const [mat, list] of buckets) {      // one draw call per material instead of one per city block
+                const names = new Set(); for (const c of list) for (const k of Object.keys(c.geometry.attributes)) names.add(k);
+                const geos = list.map((c) => {
+                    const g = c.geometry.clone(); g.applyMatrix4(c.matrix); const cnt = g.attributes.position.count;
+                    if (!g.index) { const ix = new (cnt > 65535 ? Uint32Array : Uint16Array)(cnt); for (let i = 0; i < cnt; i++) ix[i] = i; g.setIndex(new THREE.BufferAttribute(ix, 1)); }
+                    for (const k of names) if (!g.attributes[k]) { const ref = list.find((q) => q.geometry.attributes[k]).geometry.attributes[k]; g.setAttribute(k, new THREE.BufferAttribute(new Float32Array(cnt * ref.itemSize), ref.itemSize)); }
+                    for (const k of Object.keys(g.attributes)) if (!names.has(k)) g.deleteAttribute(k);
+                    g.morphAttributes = {}; return g;
+                });
+                let mg = null; try { mg = mergeGeometries(geos, false); } catch (e) { mg = null; }
+                for (const g of geos) g.dispose();
+                if (!mg) continue; const m = new THREE.Mesh(mg, mat); m.castShadow = m.receiveShadow = false; m.userData.noOutline = true; m.frustumCulled = false; bg.add(m); calls++;
+            }
+            bg.scale.setScalar(1.35); bg.position.set(0, SEA - 0.3, -430); bg.rotation.y = 0;
+            root.add(bg); LOFT.cityBg = bg;
+            for (const t of LOFT.farTowers || []) t.visible = false;       // the stand-in towers retire
+            LOFT.cityBgStats = { meshes: n, verts: v, calls };
         }
         function updateScenery(dt) {
             const a = LOFT.anim; if (!a) return; const t = nowS();
@@ -10239,8 +10277,13 @@
          *  Levels are 3 m apart. Stand under a roof and the floors above are cut away so you can see in; walls between you and the camera fade.
          * ==================================================================================================== */
         const PB_LV = 3, PB_SLAB = 0.3, PB_WH = 2.7;
-        const PB_MATS = ['wood', 'stone', 'metal', 'concrete'];
-        const PB_MAT = { wood: { label: 'Wood', icon: '🪵', c: '#a47c52', skin: 'planks' }, stone: { label: 'Stone', icon: '🪨', c: '#a9a49a', skin: 'stone' }, metal: { label: 'Metal', icon: '🔩', c: '#8f969c', skin: 'corrug' }, concrete: { label: 'Concrete', icon: '🧱', c: '#b4b4b0', skin: 'cblock' } };
+        const PB_MATS = ['wood', 'stone', 'metal', 'concrete', 'oak', 'parquet', 'tile', 'marble', 'carpet', 'brick', 'subway', 'stripes', 'dots', 'lattice', 'boards', 'paint'];
+        const PB_MAT = { wood: { label: 'Wood', icon: '🪵', c: '#a47c52', skin: 'planks' }, stone: { label: 'Stone', icon: '🪨', c: '#a9a49a', skin: 'stone' }, metal: { label: 'Metal', icon: '🔩', c: '#8f969c', skin: 'corrug' }, concrete: { label: 'Concrete', icon: '🧱', c: '#b4b4b0', skin: 'cblock' },
+            // Harbor Studio finishes (same textures as the studio's floor / wall styles)
+            oak: { label: 'Oak', icon: '🟫', c: '#ffffff', skin: 'g:oak', tu: 2 }, parquet: { label: 'Parquet', icon: '🔶', c: '#ffffff', skin: 'g:parquet', tu: 2 }, tile: { label: 'Tile', icon: '⬜', c: '#ffffff', skin: 'g:tile', tu: 2 },
+            marble: { label: 'Marble', icon: '🤍', c: '#ffffff', skin: 'g:marble', tu: 2 }, carpet: { label: 'Carpet', icon: '🟪', c: '#9a8fb0', skin: 'g:carpet', tu: 1.2 }, brick: { label: 'Brick', icon: '🧱', c: '#d9906f', skin: 'g:brick', tu: 1.6 },
+            subway: { label: 'Subway tile', icon: '🔲', c: '#ffffff', skin: 'g:subway', tu: 1.6 }, stripes: { label: 'Stripes', icon: '🦓', c: '#c9d6e3', skin: 'g:stripes', tu: 1.6 }, dots: { label: 'Dots', icon: '⚪', c: '#f0d9d9', skin: 'g:dots', tu: 1.6 },
+            lattice: { label: 'Lattice', icon: '🔷', c: '#d9e6d9', skin: 'g:lattice', tu: 1.6 }, boards: { label: 'Boards', icon: '📏', c: '#ffffff', skin: 'g:boards', tu: 2 }, paint: { label: 'Paint', icon: '🎨', c: '#e8e2d6', skin: null } };
         // [label, icon, lattice class (v vertex, c cell, e edge, sx stairs), base (slab: y = 3n, wall: y = 3n + 0.3), collision parts]
         const PB_KINDS = {
             foundation: ['Foundation 4×4', '⬛', 'v', 'slab', [['g', -2, -2, 2, 2, 0, 0.3]]],
@@ -10279,7 +10322,9 @@
               const row = Math.floor(y / 64), off = (row % 2) * 64, bx = (x + off) % 128, fy = y % 64, edge = bx < 2 || fy < 2 ? 0 : 1;
               return edge * (0.6 + 0.22 * dcVN(x, y, 8, 256, 256, 9) + 0.12 * dcVN(x, y, 2, 256, 256, 12) + 0.06 * hs(Math.floor((x + off) / 128) + row * 5)) + (1 - edge) * 0.12;
           }, { lo: 0.3, hi: 1.0, k: 2.2, tu: 0.8, tv: 0.8 });
-          for (const m of PB_MATS) DC_SKIN_OF['s:' + m] = PB_MAT[m].skin; }
+          for (const m of PB_MATS) { const sk = PB_MAT[m].skin; if (sk && sk.startsWith('g:')) { const key = sk.slice(2), tu = PB_MAT[m].tu || 2;
+              DC_SKIN_MAKE[sk] = () => { const b = DC_GEN[key](), t = b.tex.clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.needsUpdate = true; return { map: t, normalMap: null, tu, tv: tu / (b.aspect || 1) }; }; }
+              DC_SKIN_OF['s:' + m] = PB_MAT[m].skin || undefined; } }
 
         // ---- the pieces ----
         function bpMake(kind, mat, hex) {
@@ -10981,7 +11026,7 @@
         function dcCleanItem(r) {
             if (!r || typeof r !== 'object') return null;
             const t = r.t === 'p' ? 'p' : r.t === 'm' ? 'm' : r.t === 'b' ? 'b' : r.t === 's' ? 's' : null; if (!t || !dcOkId(r.id)) return null;
-            const L = dcB(), it = { id: r.id, t, n: String(r.n || '').slice(0, 40), x: dcNum(r.x, L.X0, L.X1, 0), y: dcNum(r.y, 0, L.H, 0), z: dcNum(r.z, L.Z0, L.Z1, 0), r: dcNum(r.r, -720, 720, 0), s: dcNum(r.s, 0.1, 10, 1), c: dcHex(r.c, ''), sol: !!r.sol, lock: !!r.lock };
+            const L = dcB(), it = { id: r.id, t, n: String(r.n || '').slice(0, 40), x: dcNum(r.x, L.X0, L.X1, 0), y: dcNum(r.y, 0, L.H, 0), z: dcNum(r.z, L.Z0, L.Z1, 0), r: dcNum(r.r, -720, 720, 0), s: dcNum(r.s, 0.1, 10, 1), c: dcHex(r.c, ''), sol: !!r.sol, lock: !!r.lock, d: String(r.d || '').replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, 240) };
             if (t === 'b') { if (!dcCat(r.k)) return null; it.k = r.k; if (!it.c) it.c = dcCat(r.k)[3]; }
             else if (t === 's') {
                 if (!PB_KINDS[r.k] || activeMap !== 'plot') return null; it.k = r.k; it.m = PB_MATS.includes(r.m) ? r.m : 'wood'; if (!it.c) it.c = PB_MAT[it.m].c;
@@ -10992,8 +11037,45 @@
             if (t === 'p') { it.ar = dcNum(r.ar, 0.2, 5, 1); it.f = Object.prototype.hasOwnProperty.call(DC_FRAMES, r.f) ? r.f : 'black'; }
             return it;
         }
-        const dcWireItem = (it) => { const o = { id: it.id, t: it.t, n: it.n, x: +it.x.toFixed(3), y: +it.y.toFixed(3), z: +it.z.toFixed(3), r: +it.r.toFixed(1), s: +it.s.toFixed(3), c: it.c || '', sol: it.sol ? 1 : 0, lock: it.lock ? 1 : 0 }; if (it.k) o.k = it.k; if (it.a) o.a = it.a; if (it.m) o.m = it.m; if (it.t === 'p') { o.ar = it.ar; o.f = it.f; } return o; };
+        const dcWireItem = (it) => { const o = { id: it.id, t: it.t, n: it.n, x: +it.x.toFixed(3), y: +it.y.toFixed(3), z: +it.z.toFixed(3), r: +it.r.toFixed(1), s: +it.s.toFixed(3), c: it.c || '', sol: it.sol ? 1 : 0, lock: it.lock ? 1 : 0 }; if (it.d) o.d = it.d; if (it.k) o.k = it.k; if (it.a) o.a = it.a; if (it.m) o.m = it.m; if (it.t === 'p') { o.ar = it.ar; o.f = it.f; } return o; };
         const dcWire = () => ({ items: [...DC.items.values()].map(dcWireItem), style: DC.style });
+        // undo / redo: snapshots of the whole layout (cheap: a layout is a few kilobytes of JSON)
+        DC.hist = { s: [], i: -1, t: 0, busy: false };
+        function dcHistReset() { const h = DC.hist; h.s = [JSON.stringify(dcWire())]; h.i = 0; h.t = 0; }
+        function dcHistPush() {
+            const h = DC.hist; if (h.busy || !DC.owner) return; if (h.i < 0) { dcHistReset(); return; }
+            const j = JSON.stringify(dcWire()); if (j === h.s[h.i]) return; const now = performance.now();
+            if (now - h.t < 450 && h.i > 0 && h.i === h.s.length - 1) h.s[h.i] = j;      // a slider drag is one step, not fifty
+            else { h.s.length = h.i + 1; h.s.push(j); h.i++; if (h.s.length > 80) { h.s.shift(); h.i--; } }
+            h.t = now;
+        }
+        function dcRestore(j) {
+            const w = JSON.parse(j), h = DC.hist; h.busy = true;
+            try {
+                dcSelect(null);
+                const items = (Array.isArray(w.items) ? w.items : []).slice(0, dcLimit()).map(dcCleanItem).filter(Boolean), seen = new Set();
+                for (const n of items) {
+                    seen.add(n.id); const old = DC.items.get(n.id);
+                    if (!old) { DC.items.set(n.id, n); dcInstantiate(n); continue; }
+                    const same = old.a === n.a && old.k === n.k && old.t === n.t && old.c === n.c && old.f === n.f && old.m === n.m;
+                    Object.assign(old, { x: n.x, y: n.y, z: n.z, r: n.r, s: n.s, sol: n.sol, c: n.c, f: n.f, n: n.n, m: n.m, lock: n.lock, d: n.d });
+                    if (!same) { old.a = n.a; old.k = n.k; old.ar = n.ar; dcInstantiate(old); } else dcPlace(old);
+                }
+                for (const [id, it] of [...DC.items]) if (!seen.has(id)) { dcRemoveGroup(it); DC.items.delete(id); }
+                const ns = dcCleanStyle(w.style); if (JSON.stringify(ns) !== JSON.stringify(DC.style)) { DC.style = ns; dcApplyStyle(); }
+                BP.dirty = true;
+            } finally { h.busy = false; }
+            DC.dirty = true; clearTimeout(DC.saveT); DC.saveT = setTimeout(dcSave, 400); dcBroadcastSoon(); dcRenderBar();
+        }
+        function dcUndo() { const h = DC.hist; if (h.i <= 0) { sysChat('Nothing to undo.'); return; } h.i--; dcRestore(h.s[h.i]); }
+        function dcRedo() { const h = DC.hist; if (h.i >= h.s.length - 1) { sysChat('Nothing to redo.'); return; } h.i++; dcRestore(h.s[h.i]); }
+        function dcStep(dir) { const ids = [...DC.items.keys()]; if (!ids.length) return; const i = ids.indexOf(DC.sel); dcSelect(ids[(i < 0 ? (dir > 0 ? 0 : ids.length - 1) : (i + dir + ids.length) % ids.length)]); }
+        function dcToolRow() {
+            const h = DC.hist, row = dcEl('div', 'dc-tools'), sel = DC.sel && DC.items.get(DC.sel);
+            const b = (label, title, fn, off) => { const x = dcBtn(label, fn, 'dim' + (off ? ' off' : '')); x.title = title; return x; };
+            row.append(b('↶ Undo', 'Undo (Ctrl+Z)', dcUndo, h.i <= 0), b('↷ Redo', 'Redo (Ctrl+Y)', dcRedo, h.i >= h.s.length - 1), b('◀', 'Select the previous piece', () => dcStep(-1), !DC.items.size), b('▶', 'Select the next piece', () => dcStep(1), !DC.items.size), b('🗑 Delete', 'Delete the selected piece (Del)', () => { if (sel) dcDelete(sel.id); }, !sel));
+            return row;
+        }
         function dcRemoveGroup(it) { BP.dirty = true; if (it.group) { it.group.removeFromParent(); disposeObject(it.group); it.group = null; } }
         async function dcInstantiate(it) {
             const tok = (it.tok = (it.tok || 0) + 1);
@@ -11042,12 +11124,12 @@
             it.x = p.x; it.y = p.y - 0; it.z = p.z;
         }
         function dcAddPhoto(aid, ar, name) {
-            const h = dcWallSpot(), it = { id: dcId(), t: 'p', a: aid, ar, n: name || 'Photo', f: 'black', s: 1, x: 0, y: 1.5, z: 0, r: 0, c: '', sol: 0 };
+            const h = dcWallSpot(), le = DC.lib.find((x) => x.id === aid), it = { id: dcId(), t: 'p', a: aid, ar, n: (le && le.name) || name || 'Photo', d: (le && le.d) || '', f: 'black', s: 1, x: 0, y: 1.5, z: 0, r: 0, c: '', sol: 0 };
             dcWallPose(h, it);
             // photo groups are centred on the middle of the picture, hung at its centre height
             dcAdd(it);
         }
-        function dcAddModel(aid, name) { const sp = dcSpotInFront(); dcAdd({ t: 'm', a: aid, n: name, x: sp.x, y: 0, z: sp.z, r: sp.r, s: 1, c: '', sol: 0 }); }
+        function dcAddModel(aid, name) { const sp = dcSpotInFront(), le = DC.lib.find((x) => x.id === aid); dcAdd({ t: 'm', a: aid, n: (le && le.name) || name, d: (le && le.d) || '', x: sp.x, y: 0, z: sp.z, r: sp.r, s: 1, c: '', sol: 0 }); }
         function dcDelete(id) {
             const it = DC.items.get(id); if (!it) return;
             if (DC.sel === id) dcSelect(null);
@@ -11067,7 +11149,7 @@
         }
 
         // ---- persistence and sync ----
-        function dcChanged() { DC.dirty = true; clearTimeout(DC.saveT); DC.saveT = setTimeout(dcSave, 400); dcBroadcastSoon(); renderGridAndBar(); }
+        function dcChanged() { dcHistPush(); DC.dirty = true; clearTimeout(DC.saveT); DC.saveT = setTimeout(dcSave, 400); dcBroadcastSoon(); renderGridAndBar(); }
         function renderGridAndBar() { dcRenderBar(); }
         const dcCode = () => (room && room.code) || '';
         function dcSave() { if (!DC.owner) return; const code = dcCode(); if (code) store.put('decor:' + code, { v: 1, ...dcWire() }).catch(() => {}); }
@@ -11082,13 +11164,13 @@
         }
         async function dcEnter() {
             dcSetEdit(false); dcClear();
-            DC.owner = dcOwns();
+            DC.owner = dcOwns(); DC.hist.i = -1;
             if (!DC.owner) return;
             let st = null; try { st = await store.get('decor:' + room.code); } catch (e) { st = null; }
             if (!st || !DC.owner) return;
             DC.style = dcCleanStyle(st.style);
             for (const r of (Array.isArray(st.items) ? st.items : []).slice(0, dcLimit())) { const it = dcCleanItem(r); if (it) { DC.items.set(it.id, it); dcInstantiate(it); } }
-            dcApplyStyle();
+            dcApplyStyle(); dcHistReset();
         }
         function dcOnWire(from, w) {
             if (DC.owner || !dcMapOn() || !w || typeof w !== 'object') return;
@@ -11168,6 +11250,19 @@
             DC.assets.set(id, { type: 'model', mime, buffer });
             const e = { id, kind: 'model', name: file.name.replace(/\.[^.]+$/, '').slice(0, 40), size: buffer.byteLength };
             DC.lib.push(e); dcLibSave(); return e;
+        }
+        // name + description dialog for an uploaded photo / model
+        function dcDescribe(e, title) {
+            return new Promise((done) => {
+                const ov = dcEl('div', 'dc-dlg'), bx = dcEl('div', 'dc-dlgb');
+                bx.innerHTML = `<h3></h3><label>Name<input class="dcn" maxlength="40"></label><label>Description <small>(optional, shown when people walk up to it)</small><textarea class="dcd" maxlength="240" rows="4" placeholder="What is it? Who made it? A story, a credit, a note…"></textarea></label><div class="dcr"></div>`;
+                bx.querySelector('h3').textContent = title || 'Describe this upload';
+                const ni = bx.querySelector('.dcn'), di = bx.querySelector('.dcd'); ni.value = e.name || ''; di.value = e.d || '';
+                const fin = (ok) => { if (ok) { e.name = ni.value.trim().slice(0, 40) || e.name; e.d = di.value.replace(/\s+/g, ' ').trim().slice(0, 240); dcLibSave(); for (const it of DC.items.values()) if (it.a === e.id) { it.n = e.name; it.d = e.d; } } ov.remove(); done(ok); };
+                const r = bx.querySelector('.dcr'); r.append(dcBtn('Save', () => fin(true), 'gold'), dcBtn('Skip', () => fin(false), 'dim'));
+                for (const k of ['keydown', 'keyup', 'keypress']) bx.addEventListener(k, (ev) => ev.stopPropagation());
+                ov.appendChild(bx); document.body.appendChild(ov); setTimeout(() => di.focus(), 50);
+            });
         }
         function dcLibDelete(id) {
             const used = [...DC.items.values()].some((i) => i.a === id) || dcStyleUses(id);
@@ -11259,6 +11354,8 @@
             window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
             window.addEventListener('keydown', (e) => {
                 if (!DC.edit || isTyping(e)) return;
+                if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); e.shiftKey ? dcRedo() : dcUndo(); return; }
+                if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { e.preventDefault(); dcRedo(); return; }
                 const it = DC.sel && DC.items.get(DC.sel);
                 if (e.code === 'Escape') { if (it) dcSelect(null); else dcSetEdit(false); e.preventDefault(); return; }
                 if (!it) return;
@@ -11287,20 +11384,26 @@
                 const grid = dcEl('div', 'dc-grid');
                 for (const [k, label, ico] of DC_CAT) { if ((DC.cat || 'All') !== 'All' && (DC_GROUP[k] || 'Plants & decor') !== DC.cat) continue; const b = dcEl('button', 'dc-tile', `<span>${ico}</span><em>${label}</em>`); b.type = 'button'; b.addEventListener('click', () => dcAddKind(k)); grid.appendChild(b); }
                 body.append(chips, dcEl('p', 'dc-note', 'Click a piece to put it in front of you, then drag it. Pick a colour for it in the bar below, and your recent colours stay saved. Lamps really light the room at night.'), grid);
+            } else if (DC.tab === 'list') {
+                DC.ui.panel.dataset.listN = String(DC.items.size);
+                body.append(dcEl('p', 'dc-note', 'Everything you have placed. Tap a row to select it (then move, resize or delete it), or use ✕ to delete. Undo brings anything back.'));
+                for (const it of DC.items.values()) { const r = dcEl('div', 'dc-brow2' + (DC.sel === it.id ? ' on' : '')); const sp = dcEl('span'); sp.textContent = (it.lock ? '🔒 ' : '') + ({ b: '🪑', s: '🧱', p: '🖼️', m: '📦' }[it.t] || '') + ' ' + (it.n || 'Item'); sp.style.cursor = 'pointer'; sp.addEventListener('click', () => { dcSelect(it.id); dcRenderPanel(); }); r.append(sp, dcBtn('✕', () => { dcDelete(it.id); dcRenderPanel(); }, 'dim')); body.append(r); }
+                if (!DC.items.size) body.append(dcEl('p', 'dc-note', 'Nothing placed yet.'));
+                else { let arm = false; const ca = dcBtn('Delete everything', () => { if (!arm) { arm = true; ca.textContent = 'Really delete all? (Undo can bring it back)'; return; } for (const id of [...DC.items.keys()]) { const q = DC.items.get(id); dcSelect(null); dcRemoveGroup(q); DC.items.delete(id); } dcChanged(); dcRenderPanel(); }, 'red'); body.append(ca); }
             } else if (DC.tab === 'build') { dcRenderBuild(body);
             } else if (DC.tab === 'photo') {
-                body.append(dcEl('p', 'dc-note', 'Hang your own pictures on the walls. They snap to the wall you drag them across.'), dcBtn('＋ Import photos…', () => dcPickFile('image/*', true, async (f) => { const e = await dcImportImage(f); dcRenderPanel(); dcAddPhoto(e.id, e.ar, e.name); }), 'gold'));
+                body.append(dcEl('p', 'dc-note', 'Hang your own pictures on the walls. They snap to the wall you drag them across.'), dcBtn('＋ Import photos…', () => dcPickFile('image/*', true, async (f) => { const e = await dcImportImage(f); dcRenderPanel(); await dcDescribe(e, 'Describe this photo'); dcRenderPanel(); dcAddPhoto(e.id, e.ar, e.name); }), 'gold'));
                 const grid = dcEl('div', 'dc-grid thumbs');
                 for (const e of DC.lib.filter((x) => x.kind === 'img')) {
-                    const t = dcEl('div', 'dc-thumb'); const im = dcEl('img'); dcThumb(e.id).then((u) => { im.src = u; }); const em = dcEl('em'); em.textContent = e.name; t.append(im, em);
-                    const row = dcEl('div', 'dc-trow'); row.append(dcBtn('Hang', () => dcAddPhoto(e.id, e.ar, e.name)), dcBtn('✕', () => dcLibDelete(e.id), 'dim')); t.append(row); grid.appendChild(t);
+                    const t = dcEl('div', 'dc-thumb'); const im = dcEl('img'); dcThumb(e.id).then((u) => { im.src = u; }); const em = dcEl('em'); em.textContent = e.name; t.append(im, em); if (e.d) { const dd = dcEl('small', 'dc-desc'); dd.textContent = e.d; t.append(dd); }
+                    const row = dcEl('div', 'dc-trow'); row.append(dcBtn('Hang', () => dcAddPhoto(e.id, e.ar, e.name)), dcBtn('✎', () => dcDescribe(e, 'Edit photo').then(() => dcRenderPanel()), 'dim'), dcBtn('✕', () => dcLibDelete(e.id), 'dim')); t.append(row); grid.appendChild(t);
                 }
                 body.append(grid);
             } else if (DC.tab === 'model') {
                 body.append(dcEl('p', 'dc-note', 'Bring your own furniture: .glb, .gltf (single file), .vrm or .obj. It keeps its real size when that is plausible; use the size slider to adjust. Models are stored in this browser and sent to visitors when they arrive.'),
-                    dcBtn('＋ Import 3D models…', () => dcPickFile('.glb,.gltf,.vrm,.obj', true, async (f) => { const e = await dcImportModel(f); sysChat(`Imported "${e.name}".`); dcRenderPanel(); dcAddModel(e.id, e.name); }), 'gold'));
+                    dcBtn('＋ Import 3D models…', () => dcPickFile('.glb,.gltf,.vrm,.obj', true, async (f) => { const e = await dcImportModel(f); sysChat(`Imported "${e.name}".`); dcRenderPanel(); await dcDescribe(e, 'Describe this model'); dcRenderPanel(); dcAddModel(e.id, e.name); }), 'gold'));
                 const list = dcEl('div', 'dc-list');
-                for (const e of DC.lib.filter((x) => x.kind === 'model')) { const r = dcEl('div', 'dc-lrow', `<span>${e.name.replace(/[<>&]/g, '')}</span><i>${(e.size / 1e6).toFixed(1)} MB</i>`); r.append(dcBtn('Place', () => dcAddModel(e.id, e.name)), dcBtn('✕', () => dcLibDelete(e.id), 'dim')); list.appendChild(r); }
+                for (const e of DC.lib.filter((x) => x.kind === 'model')) { const r = dcEl('div', 'dc-lrow', `<span>${e.name.replace(/[<>&]/g, '')}</span><i>${(e.size / 1e6).toFixed(1)} MB</i>`); if (e.d) { const dd = dcEl('small', 'dc-desc'); dd.textContent = e.d; r.insertBefore(dd, r.children[1]); } r.append(dcBtn('Place', () => dcAddModel(e.id, e.name)), dcBtn('✎', () => dcDescribe(e, 'Edit model').then(() => dcRenderPanel()), 'dim'), dcBtn('✕', () => dcLibDelete(e.id), 'dim')); list.appendChild(r); }
                 body.append(list);
             } else dcRenderRoom(body);
         }
@@ -11375,14 +11478,22 @@
         window.addEventListener('resize', () => { dcCompactCheck(); });
         function dcRenderBar() {
             if (!DC.ui) return; const bar = DC.ui.bar, it = DC.sel && DC.items.get(DC.sel);
+            DC.ui.tools.textContent = ''; DC.ui.tools.appendChild(dcToolRow()); if (DC.edit && DC.tab === 'list' && DC.ui.panel.dataset.listN !== String(DC.items.size)) dcRenderPanel();
             dcCompactCheck(); DC.ui.panel.classList.toggle('dc-away', !!(DC.edit && it));
             bar.classList.toggle('hidden', !DC.edit || !it); if (!it) return;
             bar.textContent = '';
             const cat = it.t === 'b' ? dcCat(it.k) : null, tint = it.t === 'b';
             const mk = (label, min, max, step, val, fmt, fn) => { const l = dcEl('label', 'dc-bl', `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}"><b>${fmt(val)}</b>`); const i = l.querySelector('input'); i.value = val; i.addEventListener('input', () => { fn(+i.value); l.querySelector('b').textContent = fmt(+i.value); }); i.addEventListener('change', () => { dcChanged(); i.blur(); }); return l; };
+            bar.appendChild(dcToolRow());
             bar.appendChild(dcEl('div', 'dc-name', (it.lock ? '🔒 ' : '') + (it.n.replace(/[<>&]/g, '') || 'Item')));
+            if (it.t === 'p' || it.t === 'm') {
+                const dl = dcEl('label', 'dc-bl dc-dl', '<span>Description</span><textarea rows="2" maxlength="240" placeholder="Add a description…"></textarea>'), ta = dl.querySelector('textarea'); ta.value = it.d || '';
+                for (const k of ['keydown', 'keyup', 'keypress']) ta.addEventListener(k, (ev) => ev.stopPropagation());
+                ta.addEventListener('change', () => { it.d = ta.value.replace(/\s+/g, ' ').trim().slice(0, 240); const le = DC.lib.find((x) => x.id === it.a); if (le) { le.d = it.d; dcLibSave(); } dcChanged(); });
+                bar.appendChild(dl);
+            }
             const lk = dcEl('div', 'dc-brow'); lk.append(dcBtn(it.lock ? '🔓 Unlock' : '🔒 Lock in place', () => { it.lock = !it.lock; dcChanged(); dcRenderBar(); }, it.lock ? '' : 'dim')); bar.appendChild(lk);
-            if (it.lock) { const act0 = dcEl('div', 'dc-brow'); act0.append(dcBtn('Done', () => dcSelect(null), 'dim')); bar.appendChild(act0); return; }
+            if (it.lock) { const act0 = dcEl('div', 'dc-brow'); act0.append(dcBtn('Delete', () => dcDelete(it.id), 'red'), dcBtn('Done', () => dcSelect(null), 'dim')); bar.appendChild(act0); return; }
             if (it.t === 's') {
                 const r0 = dcEl('div', 'dc-brow'); r0.append(dcBtn('⟲ 90°', () => dcRotate(it, -1)), dcBtn('⟳ 90°', () => dcRotate(it, 1)), dcBtn('▲ Level', () => bpLevel(it, 1)), dcBtn('▼ Level', () => bpLevel(it, -1))); bar.appendChild(r0);
                 const mr = dcEl('div', 'dc-chips');
@@ -11422,6 +11533,7 @@
             .dc-grid.thumbs{grid-template-columns:repeat(2,1fr);margin-top:8px}
             .dc-tile{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.05);color:inherit;cursor:pointer}
             .dc-tile:hover{background:rgba(56,189,248,.2)}.dc-tile span{font-size:22px}.dc-tile em{font-style:normal;font-size:10.5px;text-align:center}
+            .dc-tools{display:flex;gap:5px;flex-wrap:wrap;padding:4px 10px}.dc-btn.off{opacity:.35;pointer-events:none}.dc-brow2{display:flex;gap:6px;align-items:center;padding:4px 6px;border-radius:8px;background:rgba(255,255,255,.06);margin-bottom:4px}.dc-brow2 span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dc-brow2.on{outline:1px solid #38bdf8}
             .dc-btn{padding:5px 10px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font:inherit}
             .dc-btn:hover{background:rgba(255,255,255,.2)}.dc-btn.gold{background:#0ea5e9;border-color:#38bdf8}.dc-btn.red{background:#b91c1c;border-color:#ef4444}.dc-btn.dim{background:rgba(255,255,255,.05);color:#cbd5e1}
             .dc-thumb{display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:10px;background:rgba(255,255,255,.05)}
@@ -11441,11 +11553,11 @@
             const head = dcEl('div', 'dc-head', '<b>🛋️ Decorate</b><span class="dc-sp"></span><label><input type="checkbox" id="dc-snap" checked> Grid snap</label><select id="dc-grid"><option value="0.1">10 cm</option><option value="0.2" selected>20 cm</option><option value="0.5">50 cm</option><option value="1">1 m</option></select>');
             head.appendChild(dcBtn('Done', () => dcSetEdit(false), 'gold'));
             const tabs = dcEl('div', 'dc-tabs'), tabBtns = [];
-            for (const [k, l] of [['furn', 'Furniture'], ['build', 'Build'], ['photo', 'Photos'], ['model', 'My models'], ['room', 'Room']]) { const b = dcEl('button', 'dc-tab', l); b.type = 'button'; b.dataset.tab = k; b.addEventListener('click', () => { DC.tab = k; dcRenderPanel(); }); tabs.appendChild(b); tabBtns.push(b); }
-            const body = dcEl('div', 'dc-body'); panel.append(head, tabs, body);
+            for (const [k, l] of [['furn', 'Furniture'], ['build', 'Build'], ['photo', 'Photos'], ['model', 'My models'], ['room', 'Room'], ['list', 'Placed']]) { const b = dcEl('button', 'dc-tab', l); b.type = 'button'; b.dataset.tab = k; b.addEventListener('click', () => { DC.tab = k; dcRenderPanel(); }); tabs.appendChild(b); tabBtns.push(b); }
+            const tools = dcEl('div', 'dc-toolhost'); const body = dcEl('div', 'dc-body'); panel.append(head, tools, tabs, body);
             const bar = dcEl('div', 'dc hidden'); bar.id = 'dc-bar';
             document.body.append(panel, bar);
-            DC.ui = { panel, bar, body, tabs: tabBtns };
+            DC.ui = { panel, bar, body, tabs: tabBtns, tools };
             head.querySelector('#dc-snap').addEventListener('change', (e) => { DC.snap = e.target.checked; dcGrid(); dcRenderBar(); e.target.blur(); });
             head.querySelector('#dc-grid').addEventListener('change', (e) => { DC.grid = +e.target.value; dcGrid(); e.target.blur(); });
             [panel, bar].forEach((el) => { el.addEventListener('pointerdown', (e) => e.stopPropagation()); el.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true }); });
@@ -11458,7 +11570,14 @@
             window.addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && !isTyping(e) && !lobbyOpen() && !charModalOpen() && !equipOpen()) { e.preventDefault(); dcSetEdit(!DC.edit); } });
         }
         window.__bp = { add: bpAdd, tpl: bpTemplate, ground: (x, z, y) => plotGround(x, z, y), plots: myPlots, newPlot, enter: enterPlot, level: bpLevel };
-        window.__decor = { DC, del: dcDelete, add: dcAddKind, edit: dcSetEdit, select: dcSelect, style: (s) => { DC.style = dcCleanStyle(s); dcApplyStyle(); }, wire: dcWire, items: () => [...DC.items.values()].map(dcWireItem), enter: dcEnter, addRaw: (o) => dcAdd(o), importImage: dcImportImage, addPhoto: dcAddPhoto,
+        // ---- descriptions: dialog styling + a caption when you stand near an item that has one ----
+        { const st = document.createElement('style'); st.textContent = `.dc-dlg{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px}.dc-dlgb{width:min(420px,94vw);max-height:92vh;overflow:auto;background:#141b27;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:14px;color:#e8eef7;display:flex;flex-direction:column;gap:10px;font-family:inherit}.dc-dlgb h3{margin:0;font-size:16px}.dc-dlgb label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700}.dc-dlgb small{font-weight:400;opacity:.7}.dc-dlgb input,.dc-dlgb textarea,.dc-dl textarea{background:#0b1018;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical;width:100%}.dc-dlgb .dcr{display:flex;gap:8px;justify-content:flex-end}.dc-desc{display:block;opacity:.75;font-size:11px;line-height:1.25;margin:2px 0;max-height:3.8em;overflow:hidden}#dc-cap{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:60;max-width:min(520px,86vw);background:rgba(10,14,22,.82);backdrop-filter:blur(8px);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:8px 14px;font-size:13px;line-height:1.35;text-align:center;pointer-events:none;display:none}#dc-cap b{display:block;font-size:12px;opacity:.8;margin-bottom:2px}`; document.head.appendChild(st);
+          const cap = document.createElement('div'); cap.id = 'dc-cap'; document.body.appendChild(cap); let last = '';
+          setInterval(() => { try {
+              let best = null, bd = 12.5; if ((activeMap === 'loft' || activeMap === 'plot') && localActor && localActor.group && !DC.edit) { const p = localActor.group.position; for (const it of DC.items.values()) { if (!it.d) continue; const d = (it.x - p.x) ** 2 + (it.z - p.z) ** 2; if (d < bd) { bd = d; best = it; } } }
+              const key = best ? best.id + best.d : ''; if (key === last) return; last = key;
+              if (!best) { cap.style.display = 'none'; return; } cap.innerHTML = '<b></b><span></span>'; cap.firstChild.textContent = best.n || 'Item'; cap.lastChild.textContent = best.d; cap.style.display = 'block'; } catch (e) {} }, 300); }
+        window.__decor = { undo: dcUndo, redo: dcRedo, DC, del: dcDelete, add: dcAddKind, edit: dcSetEdit, select: dcSelect, style: (s) => { DC.style = dcCleanStyle(s); dcApplyStyle(); }, describe: dcDescribe, wire: dcWire, items: () => [...DC.items.values()].map(dcWireItem), enter: dcEnter, addRaw: (o) => dcAdd(o), importImage: dcImportImage, addPhoto: dcAddPhoto,
             screenOf: (id) => { const it = DC.items.get(id), v = new THREE.Vector3(it.x, it.y + 0.35, it.z).project(camera), r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; } };
 
         function setMap(id) {
@@ -11466,21 +11585,27 @@
             if (id === 'city') ensureCity();
             if (id === 'plot') ensurePlot();
             if (id === 'galleria') ensureGalleria();
+            if (id === 'loft' && !LOFT.cityBg && !LOFT.cityBgT) LOFT.cityBgT = setTimeout(() => { try { loftDestinyBg(); } catch (e) { console.warn('studio skyline', e); } LOFT.cityBgT = 0; }, 900);
             if (mallGroup) mallGroup.visible = id === 'mall';
             if (loftGroup) loftGroup.visible = id === 'loft';
             try { dcPoolOn(id === 'loft' || id === 'plot'); } catch (e) { /* decorate not ready yet */ }
             if (CITY.group) CITY.group.visible = id === 'city';
             if (PLOT.group) PLOT.group.visible = id === 'plot';
             if (GAL.group) GAL.group.visible = id === 'galleria';
+            if (id === 'diner') { try { ensureKitchen(); } catch (e) { console.error('Kitchen failed to build', e); } }
+            if (KC.ready && KC.group) KC.group.visible = id === 'diner';
             { const host = id === 'plot' ? PLOT.group : loftGroup; if (DC.root && host && DC.root.parent !== host) host.add(DC.root); if (DC.wallG) DC.wallG.visible = id !== 'plot'; BP.dirty = true; }
             if (camera) { camera.far = id === 'loft' ? 1000 : id === 'city' ? 1900 : id === 'plot' ? 3400 : id === 'galleria' ? 2000 : 400; camera.updateProjectionMatrix(); }
             if (id === 'loft') { scene.background = new THREE.Color(0xe9dcc0); scene.fog = new THREE.FogExp2(0xcfe8f0, 0.0021); }
             else if (id === 'city') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0011); }
             else if (id === 'galleria') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0011); }
             else if (id === 'plot') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.00085); }
+            else if (id === 'diner') { scene.background = new THREE.Color(0x2a1a1c); scene.fog = new THREE.FogExp2(0x2a1a1c, 0.004); }
             else { scene.background = new THREE.Color(0x030712); scene.fog = new THREE.FogExp2(0x030712, 0.011); }
-            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
-            if (id === 'loft' && typeof hbSet === 'function' && hbOn) hbSet(false, true);
+            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'diner' ? 15 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
+            if (typeof fpOn !== 'undefined' && fpOn && controls) { if (fpSaved) fpSaved.polar = controls.maxPolarAngle; controls.maxPolarAngle = Math.PI - 0.05; controls.minPolarAngle = 0.05; }
+            if ((id === 'loft' || id === 'diner') && typeof hbSet === 'function' && hbOn) hbSet(false, true);
+            try { kcMapChanged(id); } catch (e) { /* kitchen not loaded yet */ }
             try { hbShowButton(); } catch (e) { /* not ready yet */ }
             selectScreenSite(id);                                    // the TV of the room we are in
             applyScreen();                                          // leaving a room with a TV silences and removes the player
@@ -11502,6 +11627,7 @@
         window.__shops = () => CITY.shopDoors;
         window.__tp = (x, z) => { if (localActor) localActor.group.position.set(x, 0, z); };
         window.__ledInfo = () => (CITY.leds || []).map((m) => { const c = m.material.map.image, px = c.getContext('2d').getImageData(256, 128, 1, 1).data; return { pos: m.position.toArray(), rot: m.rotation.y, mat: m.material.type, col: m.material.color.getHexString(), px: [...px], vis: m.visible, wp: m.getWorldPosition(new THREE.Vector3()).toArray() }; });
+        window.__cityGroup = () => CITY.group; window.__loftBg = () => LOFT.cityBgStats || null;
         window.__cityState = () => ({ ...CYT, hrs: cyHours(), ready: CITY.ready, err: CITY.err, vis: CITY.group && CITY.group.visible });
         window.__cityOverlap = () => { const R = CITY.rects, out = []; for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) { const a = R[i], b = R[j], ox = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), oz = Math.min(a[3], b[3]) - Math.max(a[1], b[1]); if (ox > 0.05 && oz > 0.05) out.push([a.map((v) => +v.toFixed(1)), b.map((v) => +v.toFixed(1))]); } return { n: R.length, ov: out.slice(0, 12), nov: out.length }; };
         window.__facDup = () => { const Q = []; CITY.group.traverse((o) => { if (!o.isMesh || !o.name.startsWith('cy_fac')) return; const pa = o.geometry.attributes.position, ix = o.geometry.index; for (let i = 0; i < ix.count; i += 6) { const v = [0, 1, 2, 3].map((k) => [pa.getX(ix.getX(i + (k < 3 ? k : 5))), pa.getY(ix.getX(i + (k < 3 ? k : 5))), pa.getZ(ix.getX(i + (k < 3 ? k : 5)))]); const dx = v[1][0] - v[0][0], dz = v[1][2] - v[0][2], L = Math.hypot(dx, dz), tx = dx / L, tz = dz / L, nx = -tz, nz = tx, d = nx * v[0][0] + nz * v[0][2], t0 = tx * v[0][0] + tz * v[0][2], t1 = tx * v[1][0] + tz * v[1][2]; Q.push({ k: [nx.toFixed(2), nz.toFixed(2), d.toFixed(2)].join(), a: Math.min(t0, t1), b: Math.max(t0, t1), y0: Math.min(v[0][1], v[2][1]), y1: Math.max(v[0][1], v[2][1]), name: o.name }); } }); const m = new Map(); for (const q of Q) { if (!m.has(q.k)) m.set(q.k, []); m.get(q.k).push(q); } const out = []; for (const [k, l] of m) for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) { const a = l[i], b = l[j], ox = Math.min(a.b, b.b) - Math.max(a.a, b.a), oy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0); if (ox > 0.05 && oy > 0.05) out.push([k, +a.a.toFixed(1), +a.b.toFixed(1), +a.y0.toFixed(1), +a.y1.toFixed(1), +b.a.toFixed(1), +b.b.toFixed(1), +b.y0.toFixed(1), +b.y1.toFixed(1)]); } return { quads: Q.length, dup: out.length, sample: out.slice(0, 10) }; };
@@ -11584,11 +11710,12 @@
                 if (b[4]) { PAD.zoom = clamp(PAD.zoom + ry, -1, 1); PAD.ry = 0; }          // hold L1 / LB and push the right stick up to zoom in, down to zoom out
                 if (hit(14)) cycleLookTarget(-1);                           // D-pad left / right: target the previous / next player (head turns to them), like FFXIV
                 if (hit(15)) cycleLookTarget(1);
+                if (hit(1) && activeMap === 'diner' && KC.plate) kcPadAct('drop');
                 if (hit(1) && (localActor.lookId || SELF.on)) { setLookTarget(null); setSelfTarget(false); }       // B / Circle: clear the target
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y / Triangle: jump
                 if (hit(0)) tapSprint();                                    // A / Cross: tap repeatedly to sprint
                 if (hit(5) && !over) tapSprint();                           // R1 / RB: tap to sprint
-                if (hit(2) && !over) hbToggle();                           // X / Square: hoverboard
+                if (hit(2) && !over) { if (activeMap === 'diner') kcPadAct('use'); else hbToggle(); }                           // X / Square: hoverboard (in the Kitchen Clash: use / grab)
                 if (hit(8)) toggleStrafe();
                 if (hit(11)) { if (!$('screen-panel').classList.contains('hidden')) closeScreenPanel(); else fpToggle(); }     // R3 (click the right stick): first person
                 if (hit(9)) openStart('emotes');
@@ -11840,8 +11967,8 @@
         var fpOn = false, fpSaved = null;
         function fpToggle() {
             fpOn = !fpOn;
-            if (fpOn) { fpSaved = { min: controls.minDistance, max: controls.maxDistance, d: camera.position.distanceTo(controls.target) }; controls.minDistance = 0.05; controls.maxDistance = 0.08; sysChat('First person on (click the right stick or press C to go back).'); }
-            else { if (fpSaved) { controls.minDistance = fpSaved.min; controls.maxDistance = fpSaved.max; _po.copy(camera.position).sub(controls.target).setLength(clamp(fpSaved.d, 2.5, 8)); camera.position.copy(controls.target).add(_po); } localActor.holder.visible = true; }
+            if (fpOn) { fpSaved = { min: controls.minDistance, max: controls.maxDistance, d: camera.position.distanceTo(controls.target), polar: controls.maxPolarAngle, minPolar: controls.minPolarAngle }; controls.minDistance = 0.05; controls.maxDistance = 0.08; controls.maxPolarAngle = Math.PI - 0.05; controls.minPolarAngle = 0.05; sysChat('First person on (click the right stick or press C to go back).'); }
+            else { if (fpSaved) { controls.minDistance = fpSaved.min; controls.maxDistance = fpSaved.max; controls.maxPolarAngle = fpSaved.polar; controls.minPolarAngle = fpSaved.minPolar || 0; _po.copy(camera.position).sub(controls.target).setLength(clamp(fpSaved.d, 2.5, 8)); camera.position.copy(controls.target).add(_po); } localActor.holder.visible = true; }
         }
         var sprintTap = 0;
         function tapSprint() { sprintTap = Math.min(sprintTap + 0.42, 0.85); }
@@ -11858,7 +11985,7 @@
 
             if (_mv.lengthSq() > 0) {
                 _mv.normalize();
-                const camAngle = Math.atan2(camera.position.x - g.position.x, camera.position.z - g.position.z);
+                const camAngle = fpOn ? Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z) : Math.atan2(camera.position.x - g.position.x, camera.position.z - g.position.z);   // first person: the way you are LOOKING (the camera trails the body while it moves, so measuring from the body locked your heading)
                 _mv.applyAxisAngle(UP, camAngle);
                 // Speed ramps up the longer you keep moving: walk -> jog, or straight on to run with Shift
                 moveIdle = 0;
@@ -11872,7 +11999,7 @@
                 g.position.x += _mv.x * spd * dt;
                 g.position.z += _mv.z * spd * dt;
                 // Strafe mode: face the camera's forward direction so side-steps and back-pedals play their own clips
-                const strafe = strafePref && localActor.hasLoco();
+                const strafe = (strafePref || fpOn) && localActor.hasLoco();
                 const face = strafe ? camAngle + Math.PI : Math.atan2(_mv.x, _mv.z);
                 g.rotation.y = lerpAngle(g.rotation.y, face, 1 - Math.exp(-dt * 14));
             } else {
@@ -11880,9 +12007,11 @@
                 if (hbOn && hbLastDir && hbSpeed > 0.3) {                      // glide to a stop
                     hbSpeed = Math.max(0, hbSpeed - 7 * dt); moveSpeed = hbSpeed; g.position.x += hbLastDir.x * hbSpeed * dt; g.position.z += hbLastDir.z * hbSpeed * dt;
                 } else if (hbOn) hbSpeed = 0;
+                if (fpOn && !localActor.emote) g.rotation.y = lerpAngle(g.rotation.y, Math.atan2(controls.target.x - camera.position.x, controls.target.z - camera.position.z), 1 - Math.exp(-dt * 10));   // first person: the body turns to where you look
                 if (moveIdle > 0.25 && !(hbOn && hbSpeed > 0.3)) moveSpeed = WALK_SPEED;   // a real stop restarts the ramp; a quick tap-turn keeps it
                 const spin = (keys.turnL ? 1 : 0) - (keys.turnR ? 1 : 0);   // Q / E: turn on the spot
-                if (spin) g.rotation.y += spin * TURN_RATE * dt;
+                if (spin && fpOn) { _po.copy(camera.position).sub(controls.target).applyAxisAngle(UP, spin * TURN_RATE * dt); camera.position.copy(controls.target).add(_po); }
+                else if (spin) g.rotation.y += spin * TURN_RATE * dt;
                 else if (localActor.lookId && !localActor.emote) {          // looking at someone off to the side: the body follows once the head runs out of range
                     const raw = localActor.lk.raw;
                     if (Math.abs(raw) > 0.95) lookTurning = true; else if (Math.abs(raw) < 0.3) lookTurning = false;
@@ -13474,6 +13603,7 @@
             if (a === 'home') { DN.state = 'title'; DN.pick = Math.min(DN.pick, DN.save.day); dnOverlay('title'); return; }
             if (a === 'share') { try { sendChat(`🍔 Key's Diner and Dive: Day ${DN.day}, $${(DN.money + DN.tips).toFixed(2)} earned, ${DN.served} happy customers!`); } catch (e) { /* chat unavailable */ } return; }
             if (a === 'leave') { dinerClose(); return; }
+            if (a === 'clash') { dinerClose(); try { joinRoom('diner-01', { label: "Key's Kitchen Clash \u2022 Channel 1", map: 'diner' }); } catch (e) { sysChat('Could not open the Kitchen Clash.'); } return; }
             if (DN.state !== 'play' || DN.paused) return; dnBeep(660, 0.04, 'square', 0.025);
             if (a === 'add') { const list = v === 'fries' ? DN.fry : DN.grill, cap = v === 'fries' ? 3 : 4; if (list.length >= cap) { dnSay(v === 'fries' ? 'The fryer is full' : 'The grill is full', false); return; } list.push({ k: v, c: 0 }); }
             else if (a === 'grill' || a === 'fry') {
@@ -13496,7 +13626,7 @@
             if (kind === 'title') {
                 const best = DN.save.best, days = []; for (let d = 1; d <= Math.min(30, DN.save.day); d++) days.push(`<button class="bt ${d === DN.pick ? 'g' : ''}" style="min-width:2.6em;margin:.1em" data-a="pickday" data-v="${d}">${d}${best[d] ? '<br><small>★' + best[d].s + '</small>' : ''}</button>`);
                 const un = { 2: 'onion, pickles, coffee, medium or well-done burgers', 3: 'hot dogs and milkshakes', 4: 'pancakes', 5: 'pie and bacon' }[DN.pick];
-                ov.innerHTML = `<div class="pn"><h2>KEY'S DINER &amp; DIVE</h2><p>Take the tickets, cook it right, serve it fast.</p><p style="font-size:.85em">🥩 Tap <b>+ Patty</b>, wait until it's <b>medium</b> or <b>well</b> (the white marker), tap it to move it to the burger board, add toppings, then <b>Top bun</b>. 🍟 Fries and sides go straight to the tray. Match a ticket, hit <b>Serve</b>. Burnt food gets tossed. Faster and perfect orders earn tips and streaks.</p><p><b>Day ${DN.pick}</b>${un ? ` · new: ${un}` : ''} · goal $${Math.round(30 + DN.pick * 22)}</p><div>${days.join('')}</div><div class="row" style="justify-content:center;margin-top:.8em"><button class="bt g" style="font-size:1.2em;padding:.5em 1.5em" data-a="start">Start shift</button><button class="bt" data-a="leave">Leave</button></div><p style="font-size:.75em;opacity:.7">Total earned: $${DN.save.total.toFixed(2)} · Esc pauses</p></div>`;
+                ov.innerHTML = `<div class="pn"><h2>KEY'S DINER &amp; DIVE</h2><p>Take the tickets, cook it right, serve it fast.</p><p style="font-size:.85em">🥩 Tap <b>+ Patty</b>, wait until it's <b>medium</b> or <b>well</b> (the white marker), tap it to move it to the burger board, add toppings, then <b>Top bun</b>. 🍟 Fries and sides go straight to the tray. Match a ticket, hit <b>Serve</b>. Burnt food gets tossed. Faster and perfect orders earn tips and streaks.</p><p><b>Day ${DN.pick}</b>${un ? ` · new: ${un}` : ''} · goal $${Math.round(30 + DN.pick * 22)}</p><div>${days.join('')}</div><div class="row" style="justify-content:center;margin-top:.8em"><button class="bt g" style="font-size:1.2em;padding:.5em 1.5em" data-a="start">Start shift</button><button class="bt" data-a="leave">Leave</button></div><div class="row" style="justify-content:center;margin-top:.6em"><button class="bt r" data-a="clash">🔥 Kitchen Clash: 3D team cooking contest</button></div><p style="font-size:.75em;opacity:.7">Total earned: $${DN.save.total.toFixed(2)} · Esc pauses</p></div>`;
             } else if (kind === 'pause') ov.innerHTML = `<div class="pn"><h2>PAUSED</h2><div class="row" style="justify-content:center"><button class="bt g" data-a="resume">Resume</button><button class="bt r" data-a="quit">Quit shift</button></div></div>`;
             else if (kind === 'end') {
                 const tot = DN.served + DN.lost, ratio = tot ? DN.served / tot : 0, stars = ratio >= 0.9 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.55 ? 3 : ratio >= 0.35 ? 2 : 1, earned = DN.money + DN.tips, goal = earned >= dnGoal();
@@ -13529,6 +13659,374 @@
         }
         function dinerClose() { if (!DN.open) return; DN.open = false; clearInterval(DN.tick); DN.tick = null; if (DN.root) DN.root.classList.remove('on'); window.__galBusy = false; try { galPortalExit('diner'); } catch (e) { /* not in the Galleria */ } }
         window.__diner = { open: () => dinerOpen(), close: () => dinerClose(), act: (a, v) => dnAct(a, v), get: () => DN, tick: () => dnTick() };
+
+        /* ------------------------------------------------------------------ *
+         *  KITCHEN CLASH: the 3D, multiplayer cooking contest in Key's Diner and Dive.
+         *  A real map: two kitchens (Red on the left, Blue on the right) behind a counter, a dining floor with the START console.
+         *  Walk into a kitchen with your own character, press START, and both teams cook the SAME orders for 2:30. Grab a plate,
+         *  grill a patty, fry the fries, add toppings, pour a drink and hand the plate through the pass. Every dish is scored by
+         *  the game on how well it matches the ticket (doneness, toppings, fries, drink) and how fast it arrived; the team with
+         *  the higher total quality wins. Alone, you cook against Chef Key's crew. Teammates share the grill and fryer.
+         *  Keys: F use, K drop plate (touch: the on-screen buttons; controller: X use, B drop).
+         * ------------------------------------------------------------------ */
+        const KC = {
+            ready: false, group: null, phase: 'idle', seed: 0, len: 150, el: 0, cd: 0, teams: {}, myTeam: -1, bot: null, score: {}, tix: [], srv: [new Set(), new Set()], list: [], nextIdx: 0,
+            st: [], plate: null, near: null, ring: null, boards: [], hudT: 0, toast: [], rects: [], circ: [], lastSig: '', roster: '', result: null, hudOn: false, sent: ''
+        };
+        const KC_X = 20, KC_Z = 13, KC_LOBBY = 7.6;
+        const KC_TOP = ['lettuce', 'tomato', 'cheese', 'onion', 'pickle', 'bacon'];
+        const KC_TCOL = { lettuce: 0x5db44a, tomato: 0xe0493a, cheese: 0xf0c437, onion: 0xd9b8e0, pickle: 0x7aa83a, bacon: 0xc0603a };
+        const KC_TEAM = [{ n: 'RED', c: '#e0493a', h: 0xe0493a }, { n: 'BLUE', c: '#3a8ee0', h: 0x3a8ee0 }];
+        const kcRegion = (x, z) => (z < KC_LOBBY && Math.abs(x) > 1.2 && Math.abs(x) < KC_X - 0.4 && z > -KC_Z) ? (x < 0 ? 0 : 1) : -1;
+        const kcRank = (q) => (q >= 95 ? 'S' : q >= 85 ? 'A' : q >= 70 ? 'B' : q >= 50 ? 'C' : 'D');
+        const kcAge = (s) => (performance.now() - s.t0) / 1000;
+        function kcGround() { return 0; }
+        function kcClamp(pos) { pos.x = clamp(pos.x, -KC_X + 0.6, KC_X - 0.6); pos.z = clamp(pos.z, -KC_Z + 0.6, KC_Z - 0.6); }
+        function kcCollide(pos) { for (const r of KC.rects) pushOutRect(pos, r, 0.38); pushOutCircles(pos, KC.circ, 0.3); }
+        function kcSpawn() { return { x: (Math.random() - 0.5) * 6, y: 0, z: 10.2 + Math.random() * 1.6, ry: -Math.PI / 2 }; }
+        const kcMats = {};
+        const kcMat = (c, o = {}) => { const k = c + JSON.stringify(o); return kcMats[k] || (kcMats[k] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.7, metalness: 0.05, ...o })); };
+        function kcSprite(w, h, sw, sh) {
+            const c = document.createElement('canvas'); c.width = w; c.height = h; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false, fog: false })); s.scale.set(sw, sh, 1); s.userData = { c, g: c.getContext('2d'), t, sig: '', noOutline: true }; return s;
+        }
+        function kcLabel(text, sw = 2.4, sh = 0.6, col = '#fff') {
+            const s = kcSprite(256, 64, sw, sh), g = s.userData.g; g.font = '800 30px Nunito, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = 'rgba(10,6,8,.72)'; g.beginPath(); g.roundRect ? g.roundRect(4, 6, 248, 52, 16) : g.rect(4, 6, 248, 52); g.fill(); g.fillStyle = col; g.fillText(text, 128, 34); s.userData.t.needsUpdate = true; return s;
+        }
+        function ensureKitchen() {
+            if (KC.ready) return; KC.ready = true;
+            const root = new THREE.Group(); root.visible = false; scene.add(root); KC.group = root;
+            const P = Math.PI, S = [];
+            const gv = (geo, color) => { const n = geo.attributes.position.count, a = new Float32Array(n * 3), c = new THREE.Color(color); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } geo.setAttribute('color', new THREE.BufferAttribute(a, 3)); return geo; };
+            const bx = (w, h, d, x, y, z, c) => { const g = gv(new THREE.BoxGeometry(w, h, d), c); g.translate(x, y, z); S.push(g); };
+            const cyl = (rt, rb, h, x, y, z, c, seg = 12) => { const g = gv(new THREE.CylinderGeometry(rt, rb, h, seg), c); g.translate(x, y, z); S.push(g); };
+            // lights: warm and bright, the kitchens are indoors
+            root.add(new THREE.HemisphereLight(0xfff4e0, 0x9a8a78, 1.5), new THREE.AmbientLight(0xffffff, 0.55));
+            const sun = new THREE.DirectionalLight(0xfff0d8, 1.1); sun.position.set(-8, 20, 10); root.add(sun);
+            // floors: checker tiles (tinted per side), dining floor in wood
+            const checker = canvasTex(128, 128, (g, w, h) => { for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { g.fillStyle = (i + j) % 2 ? '#f4efe4' : '#cfc7b8'; g.fillRect(i * 64, j * 64, 64, 64); } }); checker.wrapS = checker.wrapT = THREE.RepeatWrapping;
+            for (const t of [0, 1]) {
+                const tx = checker.clone(); tx.repeat.set(KC_X, KC_Z + KC_LOBBY); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.needsUpdate = true;
+                const f = new THREE.Mesh(new THREE.PlaneGeometry(KC_X, KC_Z + KC_LOBBY), new THREE.MeshStandardMaterial({ map: tx, color: t ? 0xcfe2ff : 0xffd6d0, roughness: 0.8 })); f.rotation.x = -P / 2; f.position.set((t ? 1 : -1) * KC_X / 2, 0, (-KC_Z + KC_LOBBY) / 2); f.userData.noOutline = true; root.add(f);
+            }
+            { const wood = canvasTex(256, 256, (g, w, h) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#b98a5a' : '#a97a4c'; g.fillRect(0, i * 32, w, 30); g.fillStyle = 'rgba(0,0,0,.15)'; g.fillRect(0, i * 32 + 30, w, 2); } }); wood.wrapS = wood.wrapT = THREE.RepeatWrapping; wood.repeat.set(10, 1.6);
+              const f = new THREE.Mesh(new THREE.PlaneGeometry(KC_X * 2, KC_Z - KC_LOBBY), new THREE.MeshStandardMaterial({ map: wood, roughness: 0.75 })); f.rotation.x = -P / 2; f.position.set(0, 0.005, (KC_Z + KC_LOBBY) / 2); f.userData.noOutline = true; root.add(f); }
+            // walls
+            const wallH = 6.6;
+            bx(KC_X * 2 + 1, wallH, 0.6, 0, wallH / 2, -KC_Z - 0.3, 0xf2e8d2); bx(KC_X * 2 + 1, wallH, 0.6, 0, wallH / 2, KC_Z + 0.3, 0xf2e8d2);
+            bx(0.6, wallH, KC_Z * 2 + 1, -KC_X - 0.3, wallH / 2, 0, 0xf2e8d2); bx(0.6, wallH, KC_Z * 2 + 1, KC_X + 0.3, wallH / 2, 0, 0xf2e8d2);
+            bx(KC_X * 2, 1.0, 0.7, 0, 0.5, -KC_Z + 0.05, 0x3a2a2a); bx(KC_X, 1.0, 0.7, -KC_X / 2, 0.5, -KC_Z + 0.08, 0x8a2a24); bx(KC_X, 1.0, 0.7, KC_X / 2, 0.5, -KC_Z + 0.08, 0x24508a);       // wainscot stripes by team
+            bx(0.7, 1.0, KC_Z * 2, -KC_X + 0.05, 0.5, 0, 0x8a2a24); bx(0.7, 1.0, KC_Z * 2, KC_X - 0.05, 0.5, 0, 0x24508a);
+            bx(KC_X * 2, 0.25, 0.4, 0, wallH - 0.4, -KC_Z + 0.1, 0xb3202a); bx(KC_X * 2, 0.25, 0.4, 0, wallH - 0.4, KC_Z - 0.1, 0xb3202a);
+            // divider between the kitchens
+            bx(0.6, 1.1, KC_Z + KC_LOBBY, 0, 0.55, (-KC_Z + KC_LOBBY) / 2, 0xe8e0d0); bx(0.7, 0.12, KC_Z + KC_LOBBY, 0, 1.14, (-KC_Z + KC_LOBBY) / 2, 0x2d3036);
+            bx(0.62, 0.3, KC_Z + KC_LOBBY, 0, 0.35, (-KC_Z + KC_LOBBY) / 2, 0xf0b020);
+            KC.rects.push([-0.3, -KC_Z - 1, 0.3, KC_LOBBY]);
+            // counters (mirrored for both teams)
+            const rect = (sx, ax0, ax1, z0, z1) => KC.rects.push([sx < 0 ? -ax1 : ax0, z0, sx < 0 ? -ax0 : ax1, z1]);
+            for (const sx of [-1, 1]) {
+                const X = (ax) => sx * ax;
+                // back counter
+                bx(KC_X - 2.4, 0.95, 1.2, X((KC_X + 2.4) / 2), 0.475, -KC_Z + 0.7, 0xd9d4c8); bx(KC_X - 2.4, 0.08, 1.3, X((KC_X + 2.4) / 2), 0.98, -KC_Z + 0.7, 0x4a4e55); rect(sx, 2.4, KC_X, -KC_Z, -KC_Z + 1.3);
+                // outer-wall topping counter
+                bx(1.2, 0.95, 14.8, X(KC_X - 0.7), 0.475, -2.2 + 0.1, 0xd9d4c8); bx(1.3, 0.08, 14.8, X(KC_X - 0.7), 0.98, -2.1, 0x4a4e55); rect(sx, KC_X - 1.3, KC_X, -9.8, 5.6);
+                // pass counter (serving window) with a gap by the divider so you can walk in and out
+                bx(KC_X - 3.2, 0.95, 0.9, X((KC_X + 3.2) / 2), 0.475, KC_LOBBY - 0.45, 0xd9d4c8); bx(KC_X - 3.2, 0.08, 1.0, X((KC_X + 3.2) / 2), 0.98, KC_LOBBY - 0.45, sx < 0 ? 0xb3402e : 0x2e5ab3); rect(sx, 3.2, KC_X, KC_LOBBY - 0.9, KC_LOBBY);
+                // island
+                bx(3.2, 0.95, 1.5, X(10), 0.475, -3.5, 0xc8c2b4); bx(3.3, 0.08, 1.6, X(10), 0.98, -3.5, 0x6a4a30); rect(sx, 8.4, 11.6, -4.3, -2.7);
+                // team pad on the dining floor
+                bx(5.6, 0.04, 3.4, X(8.5), 0.03, 10.6, sx < 0 ? 0xb3402e : 0x2e5ab3);
+            }
+            // dining tables in the lobby strip
+            for (const [x, z] of [[-14, 11], [14, 11], [-4.5, 11.8], [4.5, 11.8]]) { cyl(0.9, 0.9, 0.08, x, 0.8, z, 0xf4efe4, 14); cyl(0.1, 0.1, 0.8, x, 0.4, z, 0x2d3036, 6); cyl(0.4, 0.4, 0.05, x, 0.02, z, 0x2d3036, 10); for (const a of [0.5, 2.1, 3.7, 5.3]) cyl(0.28, 0.28, 0.1, x + Math.cos(a) * 1.35, 0.5, z + Math.sin(a) * 1.35, 0xb3202a, 8); KC.circ.push({ x, z, r: 0.95 }); }
+            // hanging lamps over the kitchens
+            for (const sx of [-1, 1]) for (const ax of [5, 11, 17]) for (const z of [-8, -1, 5]) { cyl(0.012, 0.012, 1.4, sx * ax, wallH - 0.9, z, 0x333333, 3); }
+            const sm = new THREE.Mesh(mergeGeometries(S, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.05 })); sm.userData.noOutline = true; sm.frustumCulled = false; root.add(sm);
+            const lamps = new THREE.InstancedMesh(new THREE.SphereGeometry(0.3, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff1cf }), 18), mt = new THREE.Matrix4(); let ln = 0;
+            for (const sx of [-1, 1]) for (const ax of [5, 11, 17]) for (const z of [-8, -1, 5]) { mt.makeTranslation(sx * ax, wallH - 1.6, z); lamps.setMatrixAt(ln++, mt); }
+            lamps.userData.noOutline = true; root.add(lamps);
+            // signs
+            { const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 2.2), new THREE.MeshBasicMaterial({ map: signTexture("KEY'S DINER & DIVE", '#ff4f6a'), toneMapped: false })); sg.position.set(0, 5.2, KC_Z - 0.02); sg.rotation.y = P; sg.userData.noOutline = true; root.add(sg);
+              const sg2 = new THREE.Mesh(new THREE.PlaneGeometry(9, 2), new THREE.MeshBasicMaterial({ map: signTexture('KITCHEN CLASH', '#ffd23a'), toneMapped: false })); sg2.position.set(0, 4.7, -KC_Z + 0.02); sg2.userData.noOutline = true; root.add(sg2); }
+            // scoreboards: over the divider (faces both kitchens) and on the dining wall
+            for (const [x, y, z, ry, w, h] of [[0.08, 5.0, -3.2, P / 2, 8.4, 2.6], [-0.08, 5.0, -3.2, -P / 2, 8.4, 2.6], [0, 2.7, KC_Z - 0.05, P, 8.4, 2.6]]) {
+                let sp = KC.boards.find((b) => b.shared);
+                const m = sp ? sp.mat : new THREE.MeshBasicMaterial({ toneMapped: false });
+                if (!sp) { const c = document.createElement('canvas'); c.width = 768; c.height = 240; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; m.map = t; KC.boards.push({ shared: true, mat: m, c, g: c.getContext('2d'), t, sig: '' }); }
+                const pl = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); pl.position.set(x, y, z); pl.rotation.y = ry; pl.userData.noOutline = true; root.add(pl);
+            }
+            bx0(root, 8.8, 2.9, 0.12, 0.0, 5.0, -3.2, 0x1b1d24, P / 2);
+            // ---- stations
+            const mkStation = (o) => { const st = { slots: null, ...o }; KC.st.push(st); return st; };
+            const place = (g, x, y, z) => { g.position.set(x, y, z); root.add(g); return g; };
+            const box = (w, h, d, c, x, y, z, par) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), kcMat(c)); m.position.set(x, y, z); m.userData.noOutline = true; par.add(m); return m; };
+            for (const tm of [0, 1]) {
+                const sx = tm ? 1 : -1, X = (ax) => sx * ax, backZ = -KC_Z + 0.7, ay = 1.02;
+                // plates
+                { const g = new THREE.Group(); for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.36, 0.04, 16), kcMat(0xffffff)); m.position.y = ay + 0.03 + i * 0.045; m.userData.noOutline = true; g.add(m); } place(g, X(3.5), 0, backZ); const lb = kcLabel('🍽️ Plates'); lb.position.set(X(3.5), 2.3, backZ); root.add(lb); mkStation({ kind: 'plates', tm, ax: X(3.5), az: backZ + 1.7 }); }
+                // drinks
+                for (const [k, ax, col, nm, ic] of [['s', 6.0, 0xd23a3a, 'Soda', '🥤'], ['k', 8.2, 0xf0a0c0, 'Shake', '🥛']]) { const g = new THREE.Group(); box(1.2, 1.2, 0.8, 0x4a4e55, 0, ay + 0.6, 0, g); box(1.0, 0.25, 0.82, col, 0, ay + 1.1, 0.0, g); box(0.5, 0.06, 0.4, 0x222222, 0, ay + 0.05, 0.55, g); place(g, X(ax), 0, backZ); const lb = kcLabel(ic + ' ' + nm, 2.0, 0.5); lb.position.set(X(ax), 2.9, backZ); root.add(lb); mkStation({ kind: 'drink', k, tm, ax: X(ax), az: backZ + 1.7 }); }
+                // fryer
+                { const g = new THREE.Group(); box(2.2, 0.5, 1.0, 0x6d7075, 0, ay + 0.25, 0, g); for (const dx of [-0.5, 0.5]) { box(0.8, 0.12, 0.7, 0x22252a, dx, ay + 0.55, 0, g); box(0.1, 0.1, 0.5, 0xb3202a, dx, ay + 0.62, 0.62, g); } place(g, X(11), 0, backZ);
+                  const st = mkStation({ kind: 'fryer', tm, ax: X(11), az: backZ + 1.7, slots: [null, null] }); st.vis = [0, 1].map((i) => { const m = new THREE.Group(); for (let j = 0; j < 7; j++) { const f = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.34, 0.07), kcMat(0xf0d060)); f.position.set((j - 3) * 0.09, 0, ((j % 2) - 0.5) * 0.15); f.rotation.z = (j - 3) * 0.12; f.userData.noOutline = true; m.add(f); } m.position.set(X(11) + (i ? 0.5 : -0.5), ay + 0.78, backZ); m.visible = false; root.add(m); return m; });
+                  st.prog = kcSprite(256, 64, 2.2, 0.55); st.prog.position.set(X(11), 2.15, backZ); root.add(st.prog); const lb = kcLabel('🍟 Fryer', 1.8, 0.45); lb.position.set(X(11), 2.75, backZ); root.add(lb); }
+                // grill
+                { const g = new THREE.Group(); box(4.0, 0.5, 1.1, 0x4a4e55, 0, ay + 0.25, 0, g); box(3.8, 0.1, 0.95, 0x22252a, 0, ay + 0.55, 0, g); place(g, X(15.2), 0, backZ);
+                  const st = mkStation({ kind: 'grill', tm, ax: X(15.2), az: backZ + 1.7, slots: [null, null, null] }); st.vis = [0, 1, 2].map((i) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.12, 14), new THREE.MeshStandardMaterial({ color: 0xd98a8a, roughness: 0.8 })); m.position.set(X(15.2) + (i - 1) * 1.2, ay + 0.66, backZ); m.visible = false; m.userData.noOutline = true; root.add(m); return m; });
+                  st.prog = kcSprite(384, 64, 3.4, 0.55); st.prog.position.set(X(15.2), 2.15, backZ); root.add(st.prog); const lb = kcLabel('🥩 Grill', 1.8, 0.45); lb.position.set(X(15.2), 2.75, backZ); root.add(lb); }
+                // toppings bins along the outer wall
+                KC_TOP.forEach((t, i) => { const z = -8.4 + i * 2.5, g = new THREE.Group(); box(0.9, 0.22, 1.5, 0x8a8f96, 0, ay + 0.11, 0, g); box(0.76, 0.18, 1.36, KC_TCOL[t], 0, ay + 0.25, 0, g); place(g, X(KC_X - 0.75), 0, z); const em = { lettuce: '🥬', tomato: '🍅', cheese: '🧀', onion: '🧅', pickle: '🥒', bacon: '🥓' }[t]; const lb = kcLabel(em + ' ' + t, 1.7, 0.42); lb.position.set(X(KC_X - 0.75), 2.0, z); root.add(lb); mkStation({ kind: 'bin', k: t, tm, ax: X(KC_X - 2.5), az: z }); });
+                // the pass (serving window) with a bell
+                { const g = new THREE.Group(); const bell = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8, 0, P * 2, 0, P / 2), kcMat(0xffd23a, { metalness: 0.7, roughness: 0.3 })); bell.position.y = ay + 0.04; bell.userData.noOutline = true; g.add(bell); place(g, X(10.5), 0, KC_LOBBY - 0.45); const lb = kcLabel('🔔 SERVE', 2.0, 0.5, '#ffe58a'); lb.position.set(X(10.5), 2.1, KC_LOBBY - 0.45); root.add(lb); mkStation({ kind: 'pass', tm, ax: X(10.5), az: KC_LOBBY - 1.8 }); }
+                // trash
+                { const g = new THREE.Group(); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.34, 0.9, 12), kcMat(0x3a3f46)); m.position.y = 0.45; m.userData.noOutline = true; g.add(m); place(g, X(2.3), 0, 4.6); KC.circ.push({ x: X(2.3), z: 4.6, r: 0.5 }); const lb = kcLabel('🗑 Bin', 1.4, 0.4); lb.position.set(X(2.3), 1.6, 4.6); root.add(lb); mkStation({ kind: 'trash', tm, ax: X(2.3), az: 3.5 }); }
+            }
+            // the START console in the dining area
+            { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 1.0, 14), kcMat(0x2d3036)); b.position.y = 0.5; g.add(b); const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.14, 18), new THREE.MeshBasicMaterial({ color: 0x4cc462 })); btn.position.y = 1.06; btn.userData.noOutline = true; g.add(btn); KC.startBtn = btn; place(g, 0, 0, 10.0); KC.circ.push({ x: 0, z: 10.0, r: 0.9 }); const lb = kcLabel('▶ START MATCH', 3.0, 0.7, '#9dffb0'); lb.position.set(0, 2.2, 10.0); root.add(lb); mkStation({ kind: 'start', tm: -1, ax: 0, az: 10.0 }); }
+            // a door back to the Galleria
+            { const d = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.8, 0.12), kcMat(0x6b4a33)); d.position.set(17, 1.4, KC_Z - 0.1); d.userData.noOutline = true; root.add(d); const lb = kcLabel('🚪 Galleria', 2.0, 0.5); lb.position.set(17, 3.3, KC_Z - 0.2); root.add(lb); mkStation({ kind: 'exit', tm: -1, ax: 17, az: KC_Z - 1.6 }); }
+            // highlight ring under the station you would use
+            { const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 28), new THREE.MeshBasicMaterial({ color: 0xffe14a, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); ring.rotation.x = -P / 2; ring.position.y = 0.06; ring.visible = false; ring.userData.noOutline = true; root.add(ring); KC.ring = ring; }
+            kcBoardDraw(true);
+        }
+        function bx0(root, w, h, d, x, y, z, c, ry) { const m = new THREE.Mesh(new THREE.BoxGeometry(d, h, w), new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 })); m.position.set(x, y, z); m.userData.noOutline = true; root.add(m); }
+        function kcBoardDraw(force) {
+            const B = KC.boards[0]; if (!B) return; const t = KC.totals ? KC.totals() : [0, 0], left = Math.max(0, KC.phase === 'play' ? KC.len - KC.el : KC.phase === 'count' ? KC.len : KC.phase === 'result' ? 0 : KC.len);
+            const sig = [t[0], t[1], Math.ceil(left), KC.phase, Math.ceil(KC.cd)].join(); if (!force && sig === B.sig) return; B.sig = sig; const g = B.g, W = 768, H = 240;
+            g.fillStyle = '#12141b'; g.fillRect(0, 0, W, H); g.strokeStyle = '#ffd23a'; g.lineWidth = 6; g.strokeRect(4, 4, W - 8, H - 8);
+            const mx = Math.max(1, t[0] + t[1]), wr = t[0] / mx;
+            g.fillStyle = '#3b1d1d'; g.fillRect(40, 150, 688, 44); g.fillStyle = '#e0493a'; g.fillRect(40, 150, 688 * wr, 44); g.fillStyle = '#3a8ee0'; g.fillRect(40 + 688 * wr, 150, 688 * (1 - wr), 44); if (!t[0] && !t[1]) { g.fillStyle = '#555'; g.fillRect(40, 150, 688, 44); }
+            g.textBaseline = 'middle'; g.font = '900 64px Orbitron, sans-serif'; g.textAlign = 'left'; g.fillStyle = '#ff7a6a'; g.fillText('RED ' + t[0], 36, 66); g.textAlign = 'right'; g.fillStyle = '#6ab4ff'; g.fillText(t[1] + ' BLUE', W - 36, 66);
+            g.textAlign = 'center'; g.font = '900 54px Orbitron, sans-serif'; g.fillStyle = '#fff'; const mm = Math.floor(left / 60), ss = Math.floor(left % 60); g.fillText(KC.phase === 'idle' ? 'READY' : KC.phase === 'result' ? 'FINAL' : `${mm}:${String(ss).padStart(2, '0')}`, W / 2, 66); g.font = '700 26px Nunito, sans-serif'; g.fillStyle = '#ffe9b0'; g.fillText(KC.phase === 'idle' ? 'Step into a kitchen, then press START' : KC.phase === 'count' ? 'Get ready!' : KC.phase === 'result' ? 'Match over' : 'Cook the same orders. Best quality wins!', W / 2, 114); g.font = '700 22px Nunito, sans-serif'; g.fillStyle = '#fff9'; g.fillText('quality points', W / 2, 218);
+            B.t.needsUpdate = true;
+        }
+        // ---- game state
+        const kcPlate = () => ({ p: 0, t: [], f: 0, d: 0 });
+        function kcCleanPlate(p) { if (!p || typeof p !== 'object') return null; const t = Array.isArray(p.t) ? [...new Set(p.t.filter((x) => KC_TOP.includes(x)))].slice(0, 6) : []; return { p: ['m', 'w', 'b'].includes(p.p) ? p.p : 0, t, f: ['r', 'b'].includes(p.f) ? p.f : 0, d: ['s', 'k'].includes(p.d) ? p.d : 0 }; }
+        function kcGenTickets(seed) {
+            const R = seeded(seed), L = []; let at = 2.5;
+            for (let k = 0; k < 26; k++) {
+                const burger = R() < 0.85, tops = KC_TOP.slice().sort(() => R() - 0.5).slice(0, Math.floor(R() * (k < 3 ? 2 : 4))).sort();
+                let fries = R() < 0.55, drink = R() < 0.4 ? (R() < 0.6 ? 's' : 'k') : 0; if (!burger && !fries && !drink) fries = true;
+                L.push({ id: k + 1, at, burger, done: R() < 0.5 ? 'm' : 'w', tops: burger ? tops : [], fries, drink, max: 36 + (burger ? 8 : 0) + (fries ? 4 : 0) });
+                at += 7 + R() * 5 - Math.min(3.5, k * 0.3);
+            }
+            return L;
+        }
+        function kcQuality(pl, tk, frac) {
+            const parts = [];
+            if (tk.burger) {
+                const ps = !pl.p || pl.p === 'b' ? 0 : pl.p === tk.done ? 1 : 0.45; parts.push([ps, 30]);
+                const req = new Set(tk.tops); let hit = 0, extra = 0; for (const t of pl.t) req.has(t) ? hit++ : extra++;
+                let ts = req.size ? hit / req.size : 1; ts = Math.max(0, ts - extra * 0.35); parts.push([pl.p ? ts : 0, 15]);
+            } else if (pl.p) parts.push([0, 10]);
+            if (tk.fries) parts.push([pl.f === 'r' ? 1 : pl.f === 'b' ? 0.1 : 0, 25]); else if (pl.f) parts.push([0, 8]);
+            if (tk.drink) parts.push([pl.d === tk.drink ? 1 : pl.d ? 0.3 : 0, 15]); else if (pl.d) parts.push([0, 5]);
+            const W = parts.reduce((a, x) => a + x[1], 0), Sx = parts.reduce((a, x) => a + x[0] * x[1], 0), base = W ? Sx / W : 0;
+            return Math.round(base * 88 + (base > 0.55 ? 12 * clamp(frac, 0, 1) * base : 0));
+        }
+        const kcTicketTxt = (t) => [t.burger ? `🍔 ${t.done === 'm' ? 'medium' : 'well'}${t.tops.length ? ' ' + t.tops.map((x) => ({ lettuce: '🥬', tomato: '🍅', cheese: '🧀', onion: '🧅', pickle: '🥒', bacon: '🥓' }[x])).join('') : ''}` : '', t.fries ? '🍟' : '', t.drink ? (t.drink === 's' ? '🥤' : '🥛') : ''].filter(Boolean).join('  ');
+        function kcBegin(m) {
+            const teams = {}; if (m.teams && typeof m.teams === 'object') for (const k of Object.keys(m.teams).slice(0, 16)) teams[String(k).slice(0, 40)] = m.teams[k] === 1 ? 1 : 0;
+            Object.assign(KC, { phase: 'count', cd: 3.4, el: 0, seed: (m.seed >>> 0) || 1, len: clamp(+m.len || 150, 60, 300), teams, myTeam: teams[me.id] === undefined ? -1 : teams[me.id], score: {}, tix: [], srv: [new Set(), new Set()], nextIdx: 0, result: null, toast: [], sent: '' });
+            KC.list = kcGenTickets(KC.seed);
+            KC.bot = m.bot ? { pts: 0, n: 0, next: 9, R: seeded(KC.seed ^ 0x5bd1e995) } : null; KC.botTeam = m.bot ? (KC.myTeam === 0 ? 1 : 0) : -1;
+            for (const s of KC.st) if (s.slots) { s.slots.fill(null); if (s.vis) s.vis.forEach((v) => { v.visible = false; }); }
+            kcSetPlate(null, true);
+            if (KC.myTeam < 0) kcToast('A match is starting. Walk into a kitchen before the next one to play.'); else kcToast(`You are on the ${KC_TEAM[KC.myTeam].n} team${KC.bot ? ' against Chef Key’s crew' : ''}!`);
+            kcOverlay(null); dnBeep(440, 0.12, 'triangle', 0.05); kcBoardDraw(true); kcHud(true);
+        }
+        function kcStart() {
+            if (!KC.ready || KC.phase === 'count' || KC.phase === 'play') return;
+            const g = localActor.group.position, my = kcRegion(g.x, g.z); if (my < 0) { kcToast('Step into the Red (left) or Blue (right) kitchen first, then press START.'); return; }
+            const teams = {}; teams[me.id] = my; let other = 0; for (const [id, p] of peers) { const q = kcRegion(p.actor.group.position.x, p.actor.group.position.z); if (q >= 0) { teams[id] = q; if (q !== my) other++; } }
+            const m = { t: 'kc', a: 'start', seed: (Math.random() * 1e9) >>> 0, len: 150, teams, bot: other ? 0 : 1 };
+            try { net && net.send(m); } catch (e) { /* offline */ } kcBegin(m);
+        }
+        const kcPeerTeam = (id) => (KC.teams[id] === undefined ? -1 : KC.teams[id]);
+        KC.totals = () => { const t = [0, 0]; for (const [id, s] of Object.entries(KC.score)) { const tm = kcPeerTeam(id); if (tm >= 0) t[tm] += s.pts | 0; } if (KC.bot && KC.botTeam >= 0) t[KC.botTeam] += KC.bot.pts; return t; };
+        function kcToast(msg, good) { KC.toast.push({ msg, good, t: 3.2 }); if (KC.toast.length > 4) KC.toast.shift(); kcHud(true); }
+        function kcSetPlate(pl, quiet) {
+            KC.plate = pl; if (!quiet) { try { net && net.send({ t: 'kc', a: 'hold', p: pl }); } catch (e) { /* offline */ } }
+            kcPlateVisual(localActor, pl);
+        }
+        function kcPlateVisual(actor, pl) {
+            const g = actor.group; if (actor.kcPlateG) { actor.kcPlateG.removeFromParent(); actor.kcPlateG = null; } if (!pl) return;
+            const h = new THREE.Group(), mk = (geo, c, x, y, z) => { const m = new THREE.Mesh(geo, kcMat(c)); m.position.set(x, y, z); m.userData.noOutline = true; h.add(m); return m; };
+            mk(new THREE.CylinderGeometry(0.34, 0.3, 0.04, 16), 0xffffff, 0, 0, 0);
+            let y = 0.05;
+            if (pl.p) { mk(new THREE.CylinderGeometry(0.24, 0.24, 0.07, 14), 0xd99a4a, 0, y + 0.03, 0); y += 0.07; mk(new THREE.CylinderGeometry(0.23, 0.23, 0.06, 14), pl.p === 'b' ? 0x151515 : pl.p === 'w' ? 0x6a3f22 : 0xa8603a, 0, y + 0.03, 0); y += 0.06; }
+            for (const t of pl.t) { mk(new THREE.CylinderGeometry(0.26, 0.26, 0.025, 14), KC_TCOL[t], 0, y + 0.015, 0); y += 0.028; }
+            if (pl.p) { const top = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), kcMat(0xd99a4a)); top.position.y = y; top.userData.noOutline = true; h.add(top); }
+            if (pl.f) { mk(new THREE.BoxGeometry(0.16, 0.1, 0.12), 0xb3202a, 0.22, 0.08, -0.2); for (let i = 0; i < 4; i++) mk(new THREE.BoxGeometry(0.03, 0.14, 0.03), pl.f === 'b' ? 0x222222 : 0xf0d060, 0.17 + i * 0.035, 0.17, -0.2); }
+            if (pl.d) mk(new THREE.CylinderGeometry(0.075, 0.055, 0.2, 10), pl.d === 's' ? 0xd23a3a : 0xf0a0c0, -0.22, 0.12, -0.2);
+            h.position.set(0, 1.0, 0.5); h.scale.setScalar(0.85); h.userData.noOutline = true; g.add(h); actor.kcPlateG = h;
+        }
+        function kcSlotState(st, s) { return dnCookState(st.kind === 'grill' ? 'patty' : 'fries', kcAge(s)); }
+        function kcRefs(st) { if (!st.slots) return {}; const out = { ready: -1, burnt: -1, free: -1 }; st.slots.forEach((s, i) => { if (!s) { if (out.free < 0) out.free = i; return; } const q = kcSlotState(st, s); if ((q === 'medium' || q === 'well' || q === 'ready') && out.ready < 0) out.ready = i; if (q === 'burnt' && out.burnt < 0) out.burnt = i; }); return out; }
+        // what pressing "use" would do here: { text, ok, run }
+        function kcOption(st) {
+            const pl = KC.plate;
+            if (st.kind === 'start') return { text: KC.phase === 'play' || KC.phase === 'count' ? 'Match in progress' : 'Start the match', ok: KC.phase !== 'play' && KC.phase !== 'count', run: kcStart };
+            if (st.kind === 'exit') return { text: 'Leave to the Oasis Galleria', ok: true, run: () => { try { joinRoom('galleria-01', { label: 'Oasis Galleria \u2022 Channel 1', map: 'galleria' }); } catch (e) { /* not ready */ } } };
+            if (KC.phase !== 'play' || KC.myTeam < 0 || st.tm !== KC.myTeam) return { text: KC.myTeam < 0 ? (KC.phase === 'play' || KC.phase === 'count' ? 'A match is on: join the next one' : 'Walk into a kitchen, then press START') : KC.phase !== 'play' ? 'Wait for the match' : 'That is the other team’s station', ok: false };
+            const slotSend = (i, v) => { try { net && net.send({ t: 'kc', a: 'slot', tm: st.tm, s: st.kind === 'grill' ? 'g' : 'f', i, v }); } catch (e) { /* offline */ } };
+            if (st.kind === 'grill' || st.kind === 'fryer') {
+                const r = kcRefs(st), isG = st.kind === 'grill', what = isG ? 'patty' : 'fries';
+                if (pl && (isG ? !pl.p : !pl.f) && r.ready >= 0) { const state = kcSlotState(st, st.slots[r.ready]); return { text: `Take the ${what}${isG ? ' (' + state + ')' : ''}`, ok: true, run: () => { const np = { ...pl, t: pl.t.slice() }; if (isG) np.p = state === 'medium' ? 'm' : 'w'; else np.f = 'r'; st.slots[r.ready] = null; slotSend(r.ready, 0); kcSetPlate(np); dnBeep(620, 0.06, 'triangle'); } }; }
+                if (r.burnt >= 0) return { text: `Scrape the burnt ${what}`, ok: true, run: () => { st.slots[r.burnt] = null; slotSend(r.burnt, 0); dnBeep(200, 0.1, 'square', 0.03); } };
+                if (r.free >= 0) return { text: `Put ${isG ? 'a patty on the grill' : 'fries in the fryer'}`, ok: true, run: () => { st.slots[r.free] = { t0: performance.now() }; slotSend(r.free, 1); dnBeep(520, 0.06, 'sine'); } };
+                return { text: r.ready >= 0 ? 'Grab a plate to take it' : isG ? 'The grill is full' : 'The fryer is full', ok: false };
+            }
+            if (st.kind === 'plates') return pl ? { text: 'Put the plate back', ok: true, run: () => kcSetPlate(null) } : { text: 'Grab a plate', ok: true, run: () => { kcSetPlate(kcPlate()); dnBeep(700, 0.05, 'triangle'); } };
+            if (st.kind === 'trash') return pl ? { text: 'Throw the plate away', ok: true, run: () => { kcSetPlate(null); dnBeep(200, 0.1, 'sawtooth', 0.03); } } : { text: 'Nothing to throw away', ok: false };
+            if (st.kind === 'bin') { if (!pl) return { text: 'Grab a plate first', ok: false }; const has = pl.t.includes(st.k); return { text: `${has ? 'Remove' : 'Add'} ${st.k}`, ok: true, run: () => { const np = { ...pl, t: has ? pl.t.filter((x) => x !== st.k) : pl.t.concat(st.k).slice(0, 5) }; kcSetPlate(np); dnBeep(has ? 400 : 560, 0.04, 'square', 0.03); } }; }
+            if (st.kind === 'drink') { if (!pl) return { text: 'Grab a plate first', ok: false }; if (pl.d === st.k) return { text: 'Already has one', ok: false }; return { text: `Pour a ${st.k === 's' ? 'soda' : 'shake'}`, ok: true, run: () => { kcSetPlate({ ...pl, d: st.k }); dnBeep(900, 0.07, 'sine'); } }; }
+            if (st.kind === 'pass') { if (!pl) return { text: 'Bring a plate here', ok: false }; return { text: 'Serve this plate', ok: true, run: kcServe }; }
+            return { text: '', ok: false };
+        }
+        function kcNear() {
+            const g = localActor.group.position; let best = null, bd = 9;
+            for (const st of KC.st) { if (st.kind === 'start' && (KC.phase === 'play' || KC.phase === 'count')) continue; if (st.kind === 'exit' && KC.phase === 'play') continue; const d = (g.x - st.ax) ** 2 + (g.z - st.az) ** 2; if (d < bd) { bd = d; best = st; } }
+            return best;
+        }
+        function kcAct() { if (activeMap !== 'diner' || !KC.ready) return; const st = kcNear(); if (!st) return; const o = kcOption(st); if (!o.ok) { if (o.text) kcToast(o.text); dnBeep(160, 0.08, 'square', 0.03); return; } o.run(); kcHud(true); }
+        function kcDrop() { if (activeMap !== 'diner' || !KC.plate) return; kcSetPlate(null); kcToast('Plate dropped.'); kcHud(true); }
+        function kcServe() {
+            const pl = KC.plate; if (!pl) return; let best = null, bq = -1;
+            for (const t of KC.tix) { const fr = clamp(t.p / t.max, 0, 1), q = kcQuality(pl, t, fr); if (q > bq) { bq = q; best = t; } }
+            if (!best) { kcToast('No orders waiting right now.'); return; } if (bq < 8) { kcToast('That does not match any order.'); dnBeep(160, 0.12, 'square', 0.04); return; }
+            KC.srv[KC.myTeam].add(best.id); KC.tix = KC.tix.filter((t) => t !== best);
+            const s = KC.score[me.id] || (KC.score[me.id] = { pts: 0, n: 0, pf: 0, best: 0 }); s.pts += bq; s.n++; if (bq >= 95) s.pf++; s.best = Math.max(s.best, bq);
+            kcSetPlate(null); kcToast(`+${bq}  Rank ${kcRank(bq)}  ·  ${kcTicketTxt(best)}`, true); dnBeep(bq >= 70 ? 740 : 330, 0.15, 'triangle', 0.06, bq >= 70 ? 1100 : 220);
+            kcSendPts(); try { net && net.send({ t: 'kc', a: 'serve', tm: KC.myTeam, id: best.id, q: bq }); } catch (e) { /* offline */ }
+            try { lvAward('diner', 4, 3); } catch (e) { /* not ready */ }
+        }
+        function kcSendPts() { const s = KC.score[me.id]; if (!s) return; try { net && net.send({ t: 'kc', a: 'pts', pts: s.pts, n: s.n, pf: s.pf, best: s.best }); } catch (e) { /* offline */ } }
+        function kcOnMsg(from, m) {
+            const p = peers.get(from); if (!p) return;
+            if (m.a === 'start') { if (KC.phase === 'count' || KC.phase === 'play') return; kcBegin(m); return; }
+            if (m.a === 'hold') { kcPlateVisual(p.actor, kcCleanPlate(m.p)); return; }
+            if (activeMap !== 'diner') return;
+            const tm = kcPeerTeam(from);
+            if (m.a === 'slot') { if (tm < 0 || m.tm !== tm) return; const st = KC.st.find((s) => s.tm === tm && s.kind === (m.s === 'g' ? 'grill' : 'fryer')); const i = m.i | 0; if (!st || i < 0 || i >= st.slots.length) return; st.slots[i] = m.v ? { t0: performance.now() } : null; return; }
+            if (m.a === 'pts') { if (tm < 0) return; KC.score[from] = { pts: clamp(m.pts | 0, 0, 20000), n: clamp(m.n | 0, 0, 500), pf: clamp(m.pf | 0, 0, 500), best: clamp(m.best | 0, 0, 100) }; return; }
+            if (m.a === 'serve') { if (tm < 0 || m.tm !== tm) return; const id = m.id | 0; KC.srv[tm].add(id); if (tm === KC.myTeam) KC.tix = KC.tix.filter((t) => t.id !== id); else if (KC.myTeam >= 0) kcToast(`${p.name || 'A chef'} (${KC_TEAM[tm].n}) served a dish: rank ${kcRank(clamp(m.q | 0, 0, 100))}`); }
+        }
+        function kcEnd() {
+            KC.phase = 'result'; kcSendPts(); const t = KC.totals(), win = t[0] === t[1] ? -1 : t[0] > t[1] ? 0 : 1, rows = [];
+            for (const [id, s] of Object.entries(KC.score)) { const tm = kcPeerTeam(id); if (tm < 0) continue; rows.push({ id, tm, name: id === me.id ? me.name : (peers.get(id) || {}).name || 'Chef', ...s }); }
+            if (KC.bot) rows.push({ id: 'bot', tm: KC.botTeam, name: 'Chef Key’s crew', pts: KC.bot.pts, n: KC.bot.n, pf: 0, best: 0 });
+            rows.sort((a, b) => b.pts - a.pts); KC.result = { t, win, rows }; kcBoardDraw(true); kcOverlay('result');
+            dnBeep(523, 0.5, 'triangle', 0.06, 784); try { lvAward('diner', (win === KC.myTeam && KC.myTeam >= 0 ? 40 : 15), 20); } catch (e) { /* not ready */ }
+        }
+        function kcUpdate(g, dt) {
+            if (!KC.ready || !KC.group || !KC.group.visible) return;
+            for (const q of KC.toast) q.t -= dt; if (KC.toast.length && KC.toast[0].t <= 0) { KC.toast = KC.toast.filter((q) => q.t > 0); kcHud(true); }
+            if (KC.phase === 'count') { KC.cd -= dt; if (KC.cd <= 0) { KC.phase = 'play'; KC.el = 0; dnBeep(880, 0.25, 'triangle', 0.07); } else if (Math.ceil(KC.cd) !== KC.lastCd) { KC.lastCd = Math.ceil(KC.cd); dnBeep(520, 0.08, 'sine', 0.05); } }
+            else if (KC.phase === 'play') {
+                KC.el += dt;
+                while (KC.nextIdx < KC.list.length && KC.list[KC.nextIdx].at <= KC.el) { const t = KC.list[KC.nextIdx++]; if (KC.myTeam >= 0 && !KC.srv[KC.myTeam].has(t.id) && KC.tix.length < 5) { KC.tix.push({ ...t, p: t.max - (KC.el - t.at) }); dnBeep(988, 0.1, 'sine', 0.04); } }
+                for (const t of KC.tix) t.p -= dt; const gone = KC.tix.filter((t) => t.p <= 0); if (gone.length) { KC.tix = KC.tix.filter((t) => t.p > 0); kcToast('An order timed out 😠'); dnBeep(180, 0.2, 'sawtooth', 0.04, 90); }
+                if (KC.bot && KC.el >= KC.bot.next) { const R = KC.bot.R, q = clamp(Math.round(70 + (R() + R() + R() - 1.5) * 28), 35, 100); KC.bot.pts += q; KC.bot.n++; KC.bot.next += 12 + R() * 5; }
+                if (KC.el >= KC.len) kcEnd();
+            }
+            // stations: cook states
+            for (const st of KC.st) if (st.slots) {
+                st.slots.forEach((s, i) => { const v = st.vis && st.vis[i]; if (!v) return; if (!s) { v.visible = false; return; } v.visible = true; if (st.kind === 'grill') { const q = kcSlotState(st, s); v.material.color.setHex(q === 'raw' ? 0xd98a8a : q === 'medium' ? 0xa8603a : q === 'well' ? 0x6a3f22 : 0x151515); } else { const q = kcSlotState(st, s), c = q === 'raw' ? 0xf0e0a0 : q === 'ready' ? 0xf0b830 : 0x222222; v.children.forEach((f) => { f.material = kcMat(c); }); } });
+                if (st.prog) { const sig = st.slots.map((s) => (s ? Math.floor(kcAge(s) * 5) : -1)).join(); if (sig !== st.prog.userData.sig) { st.prog.userData.sig = sig; kcDrawSlots(st); } }
+            }
+            // what would "use" do right now
+            const near = KC.phase === 'idle' || KC.phase === 'result' || KC.phase === 'play' ? kcNear() : null; KC.near = near;
+            if (KC.ring) { if (near) { KC.ring.visible = true; KC.ring.position.set(near.ax, 0.06, near.az); const o = kcOption(near); KC.ring.material.color.setHex(o.ok ? 0xffe14a : 0x888888); KC.ring.scale.setScalar(1 + 0.06 * Math.sin(performance.now() / 160)); } else KC.ring.visible = false; }
+            if (KC.startBtn) KC.startBtn.material.color.setHex(KC.phase === 'play' || KC.phase === 'count' ? 0x555555 : 0x4cc462);
+            KC.hudT -= dt; if (KC.hudT <= 0) { KC.hudT = 0.2; kcBoardDraw(false); kcHud(false); }
+        }
+        function kcDrawSlots(st) {
+            const U = st.prog.userData, g = U.g, W = U.c.width, H = U.c.height, n = st.slots.length, cw = W / n, kind = st.kind === 'grill' ? 'patty' : 'fries', z = DN_COOK[kind], mx = z.max; g.clearRect(0, 0, W, H);
+            st.slots.forEach((s, i) => {
+                const x = i * cw; g.fillStyle = 'rgba(14,8,8,.78)'; g.beginPath(); g.roundRect ? g.roundRect(x + 4, 4, cw - 8, H - 8, 12) : g.rect(x + 4, 4, cw - 8, H - 8); g.fill();
+                if (!s) { g.fillStyle = '#ffffff55'; g.font = '700 22px Nunito'; g.textAlign = 'center'; g.fillText('empty', x + cw / 2, 38); return; }
+                const age = kcAge(s), bw = cw - 28, bx0_ = x + 14, by = 36, cols = kind === 'patty' ? ['#d98a8a', '#e9a24a', '#8a5a2b', '#1c1c1c'] : ['#e9d6a0', '#e9d6a0', '#e8b44a', '#1c1c1c'], zs = [0, z.zones[0], z.zones[1], z.zones[2], mx];
+                for (let k = 0; k < 4; k++) { g.fillStyle = cols[k]; g.fillRect(bx0_ + bw * zs[k] / mx, by, bw * (zs[k + 1] - zs[k]) / mx, 14); }
+                g.fillStyle = '#fff'; g.fillRect(bx0_ + bw * Math.min(1, age / mx) - 3, by - 6, 6, 26);
+                const q = dnCookState(kind, age); g.font = '800 20px Nunito'; g.textAlign = 'center'; g.fillStyle = q === 'burnt' ? '#ff8a7a' : q === 'raw' ? '#fff' : '#9dff9d'; g.fillText(q === 'burnt' ? 'BURNT!' : q === 'raw' ? 'raw' : q === 'ready' ? 'READY' : q.toUpperCase(), x + cw / 2, 24);
+            });
+            U.t.needsUpdate = true;
+        }
+        // ---- HUD
+        function kcCss() {
+            if (document.getElementById('kc-css')) return; const st = document.createElement('style'); st.id = 'kc-css';
+            st.textContent = `#kc{position:fixed;inset:0;z-index:40;pointer-events:none;display:none;font:700 13px Nunito,system-ui,sans-serif;color:#fff}#kc.on{display:block}#kc *{box-sizing:border-box}
+#kc .sc{position:absolute;top:72px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(10,12,18,.78);border:2px solid #ffd23a;border-radius:14px;padding:5px 14px;backdrop-filter:blur(6px);min-width:300px;justify-content:center}
+#kc .sc b{font:900 17px Orbitron,sans-serif}#kc .sc .r{color:#ff7a6a}#kc .sc .b{color:#6ab4ff}#kc .sc .bar{flex:1;height:10px;border-radius:9px;background:#444;overflow:hidden;display:flex;min-width:90px}#kc .sc .bar s{display:block;height:100%}
+#kc .sc .tm{font:900 18px Orbitron,sans-serif;min-width:54px;text-align:center}
+#kc .tx{position:absolute;top:116px;left:50%;transform:translateX(-50%);display:flex;gap:7px;max-width:96vw;justify-content:center;flex-wrap:wrap}
+#kc .tk{width:122px;background:#fff6dc;color:#2a1a10;border-radius:8px;padding:5px 7px 6px;border-top:6px solid #d94040;box-shadow:0 3px 10px #0007;font-size:12px;line-height:1.3}
+#kc .tk .pt{height:5px;background:#e6d6ae;border-radius:5px;overflow:hidden;margin-top:4px}#kc .tk .pt i{display:block;height:100%}
+#kc .pr{position:absolute;left:50%;bottom:104px;transform:translateX(-50%);background:rgba(10,12,18,.82);border:2px solid #ffe14a;border-radius:12px;padding:6px 14px;font-size:14px;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}#kc .pr.no{border-color:#777;color:#bbb}
+#kc .pr kbd{background:#ffe14a;color:#2a1a10;border-radius:5px;padding:1px 7px;margin-right:6px;font:900 13px Orbitron,sans-serif}
+#kc .bt{position:absolute;right:16px;bottom:100px;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:auto}
+#kc .bt button{font:inherit;color:#2a1a10;border:0;cursor:pointer;touch-action:manipulation}#kc .bt .a{width:84px;height:84px;border-radius:50%;background:linear-gradient(#ffe48a,#f0a020);box-shadow:0 5px 0 #a8650a,0 6px 16px #0007;font:900 22px Orbitron,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}#kc .bt .a small{font:800 10px Nunito,sans-serif;margin-top:3px}
+#kc .bt .a:active{transform:translateY(4px);box-shadow:0 1px 0 #a8650a}#kc .bt .a.off{filter:grayscale(.8);opacity:.7}#kc .bt .d{padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.85);font-weight:800}
+#kc .ms{position:absolute;left:50%;top:210px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}#kc .ms div{background:rgba(0,0,0,.78);border-radius:10px;padding:5px 14px;max-width:92vw;text-align:center}#kc .ms .gd{color:#9dff9d}
+#kc .rd{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(10,12,18,.88);border:2px solid #ffd23a;border-radius:16px;padding:14px 22px;text-align:center;max-width:92vw;pointer-events:auto}#kc .rd h3{margin:0 0 6px;font:900 20px Orbitron,sans-serif;color:#ffd23a}#kc .rd .row{display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+#kc .rd button,#kc .st button{font:800 14px Nunito,sans-serif;background:linear-gradient(#a8f0b0,#4cc462);color:#06260d;border:0;border-radius:10px;padding:8px 16px;cursor:pointer;box-shadow:0 3px 0 #2a7a3a;touch-action:manipulation}#kc .rd button.x{background:linear-gradient(#ff9a8a,#e0493a);color:#fff;box-shadow:0 3px 0 #8a2218}
+#kc .st{position:absolute;left:50%;top:116px;transform:translateX(-50%);background:rgba(10,12,18,.84);border:2px solid #ffd23a;border-radius:14px;padding:10px 16px;text-align:center;max-width:94vw;pointer-events:auto}#kc .st p{margin:3px 0;font-size:12.5px;line-height:1.35}
+#kc .cdn{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font:900 96px Orbitron,sans-serif;color:#ffd23a;text-shadow:0 5px 0 #8a2218,0 0 30px #000}
+@media (max-height:480px){#kc .sc{top:62px;padding:3px 10px}#kc .tx{top:98px}#kc .tk{width:104px;font-size:11px;padding:3px 5px}#kc .bt .a{width:70px;height:70px;font-size:18px}#kc .pr{bottom:86px;font-size:12px}#kc .st{top:98px;padding:6px 12px}}`;
+            document.head.appendChild(st);
+        }
+        function kcHudBuild() {
+            if (KC.hud) return; kcCss(); const r = document.createElement('div'); r.id = 'kc';
+            r.innerHTML = `<div class="sc"><b class="r">RED <span id="kc-sr">0</span></b><div class="bar"><s id="kc-br" style="background:#e0493a;width:50%"></s><s id="kc-bb" style="background:#3a8ee0;width:50%"></s></div><b class="b"><span id="kc-sb">0</span> BLUE</b><span class="tm" id="kc-tm">2:30</span></div><div class="tx" id="kc-tx"></div><div class="st" id="kc-st"></div><div class="ms" id="kc-ms"></div><div class="cdn" id="kc-cd"></div><div class="pr" id="kc-pr"></div><div class="bt"><button class="d" id="kc-drop">Drop plate</button><button class="a" id="kc-act">F<small>USE</small></button></div><div class="rd" id="kc-rd" style="display:none"></div>`;
+            document.body.appendChild(r); KC.hud = r;
+            const press = (el, fn) => el.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); });
+            press(r.querySelector('#kc-act'), kcAct); press(r.querySelector('#kc-drop'), kcDrop);
+            r.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); const a = b.dataset.k; if (a === 'start' || a === 'again') kcStart(); else if (a === 'close') kcOverlay(null); else if (a === 'lobby') { kcOverlay(null); KC.phase = 'idle'; kcBoardDraw(true); kcHud(true); } });
+            window.addEventListener('keydown', (e) => {
+                if (activeMap !== 'diner' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return; if (typeof isTyping === 'function' && isTyping(e)) return;
+                if (e.code === 'KeyF') { e.preventDefault(); e.stopImmediatePropagation(); kcAct(); } else if (e.code === 'KeyK') { e.preventDefault(); kcDrop(); }
+            }, true);
+        }
+        function kcOverlay(kind) {
+            const rd = document.getElementById('kc-rd'); if (!rd) return; if (!kind) { rd.style.display = 'none'; rd.innerHTML = ''; return; }
+            const R = KC.result; if (!R) return; const mine = KC.myTeam, won = R.win >= 0 && R.win === mine, tie = R.win < 0;
+            const rows = R.rows.map((r, i) => `<div style="display:flex;gap:10px;justify-content:space-between;font-size:13px;color:${KC_TEAM[r.tm].c}"><span>${i === 0 ? '⭐ ' : ''}${String(r.name).replace(/[<>&]/g, '')}</span><span>${r.pts} pts · ${r.n} dish${r.n === 1 ? '' : 'es'}${r.best ? ' · best ' + kcRank(r.best) : ''}</span></div>`).join('');
+            rd.style.display = 'block';
+            rd.innerHTML = `<h3>${tie ? 'IT’S A TIE!' : won ? 'YOUR TEAM WINS! 🏆' : mine < 0 ? KC_TEAM[R.win].n + ' TEAM WINS!' : KC_TEAM[R.win].n + ' TEAM WINS'}</h3><div style="font:900 22px Orbitron,sans-serif"><span style="color:#ff7a6a">RED ${R.t[0]}</span> &nbsp;·&nbsp; <span style="color:#6ab4ff">${R.t[1]} BLUE</span></div><div style="margin-top:8px;text-align:left">${rows || '<i>No dishes were served.</i>'}</div><div class="row"><button data-k="again">Rematch</button><button data-k="lobby" class="x">Back to the floor</button></div>`;
+        }
+        function kcHud(force) {
+            if (!KC.hud) return; const on = activeMap === 'diner'; if (KC.hudOn !== on) { KC.hudOn = on; KC.hud.classList.toggle('on', on); } if (!on) return;
+            const $k = (id) => document.getElementById(id), t = KC.totals(), left = Math.max(0, KC.phase === 'play' ? KC.len - KC.el : KC.phase === 'result' ? 0 : KC.len);
+            $k('kc-sr').textContent = t[0]; $k('kc-sb').textContent = t[1]; const mx = Math.max(1, t[0] + t[1]); $k('kc-br').style.width = (t[0] || t[1] ? t[0] / mx * 100 : 50) + '%'; $k('kc-bb').style.width = (t[0] || t[1] ? t[1] / mx * 100 : 50) + '%';
+            $k('kc-tm').textContent = KC.phase === 'idle' ? '--:--' : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+            $k('kc-cd').textContent = KC.phase === 'count' ? (KC.cd > 0.6 ? Math.ceil(KC.cd - 0.4) : 'GO!') : '';
+            // tickets
+            $k('kc-tx').innerHTML = KC.phase === 'play' && KC.myTeam >= 0 ? KC.tix.map((t) => { const fr = clamp(t.p / t.max, 0, 1); return `<div class="tk"><b>#${t.id}</b> ${kcTicketTxt(t)}<div class="pt"><i style="width:${(fr * 100).toFixed(0)}%;background:${fr > 0.5 ? '#4cc462' : fr > 0.25 ? '#f0a020' : '#e0493a'}"></i></div></div>`; }).join('') : '';
+            // idle panel
+            const st = $k('kc-st');
+            if (KC.phase === 'idle') {
+                const g = localActor.group.position, cnt = [0, 0]; const my = kcRegion(g.x, g.z); if (my >= 0) cnt[my]++; for (const [, p] of peers) { const q = kcRegion(p.actor.group.position.x, p.actor.group.position.z); if (q >= 0) cnt[q]++; }
+                const sig = [cnt[0], cnt[1], my].join(); if (force || sig !== KC.roster) { KC.roster = sig; st.style.display = 'block'; st.innerHTML = `<b style="font:900 15px Orbitron,sans-serif;color:#ffd23a">KITCHEN CLASH</b><p>Both kitchens cook the <b>same orders</b> for 2:30; the best <b>dish quality</b> wins. Walk into <span style="color:#ff7a6a">Red</span> (left) or <span style="color:#6ab4ff">Blue</span> (right), then START. Alone, you face Chef Key\u2019s crew.</p><p>🔴 ${cnt[0]} · 🔵 ${cnt[1]} ${my >= 0 ? `· you: <b style="color:${KC_TEAM[my].c}">${KC_TEAM[my].n}</b>` : '· step into a kitchen'}</p><button data-k="start">▶ START MATCH</button>`; }
+            } else if (st.style.display !== 'none') { st.style.display = 'none'; KC.roster = ''; }
+            $k('kc-ms').innerHTML = KC.toast.map((q) => `<div class="${q.good ? 'gd' : ''}">${q.msg}</div>`).join('');
+            // prompt
+            const pr = $k('kc-pr'), act = $k('kc-act'); const near = KC.near, o = near ? kcOption(near) : null;
+            if (o && o.text) { pr.style.display = 'block'; pr.className = 'pr' + (o.ok ? '' : ' no'); pr.innerHTML = `<kbd>F</kbd>${o.text}`; act.classList.toggle('off', !o.ok); } else { pr.style.display = 'none'; act.classList.add('off'); }
+            $k('kc-drop').style.display = KC.plate ? '' : 'none';
+        }
+        function kcMapChanged(id) {
+            if (id === 'diner') { ensureKitchen(); kcHudBuild(); Object.assign(KC, { phase: 'idle', el: 0, tix: [], score: {}, teams: {}, myTeam: -1, bot: null, result: null, toast: [], plate: null }); kcOverlay(null); kcBoardDraw(true); }
+            else { if (KC.ready) { kcSetPlate(null, true); KC.phase = 'idle'; } }
+            kcHud(true);
+        }
+        function kcPadAct(kind) { if (activeMap !== 'diner') return false; if (kind === 'use') kcAct(); else kcDrop(); return true; }
+        MAP_DEFS.diner = { id: 'diner', ground: kcGround, clamp: kcClamp, collide: kcCollide, spawn: kcSpawn, update: kcUpdate };
+        window.__peersDbg = () => [...peers.values()];
+        window.__fpState = () => { const d = new THREE.Vector3().subVectors(controls.target, camera.position), l = d.length() || 1; return { on: fpOn, dist: +l.toFixed(3), fwd: [+(d.x / l).toFixed(3), +(d.z / l).toFixed(3)], pitch: +(Math.asin(d.y / l) * 180 / Math.PI).toFixed(1), pos: [localActor.group.position.x, localActor.group.position.z] }; };
+        window.__kc = { actor: () => localActor, get: () => KC, act: kcAct, drop: kcDrop, start: kcStart, near: () => (KC.near ? KC.near.kind + (KC.near.k ? ':' + KC.near.k : '') : null), opt: () => (KC.near ? kcOption(KC.near) : null), quality: kcQuality, tickets: kcGenTickets, ensure: ensureKitchen };
+
 
         /* ------------------------------------------------------------------ *
          *  Oasis Industries: the hoverboard lab. A live 3D preview with presets, paint, decals, shape and thruster sliders,
@@ -14031,6 +14529,7 @@
             $('pm-loft').addEventListener('click', () => { privateMap = 'loft'; renderPrivateMap(); });
             $('pm-city').addEventListener('click', () => { privateMap = 'city'; renderPrivateMap(); });
             $('pm-galleria').addEventListener('click', () => { privateMap = 'galleria'; renderPrivateMap(); });
+            $('pm-diner').addEventListener('click', () => { privateMap = 'diner'; renderPrivateMap(); });
             $('plot-new').addEventListener('click', () => { const code = newPlot(); renderPlots(); enterPlot(code); });
             $('enter-loft').addEventListener('click', () => { const code = myLoftCode(); joinRoom('private-' + code, { label: 'My Harbor Studio', isPrivate: true, code, map: 'loft' }); });
             renderPrivateMap();
