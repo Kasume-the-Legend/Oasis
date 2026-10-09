@@ -128,7 +128,7 @@ Press **`J`** (or Social > Party).
 - The studio **comes empty**. The kitchen counter, island, fridge, bar stools, tall bookcase and six realistic plants (monstera, fiddle-leaf fig, snake plant, areca palm, bird of paradise, fern) are **Decorate furniture** you place where you like (`B`).
 - Bigger oval skylight with glass, rings and ribs, warm cove lighting and skirting boards.
 - The view from the windows is the real **Destiny City** skyline across the bay (the city's own buildings, merged into 11 draw calls; on phones the heaviest window layers are left out). It follows the same day, night and sky as the rest of the studio.
-- Also in this version: house sizes (S/M/L), levelling, a menu hologram, D-pad player targeting and LB + right stick zoom.
+- Also in this version: house sizes (S/M/L), levelling, a menu hologram, D-pad player targeting.
 
 ### Destiny City (new map; the lobby has a Destiny City card with a Join button, and a Destiny City option for private rooms)
 A Tokyo-inspired harbor district on a tropical island, built to keep growing. Join **Destiny City** from the elevator lobby.
@@ -170,22 +170,36 @@ On the Key's Diner title screen press **Kitchen Clash**, or pick **Key's Kitchen
 - Walk into a kitchen with your friends and press START (button, console, or `F` at the console). Both teams cook the **same orders** for **2:30**, and everyone on a team shares the same grill and fryer. Alone, or with nobody on the other side, you cook against **Chef Key's crew**.
 - Per dish: grab a **plate**, put a **patty** on the grill (raw, medium, well, burnt: watch the bar above it), take it when it is done, add **toppings** from the bins, take **fries** from the fryer, pour a **soda** or **shake**, then **serve** it at the pass. Burnt food has to be scraped off. You carry one plate at a time and other players see it.
 - **Scoring is done by the game, 0 to 100 per dish:** patty doneness (30), toppings (15, extras cost points), fries ready (25), drink (15), and a speed bonus (up to 12) for serving before the ticket's patience runs out; ranks D, C, B, A and S. A plate is judged against the order it fits best. The team with the higher total wins; the results show each chef's points, dishes and best rank.
-- Controls: `F` use / grab, `K` drop plate, big on-screen **USE** button on touch, controller X to use and B to drop.
+- Controls: `F` use / grab, `K` drop plate, big on-screen **USE** button on touch, controller A to use / grab and B to drop.
 - Opening the title screen still gives you the original solo shift game.
 
 Open the solo game from the Galleria doorway, Home > Key's Diner, or `/diner`. `Esc` pauses. This is my own take on a "cooking rush" game (I did not have the Discord game to copy), so tell me which rules to change.
+
+### Laser Tag (guns, bows and blades; its own room)
+
+A neon arena in the spirit of Gun Gale Online. Open it from **Home → Laser Tag**, the lobby (a private **Laser Tag** room has a code starting with T), or type `/tag`. Walk into the **Red** (left) or **Blue** (right) area of the briefing room, pick a weapon and press **START** (F at the console, or the button). Everyone who stood in a team area plays; alone, you face **training drones** (each side is filled up to 3 fighters).
+
+- **Rules:** 100 HP, a knockout costs the other team a point, you are back at your base after 5 seconds with 2.5 s of protection. Most knockouts after 4 minutes wins, or the first team to 30. Late joiners watch until the next match.
+- **Pulse Blaster (1):** fires Star Wars style bolts, glowing streaks with a white core in your team colour that fly at 70 m/s, so you can see them cross the arena and have to lead a moving target. 12 shots, 18 damage on impact, R reloads (also automatic when empty). Bolts stop at cover and walls with a spark. Drones shoot visible bolts too, and their hits land when the bolt arrives.
+- **Longbow (2):** hold to draw (0.7 s), release to shoot; a full draw does 48 damage, a quick tap 12. Arrows drop over distance, and you walk slowly while drawing.
+- **Photon Blade (3):** 3-hit combo (24 / 24 / 38), 2.7 m reach in front of you, a little faster on foot.
+- **Aiming (Resident Evil 4 style):** in the arena the camera sits over your right shoulder and the character faces where you look. **Click once** in the game to capture the mouse (Esc releases it), then move the mouse to look. **Hold the right mouse button to aim**: the camera pulls in closer, zooms, you walk at half speed, a small red crosshair shows and a red laser sight runs from the gun to whatever you point at (it turns yellow over an enemy). Left mouse fires. Aimed shots go exactly through the crosshair with a slight pull onto an enemy right next to it. Hip fire (not aiming) is wider and the gun spreads a little. The bow aims the same way (arrow drop is compensated) and drawing it zooms in automatically. The camera pulls in against cover so walls never hide you. The blade needs no aiming. **Controller:** right stick looks, hold LT to aim, RT fires. **Touch:** drag to look, hold the AIM button to aim, FIRE to shoot.
+- **Keys:** left mouse or F fire (hold to draw the bow), right mouse hold aims, 1 / 2 / 3 weapons, R reload, F also uses the console. **Controller:** RT fire, LT aim, D-pad left / right weapon, X reload, A use, Y jump. **Touch:** FIRE and AIM buttons, weapon and reload buttons, drag to turn.
+- Each hit is decided by the shooter and reported to the victim, so other players' hits on you show up as they arrive; drones walk fixed routes on a shared clock.
+
+**Your own animations.** Open Animations: there are now sections for each weapon. Per weapon you can set idle, walk (forward / back / left / right), run (the same four) and jump, which replace your normal movement while you carry that weapon (anything you leave empty uses your normal clip). Plus action clips: blaster fire and reload, bow draw and release, blade slash 1 / 2 / 3, and for every weapon: got hit, knocked out (stays down), victory, defeat. Drop several FBX files at once and the names are read: for example `Rifle Idle`, `Rifle Walk Backward`, `Pistol Run Left Strafe`, `Rifle Fire`, `Rifle Reload`, `Bow Draw`, `Bow Shoot`, `Sword Idle`, `Katana Run`, `Sword Slash 1` / `2` / `3` (or `Attack_03`), `Hit Reaction`, `Death`, `Victory`, `Defeat`. A word like rifle / gun / pistol / blaster, bow / archer, or sword / blade / katana / melee picks the weapon. Until you upload clips, simple built-in poses are used (blaster held level, bow drawn, blade raised, swing and recoil).
 
 ### Oasis Industries (hoverboard lab)
 Ported from your Extreme Gear customizer. A live 3D lab (own preview, orbit and five camera views) with nine presets, three paint colours (body, trim, plasma), six deck decals (Racing, Flame, Cyber, Checker, Stars, Oasis), length, width and nose-flare sliders, exhaust density, hover height, a boost demo with engine sound and speed lines, and OBJ export. Eight save slots; **Save & ride** makes it your board in the world, and other players see your custom board. `Shift+X` also cycles through your saved boards after the five stock colourways.
 Open it from the Galleria doorway, Home > Oasis Industries, or `/industries`. Changes I made while porting: the decal now covers the whole deck (in the original it only showed on one corner), the foot pads and straps sit on top of the deck instead of inside it, and the OBJ export includes the deck faces.
 
 ### Hoverboards
-Press `X` (or the wind button at the top right, or X / Square on a controller) to hop on a jet-pod hoverboard: faster than running, with a glide when you let go, banking in turns, a hover bob and a pool of light under it. `Shift+X` cycles five colourways (Cyan Streak, Solar Flare, Sakura Drift, Venom Wing, Midnight). Other players see your board. They are not allowed in the Harbor Studio. The board is an original design, and the rider uses a skateboarding pose (a crouched, sideways stance). Boards you design in **Oasis Industries** join the cycle.
+Press `X` (or the wind button at the top right, or the Hoverboard slot on a controller hotbar) to hop on a jet-pod hoverboard: faster than running, with a glide when you let go, banking in turns, a hover bob and a pool of light under it. `Shift+X` cycles five colourways (Cyan Streak, Solar Flare, Sakura Drift, Venom Wing, Midnight). Other players see your board. They are not allowed in the Harbor Studio. The board is an original design, and the rider uses a skateboarding pose (a crouched, sideways stance). Boards you design in **Oasis Industries** join the cycle.
 
 ### O-Boy (portable screen)
 Press `O` (or the gamepad button at the top right) for a personal handheld. **Load game** takes a ROM you own (NES, SNES, Genesis, Master System, Game Boy / Color / Advance, N64, PlayStation, arcade) and runs it in its own emulator, separate from the TV and not shared with anyone. It opens held up in front of your view (first person); **Full screen** shows only the game. Keys: arrows or WASD, `Z` = B, `X` = A, `Enter` = Start, `Shift` = Select, `Esc` closes; a controller works, and the on-screen buttons work by touch. **Colour** takes any colour you like (picker plus swatches) and is remembered. The emulator core downloads from cdn.emulatorjs.org the first time. **Others can see you playing**: your character holds a small version of the device in both hands with its screen lit in your colour (and the game's frames are not shared), so people know you are busy rather than standing still.
 
-**Targeting**: `T` cycles through nearby players, then yourself, then off. Targeting someone shows a floating, see-through card at them (name, level, and whether they are playing O-Boy or just online); targeting yourself shows your own card. On a controller, tap D-pad down to target yourself (hold it to zoom out) and B clears.
+**Targeting**: `T` cycles through nearby players, then yourself, then off. Targeting someone (on a controller: D-pad left / right, or A) shows a floating, see-through card at them (name, level, and whether they are playing O-Boy or just online); targeting yourself shows your own card. On a controller, tap D-pad down to target yourself (hold it to zoom out) and B clears.
 
 ### Inventory and trading
 - **Inventory** (`I`, or Avatar > Inventory): a 60-slot bag. Store **.vrm** models and **PNG / JPG / GIF / WebP** images (other file types are refused; files are checked by their contents, not just their names). Your Equipment clothes and items show up in the bag too. You can **download** anything back out, set a stored .vrm as your avatar, or delete things. The bag lives in your browser.
@@ -215,11 +229,25 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 - **Shared TV.** Play a video on the big screen and the room watches together.
 - Name plates carry the Oasis mark.
 
-### Controls
+### Footstep sounds
+
+Every character (you and everyone else in the room) makes a step sound as each foot lands, and a thud when landing from a jump. The sound follows what is underfoot:
+
+| Where | Surface |
+|---|---|
+| Harbor Studio room | the floor style you picked (wood by default, or marble, tile, carpet, concrete, stone); stone around the pool, wood on the deck, metal in the lift; sofas and beds sound soft, tables and chests like wood |
+| Builder's Plot | the material of the floor you built (wood, oak, parquet, boards, stone, brick, tile, marble, metal, concrete, carpet), grass on open ground |
+| The city | asphalt on roads, concrete pavement, grass in the two lawns and on the islet, sand on the beach, wood on the piers, a splash in the shallows |
+| Galleria | marble in the hall, grass in the garden, stone on the garden path |
+| Mall, Key's Diner, Kitchen Clash | tile |
+
+Outdoors, snow lying on the ground (see Weather) turns steps into a crunch, and wet ground adds a splash. Others' steps get quieter with distance and pan left or right; nothing plays beyond about 26 m, on a hoverboard, or while sitting. The sounds are synthesised in the browser (no sound files). Turn them off or change the volume in the Start menu under More; the choice is saved in this browser. Browsers keep audio silent until you click or press a key once.
+
+## Controls
 | Input | Action |
 |---|---|
 | `W A S D` / arrows | Move |
-| `Shift` | Run (hold), or tap it repeatedly to sprint like GTA; R1 / RB taps on a controller |
+| `Shift` | Run (hold), or tap it repeatedly to sprint like GTA. On a controller use LB auto-run |
 | `Q` / `E` | Turn on the spot |
 | `Space` | Jump (also onto beds, tables and mall benches) |
 | `1` `2` | Cheer, sit |
@@ -227,7 +255,7 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 | `Tab` | Bottom menu (XMB): ←/→ category, ↑/↓ items, `Enter` select, `Esc` or `Tab` leave |
 | `M` | Start menu |
 | `O` | O-Boy portable screen |
-| `C` | First person view on/off (controller: click the right stick) |
+| `C` | First person view on/off (controller: R3 cycles near, far, first person) |
 | `X` | Hoverboard on/off (`Shift+X` changes colour). Not in the studio. Controller: X / Square |
 | `G` | Equipment |
 | `I` | Inventory (bag, files, trading) |
@@ -241,7 +269,26 @@ VRoid Studio `.vroidcustomitem` files hold only textures and colours for clothin
 | Click a player | Open their profile card (RetroAchievements stats, Look at) |
 | Mouse drag | Orbit camera |
 
-**Game controllers** (wired or Bluetooth, any browser-supported gamepad): left stick moves, right stick turns the camera (up looks up, and in the studio it can dip below eye level like the mouse), `Y` jumps, tap `A` (or R1) to sprint, click the right stick for first person, triggers run, `Start` opens the Start menu and the D-pad navigates menus.
+**Game controllers** (wired or Bluetooth, any browser-supported gamepad; Xbox names, PlayStation in brackets). The layout follows an MMO-style scheme:
+
+| Control | In the world | In windows and menus |
+|---|---|---|
+| Left stick | Move | Move the highlight |
+| Right stick | Move the camera (up looks up) | Scroll |
+| L3 (click left stick) | Lock the camera on your target (or the nearest player); press again to release | |
+| R3 (click right stick) | Change camera: near, far, first person | |
+| LT / RT (L2 / R2) | Hold to bring up the left / right hotbar | |
+| LB (L1) | Auto-run: press while moving; it keeps going until you press LB again, pull the stick back, or press B | Previous tab |
+| RB (R1) | Change hotbar set (3 sets) | Next tab |
+| D-pad | Left / right: cycle targets. Up / down: cycle you and your party members | Move the highlight |
+| A (Cross) | Select target (nearest player), then open their profile; Kitchen Clash: use / grab | Confirm |
+| B (Circle) | Cancel: clear target, release lock-on, stop auto-run; Kitchen Clash: drop plate | Back |
+| X (Square) | Open the map (rooms) | |
+| Y (Triangle) | Jump | |
+| Back (Select) | Select the HUD: D-pad moves around the bottom bar, A opens, B leaves | |
+| Start (Options) | Main menu (emotes, bubble colour, lobby) | Close |
+
+**Hotbars.** Hold LT for the left bar or RT for the right bar, then press a D-pad direction or A / B / X / Y to use that slot (8 slots per bar, 16 per set). The crossbar sits at the bottom centre and only appears when a controller is connected. The three default sets are Social (cheer, sit, target yourself, clear target, emotes, O-Boy, hoverboard, board colour; chat, party, TV, strafe, equipment, inventory, map, weather), View (zoom, camera, lock on, hide bar, fullscreen; decorate, profile, bubble colour...) and Home (decorate, inventory, equipment, party, map, TV, weather, O-Boy; hoverboard, sit, cheer, emotes, profile, chat). Slots can be rebound from the browser console with `__pad.bind(set, 'L' or 'R', slot, 'actionName')` (set 0-2, slot 0-7 = D-pad up, right, down, left, then Y, B, A, X; `__pad.acts()` lists the action names); the choice is saved in this browser. Tapping A or R1 to sprint is gone: use LB auto-run (sprint speed) or `Shift` on a keyboard.
 
 **Player profiles:** click someone to see a card built from their public RetroAchievements profile (points, rank, recently played). Set yours in Start menu > Profile by pasting your profile link (optional, shared only with people in your room). No API keys are involved. Reading the page goes through the Cloudflare helper, which only reads retroachievements.org; see `cloudflare/DEPLOY-NO-TERMINAL.md`.
 
@@ -318,6 +365,7 @@ For the retro-game video on networks that block direct connections, run a TURN s
 - Weather and seasons do not reach inside interiors (shops, roofed houses, the Galleria hall); the Harbor Studio only gets the sky, light and lightning. The weather you see follows the game calendar, so in real October you see autumn unless you preview another season.
 - The Galleria's other shop fronts are decoration; the solo diner shift and the lab are overlays, but the Kitchen Clash is a real room.
 - Kitchen Clash: tested in an emulated desktop browser only (one player against Chef Key's crew, serving and scoring checked by script). Not yet tried: two or more real players over the network, phones, or a controller. Team match results are computed on each player's own device from the points everyone broadcasts, so a lost network message could make two devices show slightly different totals. Players who walk in after a match has started spectate until the next one. Stations are shared by teammates, but if two teammates grab the same patty in the same instant one of them just gets nothing.
+- Laser Tag: tested in an emulated desktop browser only: solo against the drones (gun, bow, blade, knockout, respawn and result checked by script), two tabs (teams, start, hits, knockouts and respawn shared), the built-in poses on the stock character, and the filename reading for uploads. Blaster bolts were checked by script (they fly, travel at speed and damage a drone on impact) and in one screenshot, but not how they look or feel at full frame rate. Over-the-shoulder aiming was checked by script (shots through the crosshair and aim assist hit a drone, plus one aimed screenshot) but the mouse capture itself, touch drag-to-look, the controller's right stick / LT, and how the camera feels hugging cover are untested. Not yet tried: a phone (button layout and touch aiming), a real controller, three or more players, your own VRM files (the weapon positions were calibrated on the stock character; a VRM 0.x model may need a nudge) or your own weapon clips, and how it sounds (the effects are synthesised).
 - There is no kick or ban yet; if a code leaks, make a new room.
 - Builder's Plot, party and the new sky were tested only in an emulated desktop browser with two tabs, not on a phone. Very large builds may be slow on phones. Stairs, upper levels and walking on floors still need real-world testing.
 
@@ -328,3 +376,5 @@ Built by **Kasume the Legend**. Inspired by the 3D home spaces of the console er
 ## License
 
 Add your preferred license here (for example MIT). Third-party libraries keep their own licenses. Avatars, outfits and videos loaded by players remain the property of their creators.
+- The controller layout (hotbars, auto-run, lock-on, HUD select, camera cycle) was tested with a simulated gamepad in an emulated desktop browser, not with a real controller. Button numbers follow the standard gamepad mapping, so non-standard pads may differ. Lock-on and party cycling need other players in the room and were not exercised.
+- Footstep sounds: surface detection and step timing were checked by script in the studio, city, galleria and plot (no sound could be listened to). Not yet checked: how each surface actually sounds, or other players' steps over a real network. Snow and wet steps use the same weather values as the ground effect, tested only for errors.
