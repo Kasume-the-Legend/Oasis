@@ -799,6 +799,7 @@
 #gm-modal .tc.o1{box-shadow:0 0 0 2px #ff8f80,0 3px 8px rgba(0,0,0,.5)}
 #gm-modal .tc.s4,#gm-modal .tc.s5{box-shadow:0 0 0 2px #ffd24a,0 0 12px #ffd24acc,0 3px 8px rgba(0,0,0,.5)}
 #gm-modal .tc .art{top:43%;font-size:calc(var(--ch) * .34)}
+#gm-modal .tc .art .artimg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(var(--ch) * .56);height:calc(var(--ch) * .68);object-fit:cover;border-radius:4px;background:#000}
 #gm-modal .tc .n{font-size:calc(var(--ch) * .2);text-shadow:0 0 3px #000,0 1px 2px #000,0 0 6px #000}
 #gm-modal .tc .n.t{top:4%}#gm-modal .tc .n.b{bottom:18%}#gm-modal .tc .n.l{top:43%}#gm-modal .tc .n.r{top:43%}
 #gm-modal .tc .st{left:50%;top:auto;bottom:2.5%;transform:translateX(-50%);font-size:calc(var(--ch) * .095);color:#5a3a00;text-shadow:0 1px 0 #fff8}
@@ -815,7 +816,7 @@
     </style>
     <div id="gm-modal" class="hidden fixed inset-0 z-[57] bg-black/45">
         <div class="gm-panel">
-            <div class="gm-head"><span style="font-size:18px">🎴</span><b id="gm-title">GAMES</b><button id="gm-back" type="button" hidden>◀ Back</button><span id="gm-status"></span><button id="gm-close" type="button" aria-label="Close">✕</button></div>
+            <div class="gm-head"><span style="font-size:18px">🎴</span><b id="gm-title">GAMES</b><button id="gm-back" type="button" hidden>◀ Back</button><span id="gm-status"></span><button id="gm-music" type="button" title="Triple Triad music on / off" aria-label="Music">🔊</button><button id="gm-close" type="button" aria-label="Close">✕</button></div>
             <div class="gm-body" id="gm-body"></div>
         </div>
     </div>
@@ -8025,83 +8026,14 @@
             g.traverse((m) => { m.userData.noOutline = true; }); parent.add(g); return g;
         }
         function buildHarborScenery(root, ctx) {
-            const { M } = ctx, scn = new THREE.Group(); root.add(scn); LOFT.scn = scn;
-            const anim = LOFT.anim = { cars: null, wheel: null, blimp: null, blink: [], sea: null };
-            // sea (turns light turquoise near the islands thanks to their lagoons)
-            const st = seaTexture(); st.wrapS = st.wrapT = THREE.RepeatWrapping; st.repeat.set(70, 70); anim.sea = st;
-            const sea = new THREE.Mesh(new THREE.PlaneGeometry(2600, 2600), new THREE.MeshBasicMaterial({ map: st })); sea.rotation.x = -Math.PI / 2; sea.position.set(0, SEA, -300); scn.add(sea);
-            // the apartment tower we are standing on top of: white facade with floor slabs, down into the water
-            { const tile = [12, 14], tex = towerTexture('white'); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; const fm = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }), pl = LOFT.pool, W = 19.4, top = -0.05, bot = SEA - 3, Hh = top - bot, cy = (top + bot) / 2;
+            const scn = new THREE.Group(); root.add(scn); LOFT.scn = scn;
+            LOFT.anim = { cars: null, wheel: null, blimp: null, blink: [], sea: null };
+            { // the deck slab (and the block under the studio): dark timber fascia, now sitting on a wooded hillside instead of an apartment tower
+              const tile = [3, 3], fm = new THREE.MeshStandardMaterial({ color: 0x4a3b2f, roughness: 0.85 }), pl = LOFT.pool, W = 19.4, top = -0.05, Hh = 1.8, cy = top - Hh / 2;
               const piece = (x0, x1, z0, z1) => { const m = new THREE.Mesh(uvBox(x1 - x0, Hh, z1 - z0, tile), fm); m.position.set((x0 + x1) / 2, cy, (z0 + z1) / 2); m.castShadow = true; scn.add(m); };
               piece(-W / 2, W / 2, -16.3, pl.z0 - 0.22); piece(-W / 2, W / 2, pl.z1 + 0.22, -6.7);
               piece(-W / 2, pl.x0 - 0.22, pl.z0 - 0.22, pl.z1 + 0.22); piece(pl.x1 + 0.22, W / 2, pl.z0 - 0.22, pl.z1 + 0.22);
               const rest = new THREE.Mesh(uvBox(9.9, Hh, 14.8, tile), fm); rest.position.set(0, cy, 0.3); scn.add(rest); LOFT.podium = rest;
-              const slab = new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: 0.9 }), glow = new THREE.MeshBasicMaterial({ color: 0xffe6b8 });
-              for (let y = -3.4; y > SEA; y -= 3.4) { const s1 = new THREE.Mesh(new THREE.BoxGeometry(W + 0.5, 0.22, 9.8), slab); s1.position.set(0, y, -11.5); scn.add(s1); const s2 = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.14, 0.14), glow); s2.position.set(0, y - 0.14, -16.35); scn.add(s2); }
-              const foam = new THREE.Mesh(new THREE.CircleGeometry(30, 40), new THREE.MeshBasicMaterial({ map: radialTex([[0, 'rgba(255,255,255,0)'], [0.55, 'rgba(255,255,255,0)'], [0.62, 'rgba(255,255,255,0.7)'], [0.8, 'rgba(255,255,255,0.12)'], [1, 'rgba(255,255,255,0)']]), transparent: true, depthWrite: false })); foam.rotation.x = -Math.PI / 2; foam.position.set(0, SEA + 0.08, -9); foam.scale.set(1, 1.5, 1); foam.renderOrder = 2; scn.add(foam);
-            }
-            // ---------------- the islands (middle ground) ----------------
-            buildIsland(scn, { x: -34, z: -88, r: 26, seed: 3, palms: 9, dock: 0.55, sx: 1.25, sz: 0.9 });
-            buildIsland(scn, { x: 14, z: -74, r: 8.5, seed: 8, palms: 1, paopu: true, rocks: 3 });
-            buildIsland(scn, { x: 62, z: -112, r: 21, seed: 5, palms: 7, dock: 2.4, sx: 1.1 });
-            buildIsland(scn, { x: -92, z: -138, r: 15, seed: 11, palms: 5 });
-            buildIsland(scn, { x: 6, z: -148, r: 12, seed: 14, palms: 4, sz: 1.2 });
-            buildIsland(scn, { x: 116, z: -150, r: 12, seed: 17, palms: 4 });
-            { // wooden bridge from the big island to the paopu islet
-              const wood = new THREE.MeshStandardMaterial({ color: 0xb08052, roughness: 0.9 }), A = new THREE.Vector3(-34 + 26 * 1.0, SEA + 0.8, -88 + 6), B = new THREE.Vector3(14 - 8, SEA + 0.8, -74 + 1), n = 38;
-              for (let k = 0; k <= n; k++) { const t = k / n, p = A.clone().lerp(B, t); p.y += Math.sin(t * Math.PI) * 1.2; const pl = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.55), wood); pl.position.copy(p); pl.rotation.y = Math.atan2(B.x - A.x, B.z - A.z) + Math.PI / 2; scn.add(pl); if (k % 4 === 0) for (const sd of [-1.2, 1.2]) { const po = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.1, 6), wood); const dx = Math.cos(pl.rotation.y), dz = -Math.sin(pl.rotation.y); po.position.set(p.x + dx * sd, p.y + 0.55, p.z + dz * sd); scn.add(po); } }
-            }
-            for (const [x, z, ry, sc] of [[-8, -52, 0.6, 1.5], [36, -62, -0.8, 1.3], [-62, -62, 2.4, 1.6], [90, -78, 0.2, 1.4], [-5, -120, 1.2, 1.4], [30, -170, 0.4, 1.6]]) buildSailboat(scn, x, z, ry, sc);
-            // ---------------- the city (background) ----------------
-            const tex = { glass: towerTexture('glass'), white: towerTexture('white'), neon: towerTexture('neon') };
-            for (const t of Object.values(tex)) t.wrapS = t.wrapT = THREE.RepeatWrapping;
-            const mat = { glass: new THREE.MeshStandardMaterial({ map: tex.glass, roughness: 0.25, metalness: 0.2 }), white: new THREE.MeshStandardMaterial({ map: tex.white, roughness: 0.9 }), neon: new THREE.MeshStandardMaterial({ map: tex.neon, roughness: 0.6 }) };
-            const NEON = [0xff3fa4, 0x2ee6ff, 0xffb02e, 0x9b6bff], neonM = NEON.map((c) => new THREE.MeshBasicMaterial({ color: c })), red = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
-            const TR = seeded(99), SIGNS = ['ARC CAFE', 'LUMEN', 'SKYLINE', 'NOVA MART', 'RAMEN YA', 'MOONLIGHT', 'PLAY', 'DRIVE', 'BLOOM', 'HARBOR LIVE'], SCOL = ['#ff3fa4', '#2ee6ff', '#ffb02e', '#9b6bff'];
-            const tower = (x, z, w, d, hgt, kind) => {
-                const g = new THREE.Group(); g.position.set(x, SEA - 6, z); scn.add(g);
-                const tile = kind === 'white' ? [12, 14] : kind === 'glass' ? [9, 18] : [8, 10], base = new THREE.Mesh(uvBox(w, hgt, d, tile), mat[kind]); base.position.y = hgt / 2; g.add(base);
-                let top = hgt;
-                if (TR() < 0.6) { const w2 = w * (0.55 + TR() * 0.2), h2 = 6 + TR() * hgt * 0.18, m2 = new THREE.Mesh(uvBox(w2, h2, d * 0.6, tile), mat[kind]); m2.position.y = hgt + h2 / 2; g.add(m2); top += h2; }
-                if (TR() < 0.7) { const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 14, 5), new THREE.MeshStandardMaterial({ color: 0xdfe4ea })); ant.position.y = top + 7; g.add(ant); const bl = new THREE.Mesh(new THREE.SphereGeometry(0.8, 6, 6), red); bl.position.y = top + 14.5; g.add(bl); anim.blink.push(bl); }
-                for (let k = 0; k < 2; k++) if (TR() < 0.55) { const y = hgt * (0.25 + TR() * 0.65), nm = neonM[Math.floor(TR() * 4)]; const bd = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.7, d + 0.5), nm); bd.position.y = y; g.add(bd); }
-                if (TR() < 0.5) { const i = Math.floor(TR() * SIGNS.length), sg = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, w * 0.25), new THREE.MeshBasicMaterial({ map: signTexture(SIGNS[i], SCOL[i % 4]) })); sg.position.set(0, hgt * (0.3 + TR() * 0.4), d / 2 + 0.3); g.add(sg); }
-                g.traverse((m) => { m.userData.noOutline = true; });
-                return g;
-            };
-            LOFT.farTowers = [];
-            for (let i = 0; i < 34; i++) {              // the skyline across the bay (stands in until Destiny City itself is ready; see loftDestinyBg)
-                const a = (-72 + 144 * (i / 33) + (TR() - 0.5) * 6) * Math.PI / 180, R_ = 290 + TR() * 150, hgt = 70 + TR() * 130 * (1 - Math.abs(a) * 0.4);
-                LOFT.farTowers.push(tower(Math.sin(a) * R_, -Math.cos(a) * R_ - 40, 16 + TR() * 20, 16 + TR() * 18, hgt, ['glass', 'white', 'neon'][Math.floor(TR() * 3)]));
-            }
-            for (let i = 0; i < 12; i++) {              // neighbours either side: apartment blocks, some taller than us
-                const side = i % 2 ? 1 : -1, x = side * (95 + TR() * 90), z = -20 - TR() * 80, hgt = 30 + TR() * 55;
-                const tw = tower(x, z, 16 + TR() * 8, 16 + TR() * 8, hgt, TR() < 0.65 ? 'white' : 'glass');
-                if (TR() < 0.6) { const gdn = new THREE.Mesh(new THREE.BoxGeometry(14, 0.8, 14), new THREE.MeshStandardMaterial({ color: 0x5aa844, roughness: 1 })); gdn.position.y = hgt + 0.4; tw.add(gdn); }
-            }
-            { // landmarks: an orb tower, a neon ring gate, a ferris wheel on a pier
-              const og = new THREE.Group(); og.position.set(-70, SEA - 6, -300); scn.add(og);
-              const shaft = new THREE.Mesh(new THREE.CylinderGeometry(7, 11, 200, 18), mat.glass); shaft.position.y = 100; og.add(shaft);
-              const orb = new THREE.Mesh(new THREE.SphereGeometry(24, 28, 20), new THREE.MeshStandardMaterial({ color: 0xf2f7fb, roughness: 0.2, metalness: 0.4 })); orb.position.y = 188; og.add(orb);
-              const rg = new THREE.Mesh(new THREE.TorusGeometry(31, 1.4, 8, 56), neonM[1]); rg.rotation.x = Math.PI / 2 + 0.25; rg.position.y = 188; og.add(rg);
-              const rg2 = new THREE.Mesh(new THREE.TorusGeometry(28, 1.0, 8, 56), neonM[0]); rg2.rotation.x = Math.PI / 2 - 0.3; rg2.rotation.y = 0.4; rg2.position.y = 188; og.add(rg2);
-              const gate = new THREE.Group(); gate.position.set(98, SEA - 6, -285); scn.add(gate);
-              const ring = new THREE.Mesh(new THREE.TorusGeometry(40, 2.4, 10, 64), neonM[0]); ring.position.y = 70; gate.add(ring); const ring2 = new THREE.Mesh(new THREE.TorusGeometry(34, 1.2, 8, 64), neonM[3]); ring2.position.y = 70; gate.add(ring2);
-              for (const sx of [-26, 26]) { const p = new THREE.Mesh(new THREE.BoxGeometry(10, 74, 12), mat.white); p.position.set(sx, 37, 0); gate.add(p); }
-              const wh = new THREE.Group(); wh.position.set(150, SEA + 24, -178); scn.add(wh); anim.wheel = wh;
-              const rim = new THREE.Mesh(new THREE.TorusGeometry(24, 0.6, 6, 48), neonM[2]); wh.add(rim); const rim2 = new THREE.Mesh(new THREE.TorusGeometry(13, 0.4, 6, 40), neonM[1]); wh.add(rim2);
-              for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, sp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 24, 0.3), new THREE.MeshStandardMaterial({ color: 0xffffff })); sp.rotation.z = a; sp.position.set(Math.sin(a) * 0, 0, 0); wh.add(sp); const gd = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.6, 3.2), neonM[k % 4]); gd.position.set(Math.cos(a) * 24, Math.sin(a) * 24, 0); gd.userData.gond = true; wh.add(gd); }
-              for (const sx of [-1, 1]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(1.4, 60, 1.4), new THREE.MeshStandardMaterial({ color: 0xf1f1f1 })); leg.position.set(sx * 9, -12, 0); leg.rotation.z = -sx * 0.25; wh.add(leg); }
-              const pier = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 34), new THREE.MeshStandardMaterial({ color: 0xd2c8b0 })); pier.position.set(150, SEA + 0.5, -178); scn.add(pier);
-              // elevated highway across the far bay with moving car lights
-              const hw = new THREE.Mesh(new THREE.BoxGeometry(620, 1.8, 13), new THREE.MeshStandardMaterial({ color: 0xc9ccd2, roughness: 0.8 })); hw.position.set(0, SEA + 24, -200); scn.add(hw);
-              const rail = new THREE.Mesh(new THREE.BoxGeometry(620, 0.5, 0.4), neonM[1]); rail.position.set(0, SEA + 25.4, -193.8); scn.add(rail); const rail2 = rail.clone(); rail2.position.z = -206.2; scn.add(rail2);
-              for (let x = -300; x <= 300; x += 36) { const pl = new THREE.Mesh(new THREE.BoxGeometry(3.2, 25, 5), mat.white); pl.position.set(x, SEA + 11, -200); scn.add(pl); }
-              const N = 90, pp = new Float32Array(N * 3), cc = new Float32Array(N * 3), car = []; for (let i = 0; i < N; i++) { const dir = i % 2 ? 1 : -1, lane = (i % 4 < 2 ? 2.2 : -2.2) * (i % 2 ? 1 : -1); car.push({ x: (TR() - 0.5) * 600, dir, lane, sp: 8 + TR() * 10 }); const white = dir > 0; cc.set(white ? [1, 0.96, 0.8] : [1, 0.15, 0.15], i * 3); }
-              const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pp, 3)); geo.setAttribute('color', new THREE.BufferAttribute(cc, 3));
-              const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 3.2, vertexColors: true, sizeAttenuation: true })); pts.frustumCulled = false; scn.add(pts); anim.cars = { car, pp, geo };
-              // a blimp with an LED ad drifting over the bay
-              const bl = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), new THREE.MeshStandardMaterial({ map: canvasTex(512, 256, (g, w, h) => { g.fillStyle = '#e9eef5'; g.fillRect(0, 0, w, h); g.fillStyle = '#10163a'; g.fillRect(40, 70, w - 80, 116); g.font = '800 64px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = '#ff3fa4'; g.shadowBlur = 16; g.fillStyle = '#ff7ac6'; g.fillText('THE OASIS', w / 2, h / 2 + 2); }), roughness: 0.5 })); bl.scale.set(26, 9, 9); bl.position.set(-120, 62, -230); scn.add(bl); anim.blimp = bl;
             }
             scn.traverse((m) => { m.userData.noOutline = true; });
         }
@@ -8177,6 +8109,7 @@
             if (a.blimp) { a.blimp.position.x += dt * 1.6; if (a.blimp.position.x > 170) a.blimp.position.x = -170; }
             const on = Math.floor(t * 1.2) % 2 === 0; for (const b of a.blink) b.visible = on;
             if (LOFT.clouds) LOFT.clouds.rotation.y += dt * 0.004;
+            LOFT.forestU.value = t; try { const S = LOFT.forestS.value, c = WX.clim; if (S && c) { const k = Math.min(1, dt * 0.8); S.x += (c.green - S.x) * k; S.y += (c.fall - S.y) * k; S.z += (c.bloom - S.z) * k; S.w += (Math.min(1, WX.depth || 0) - S.w) * k; } } catch (e) { /* weather not ready */ }
         }
 
         /* ---- the elevator in the middle of the front wall: stepping into the cabin takes you to the lobby ---- */
@@ -13349,6 +13282,216 @@ function btMusicStop() {
         setTimeout(() => { const b = document.getElementById('btn-settings'); if (b) b.addEventListener('click', () => gfxToggle(true)); }, 0);
         window.__gfx = { GFX, toggle: gfxToggle };
 
+        /* ---- THE FOREST EDGE behind the Harbor Studio: a hillside of pines and leafy trees, a valley and layered mountains (replaces the old bay and city) ---- */
+        LOFT.forestU = { value: 0 }; LOFT.forestS = { value: null };   // seasons: x leaf cover, y autumn colour, z blossom, w snow depth
+        function loftForestEnsure() {
+            if (LOFT.forest && LOFT.forest.parent) return;
+            if (!LOFT.forestS.value) { const c = (typeof WX !== 'undefined' && WX.clim) || { green: 1, fall: 0, bloom: 0 }; LOFT.forestS.value = new THREE.Vector4(c.green, c.fall, c.bloom, Math.min(1, (typeof WX !== 'undefined' && WX.depth) || 0)); }
+            const root = new THREE.Group(); root.name = 'loft_forest'; loftGroup.add(root); LOFT.forest = root; root.userData.noOutline = true;
+            const rnd = seeded(20241010);
+            const hash = (i, j) => { let h = (Math.imul(i, 374761393) + Math.imul(j, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+            const sm = (t) => t * t * (3 - 2 * t);
+            const vn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), fx = sm(x - i), fz = sm(z - j); const a = hash(i, j), b = hash(i + 1, j), c = hash(i, j + 1), d = hash(i + 1, j + 1); return a + (b - a) * fx + (c - a) * fz + (a - b - c + d) * fx * fz; };
+            const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+            const fbm = (x, z) => vn(x / 46, z / 46) * 0.6 + vn(x / 19, z / 19) * 0.28 + vn(x / 8, z / 8) * 0.12 - 0.5;
+            // ---- the ground: a flat shelf under the studio, a steep slope falling away in front, a wooded rise to the left and behind, rolling hills beyond
+            const PX = 16, PZ0 = -16.5, PZ1 = 23, FLAT = -2.0;
+            const H = (x, z) => {
+                const qx = Math.max(Math.abs(x) - PX, 0), qz = Math.max(PZ0 - z, z - PZ1, 0), d = Math.hypot(qx, qz);
+                let y = FLAT;
+                if (z < PZ0) y -= 46 * (1 - Math.exp(-(PZ0 - z) / 95));
+                if (x < -PX) y += 15 * ss(0, 80, -x - PX) * (0.55 + 0.45 * ss(-260, -40, z));
+                if (z > PZ1) y += 22 * ss(0, 90, z - PZ1);
+                if (x > PX) y -= 8 * ss(0, 100, x - PX);
+                y += fbm(x, z) * 15 * ss(8, 70, d) + (vn(x / 170 + 40, z / 170 + 40) - 0.5) * 36 * ss(80, 300, d) + fbm(x + 90, z - 40) * 1.2 * ss(0, 12, d);
+                return y;
+            };
+            // ---- shared materials: soft haze (so the mountains stay visible) and a gentle sway for the leaves
+            const SEAS = {
+                up: 'float upN = dot(normalize(normal), normalize(mat3(viewMatrix) * vec3(0.0, 1.0, 0.0)));\n',
+                leaf: 'float pres = clamp(max(uSea.x, uSea.y * 0.9), 0.02, 1.0); pres = max(pres, uSea.z * 0.55); if (vRnd > pres) discard;\n vec3 lc = diffuseColor.rgb; float lum = dot(lc, vec3(0.3, 0.5, 0.2));\n vec3 fallT = mix(vec3(1.0, 0.74, 0.18), vec3(0.9, 0.33, 0.1), fract(vRnd * 7.3)); diffuseColor.rgb = mix(lc, vec3(lum * 2.6) * fallT, uSea.y * 0.8);\n if (uSea.z > 0.05 && vRnd < uSea.z * 0.8) diffuseColor.rgb = mix(lc, vec3(1.0, 0.55, 0.72) * lum * 3.4, 0.8);\n diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), uSea.w * 0.75 * smoothstep(0.35, 0.85, abs(upN)));\n',
+                needle: 'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), uSea.w * 0.7 * smoothstep(0.3, 0.8, abs(upN)));\n',
+                ground: 'vec3 gc = diffuseColor.rgb; gc = mix(gc, gc * vec3(1.35, 0.95, 0.5), uSea.y * 0.55); gc = mix(gc, vec3(0.2, 0.16, 0.1), (1.0 - max(uSea.x, uSea.y)) * 0.6); gc = mix(gc, gc * vec3(0.85, 1.25, 0.7), uSea.z * 0.5);\n gc = mix(gc, vec3(0.85, 0.9, 0.95), uSea.w * smoothstep(0.35, 0.75, upN) * 0.95); diffuseColor.rgb = gc;\n',
+                ridge: 'vec3 gc = diffuseColor.rgb; gc = mix(gc, gc * vec3(1.25, 0.95, 0.6), uSea.y * 0.4); gc = mix(gc, vec3(0.85, 0.9, 0.95), uSea.w * smoothstep(0.2, 0.7, upN) * 0.85); diffuseColor.rgb = gc;\n',
+                blob: 'vec3 gc = diffuseColor.rgb; float bare = 1.0 - max(uSea.x, uSea.y * 0.9); gc = mix(gc, vec3(0.16, 0.12, 0.09), bare * 0.7); gc = mix(gc, gc * vec3(2.2, 1.5, 0.45), uSea.y * 0.7); gc = mix(gc, vec3(0.88, 0.92, 0.96), uSea.w * smoothstep(0.3, 0.8, upN) * 0.9); diffuseColor.rgb = gc;\n',
+                cone: 'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.88, 0.92, 0.96), uSea.w * smoothstep(0.3, 0.8, upN) * 0.9);\n',
+                rock: 'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), uSea.w * smoothstep(0.35, 0.75, upN));\n',
+                grass: 'if (vRnd < uSea.w * 0.95) discard; vec3 gc = diffuseColor.rgb; gc = mix(gc, gc * vec3(1.5, 1.0, 0.45), uSea.y * 0.6); gc = mix(gc, vec3(0.45, 0.36, 0.18) * 0.6, (1.0 - max(uSea.x, uSea.y)) * 0.7); diffuseColor.rgb = gc;\n'
+            };
+            const fx = (mat, o = {}) => {
+                const k = o.haze || 1, kind = o.seas || '';
+                mat.onBeforeCompile = (sh) => {
+                    sh.uniforms.uSea = LOFT.forestS; if (o.sway) sh.uniforms.uT = LOFT.forestU;
+                    sh.vertexShader = 'varying float vRnd;\n' + (o.sway ? 'uniform float uT;\n' : '') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n float ph = instanceMatrix[3].x * 0.21 + instanceMatrix[3].z * 0.17 + instanceMatrix[3].y * 0.3;\n vRnd = fract(sin(dot(instanceMatrix[3].xyz, vec3(12.9898, 78.233, 37.719))) * 43758.5453);\n' + (o.sway ? ' transformed.x += sin(uT * 1.7 + ph) * 0.09 * position.y; transformed.z += cos(uT * 1.3 + ph * 1.3) * 0.06 * position.y;\n' : '') + '#else\n vRnd = 0.5;\n#endif');
+                    sh.fragmentShader = 'varying float vRnd;\nuniform vec4 uSea;\n' + sh.fragmentShader;
+                    if (kind) sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n' + SEAS.up + SEAS[kind]);
+                    if (k !== 1) sh.fragmentShader = sh.fragmentShader.replace('#include <fog_fragment>', `#ifdef USE_FOG\n float fogF = 1.0 - exp(-fogDensity * fogDensity * vFogDepth * vFogDepth * ${k.toFixed(3)});\n gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fogF);\n#endif`);
+                };
+                mat.customProgramCacheKey = () => 'lf' + kind + (o.sway ? 's' : '') + k; return mat;
+            };
+            const lin = (v) => Math.pow(v, 2.2);
+            // ---- terrain mesh (a graded grid: fine under the studio, coarse towards the horizon)
+            {
+                const N = 150, k = 2.62, c = 85.9, warp = (u) => Math.sign(u) * c * (Math.exp(k * Math.abs(u)) - 1);
+                const xs = [], zs = []; for (let i = 0; i <= N; i++) { const u = (i / N) * 2 - 1; xs.push(warp(u)); zs.push(u > 0 ? warp(u) * 0.32 : warp(u)); }
+                const pos = new Float32Array((N + 1) * (N + 1) * 3), col = new Float32Array((N + 1) * (N + 1) * 3), idx = [];
+                const cMeadow = [0.34, 0.45, 0.18], cGold = [0.64, 0.55, 0.26], cDark = [0.12, 0.24, 0.12], cRock = [0.47, 0.43, 0.38], cDry = [0.5, 0.45, 0.28];
+                for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+                    const x = xs[i], z = zs[j], y = H(x, z), p = (j * (N + 1) + i);
+                    pos[p * 3] = x; pos[p * 3 + 1] = y; pos[p * 3 + 2] = z;
+                    const sl = (Math.abs(H(x + 3, z) - H(x - 3, z)) + Math.abs(H(x, z + 3) - H(x, z - 3))) / 6;
+                    const gold = ss(0.5, 0.78, vn(x / 38 + 11, z / 38 + 5)), dark = ss(0.55, 0.3, vn(x / 70 + 3, z / 70 + 9)) * ss(20, 60, Math.hypot(x, z + 10)), rock = ss(0.55, 1.0, sl), near = 1 - ss(14, 60, Math.hypot(Math.max(Math.abs(x) - PX, 0), Math.max(PZ0 - z, 0)));
+                    const spk = 0.92 + 0.16 * vn(x / 3.5, z / 3.5);
+                    for (let q = 0; q < 3; q++) { let v = cMeadow[q] + (cGold[q] - cMeadow[q]) * gold; v += (cDark[q] - v) * dark * 0.8; v += (cDry[q] - v) * near * 0.55; v += (cRock[q] - v) * rock; pos[p * 3 + 0] = x; col[p * 3 + q] = lin(v * spk); }
+                }
+                for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i, b = a + 1, d = a + N + 1, e = d + 1; idx.push(a, d, b, b, d, e); }
+                const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+                const m = new THREE.Mesh(g, fx(new THREE.MeshLambertMaterial({ vertexColors: true }), { haze: 0.45, seas: 'ground' })); m.frustumCulled = false; m.userData.noOutline = true; root.add(m);
+            }
+            // ---- layered mountains: forested near ridges, blue far ridges
+            {
+                const rows = [-80, 0.45, 0.8, 1], seg = 220, hz = [0.66, 0.8, 0.86], layers = [
+                    { r: 360, h: 22, amp: 24, col: [0.2, 0.36, 0.24], top: [0.3, 0.46, 0.32], seed: 3, rust: 0.2, mix: 0.2 }, { r: 540, h: 42, amp: 40, col: [0.22, 0.38, 0.32], top: [0.36, 0.48, 0.42], seed: 9, rust: 0.4, mix: 0.4 },
+                    { r: 720, h: 66, amp: 52, col: [0.3, 0.44, 0.52], top: [0.46, 0.58, 0.66], seed: 17, rust: 0.15, mix: 0.55 }, { r: 900, h: 92, amp: 58, col: [0.5, 0.62, 0.72], top: [0.62, 0.74, 0.82], seed: 31, rust: 0, mix: 0.65 }];
+                const pos = [], col = [], idx = [];
+                for (const L of layers) {
+                    const base = pos.length / 3;
+                    for (let s = 0; s <= seg; s++) {
+                        const th = (s / seg) * TAU, nx = Math.cos(th) * 2.2 + L.seed, nz = Math.sin(th) * 2.2 + L.seed * 1.7;
+                        const ridge = L.h + L.amp * (vn(nx * 1.6, nz * 1.6) * 0.65 + vn(nx * 5.1, nz * 5.1) * 0.25 + vn(nx * 14, nz * 14) * 0.1 - 0.35);
+                        const px = Math.sin(th) * L.r, pz = -Math.cos(th) * L.r, rustN = vn(nx * 6.3 + 5, nz * 6.3);
+                        for (let r = 0; r < 4; r++) {
+                            const y = r === 0 ? -80 : -45 + (ridge + 45) * rows[r], t = r / 3;
+                            pos.push(px, y, pz);
+                            for (let q = 0; q < 3; q++) { let v = L.col[q] + (L.top[q] - L.col[q]) * t; if (L.rust && r >= 2) v += ([0.5, 0.3, 0.2][q] - v) * L.rust * ss(0.5, 0.75, rustN) * 0.7; v += (hz[q] - v) * L.mix; col.push(lin(v)); }
+                        }
+                    }
+                    for (let s = 0; s < seg; s++) for (let r = 0; r < 3; r++) { const a = base + s * 4 + r, b = a + 4; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+                }
+                const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+                const m = new THREE.Mesh(g, fx(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), { haze: 0.14, seas: 'ridge' })); m.frustumCulled = false; m.userData.noOutline = true; root.add(m);
+            }
+            // ---- textures: a twig of detailed leaves, a pine branch, grass blades, bark
+            const leafTex = canvasTex(512, 512, (g, w, h) => {
+                g.clearRect(0, 0, w, h); const r = seeded(7);
+                const leaf = (x, y, ang, len, wid) => {
+                    g.save(); g.translate(x, y); g.rotate(ang); g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(wid, -len * 0.2, wid * 0.85, -len * 0.75, 0, -len); g.bezierCurveTo(-wid * 0.85, -len * 0.75, -wid, -len * 0.2, 0, 0); g.closePath();
+                    const gr = g.createLinearGradient(-wid, 0, wid, 0); const l0 = 50 + r() * 8; gr.addColorStop(0, `hsl(78,42%,${l0 - 12}%)`); gr.addColorStop(0.5, `hsl(82,48%,${l0 + 8}%)`); gr.addColorStop(1, `hsl(76,40%,${l0 - 14}%)`); g.fillStyle = gr; g.fill();
+                    g.lineWidth = 2; g.strokeStyle = 'rgba(40,52,20,0.85)'; g.stroke();
+                    g.strokeStyle = 'rgba(240,244,190,0.75)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -len * 0.96); g.stroke();
+                    g.lineWidth = 1.2; g.strokeStyle = 'rgba(235,240,170,0.5)'; for (let k = 1; k <= 6; k++) { const yy = -len * k / 7.6, dx = wid * 0.78 * (1 - k / 9); g.beginPath(); g.moveTo(0, yy); g.quadraticCurveTo(dx * 0.5, yy - len * 0.03, dx, yy - len * 0.12); g.moveTo(0, yy); g.quadraticCurveTo(-dx * 0.5, yy - len * 0.03, -dx, yy - len * 0.12); g.stroke(); }
+                    g.restore();
+                };
+                for (let t = 0; t < 4; t++) {
+                    const ox = w * (0.2 + 0.2 * t), ang0 = (t - 1.5) * 0.4; g.strokeStyle = 'rgba(70,52,34,0.95)'; g.lineWidth = 5; g.beginPath(); g.moveTo(ox, h); g.quadraticCurveTo(ox + Math.sin(ang0) * 90, h * 0.6, ox + Math.sin(ang0) * 190, h * 0.12); g.stroke();
+                    for (let k = 0; k < 6; k++) { const f = 0.15 + k * 0.13, tx = ox + Math.sin(ang0) * 190 * f, ty = h - h * 0.88 * f; leaf(tx, ty, ang0 + 0.9 + r() * 0.3, 96 + r() * 26, 36 + r() * 8); leaf(tx, ty, ang0 - 0.9 - r() * 0.3, 96 + r() * 26, 36 + r() * 8); }
+                    leaf(ox + Math.sin(ang0) * 192, h * 0.12, ang0, 110, 42);
+                }
+            });
+            const needleTex = canvasTex(256, 512, (g, w, h) => {
+                g.clearRect(0, 0, w, h); const r = seeded(11); g.lineCap = 'round';
+                g.strokeStyle = 'rgba(86,60,38,0.95)'; g.lineWidth = 5; g.beginPath(); g.moveTo(w * 0.5, h); g.lineTo(w * 0.5, h * 0.03); g.stroke();
+                for (let n = 0; n < 150; n++) {
+                    const f = n / 150, y = h * (1 - f * 0.96), side = n % 2 ? 1 : -1, len = (w * 0.47) * (1 - f * 0.55) * (0.7 + r() * 0.4), a = 0.55 + r() * 0.5, ex = w * 0.5 + side * Math.cos(a) * len * 0.95, ey = y - Math.sin(a) * len * 0.55 - 14;
+                    g.strokeStyle = `hsl(${118 + r() * 14},${40 + r() * 10}%,${20 + r() * 12}%)`; g.lineWidth = 2.6; g.beginPath(); g.moveTo(w * 0.5, y); g.lineTo(ex, ey); g.stroke();
+                    g.strokeStyle = `hsl(${100 + r() * 20},45%,${34 + r() * 12}%)`; g.lineWidth = 1.6; g.beginPath(); g.moveTo(w * 0.5 + (ex - w * 0.5) * 0.4, y + (ey - y) * 0.4); g.lineTo(ex, ey); g.stroke();
+                }
+            });
+            const grassTex = canvasTex(256, 256, (g, w, h) => {
+                g.clearRect(0, 0, w, h); const r = seeded(13); g.lineCap = 'round';
+                for (let n = 0; n < 46; n++) { const x = w * (0.1 + 0.8 * r()), tipx = x + (r() - 0.5) * 70, tipy = h * (0.08 + r() * 0.5); g.strokeStyle = `hsl(${62 + r() * 28},${45 + r() * 15}%,${46 + r() * 20}%)`; g.lineWidth = 4 + r() * 3; g.beginPath(); g.moveTo(x, h); g.quadraticCurveTo(x + (tipx - x) * 0.2, h * 0.55, tipx, tipy); g.stroke(); }
+            });
+            const barkTex = canvasTex(128, 256, (g, w, h) => {
+                g.fillStyle = '#7d6247'; g.fillRect(0, 0, w, h); const r = seeded(17);
+                for (let n = 0; n < 70; n++) { const x = r() * w, y = r() * h, l = 30 + r() * 90; g.strokeStyle = r() < 0.5 ? 'rgba(40,28,18,0.55)' : 'rgba(170,140,105,0.35)'; g.lineWidth = 1.5 + r() * 2.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - 0.5) * 6, y + l); g.stroke(); }
+            });
+            barkTex.wrapS = barkTex.wrapT = THREE.RepeatWrapping; barkTex.repeat.set(2, 2);
+            const leafMat = fx(new THREE.MeshLambertMaterial({ map: leafTex, alphaTest: 0.5, side: THREE.DoubleSide }), { sway: true, haze: 0.8, seas: 'leaf' });
+            const needleMat = fx(new THREE.MeshLambertMaterial({ map: needleTex, alphaTest: 0.45, side: THREE.DoubleSide }), { sway: true, haze: 0.8, seas: 'needle' });
+            const grassMat = fx(new THREE.MeshLambertMaterial({ map: grassTex, alphaTest: 0.5, side: THREE.DoubleSide }), { sway: true, seas: 'grass' });
+            const barkMat = fx(new THREE.MeshLambertMaterial({ map: barkTex }), { haze: 0.8 }), rockMat = fx(new THREE.MeshLambertMaterial({ flatShading: true }), { haze: 0.6, seas: 'rock' }), blobMat = fx(new THREE.MeshLambertMaterial({ flatShading: true }), { haze: 0.5, seas: 'blob' }), coneMat = fx(new THREE.MeshLambertMaterial({ flatShading: true }), { haze: 0.5, seas: 'cone' });
+            // ---- instancing helpers
+            const dummy = new THREE.Object3D(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), Yv = new THREE.Vector3(0, 1, 0), dv = new THREE.Vector3(), P = new THREE.Vector3(), C = new THREE.Color();
+            const bag = () => ({ m: [], c: [] });
+            const put = (b, p, dir, sx, sy, sz, roll, h, s, l) => {
+                qa.setFromUnitVectors(Yv, dv.copy(dir).normalize()); qb.setFromAxisAngle(Yv, roll); qa.multiply(qb); dummy.position.copy(p); dummy.quaternion.copy(qa); dummy.scale.set(sx, sy, sz); dummy.updateMatrix();
+                for (let i = 0; i < 16; i++) b.m.push(dummy.matrix.elements[i]); C.setHSL(h, s, l, THREE.SRGBColorSpace); b.c.push(C.r, C.g, C.b);
+            };
+            const inst = (geo, mat, b) => {
+                const n = b.m.length / 16; if (!n) return null; const im = new THREE.InstancedMesh(geo, mat, n); im.instanceMatrix.array.set(b.m); im.instanceMatrix.needsUpdate = true;
+                im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(b.c), 3); im.frustumCulled = false; im.castShadow = im.receiveShadow = false; im.userData.noOutline = true; root.add(im); return im;
+            };
+            const card = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0), stick = new THREE.CylinderGeometry(0.62, 1, 1, 6, 1, true).translate(0, 0.5, 0);
+            const cone = new THREE.ConeGeometry(1, 1, 7, 1).translate(0, 0.5, 0), blob = new THREE.IcosahedronGeometry(1, 0), rockG = new THREE.IcosahedronGeometry(1, 1);
+            const leaves = bag(), needles = bag(), wood = bag(), cones = bag(), blobs = bag(), rocks = bag(), tufts = bag();
+            const Z = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), rr = (a, b) => a + (b - a) * rnd(), TWO = Math.PI * 2;
+            // a leafy tree: a trunk, a few limbs and a crown of detailed leaf cards
+            const leafy = (x, z, sc, hue) => {
+                const y0 = H(x, z) - 0.25, ht = (6 + rnd() * 5) * sc, tr = 0.22 * sc + rnd() * 0.12, lean = (rnd() - 0.5) * 0.12;
+                put(wood, P.set(x, y0, z), dv.set(lean, 1, lean * 0.5), tr * 1.3, ht, tr * 1.3, 0, 0.075, 0.25, 0.5);
+                const cx = x + lean * ht, cz = z + lean * ht * 0.5, cy = y0 + ht * 0.82, rx = (3.6 + rnd() * 1.8) * sc, ry = (2.8 + rnd() * 1.2) * sc;
+                for (let b = 0; b < 5; b++) { const a = rnd() * TWO, tp = P.set(x + lean * ht * 0.6, y0 + ht * (0.55 + rnd() * 0.25), z + lean * ht * 0.3); put(wood, tp, dv.set(Math.cos(a) * 0.8, 0.9, Math.sin(a) * 0.8), tr * 0.55, ht * 0.36, tr * 0.55, 0, 0.075, 0.25, 0.45); }
+                const n = Math.round(76 * sc);
+                for (let i = 0; i < n; i++) {
+                    let ux, uy, uz, l; do { ux = rnd() * 2 - 1; uy = rnd() * 2 - 1; uz = rnd() * 2 - 1; l = ux * ux + uy * uy + uz * uz; } while (l > 1 || l < 0.2);
+                    const p = P.set(cx + ux * rx, cy + uy * ry * 0.8 + ry * 0.1, cz + uz * rx); if (p.y < y0 + ht * 0.45) p.y = y0 + ht * 0.45 + rnd();
+                    const dir = dv.set(ux * 0.9, uy * 0.8 + 0.35, uz * 0.9), sz = rr(1.5, 2.4) * (0.8 + 0.3 * sc);
+                    put(leaves, p, dir, sz, sz, 1, rnd() * TWO, hue + (rnd() - 0.5) * 0.035, 0.62 + rnd() * 0.18, 0.5 + rnd() * 0.14);
+                }
+            };
+            // a pine: a tall straight trunk with whorls of drooping needle branches that get shorter towards the top
+            const pine = (x, z, sc) => {
+                const y0 = H(x, z) - 0.3, ht = (13 + rnd() * 9) * sc, tr = 0.2 * sc + rnd() * 0.1, lean = (rnd() - 0.5) * 0.05;
+                put(wood, P.set(x, y0, z), dv.set(lean, 1, lean), tr * 1.5, ht, tr * 1.5, 0, 0.06, 0.22, 0.44);
+                const hue = 0.3 + rnd() * 0.04, whorls = Math.round(14 * Math.min(1.2, sc)), ph = rnd() * TWO;
+                for (let w = 0; w < whorls; w++) {
+                    const f = 0.22 + 0.76 * (w / whorls), len = (1 - f * 0.78) * 4.4 * sc + 0.9, cnt = 5 + (w % 2);
+                    for (let k = 0; k < cnt; k++) {
+                        const a = ph + w * 1.1 + (k / cnt) * TWO + rnd() * 0.3, p = P.set(x + lean * ht * f, y0 + ht * f + rnd() * 0.3, z + lean * ht * f);
+                        const nh = hue + (rnd() - 0.5) * 0.03, ns = 0.4 + rnd() * 0.12, nl = 0.30 + rnd() * 0.1; dv.set(Math.cos(a), -0.22 + f * 0.1, Math.sin(a)); put(needles, p, dv, len * 0.62, len, 1, 0, nh, ns, nl); put(needles, p, dv, len * 0.62, len, 1, 1.5707963, nh, ns, nl);
+                    }
+                }
+                put(needles, P.set(x + lean * ht, y0 + ht * 0.97, z + lean * ht), up, 0.7, 1.6 * sc + 0.6, 1, 0, hue, 0.45, 0.34);
+            };
+            const bush = (x, z, sc, hue) => {
+                const y0 = H(x, z) - 0.1, n = 14 + Math.floor(rnd() * 6);
+                for (let i = 0; i < n; i++) { const a = rnd() * TWO, rad = rnd() * 0.7 * sc, h = rr(0.2, 1.0) * sc; const p = P.set(x + Math.cos(a) * rad, y0 + h * 0.4, z + Math.sin(a) * rad); const sz = rr(0.9, 1.5) * (0.6 + 0.4 * sc); put(leaves, p, dv.set(Math.cos(a) * 0.8, 0.9 + h, Math.sin(a) * 0.8), sz, sz, 1, rnd() * TWO, hue + (rnd() - 0.5) * 0.04, 0.6 + rnd() * 0.2, 0.46 + rnd() * 0.14); }
+            };
+            const clear = (x, z) => (Math.abs(x) < 19 && z > -26 && z < 26);             // the studio and its deck
+            const density = (x, z) => {
+                const left = ss(-14, -46, x), behind = ss(30, 60, z) * (1 - ss(60, 130, Math.abs(x))), front = (Math.abs(x) < 42 && z > -75) ? 0.12 : 0.5;
+                return Math.min(0.97, 0.16 + left * 0.8 + behind * 0.85 + ss(0.4, 0.7, vn(x / 55 + 7, z / 55 + 2)) * 0.35) * (z < -19 ? front * 1.6 : 1);
+            };
+            const hueFor = () => { const r = rnd(); return r < 0.3 ? 0.15 : r < 0.42 ? 0.095 : r < 0.75 ? 0.24 : 0.28; };
+            let nLeafy = 0, nPine = 0;
+            for (let t = 0; t < 2600 && (nLeafy < 78 || nPine < 96); t++) {            // detailed trees near the studio
+                const x = rr(-125, 70), z = rr(-135, 80); if (clear(x, z) || rnd() > density(x, z)) continue;
+                const near = Math.hypot(x, z + 10); if (near > 150) continue;
+                if (rnd() < 0.45 && nLeafy < 78) { leafy(x, z, rr(0.85, 1.35), hueFor()); nLeafy++; } else if (nPine < 96) { pine(x, z, rr(0.7, 1.25)); nPine++; }
+            }
+            for (let t = 0, n = 0; t < 3000 && n < 330; t++) {                          // shrubs, thick on the left and scattered across the slope (the yellow-green bushes in the photo)
+                const x = rr(-75, 55), z = rr(-70, 45); if (clear(x, z)) continue;
+                const p = 0.3 + ss(-16, -40, x) * 0.7 + ss(0.5, 0.75, vn(x / 20 + 2, z / 20 + 8)) * 0.4; if (rnd() > p) continue; bush(x, z, rr(1.0, 2.2), hueFor()); n++;
+            }
+            // the garden edge itself: shrubs and tall grass hugging the foot of the railing, with a few rocks
+            for (let i = 0; i < 26; i++) { const side = i % 3 === 0 ? -1 : 1, x = side < 0 ? rr(-26, -17) : rr(-16, 16), z = side < 0 ? rr(-30, -8) : rr(-24.5, -19.5); bush(x, z, rr(0.7, 1.3), hueFor()); }
+            for (let i = 0; i < 520; i++) { const a = rnd() * TWO, d = Math.sqrt(rnd()) * 70, x = Math.cos(a) * d * 1.2 - 6, z = Math.sin(a) * d - 34; if (clear(x, z)) continue; const sz = rr(0.8, 1.5); put(tufts, P.set(x, H(x, z) - 0.05, z), up, sz * 1.1, sz, 1, rnd() * TWO, 0.19 + rnd() * 0.06, 0.5, 0.48); put(tufts, P.set(x, H(x, z) - 0.05, z), up, sz * 1.1, sz, 1, rnd() * TWO + 1.57, 0.19 + rnd() * 0.06, 0.5, 0.48); }
+            for (let i = 0; i < 70; i++) {
+                const x = i < 40 ? rr(-34, -16) : rr(-60, 40), z = i < 40 ? rr(-34, -10) : rr(-90, -22); if (clear(x, z)) continue; const s = rr(0.5, 1.9);
+                put(rocks, P.set(x, H(x, z) - s * 0.3, z), up, s * 1.3, s * 0.8, s, rnd() * TWO, 0.08 + rnd() * 0.03, 0.08 + rnd() * 0.1, 0.4 + rnd() * 0.15);
+            }
+            // distant woods: cheap cone pines and round broadleaf crowns, thick in the valley
+            for (let t = 0, n = 0; t < 10000 && n < 2300; t++) {
+                const a = rnd() * TWO, d = 90 + Math.sqrt(rnd()) * 390, x = Math.sin(a) * d, z = -Math.cos(a) * d * 0.95 - 20; if (z > 40 && rnd() < 0.5) continue;
+                if (Math.hypot(x, z + 10) < 90) continue; if (rnd() > 0.2 + ss(0.4, 0.62, vn(x / 80 + 21, z / 80 + 3)) * 0.8) continue;
+                const y = H(x, z) - 0.5, sc = rr(0.8, 1.5); n++;
+                if (rnd() < 0.62) put(cones, P.set(x, y, z), up, 3.6 * sc, 17 * sc, 3.6 * sc, rnd() * TWO, 0.33 + rnd() * 0.04, 0.34, 0.15 + rnd() * 0.06);
+                else { const hr = rnd(), h = hr < 0.12 ? 0.13 : 0.22 + rnd() * 0.07; put(blobs, P.set(x, y + 6 * sc, z), up, 6 * sc, 4.6 * sc, 6 * sc, rnd() * TWO, h, 0.34 + rnd() * 0.12, 0.32 + rnd() * 0.08); }
+            }
+            inst(stick, barkMat, wood); inst(card, needleMat, needles); inst(card, leafMat, leaves); inst(card, grassMat, tufts); inst(rockG, rockMat, rocks); inst(cone, coneMat, cones); inst(blob, blobMat, blobs);
+            LOFT.forestStats = { leafy: nLeafy, pine: nPine, leaves: leaves.m.length / 16, needles: needles.m.length / 16 };
+        }
+
 
 
         function schPortalDummy() { }
@@ -14184,7 +14327,7 @@ function btMusicStop() {
             if (id === 'school') { try { ensureSchool(); } catch (e) { console.error('School failed to build', e); } }
             if (id === 'bowl') { try { ensureBowl(); } catch (e) { console.error('Zen Bowl failed to build', e); } }
             if (id === 'btl') { try { ensureBtl(); } catch (e) { console.error('Arena failed to build', e); } }
-            if (id === 'loft' && !LOFT.cityBg && !LOFT.cityBgT) LOFT.cityBgT = setTimeout(() => { try { loftBakeScenery(); } catch (e) { console.warn('studio scenery bake', e); } try { loftDestinyBg(); } catch (e) { console.warn('studio skyline', e); } LOFT.cityBgT = 0; }, 900);
+            if (id === 'loft') { try { loftForestEnsure(); } catch (e) { console.warn('forest edge', e); } }
             if (mallGroup) mallGroup.visible = id === 'mall';
             if (loftGroup) loftGroup.visible = id === 'loft';
             try { dcPoolOn(id === 'loft' || id === 'plot'); } catch (e) { /* decorate not ready yet */ }
@@ -15825,25 +15968,113 @@ function btMusicStop() {
         const gmEl = () => $('gm-modal'), gmBody = () => $('gm-body');
         const gmSay = (t) => { const s = $('gm-status'); if (s) s.textContent = t || ''; };
         const gmLater = (fn, ms) => { const t = setTimeout(() => { GM.timers = GM.timers.filter((x) => x !== t); fn(); }, ms); GM.timers.push(t); };
+        /* real card pictures from XIVAPI (https://v2.xivapi.com), loaded by the player's browser; the emoji stays if a picture cannot be loaded.
+           The picture address is tried in a few forms (the first that works for the test card is then used for all). The result is written on the Games lobby. */
+        const TT_ART = {}; let ttArtState = 0; const TT_ART_MSG = { t: 'Card pictures: not loaded yet' };
+        const ttArtUrls = (row) => ['ui/icon/088000/' + String(88000 + row).padStart(6, '0') + '_hr1.tex', 'ui/icon/088000/' + String(88000 + row).padStart(6, '0') + '.tex', 'ui/icon/087000/' + String(87000 + row).padStart(6, '0') + '_hr1.tex', 'ui/icon/087000/' + String(87000 + row).padStart(6, '0') + '.tex'].map((q) => 'https://v2.xivapi.com/api/asset?path=' + q + '&format=png');
+        const ttArtSay = (t) => { TT_ART_MSG.t = t; try { if (GM.open && GM.view === 'lobby') gmSay(t); } catch (e) { /* closed */ } };
+        window.ttArtErr = (img) => { const l = TT_ART[+img.dataset.id]; const i = +img.dataset.i + 1; if (l && l[i]) { img.dataset.i = i; img.src = l[i]; } else img.remove(); };
+        function ttArtLoad() {
+            if (ttArtState === 1 || ttArtState === 2) return; ttArtState = 1; ttArtSay('Card pictures: asking XIVAPI…'); const norm = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '');
+            fetch('https://v2.xivapi.com/api/sheet/TripleTriadCard?limit=500&fields=Name').then((r) => (r.ok ? r.json() : Promise.reject('XIVAPI answered ' + r.status))).then((j) => {
+                const rows = j.rows || [], by = new Map(); rows.forEach((r) => { const n = r.fields && r.fields.Name; if (n && r.row_id) by.set(norm(n), r.row_id); });
+                const hit = []; TT_CARDS.forEach((c) => { const id = by.get(norm(c.n)); if (id) hit.push([c.id, id]); });
+                if (!hit.length) { ttArtState = 3; ttArtSay('Card pictures: XIVAPI answered but no card names matched (' + rows.length + ' rows' + (rows[0] ? '; fields: ' + Object.keys(rows[0].fields || {}).join(',') : '') + ')'); return; }
+                const test = (k) => { if (k >= 4) { ttArtState = 3; ttArtSay('Card pictures: names matched (' + hit.length + ' of ' + TT_CARDS.length + ') but no picture address worked'); return; } const im = new Image(); im.onload = () => { ttArtState = 2; hit.forEach(([cid, row]) => { const l = ttArtUrls(row); TT_ART[cid] = l.slice(k).concat(l.slice(0, k)); }); ttArtSay('Card pictures: working (' + hit.length + ' of ' + TT_CARDS.length + ' cards, address form ' + (k + 1) + ')'); try { if (GM.open && GM.sess && GM.sess.game === 'tt') ttRender(); } catch (e) { /* closed */ } }; im.onerror = () => test(k + 1); im.src = ttArtUrls(hit[0][1])[k]; };
+                test(0);
+            }).catch((e) => { ttArtState = 3; ttArtSay('Card pictures: could not reach XIVAPI (' + String(e && e.message || e).slice(0, 80) + ')'); console.warn('card art', e); });
+        }
         function gmOpen() {
+            try { ttArtLoad(); } catch (e) { /* offline */ }
             if (!gmEl()) return; try { closeStart(); } catch (e) { /* not open */ }
             GM.open = true; gmEl().classList.remove('hidden'); if (GM.sess) gmShowGame(); else gmLobby();
         }
-        function gmClose() { gmEl().classList.add('hidden'); GM.open = false; c4Stop(); if (GM.sess) gmEndSession(true); }
+        const TTM = { f: null, a: null, src: null, name: '', inited: false, busy: false, mute: false, vid: 'OSYqDJD4_M8' };
+        try { TTM.mute = localStorage.getItem('oasisTtMute') === '1'; } catch (e) { /* storage */ }
+        async function ttmInit() {       // a file you loaded (kept in this browser) comes first, then triple-triad-theme.mp3 placed next to the game, then YouTube
+            if (TTM.inited) return; TTM.inited = true;
+            try { const rec = await btDb((st) => st.get('tt')); if (rec && rec.blob) { TTM.src = URL.createObjectURL(rec.blob); TTM.name = String(rec.name || 'your file').slice(0, 40); return; } } catch (e) { /* no storage */ }
+            try { const r = await fetch('triple-triad-theme.mp3', { method: 'HEAD' }); if (r.ok && /audio|octet-stream/.test(r.headers.get('content-type') || '')) { TTM.src = 'triple-triad-theme.mp3'; TTM.name = 'triple-triad-theme.mp3'; } } catch (e) { /* not there */ }
+        }
+        async function ttmLoadFile(file) { if (!file) return; TTM.inited = true; if (TTM.src && TTM.src.startsWith('blob:')) URL.revokeObjectURL(TTM.src); TTM.src = URL.createObjectURL(file); TTM.name = String(file.name || 'your file').slice(0, 40); await btDb((st) => st.put({ name: file.name, blob: file }, 'tt')); ttmStop(); ttArtSay('Music: ' + TTM.name + ' (kept on this device)'); }
+        async function ttmClearFile() { await btDb((st) => st.delete('tt')); if (TTM.src && TTM.src.startsWith('blob:')) URL.revokeObjectURL(TTM.src); TTM.src = null; TTM.name = ''; TTM.inited = false; ttmStop(); await ttmInit(); ttArtSay('Music: ' + (TTM.src ? TTM.name : 'YouTube theme')); }
+        function ttmVol() { try { if (TTM.f && TTM.f.contentWindow) TTM.f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [45] }), '*'); } catch (e) { /* not ready */ } }
+        function ttmIcon() { const b = document.getElementById('gm-music'); if (b) b.textContent = TTM.mute ? '🔇' : '🔊'; }
+        function ttmStop() { if (TTM.f) { TTM.f.remove(); TTM.f = null; } if (TTM.a) { try { TTM.a.pause(); } catch (e) { /* none */ } TTM.a = null; } }
+        async function ttmPlay() {
+            ttmIcon(); if (TTM.f || TTM.a || TTM.mute || TTM.busy) return; TTM.busy = true;
+            try { await ttmInit(); } catch (e) { /* none */ } TTM.busy = false; if (TTM.f || TTM.a || TTM.mute || !(GM.sess && GM.sess.game === 'tt' && GM.open)) return;
+            if (TTM.src) { try { const a = new Audio(TTM.src); a.loop = true; a.volume = 0.5; TTM.a = a; a.play().catch((e) => { console.warn('triple triad music', e); }); return; } catch (e) { /* fall back to YouTube */ } }
+            try { const f = document.createElement('iframe'); f.src = 'https://www.youtube.com/embed/' + TTM.vid + '?autoplay=1&controls=0&enablejsapi=1&playsinline=1&rel=0&loop=1&playlist=' + TTM.vid; f.allow = 'autoplay; encrypted-media'; f.title = 'Triple Triad music'; f.style.cssText = 'position:fixed;width:2px;height:2px;left:-10px;top:-10px;border:0;opacity:0;pointer-events:none'; f.addEventListener('load', () => { setTimeout(ttmVol, 1500); setTimeout(ttmVol, 4000); }); document.body.appendChild(f); TTM.f = f; } catch (e) { /* offline */ }
+        }
+        document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('#gm-music'); if (!b) return; TTM.mute = !TTM.mute; try { localStorage.setItem('oasisTtMute', TTM.mute ? '1' : '0'); } catch (x) { /* storage */ } if (TTM.mute) ttmStop(); else if (GM.sess && GM.sess.game === 'tt') ttmPlay(); ttmIcon(); });
+        /* sound effects are decoded with Web Audio so that the silence at the start (and end) of a file is skipped: the clip plays the moment it is triggered */
+        function ttsfxPrep(slot) {
+            try {
+                const src = slot.src; if (!src || slot.prep === src) return; dnBeep(1, 0.001, 'sine', 0.0001); const ac = dnAC; if (!ac) return; slot.prep = src;
+                fetch(src).then((r) => r.arrayBuffer()).then((ab) => ac.decodeAudioData(ab)).then((buf) => {
+                    const n = buf.length, ch = []; for (let c = 0; c < buf.numberOfChannels; c++) ch.push(buf.getChannelData(c)); let a = 0, b = n - 1;
+                    const loud = (i, t) => { for (let c = 0; c < ch.length; c++) if (Math.abs(ch[c][i]) > t) return true; return false; };
+                    while (a < n && !loud(a, 0.02)) a++; while (b > a && !loud(b, 0.01)) b--;
+                    slot.lead = Math.max(0, a / buf.sampleRate - 0.01); slot.len = Math.max(0.05, (b - a) / buf.sampleRate + 0.08); slot.buf = buf; slot.bufSrc = src; if (slot.want) { const v = slot.want; slot.want = 0; ttsfxPlay(slot, v); }
+                }).catch((e) => { slot.prep = null; console.warn('sound effect', e); });
+            } catch (e) { /* no audio */ }
+        }
+        function ttsfxPlay(slot, vol) {
+            try {
+                if (!slot.src) return; if (slot.bufSrc !== slot.src || !slot.buf) { slot.want = vol; ttsfxPrep(slot); return; } const ac = dnAC; if (!ac) return; if (ac.state === 'suspended') ac.resume();
+                const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = slot.buf; g.gain.value = vol; s.connect(g); g.connect(ac.destination); s.start(0, slot.lead, slot.len);
+            } catch (e) { /* none */ }
+        }
+        const TTS = { src: null, name: '', inited: false };
+        async function ttsInit() {
+            if (TTS.inited) return; TTS.inited = true;
+            try { const rec = await btDb((st) => st.get('ttstart')); if (rec && rec.blob) { TTS.src = URL.createObjectURL(rec.blob); TTS.name = String(rec.name || 'your file').slice(0, 40); return; } } catch (e) { /* no storage */ }
+            try { const r = await fetch('triple-triad-start.mp3', { method: 'HEAD' }); if (r.ok && /audio|octet-stream/.test(r.headers.get('content-type') || '')) { TTS.src = 'triple-triad-start.mp3'; TTS.name = 'triple-triad-start.mp3'; } } catch (e) { /* not there */ }
+        }
+        async function ttsLoadFile(file) { if (!file) return; TTS.inited = true; if (TTS.src && TTS.src.startsWith('blob:')) URL.revokeObjectURL(TTS.src); TTS.src = URL.createObjectURL(file); TTS.name = String(file.name || 'your file').slice(0, 40); await btDb((st) => st.put({ name: file.name, blob: file }, 'ttstart')); ttArtSay('Start sound: ' + TTS.name + ' (kept on this device)'); ttsfxPrep(TTS); setTimeout(() => ttsfxPlay(TTS, 0.8), 600); }
+        async function ttsClearFile() { await btDb((st) => st.delete('ttstart')); if (TTS.src && TTS.src.startsWith('blob:')) URL.revokeObjectURL(TTS.src); TTS.src = null; TTS.name = ''; TTS.inited = false; await ttsInit(); ttArtSay('Start sound: ' + (TTS.src ? TTS.name : 'none')); }
+        async function ttsPlay() { if (TTM.mute) return; try { await ttsInit(); ttsfxPlay(TTS, 0.8); } catch (e) { /* none */ } }
+        const TTC = { src: null, name: '', inited: false };
+        async function ttcInit() {
+            if (TTC.inited) return; TTC.inited = true;
+            try { const rec = await btDb((st) => st.get('ttcap')); if (rec && rec.blob) { TTC.src = URL.createObjectURL(rec.blob); TTC.name = String(rec.name || 'your file').slice(0, 40); return; } } catch (e) { /* no storage */ }
+            try { const r = await fetch('triple-triad-take.mp3', { method: 'HEAD' }); if (r.ok && /audio|octet-stream/.test(r.headers.get('content-type') || '')) { TTC.src = 'triple-triad-take.mp3'; TTC.name = 'triple-triad-take.mp3'; } } catch (e) { /* not there */ }
+        }
+        async function ttcLoadFile(file) { if (!file) return; TTC.inited = true; if (TTC.src && TTC.src.startsWith('blob:')) URL.revokeObjectURL(TTC.src); TTC.src = URL.createObjectURL(file); TTC.name = String(file.name || 'your file').slice(0, 40); await btDb((st) => st.put({ name: file.name, blob: file }, 'ttcap')); ttArtSay('Capture sound: ' + TTC.name + ' (kept on this device)'); ttsfxPrep(TTC); setTimeout(() => ttsfxPlay(TTC, 0.8), 600); }
+        async function ttcClearFile() { await btDb((st) => st.delete('ttcap')); if (TTC.src && TTC.src.startsWith('blob:')) URL.revokeObjectURL(TTC.src); TTC.src = null; TTC.name = ''; TTC.inited = false; await ttcInit(); ttArtSay('Capture sound: ' + (TTC.src ? TTC.name : 'none')); }
+        async function ttcPlay() { if (TTM.mute) return; try { await ttcInit(); ttsfxPlay(TTC, 0.8); } catch (e) { /* none */ } }
+        const TTU = { src: null, name: '', inited: false, last: 0, lastEl: null };
+        async function ttuInit() {
+            if (TTU.inited) return; TTU.inited = true;
+            try { const rec = await btDb((st) => st.get('ttcur')); if (rec && rec.blob) { TTU.src = URL.createObjectURL(rec.blob); TTU.name = String(rec.name || 'your file').slice(0, 40); return; } } catch (e) { /* no storage */ }
+            try { const r = await fetch('triple-triad-cursor.mp3', { method: 'HEAD' }); if (r.ok && /audio|octet-stream/.test(r.headers.get('content-type') || '')) { TTU.src = 'triple-triad-cursor.mp3'; TTU.name = 'triple-triad-cursor.mp3'; } } catch (e) { /* not there */ }
+        }
+        function ttuBeep() { ttsfxPlay(TTU, 0.6); }
+        async function ttuLoadFile(file) { if (!file) return; TTU.inited = true; if (TTU.src && TTU.src.startsWith('blob:')) URL.revokeObjectURL(TTU.src); TTU.src = URL.createObjectURL(file); TTU.name = String(file.name || 'your file').slice(0, 40); await btDb((st) => st.put({ name: file.name, blob: file }, 'ttcur')); ttArtSay('Cursor sound: ' + TTU.name + ' (kept on this device)'); ttsfxPrep(TTU); setTimeout(ttuBeep, 600); }
+        async function ttuClearFile() { await btDb((st) => st.delete('ttcur')); if (TTU.src && TTU.src.startsWith('blob:')) URL.revokeObjectURL(TTU.src); TTU.src = null; TTU.name = ''; TTU.inited = false; await ttuInit(); ttArtSay('Cursor sound: ' + (TTU.src ? TTU.name : 'none')); }
+        const ttuHit = (e) => {       // the cursor moves onto a button, card or board space inside the Games window
+            if (!TTU.src || TTM.mute || !GM.open) return; const el = e.target && e.target.closest ? e.target.closest('#gm-modal button, #gm-modal .tt-cell, #gm-modal .tc[data-h]') : null; if (!el || el.id === 'gm-music' || el.id === 'gm-close') return;
+            const now = performance.now(); if (el === TTU.lastEl && now - TTU.last < 400) return; if (now - TTU.last < 70) return; TTU.lastEl = el; TTU.last = now; ttuBeep();
+        };
+        document.addEventListener('pointerover', (e) => { if (e.pointerType === 'mouse') ttuHit(e); }); document.addEventListener('focusin', ttuHit); document.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') ttuHit(e); });
+        window.__ttm = TTM; window.__tts = TTS; window.__ttc = TTC; window.__ttu = TTU;
+        function gmClose() { try { ttmStop(); } catch (e) { /* none */ } gmEl().classList.add('hidden'); GM.open = false; c4Stop(); if (GM.sess) gmEndSession(true); }
         function gmEndSession(notify) {
+            try { ttmStop(); } catch (e) { /* none */ }
             const s = GM.sess; GM.timers.forEach(clearTimeout); GM.timers = []; GM.sess = null; c4Stop();
             if (s && s.peer && notify && net) { try { net.send({ t: 'gm', to: s.peer, tid: s.tid, op: 'bye' }); } catch (e) { /* offline */ } }
         }
         function gmBack() { if (GM.sess) gmEndSession(true); gmLobby(); }
         function gmLobby() {
-            c4Stop(); GM.view = 'lobby'; $('gm-title').textContent = 'GAMES'; $('gm-back').hidden = true; gmSay('');
+            c4Stop(); GM.view = 'lobby'; $('gm-title').textContent = 'GAMES'; $('gm-back').hidden = true; gmSay(TT_ART_MSG.t);
             const ps = [...peers.values()].filter((p) => p && p.name);
             const tt = GM.pick === 'tt';
             gmBody().innerHTML = `<div class="gm-lobby"><div class="gm-tiles">
                 <button type="button" class="gm-tile ${tt ? 'on' : ''}" data-g="tt"><span class="ico cardback">🎴</span><span><b>Triple Triad</b><small>Place cards on a 3×3 board and capture your rival's cards.</small></span></button>
                 <button type="button" class="gm-tile ${tt ? '' : 'on'}" data-g="c4"><span class="ico">🔴</span><span><b>Connect 4 (3D)</b><small>Drop discs into the board and line up four.</small></span></button></div>
                 <div class="gm-opts"><h4>${tt ? 'Triple Triad' : 'Connect 4'}</h4>
-                ${tt ? `<div class="gm-row"><label class="gm-chk"><input type="checkbox" id="gm-same" ${GM.rules.same ? 'checked' : ''}> Same</label><label class="gm-chk"><input type="checkbox" id="gm-plus" ${GM.rules.plus ? 'checked' : ''}> Plus</label><button type="button" class="gm-btn alt" id="gm-deck">Your deck</button></div><div class="gm-note">Both hands are open. Same and Plus flip cards and chain into combos.</div>` : '<div class="gm-note">Drag to turn the board. Left / right and Enter drop a disc, or click a column.</div>'}
+                ${tt ? `<div class="gm-row"><label class="gm-chk"><input type="checkbox" id="gm-same" ${GM.rules.same ? 'checked' : ''}> Same</label><label class="gm-chk"><input type="checkbox" id="gm-plus" ${GM.rules.plus ? 'checked' : ''}> Plus</label><button type="button" class="gm-btn alt" id="gm-deck">Your deck</button><button type="button" class="gm-btn alt" id="gm-mfile">🎵 Music file</button><input type="file" id="gm-mfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-sfile">🔔 Start sound</button><input type="file" id="gm-sfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-cfile">🃏 Capture sound</button><input type="file" id="gm-cfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-ufile">🖱️ Cursor sound</button><input type="file" id="gm-ufin" accept="audio/*" hidden>${TTU.src && TTU.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-uclr">Remove cursor sound</button>' : ''}${TTC.src && TTC.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-cclr">Remove capture sound</button>' : ''}${TTS.src && TTS.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-sclr">Remove start sound</button>' : ''}${TTM.src && TTM.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-mclr">Use default music</button>' : ''}</div><div class="gm-note">Both hands are open. Same and Plus flip cards and chain into combos.</div>` : '<div class="gm-note">Drag to turn the board. Left / right and Enter drop a disc, or click a column.</div>'}
                 <h4>Play the computer</h4><div class="gm-row"><button type="button" class="gm-btn" data-ai="0">Easy</button><button type="button" class="gm-btn" data-ai="1">Normal</button><button type="button" class="gm-btn" data-ai="2">Hard</button></div>
                 <h4>Challenge a player here</h4><div class="gm-row">${ps.length && net ? ps.map((p) => `<button type="button" class="gm-btn gold" data-peer="${esc(p.id)}">${esc(String(p.name).slice(0, 16))}</button>`).join('') : '<span class="gm-note">Nobody else is in this room right now.</span>'}</div></div></div>`;
             const b = gmBody();
@@ -15852,6 +16083,10 @@ function btMusicStop() {
             b.querySelectorAll('[data-peer]').forEach((e) => e.addEventListener('click', () => gmChallenge(e.dataset.peer)));
             const sm = $('gm-same'), pl = $('gm-plus'); if (sm) sm.onchange = () => { GM.rules.same = sm.checked; }; if (pl) pl.onchange = () => { GM.rules.plus = pl.checked; };
             const dk = $('gm-deck'); if (dk) dk.onclick = () => gmDeckView();
+            { const mf = $('gm-mfile'), fi = $('gm-mfin'), mc = $('gm-mclr'); if (mf && fi) { mf.onclick = () => fi.click(); fi.onchange = async () => { await ttmLoadFile(fi.files[0]); gmLobby(); }; } if (mc) mc.onclick = async () => { await ttmClearFile(); gmLobby(); }; { const uf = $('gm-ufile'), ufi = $('gm-ufin'), uc = $('gm-uclr'); if (uf && ufi) { uf.onclick = () => ufi.click(); ufi.onchange = async () => { await ttuLoadFile(ufi.files[0]); gmLobby(); }; } if (uc) uc.onclick = async () => { await ttuClearFile(); gmLobby(); }; try { ttuInit().then(() => { ttsfxPrep(TTU);  if (TTU.src && TTU.src.startsWith('blob:') && !$('gm-uclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
+            { const cf = $('gm-cfile'), cfi = $('gm-cfin'), cc = $('gm-cclr'); if (cf && cfi) { cf.onclick = () => cfi.click(); cfi.onchange = async () => { await ttcLoadFile(cfi.files[0]); gmLobby(); }; } if (cc) cc.onclick = async () => { await ttcClearFile(); gmLobby(); }; try { ttcInit().then(() => { ttsfxPrep(TTC);  if (TTC.src && TTC.src.startsWith('blob:') && !$('gm-cclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
+            { const sf = $('gm-sfile'), sfi = $('gm-sfin'), sc = $('gm-sclr'); if (sf && sfi) { sf.onclick = () => sfi.click(); sfi.onchange = async () => { await ttsLoadFile(sfi.files[0]); gmLobby(); }; } if (sc) sc.onclick = async () => { await ttsClearFile(); gmLobby(); }; try { ttsInit().then(() => { ttsfxPrep(TTS);  if (TTS.src && TTS.src.startsWith('blob:') && !$('gm-sclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
+            try { ttmInit().then(() => { if (TTM.src && TTM.src.startsWith('blob:') && !$('gm-mclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
             const f = b.querySelector('[data-ai="1"]'); if (f) f.focus({ preventScroll: true });
         }
         function gmDeckView() {
@@ -15865,7 +16100,7 @@ function btMusicStop() {
             };
             draw();
         }
-        const ttFace = (c) => `<span class="st">${'★'.repeat(c.st)}</span><i class="art">${c.ic}</i><b class="n t">${c.v[0] === 10 ? 'A' : c.v[0]}</b><b class="n r">${c.v[1] === 10 ? 'A' : c.v[1]}</b><b class="n b">${c.v[2] === 10 ? 'A' : c.v[2]}</b><b class="n l">${c.v[3] === 10 ? 'A' : c.v[3]}</b>`;
+        const ttFace = (c) => `<span class="st">${'★'.repeat(c.st)}</span><i class="art">${c.ic}${TT_ART[c.id] ? '<img class="artimg" alt="" referrerpolicy="no-referrer" data-id="' + c.id + '" data-i="0" src="' + TT_ART[c.id][0] + '" onerror="ttArtErr(this)">' : ''}</i></i><b class="n t">${c.v[0] === 10 ? 'A' : c.v[0]}</b><b class="n r">${c.v[1] === 10 ? 'A' : c.v[1]}</b><b class="n b">${c.v[2] === 10 ? 'A' : c.v[2]}</b><b class="n l">${c.v[3] === 10 ? 'A' : c.v[3]}</b>`;
         function gmChallenge(peerId) {
             const p = peers.get(peerId); if (!p || !net) { sysChat('That player is not here.'); return; }
             if (GM.sess) { gmEndSession(true); }
@@ -15916,7 +16151,7 @@ function btMusicStop() {
             const prev = GM.sess; GM.timers.forEach(clearTimeout); GM.timers = [];
             const s = GM.sess = { tid: o.tid || (prev && prev.tid) || uid(), peer: o.peer, game: o.game, seat: o.seat, phase: 'live', ai: !o.peer, name: o.name || 'Computer', rules: o.rules, over: false, sel: -1 };
             if (o.game === 'tt') { s.S = ttNew(o.decks, o.rules, o.first); } else { s.cols = [[], [], [], [], [], [], []]; s.turn = o.first; s.last = null; }
-            gmShowGame();
+            gmShowGame(); try { if (o.game === 'tt') { ttsPlay(); ttmPlay(); } else ttmStop(); } catch (e) { /* music */ }
         }
         function gmShowGame() {
             const s = GM.sess; if (!s) return gmLobby(); GM.view = s.game; $('gm-back').hidden = false;
@@ -15957,7 +16192,7 @@ function btMusicStop() {
             const s = GM.sess; if (!s || s.game !== 'tt' || s.over) return; if (!Number.isInteger(id) || !Number.isInteger(cell)) return;
             const r = ttPlay(s.S, seat, id, cell); if (!r) return; s.sel = -1;
             if (seat === s.seat && s.peer && net) { try { net.send({ t: 'gm', to: s.peer, tid: s.tid, op: 'mv', c: id, s: cell }); } catch (e) { /* offline */ } }
-            dnBeep(520, 0.08, 'triangle', 0.05, 760); if (r.flips.length) gmLater(() => dnBeep(880, 0.1, 'sine', 0.05, 1200), 150);
+            if (r.flips.length && seat === s.seat) ttcPlay(); dnBeep(520, 0.08, 'triangle', 0.05, 760); if (r.flips.length) gmLater(() => dnBeep(880, 0.1, 'sine', 0.05, 1200), 150);
             ttRender(r.flips, cell, r.ev);
             if (s.S.n >= 9) { const a = ttScore(s.S, s.seat), b = ttScore(s.S, 1 - s.seat); gmFinish(a > b ? `You win ${a} – ${b}!` : a < b ? `You lose ${a} – ${b}` : `Draw ${a} – ${b}`, a > b ? 1 : a < b ? -1 : 0); } else gmAfterMove();
         }
@@ -20445,8 +20680,8 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             if (PERF.acc < 1.5) return;
             const fps = PERF.fps = PERF.n / PERF.acc, now = nowS(); PERF.acc = 0; PERF.n = 0; perfRatio();
             if (window.__noAutoQ) return;
-            if (fps < 50 && PERF.ratio > 0.8) { PERF.ratio = Math.max(0.8, PERF.ratio - 0.25); PERF.lastDown = now; PERF.good = 0; perfApply(); }
-            else if (fps >= 57) { if (++PERF.good >= 5 && now - PERF.lastDown > 20 && PERF.ratio < PERF.max) { PERF.ratio = Math.min(PERF.max, PERF.ratio + 0.25); PERF.good = 0; perfApply(); } }
+            if (false && fps < 50 && PERF.ratio > 0.8) { PERF.ratio = Math.max(0.8, PERF.ratio - 0.25); PERF.lastDown = now; PERF.good = 0; perfApply(); }
+            else if (false) { if (++PERF.good >= 5 && now - PERF.lastDown > 20 && PERF.ratio < PERF.max) { PERF.ratio = Math.min(PERF.max, PERF.ratio + 0.25); PERF.good = 0; perfApply(); } }
             else PERF.good = 0;
         }
         window.__perf = PERF;
