@@ -778,6 +778,7 @@
 .gm-deck{display:flex;flex-direction:column;width:100%;padding:8px 10px;gap:6px;min-height:0}
 .gm-deckgrid{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;padding:4px}
 .gm-deckgrid .tc{cursor:pointer}
+.gm-rec{border-collapse:collapse;width:100%;max-width:520px;margin:4px 0 8px;font-size:13px}.gm-rec th,.gm-rec td{padding:4px 8px;text-align:center;border-bottom:1px solid #ffffff22}.gm-rec th:first-child,.gm-rec td:first-child{text-align:left}.gm-rec th{color:#9fc3ff;font-weight:700}.gm-rec .w{color:#7ee08f}.gm-rec .l{color:#ff8f8f}.gm-rec .tot td{font-weight:700;border-top:2px solid #ffffff44}
 .gm-flt{flex-wrap:wrap;gap:6px;align-items:center}.gm-flt .gm-btn{padding:4px 10px}.gm-flt input{flex:1;min-width:120px;max-width:240px;padding:5px 8px;border-radius:8px;border:1px solid #ffffff44;background:#0006;color:#fff}
 #gm-vol{width:84px;margin:0 8px;accent-color:#ffd24a;vertical-align:middle}.gm-deckgrid .tc.pick{outline:3px solid #ffd24a}
 /* Connect 4 */
@@ -16718,6 +16719,18 @@ function btMusicStop() {
             if (s && s.peer && notify && net) { try { net.send({ t: 'gm', to: s.peer, tid: s.tid, op: 'bye' }); } catch (e) { /* offline */ } }
         }
         function gmBack() { if (GM.sess) gmEndSession(true); gmLobby(); }
+        const gmRecLoad = () => { try { const r = JSON.parse(localStorage.getItem('oasisGmRec') || '{}'); return r && typeof r === 'object' ? r : {}; } catch (e) { return {}; } };
+        function gmRecAdd(s, win) {
+            const r = gmRecLoad(), g = s.game === 'tt' ? 'tt' : 'c4', who = s.ai ? 'Computer · ' + ['Easy', 'Normal', 'Hard'][s.lvl] : String(s.name || 'Player').slice(0, 16);
+            r[g] = r[g] || {}; const a = r[g][who] || [0, 0, 0]; a[win === 1 ? 0 : win === -1 ? 1 : 2]++; r[g][who] = a; try { localStorage.setItem('oasisGmRec', JSON.stringify(r)); } catch (e) { /* storage */ }
+        }
+        function gmRecHtml() {
+            const g = GM.pick === 'tt' ? 'tt' : 'c4', rec = gmRecLoad()[g] || {}, rows = Object.entries(rec).filter(([k, v]) => Array.isArray(v)).sort((a, b) => (b[1][0] + b[1][1] + b[1][2]) - (a[1][0] + a[1][1] + a[1][2]));
+            const tot = rows.reduce((t, [, v]) => [t[0] + v[0], t[1] + v[1], t[2] + v[2]], [0, 0, 0]), n = tot[0] + tot[1] + tot[2];
+            return `<h4>Your record · ${g === 'tt' ? 'Triple Triad' : 'Connect 4'}</h4>` + (n ? `<table class="gm-rec"><tr><th>Opponent</th><th>Wins</th><th>Losses</th><th>Draws</th><th>Win %</th></tr>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="w">${v[0]}</td><td class="l">${v[1]}</td><td>${v[2]}</td><td>${Math.round(100 * v[0] / Math.max(1, v[0] + v[1] + v[2]))}%</td></tr>`).join('')}<tr class="tot"><td>All games</td><td class="w">${tot[0]}</td><td class="l">${tot[1]}</td><td>${tot[2]}</td><td>${Math.round(100 * tot[0] / n)}%</td></tr></table><div class="gm-row"><button type="button" class="gm-btn alt" id="gm-recclr">Reset record</button></div>` : '<div class="gm-row"><span class="gm-note">No games finished yet. Wins, losses and draws against each opponent will show here.</span></div>');
+        }
+        document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('#gm-recclr'); if (!b) return; if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Tap again to reset'; return; } const r = gmRecLoad(); delete r[GM.pick === 'tt' ? 'tt' : 'c4']; try { localStorage.setItem('oasisGmRec', JSON.stringify(r)); } catch (x) { /* storage */ } gmLobby(); });
+        window.__gmRec = { add: gmRecAdd, html: gmRecHtml };
         function gmLobby() {
             c4Stop(); GM.view = 'lobby'; $('gm-title').textContent = 'GAMES'; $('gm-back').hidden = true; gmSay(TT_ART_MSG.t);
             const ps = [...peers.values()].filter((p) => p && p.name);
@@ -16728,7 +16741,7 @@ function btMusicStop() {
                 <div class="gm-opts"><h4>${tt ? 'Triple Triad' : 'Connect 4'}</h4>
                 ${tt ? `<div class="gm-row"><label class="gm-chk"><input type="checkbox" id="gm-same" ${GM.rules.same ? 'checked' : ''}> Same</label><label class="gm-chk"><input type="checkbox" id="gm-plus" ${GM.rules.plus ? 'checked' : ''}> Plus</label><button type="button" class="gm-btn alt" id="gm-deck">Your deck</button><button type="button" class="gm-btn alt" id="gm-mfile">🎵 Music file</button><input type="file" id="gm-mfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-sfile">🔔 Start sound</button><input type="file" id="gm-sfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-cfile">🃏 Capture sound</button><input type="file" id="gm-cfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-ufile">🖱️ Cursor sound</button><input type="file" id="gm-ufin" accept="audio/*" hidden>${TTU.src && TTU.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-uclr">Remove cursor sound</button>' : ''}${TTC.src && TTC.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-cclr">Remove capture sound</button>' : ''}${TTS.src && TTS.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-sclr">Remove start sound</button>' : ''}${TTM.src && TTM.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-mclr">Use default music</button>' : ''}</div><div class="gm-note">Both hands are open. Same and Plus flip cards and chain into combos.</div>` : '<div class="gm-note">Drag to turn the board. Left / right and Enter drop a disc, or click a column.</div>'}
                 <h4>Play the computer</h4><div class="gm-row"><button type="button" class="gm-btn" data-ai="0">Easy</button><button type="button" class="gm-btn" data-ai="1">Normal</button><button type="button" class="gm-btn" data-ai="2">Hard</button></div>
-                <h4>Challenge a player here</h4><div class="gm-row">${ps.length && net ? ps.map((p) => `<button type="button" class="gm-btn gold" data-peer="${esc(p.id)}">${esc(String(p.name).slice(0, 16))}</button>`).join('') : '<span class="gm-note">Nobody else is in this room right now.</span>'}</div></div></div>`;
+                <h4>Challenge a player here</h4><div class="gm-row">${ps.length && net ? ps.map((p) => `<button type="button" class="gm-btn gold" data-peer="${esc(p.id)}">${esc(String(p.name).slice(0, 16))}</button>`).join('') : '<span class="gm-note">Nobody else is in this room right now.</span>'}</div>${gmRecHtml()}</div></div>`;
             const b = gmBody();
             b.querySelectorAll('[data-g]').forEach((e) => e.addEventListener('click', () => { GM.pick = e.dataset.g; gmLobby(); const t = gmBody().querySelector(`[data-g="${GM.pick}"]`); if (t) t.focus(); }));
             b.querySelectorAll('[data-ai]').forEach((e) => e.addEventListener('click', () => { GM.lvl = +e.dataset.ai; gmStart({ game: GM.pick, peer: null, seat: 0, first: Math.random() < 0.5 ? 0 : 1, decks: [ttMyDeck(), ttAutoDeck()], rules: { ...GM.rules } }); }));
@@ -16804,7 +16817,7 @@ function btMusicStop() {
         }
         function gmStart(o) {
             const prev = GM.sess; GM.timers.forEach(clearTimeout); GM.timers = [];
-            const s = GM.sess = { tid: o.tid || (prev && prev.tid) || uid(), peer: o.peer, game: o.game, seat: o.seat, phase: 'live', ai: !o.peer, name: o.name || 'Computer', rules: o.rules, over: false, sel: -1 };
+            const s = GM.sess = { tid: o.tid || (prev && prev.tid) || uid(), peer: o.peer, game: o.game, seat: o.seat, phase: 'live', ai: !o.peer, lvl: GM.lvl, name: o.name || 'Computer', rules: o.rules, over: false, sel: -1 };
             if (o.game === 'tt') { s.S = ttNew(o.decks, o.rules, o.first); } else { s.cols = [[], [], [], [], [], [], []]; s.turn = o.first; s.last = null; }
             gmShowGame(); try { if (o.game === 'tt') { ttsPlay(); ttStinger('SHUFFLE', 0.15); ttmPlay(); } else ttmStop(); } catch (e) { /* music */ }
         }
@@ -16825,7 +16838,7 @@ function btMusicStop() {
             setTimeout(() => { const x = $('gm-again'); if (x) x.focus(); }, 30);
         }
         function gmFinish(text, win) {
-            const s = GM.sess; if (!s) return; s.over = true; s.res = text; gmSay(text); try { if (win === 1) lvAward('game', 25, 30); else lvAward('game', 8, 30); } catch (e) { /* levels not ready */ }
+            const s = GM.sess; if (!s) return; if (s.over) return; s.over = true; s.res = text; gmSay(text); try { gmRecAdd(s, win); } catch (e) { /* record */ } try { if (win === 1) lvAward('game', 25, 30); else lvAward('game', 8, 30); } catch (e) { /* levels not ready */ }
             try { ttResultFx(win, s); } catch (e) { gmBanner(); }
         }
         /* ---- Triple Triad: screen ---- */
