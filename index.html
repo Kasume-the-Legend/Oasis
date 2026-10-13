@@ -14442,6 +14442,49 @@ function btMusicStop() {
         });
         window.__bz2 = { open: bzOpen, close: bzClose, BZ, invite: bzInvite };
 
+/* ---- Touch stick: a floating analog stick for phones/tablets without a controller. Touch the left side of the 3D view and drag; it appears under your thumb, feeds the same analog movement as a gamepad's left stick, and vanishes when you let go (or fades if you hold still). ---- */
+const TSK = { on: false, id: null, x: 0, z: 0, run: false, ox: 0, oy: 0, el: null, knob: null, idleAt: 0, R: 58 };
+window.__ts = TSK;
+(function () {
+    const st = document.createElement('style');
+    st.textContent = '#ts-base{position:fixed;z-index:35;width:116px;height:116px;margin:-58px 0 0 -58px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(120,190,255,.10),rgba(120,190,255,.22));border:2px solid rgba(190,225,255,.55);box-shadow:0 0 18px rgba(80,160,255,.35),inset 0 0 14px rgba(80,160,255,.2);opacity:0;transition:opacity .22s}#ts-base.on{opacity:1}#ts-base.idle{opacity:.28}#ts-knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#9fd0ff 60%,#4a90e0);box-shadow:0 0 12px rgba(120,190,255,.8)}#ts-base.run #ts-knob{background:radial-gradient(circle at 35% 30%,#fff,#ffe29a 60%,#e0a030);box-shadow:0 0 14px rgba(255,200,90,.9)}';
+    document.head.appendChild(st);
+    const el = document.createElement('div'); el.id = 'ts-base'; const kn = document.createElement('div'); kn.id = 'ts-knob'; el.appendChild(kn); document.body.appendChild(el); TSK.el = el; TSK.knob = kn;
+    const ok = (e) => {
+        try {
+            if (e.pointerType !== 'touch' || TSK.id !== null) return false;
+            if (typeof renderer === 'undefined' || !renderer || e.target !== renderer.domElement) return false;
+            if (e.clientX > window.innerWidth * 0.55) return false;
+            if (PAD.active) return false;                                  // a controller is connected: it does the walking
+            if (TG.rigOn || gnRigOn() || (typeof OB !== 'undefined' && OB.open)) return false;   // shooter modes aim with their own touch
+            if (typeof DC !== 'undefined' && DC.edit) return false;       // decorating drags furniture
+            if (typeof localActor === 'undefined' || !localActor) return false;
+            return true;
+        } catch (er) { return false; }
+    };
+    const reset = () => { TSK.on = false; TSK.id = null; TSK.x = TSK.z = 0; TSK.run = false; el.classList.remove('on', 'idle', 'run'); kn.style.transform = ''; };
+    window.addEventListener('pointerdown', (e) => {
+        if (!ok(e)) return;
+        TSK.id = e.pointerId; TSK.on = true; TSK.ox = e.clientX; TSK.oy = e.clientY; TSK.idleAt = performance.now();
+        el.style.left = e.clientX + 'px'; el.style.top = e.clientY + 'px'; el.classList.add('on'); el.classList.remove('idle', 'run'); kn.style.transform = '';
+        e.stopPropagation();                                              // the camera must not also orbit with this finger
+    }, true);
+    window.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== TSK.id) return;
+        let dx = e.clientX - TSK.ox, dy = e.clientY - TSK.oy; const d = Math.hypot(dx, dy);
+        if (d > TSK.R) { const k = TSK.R / d; dx *= k; dy *= k; }
+        const m = Math.min(1, d / TSK.R);
+        if (m < 0.14) { TSK.x = TSK.z = 0; TSK.run = false; } else { TSK.x = dx / TSK.R / Math.max(m, 0.001) * m; TSK.z = dy / TSK.R / Math.max(m, 0.001) * m; TSK.run = m > 0.88; TSK.idleAt = performance.now(); }
+        kn.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)';
+        el.classList.toggle('run', TSK.run); el.classList.toggle('idle', m < 0.14 && performance.now() - TSK.idleAt > 700);
+        e.stopPropagation();
+    }, true);
+    const up = (e) => { if (e.pointerId !== TSK.id) return; reset(); };
+    window.addEventListener('pointerup', up, true); window.addEventListener('pointercancel', up, true);
+    window.addEventListener('blur', reset);
+    setInterval(() => { if (TSK.on && Math.hypot(TSK.x, TSK.z) < 0.01 && performance.now() - TSK.idleAt > 700) el.classList.add('idle'); }, 250);
+})();
+
 
 
         function schPortalDummy() { }
@@ -15266,7 +15309,7 @@ function btMusicStop() {
                   for (const it of DC.items.values()) { if (!it.d) continue; if ((it.x - p.x) ** 2 + (it.z - p.z) ** 2 > 36) continue; const vx = it.x - cp.x, vy = (it.y || 0) + 0.8 - cp.y, vz = it.z - cp.z, L = Math.hypot(vx, vy, vz) || 1, ang = 1 - (vx * cd.x + vy * cd.y + vz * cd.z) / L; if (ang < bd) { bd = ang; best = it; } } }
               const key = best ? best.id + best.d : ''; if (key === last) return; last = key;
               if (!best) { cap.style.display = 'none'; return; } cap.innerHTML = '<b></b><span></span>'; cap.firstChild.textContent = best.n || 'Item'; cap.lastChild.textContent = best.d; cap.style.display = 'block'; } catch (e) {} }, 300); }
-        window.__decor = { undo: dcUndo, redo: dcRedo, DC, del: dcDelete, add: dcAddKind, edit: dcSetEdit, select: dcSelect, style: (s) => { DC.style = dcCleanStyle(s); dcApplyStyle(); }, describe: dcDescribe, wire: dcWire, items: () => [...DC.items.values()].map(dcWireItem), enter: dcEnter, addRaw: (o) => dcAdd(o), importImage: dcImportImage, addPhoto: dcAddPhoto,
+        window.__decor = { undo: dcUndo, redo: dcRedo, DC, del: dcDelete, add: dcAddKind, edit: dcSetEdit, select: dcSelect, style: (s) => { DC.style = dcCleanStyle(s); dcApplyStyle(); }, describe: dcDescribe, wire: dcWire, items: () => [...DC.items.values()].map(dcWireItem), enter: dcEnter, addRaw: (o) => dcAdd(o), importImage: dcImportImage, importModel: dcImportModel, addPhoto: dcAddPhoto,
             screenOf: (id) => { const it = DC.items.get(id), v = new THREE.Vector3(it.x, it.y + 0.35, it.z).project(camera), r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; } };
 
         function setMap(id) {
@@ -15522,7 +15565,7 @@ function btMusicStop() {
         }
         function padUpdate(dt) {
             const gp = padRead();
-            if (!gp) { if (PAD.hudHid) { PAD.hudHid = undefined; toggleDock(false); } padMove.x = padMove.z = 0; padMove.run = false; PAD.prev = []; if (PAD.bar) padBarDraw(false, ''); return; }
+            if (!gp) { if (PAD.hudHid) { PAD.hudHid = undefined; toggleDock(false); } if (window.__ts && window.__ts.on) { padMove.x = window.__ts.x; padMove.z = window.__ts.z; padMove.run = window.__ts.run; } else { padMove.x = padMove.z = 0; padMove.run = false; } PAD.prev = []; if (PAD.bar) padBarDraw(false, ''); return; }
             const b = gp.buttons.map((x) => !!(x && (x.pressed || x.value > 0.5)));
             const hit = (i) => b[i] && !PAD.prev[i];
             const ax = (i) => gp.axes[i] || 0;
