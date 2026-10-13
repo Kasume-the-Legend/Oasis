@@ -639,3 +639,66 @@ Verified in the emulated desktop test = tested here; Unverified = needs your pho
 ## Blitzball is now a separate file (size split)
 Oasis.html is ~24.9 MB (under 25 MB). Blitzball lives in `Blitzball.html` and is fetched at runtime when you open it from the menu button, the Lobbies "Blitzball Arena" entry or the Save Sphere. **Upload Blitzball.html next to Oasis.html** (same folder). Opened from file:// where fetch is blocked, it falls back to loading Blitzball.html in the frame directly.
 Verified (emulated desktop): fetch + load + match start with rigged swimmers. Unverified: phone, file:// fallback.
+
+## Touch stick (phones / tablets without a controller)
+Touch the left part of the 3D view and drag: a floating analog stick appears under your thumb and walks your character (push to the rim to run; the knob turns gold). It vanishes when you lift your finger and dims if you hold it still. The other thumb on the right half still orbits the camera. It switches itself off when a controller is connected, in the shooter modes (Laser Tag / Construct aiming), and while decorating.
+Verified (emulated touch in desktop Chromium): the stick appears, the character walks and the camera follows, it hides on release, and a touch on the right half doesn't trigger it. Unverified: a real phone, thumb feel and dead-zone tuning, running via the rim.
+
+## Levels.js: Warriors of Light monsters + biomes load separately
+The eight Warriors of Light monsters and the 13 battle biomes now live in `Levels.js`, loaded on demand: it fetches in the background a few seconds after start and is needed when you enter the battle map. **Upload Levels.js next to Oasis.html** (same folder, exact name, capital L). If it is missing (or the page is opened straight from disk) battles still run with plain placeholder monsters and bare ground, and a chat line tells you the file is missing. Oasis.html is now 24.80 MB.
+Monsters rebuilt with PS2-style detail (4,000 to 9,000 triangles each, painted scale/fur/metal/rock/cloth textures with bump, smooth shading, eyes, teeth, claws, armour, wings with bone fingers): Gel Slime, Sentry Drone, Dusk Wolf, Iron Guard, Bomb, Dusk Wraith, Ember Drake, Mako Golem. They keep the same animation hooks (rotor spin, tail sway, wing flap, flame flicker, slime squash), so combat is unchanged.
+Verified (emulated desktop): Levels.js loads and battles run without errors; each monster rendered in a lineup. Unverified: phone speed (more triangles per monster; not measured on the Nothing Phone), all eight animating in a long fight, the missing-file fallback.
+
+Battle biomes got a detail pass too (on top of the existing scenery, same locations and weather): bump-mapped floors and ground, textured leafy trees, pines with snow caps, palms with fronds, grass and fern cards, mossy rocks, mushrooms and logs; plaza houses with windowed facades, tiled roofs, chimneys and flower boxes, market stalls with awnings, barrels, crates and glass lamp posts; grand hall statues, banners, pillars and torches; garden topiary, flower beds, statues and lamps; desert cacti, skulls and ruined pillars; volcano basalt with lava veins and fire crystals; shore palms, driftwood and barrels; crystal cavern crystals and glowing mushrooms; cliff grass and ruined pillars; reactor tanks, pipes and mako crystals. Roughly 30 to 70 extra props per biome.
+Verified (emulated desktop): Forest, Plains, Plaza, Hall, Jungle, Volcano, Shore, Cavern, Pines, Garden rendered in battle without errors. Unverified: phone frame rate with the extra props (not measured on the Nothing Phone 3), the Desert, Cliffs and Reactor dressings by eye, and the torch/lamp flames are static (no flicker yet).
+
+## New: the full bestiary (44 monsters) and FF9-style status effects
+
+**Keep `Levels.js` next to `Oasis.html`** (upload both). It was rebuilt with all new monsters.
+
+### Bestiary
+- Tiers D → S, then bosses and secrets. Weak monsters come first; stronger ones unlock as waves go up (each has a first wave). Biome-themed ones show up more in their home biome.
+- D (wave 1+): Gel Slime, Sentry Drone, Frost Gel, Spore Cap, Sand Beetle. C (3+): Dusk Wolf, Bomb, Ember Gel, Cave Scorpion, Maw Sprout, Bone Soldier, Strike Drone. B (6+): Iron Guard, Dusk Wraith, Frost Wolf, Rex Raptor, Gale Harpy, Venom Serpent, Cinder Bomb, Volt Gel, Banshee, Razor Mantis. A (12+): Dread Knight, Alpha Wolf, Storm Roc, Reaper, Crystal Scorpion, Strangler Vine, Ice Golem. S (20+): Void Wraith, Lich Mage, Iron Colossus.
+- Bosses every 5th wave: Mako Golem, Ember Drake, Marsh Hydra, Horned Behemoth, Lich King, War Titan.
+- Secrets (rare, bigger Gil): Gilded Slime (any wave 2+, ~7%), Treasure Mimic (wave 3+, more often in hall/plaza/garden/cavern), Phantom Knight (wave 8+, night weather only), Crystal Drake (replaces a boss wave 15+ in cavern/volcano/cliffs, ~18%). "A rare monster appeared!" shows when one spawns.
+
+### Status effects
+- Good: Regen, Haste, Protect, Shell, Float (dodges Quake), Vanish (physical hits miss), Auto-Life. Bad: Poison, Venom, Darkness, Silence, Sleep (wakes when hit), Slow, Stop, Confuse (attacks anyone), Berserk (auto-attacks, hits harder), Mini, Petrify. All end after the wave.
+- New menus: **Support** (Esuna lv2, Haste/Protect lv3-4, Shell, Regen, Float, Vanish, Auto-Life) and **Hex** (Sleep, Poison, Blind, Slow, Silence) on enemies. Items: Antidote, Remedy (drops, also in Supplies).
+- Monsters inflict them with moves (Sting/Spore Burst poison, Chill slow, Wail silence, Drain sleep, Soul Scythe petrify...) and big ones buff themselves (Fortify, Frenzy). Bosses are immune to Sleep/Stop/Petrify/Confuse/Berserk/Mini; undead and machines resist Poison etc.
+- Icons show under each name; poison/regen tick every 3 s; synced to everyone in the room.
+
+### HUD
+- Party panel now reads like FF7: `HP 300 / 300`, MP, LIMIT bar (pink), TIME bar (green).
+
+### Verified / not verified
+- Verified in emulated desktop Chromium: all 44 monsters load and appear at the right waves (including bosses), no console errors; poison ticks, sleep, blind, protect, haste, Esuna, Fortify, Frenzy, Spore Burst poison; new HUD layout.
+- Not verified: balance, the other hexes landing (they are chance-based), Petrify/Confuse/Berserk in a live fight, multiplayer sync between two real devices, phone frame rate with the bigger monsters.
+
+## Fix: Hero class in battle
+- The Hero now uses your imported sword and the sword animation pack in battle (same as the lobby). The old prop blade and the hand-posed guard are gone for the sword class (Gunner keeps its stance).
+- Verified (emulated desktop): the class is the Hero set, the imported sword is attached to the right hand and visible, no prop blade. Not verified by eye: close-up of the pose and sword (emulator camera couldn't frame it).
+- Fighter: not changed. Needs a screenshot to see what looks off with the pose/hands.
+
+## Equipment Shop (Equipment.html)
+Separate page, opened from the menu ("Equipment Shop", 🛡️) or the Gear button in Warriors of Light. Deploy it next to Oasis.html.
+- 434 items: weapons (235), head (36), body (43), wrist (56), accessories (64), from FF7, FF8 and FF9. Buy with Gil, sell for 40%, equip per class (Hero, Gunner, Fighter).
+- Gear levels with class XP (to 99, +2% stats per level). Clearing waves now awards class XP.
+- Worn gear applies in Warriors of Light: attack, magic, defense, HP/MP, speed, evade, crit, status immunities and start-of-wave statuses. It is synced to the party host, with values clamped.
+- Names and ranks come from the FF7/8/9 equipment lists. Stats are normalized to this game's scale and not the originals. Some values were extracted from web pages and are approximate. FF9 armour stats are estimated from rank.
+- Verified (emulated desktop Chromium): overlay opens/closes, worn gear reaches battle stats, no console errors. Not verified: phone layout, multiplayer sync with a second player.
+- Not done: splitting imported VRM sets (e.g. gunblade set) into per-slot pieces, and the Fighter pose/hands issue (needs a screenshot).
+
+## Warriors of Light menu
+The side buttons are now: **Play** (joins and starts), **Gear**, **Settings**, **Exit**. Settings opens Leave/Join party, + / - CPU ally, Battle cam, Cast, Music and Supplies. Verified in emulated desktop Chromium (button list/toggle); not checked on phone.
+
+## Warriors of Light menu (v2)
+Side buttons: **Play**, **Shop** (Supplies, Equipment; only outside a battle), **Settings** (Leave/Join party, CPU allies, Battle cam, Cast, Music), **Exit**. During a fight only Settings and Exit show. Verified in emulated desktop Chromium (lobby, shop open, battle).
+
+## Fix: shared weather in the Harbor Studio / outdoor maps
+Cause (found by reading the code, not reproduced): the sync trusted each phone's/PC's clock to decide whose weather choice was "newest", so a device whose clock ran ahead or behind would ignore other people's changes, or get its own change overwritten within 12 s. Now a deliberate change always wins and is applied on every device, timestamps never go backwards, and anyone who enters a studio or outdoor map keeps asking the room for the current weather until someone answers (this used to happen for outdoor maps only, not the studio).
+Verified: weather changes apply locally in the studio (emulated). **Not verified**: the multi-player sync itself; the sandbox blocks peer-to-peer, so I could not test two players. Please test with a friend and tell me.
+Note: inside the studio the rain is deliberately hidden (shelter) until you walk out onto the deck.
+
+## Fix: battle YouTube music for other players
+The host's saved YouTube link (from a previous session, in the host's own settings) was only shared with the party when it was freshly pasted. Now it is shared with the party automatically when the music starts. Guests must not have "shared music" turned off. Not tested with two players.
