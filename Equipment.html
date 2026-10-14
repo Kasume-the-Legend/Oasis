@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>The Oasis · Equipment Shop</title>
+<style>
+:root{--bg:#070b1c;--panel:#101a46;--panel2:#0b1257;--line:#e3e9ff;--ink:#f2f5ff;--dim:#9fb0ee;--gold:#ffd24a;--good:#7dffa8;--bad:#ff8a8a;--acc:#6fd0ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:600 13px/1.35 Nunito,system-ui,sans-serif;overflow:hidden}
+#app{display:grid;grid-template-rows:auto auto 1fr;height:100%;padding:8px;gap:6px;max-width:1200px;margin:0 auto}
+.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.top h1{margin:0;font:800 14px Orbitron,Nunito,sans-serif;letter-spacing:.12em;color:var(--acc)}
+.gil{margin-left:auto;padding:4px 12px;border-radius:999px;background:#0b1257;border:2px solid var(--line);font-weight:800;color:var(--gold)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tab{padding:5px 11px;border-radius:999px;border:2px solid #4a5aa8;background:#14206b;color:var(--ink);font:800 12px Nunito,sans-serif;cursor:pointer}
+.tab.on{border-color:var(--gold);background:#2b3a9a;color:#fff}
+.sep{width:1px;height:20px;background:#3a4a98;margin:0 4px}
+input.q{padding:5px 10px;border-radius:8px;border:2px solid #4a5aa8;background:#0a1040;color:#fff;width:130px;font:600 12px Nunito,sans-serif}
+.main{display:grid;grid-template-columns:1.5fr 1fr;gap:8px;min-height:0}
+.box{background:linear-gradient(#2036a8,#0b1257);border:2px solid var(--line);border-radius:10px;box-shadow:0 0 0 2px #050834;padding:6px;min-height:0;overflow:auto}
+.row{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:5px 6px;border-radius:7px;border-bottom:1px solid #ffffff14}
+.row:hover{background:#ffffff12}
+.row.worn{background:#ffe14a22;outline:1px solid var(--gold)}
+.g{display:inline-block;font:800 9px Orbitron,sans-serif;padding:2px 5px;border-radius:5px;background:#000a;color:#fff}
+.g7{color:#8ad4ff}.g8{color:#ffb36a}.g9{color:#b9ff8a}
+.nm{font-weight:800}
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+.chip{font:700 10px Nunito,sans-serif;padding:1px 5px;border-radius:5px;background:#000a;color:#cfe0ff}
+.chip.i{color:var(--good)}.chip.s{color:#ffd98a}
+.btn{padding:5px 10px;border-radius:8px;border:2px solid var(--gold);background:#3a2a00;color:var(--gold);font:800 12px Nunito,sans-serif;cursor:pointer;white-space:nowrap}
+.btn.g2{border-color:#6fe8a8;background:#06361e;color:#8dffc4}
+.btn.r{border-color:#ff7a7a;background:#3a0a0a;color:#ffaaaa}
+.btn:disabled{opacity:.4;cursor:default}
+.lv{font:800 10px Orbitron,sans-serif;color:var(--gold)}
+.bar{height:5px;background:#000a;border-radius:3px;overflow:hidden;margin-top:3px;width:90px}
+.bar u{display:block;height:100%;background:linear-gradient(#ffe86a,#e0a21a)}
+h3{margin:0 0 4px;font:800 11px Orbitron,sans-serif;letter-spacing:.1em;color:#9fe8ff}
+.slot{display:grid;grid-template-columns:62px 1fr auto;gap:6px;align-items:center;padding:4px 4px;border-bottom:1px solid #ffffff14}
+.slot small{color:var(--dim)}
+.tot{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px}
+.tot .chip{font-size:11px;padding:2px 7px}
+.note{color:var(--dim);font-size:11px;margin-top:6px}
+#toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:#0b1257;border:2px solid var(--gold);color:#fff;padding:7px 14px;border-radius:10px;font-weight:800;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+#toast.on{opacity:1}
+@media(max-width:760px){.main{grid-template-columns:1fr}.box.me{display:none}.me-on .box.me{display:block}.me-on .box.list{display:none}}
+</style></head><body>
+<div id="app">
+ <div class="top"><h1>EQUIPMENT SHOP</h1><button class="tab" id="meBtn" style="display:none">Your gear</button><div class="gil" id="gil">0 Gil</div></div>
+ <div class="tabs" id="tabs"></div>
+ <div class="main" id="main"><div class="box list" id="list"></div><div class="box me" id="me"></div></div>
+</div>
+<div id="toast"></div>
+<script>
+/* Equipment lists from the official Final Fantasy VII / VIII / IX games (names + relative strength). */
+const RAW = {
+w7: `Cloud|Buster Sword|18|0
+Cloud|Mythril Saber|23|1000
+Cloud|Hardedge|32|1500
+Cloud|Force Stealer|36|2200
+Cloud|Butterfly Edge|39|2800
+Cloud|Rune Blade|40|3800
+Cloud|Yoshiyuki|56|4200
+Cloud|Nail Bat|70|2800
+Cloud|Murasame|51|6500
+Cloud|Enhance Sword|43|12000
+Cloud|Organics|62|12000
+Cloud|Crystal Sword|76|18000
+Cloud|Apocalypse|88|0
+Cloud|Heaven's Cloud|93|0
+Cloud|Ragnarok|97|0
+Cloud|Ultima Weapon|100|0
+Barret|Gatling Gun|14|0
+Barret|Assault Gun|17|350
+Barret|Cannon Ball|23|950
+Barret|Atomic Scissors|32|1400
+Barret|Heavy Vulcan|39|2700
+Barret|Chainsaw|52|6300
+Barret|Microlaser|63|12000
+Barret|AM Cannon|77|18000
+Barret|W Machine Gun|30|2000
+Barret|Drill Arm|37|3300
+Barret|Solid Bazooka|61|16000
+Barret|Rocket Punch|62|3200
+Barret|Enemy Launcher|35|3300
+Barret|Pile Banger|90|0
+Barret|Max Ray|97|0
+Barret|Missing Score|98|0
+Tifa|Leather Glove|13|120
+Tifa|Metal Knuckle|18|320
+Tifa|Mythril Claw|24|750
+Tifa|Grand Glove|31|1200
+Tifa|Tiger Fang|38|2500
+Tifa|Diamond Knuckle|51|5800
+Tifa|Dragon Claw|62|10000
+Tifa|Crystal Glove|75|16000
+Tifa|Motor Drive|27|1800
+Tifa|Platinum Fist|30|2700
+Tifa|Kaiser Knuckle|44|15000
+Tifa|Work Glove|68|2200
+Tifa|Powersoul|28|4200
+Tifa|Master Fist|38|0
+Tifa|God's Hand|86|0
+Tifa|Premium Heart|99|0
+Aeris|Guard Stick|12|140
+Aeris|Mythril Rod|16|370
+Aeris|Full Metal Staff|22|800
+Aeris|Striking Staff|32|1300
+Aeris|Prism Staff|40|2600
+Aeris|Aurora Rod|51|5800
+Aeris|Wizard Staff|28|1800
+Aeris|Wizer Staff|33|3200
+Aeris|Fairy Tale|37|2500
+Aeris|Umbrella|58|3800
+Aeris|Princess Guard|52|7500
+Red XIII|Mythril Clip|24|800
+Red XIII|Diamond Pin|33|1300
+Red XIII|Silver Barrette|40|2500
+Red XIII|Gold Barrette|50|6000
+Red XIII|Adaman Clip|60|11000
+Red XIII|Crystal Comb|76|17000
+Red XIII|Magic Comb|37|2000
+Red XIII|Plus Barrette|39|3500
+Red XIII|Centclip|58|14000
+Red XIII|Hairpin|57|3500
+Red XIII|Seraph Comb|68|8000
+Red XIII|Behemoth Horn|91|0
+Red XIII|Spring Gun Clip|87|0
+Red XIII|Limited Moon|93|0
+Yuffie|4-point Shuriken|23|600
+Yuffie|Boomerang|30|1400
+Yuffie|Pinwheel|37|2600
+Yuffie|Razor Ring|49|6000
+Yuffie|Hawkeye|61|12000
+Yuffie|Crystal Cross|74|18000
+Yuffie|Wind Slash|30|2000
+Yuffie|Twin Viper|36|3200
+Yuffie|Spiral Shuriken|68|14000
+Yuffie|Superball|68|3000
+Yuffie|Magic Shuriken|64|6000
+Yuffie|Rising Sun|68|0
+Yuffie|Oritsuru|90|0
+Yuffie|Conformer|96|0
+Cait Sith|Yellow M-phone|36|500
+Cait Sith|Green M-phone|41|2400
+Cait Sith|Blue M-phone|48|5500
+Cait Sith|Red M-phone|60|11000
+Cait Sith|Crystal M-phone|74|18000
+Cait Sith|White M-phone|35|2200
+Cait Sith|Black M-phone|31|2800
+Cait Sith|Silver M-phone|28|3300
+Cait Sith|Trumpet Shell|68|3000
+Cait Sith|Gold M-phone|58|15000
+Cait Sith|Battle Trumpet|95|0
+Cait Sith|Starlight Phone|88|0
+Cait Sith|HP Shout|95|3300
+Vincent|Quicksilver|36|1000
+Vincent|Shotgun|48|3100
+Vincent|Shortbarrel|51|6400
+Vincent|Lariat|64|12000
+Vincent|Winchester|73|18000
+Vincent|Peacemaker|38|3300
+Vincent|Buntline|48|6800
+Vincent|Long Barrel R|66|13000
+Vincent|Silver Rifle|62|3000
+Vincent|Sniper CR|42|3300
+Vincent|Supershot ST|97|0
+Vincent|Outsider|80|0
+Vincent|Death Penalty|99|0
+Cid|Spear|44|1200
+Cid|Slash Lance|56|6500
+Cid|Trident|60|7500
+Cid|Mast Ax|64|13000
+Cid|Partisan|78|19000
+Cid|Viper Halberd|58|7000
+Cid|Javelin|62|7500
+Cid|Grow Lance|78|16000
+Cid|Mop|68|3200
+Cid|Dragoon Lance|66|6200
+Cid|Scimitar|86|0
+Cid|Flayer|100|15000
+Cid|Spirit Lance|92|0
+Cid|Venus Gospel|97|0
+Sephiroth|Masamune|99|0`,
+a7: `Bronze Bangle|8
+Iron Bangle|10
+Titan Bangle|14
+Mythril Armlet|18
+Carbon Bangle|27
+Silver Armlet|34
+Gold Armlet|46
+Diamond Bangle|57
+Crystal Bangle|70
+Platinum Bangle|20
+Rune Armlet|43
+Edincoat|50
+Wizard Bracelet|6
+Adaman Bangle|93
+Gigas Armlet|59
+Imperial Guard|82
+Aegis Armlet|55
+Fourth Brace|74
+Warrior Bangle|96
+Shinra Beta|30
+Shinra Alpha|77
+Four Slot|12
+Fire Armlet|72
+Aurora Armlet|76
+Bolt Armlet|74
+Dragon Armlet|58
+Minerva Band|60
+Escort Guard|62
+Mystile|65
+Ziedrich|100
+Precious Watch|1
+Chocobobracelet|35`,
+w8: `Squall|Revolver|11
+Squall|Shear Trigger|14
+Squall|Cutting Trigger|18
+Squall|Flame Saber|20
+Squall|Twin Lance|22
+Squall|Punishment|24
+Squall|Lion Heart|30
+Seifer|Hyperion|12
+Rinoa|Pinwheel|11
+Rinoa|Valkyrie|14
+Rinoa|Rising Sun|18
+Rinoa|Cardinal|24
+Rinoa|Shooting Star|28
+Zell|Metal Knuckle|12
+Zell|Maverick|15
+Zell|Gauntlet|20
+Zell|Ehrgeiz|25
+Quistis|Chain Whip|12
+Quistis|Slaying Tail|15
+Quistis|Red Scorpion|20
+Quistis|Save the Queen|25
+Selphie|Flail|12
+Selphie|Morning Star|15
+Selphie|Crescent Wish|20
+Selphie|Strange Vision|25
+Irvine|Valiant|12
+Irvine|Ulysses|15
+Irvine|Bismarck|20
+Irvine|Exeter|25
+Laguna|Machine Gun|14
+Kiros|Katal|13
+Ward|Harpoon|16`,
+w9: `hero|Dagger|12
+hero|Mage Masher|14
+hero|Mythril Dagger|18
+hero|Gladius|30
+hero|Zorlin Shape|42
+hero|Orichalcon|71
+hero|Broadsword|12
+hero|Iron Sword|16
+hero|Mythril Sword|20
+hero|Blood Sword|24
+hero|Ice Brand|35
+hero|Coral Sword|38
+hero|Diamond Sword|42
+hero|Flame Saber|46
+hero|Rune Blade|57
+hero|Defender|65
+hero|Save the Queen|23
+hero|Ultima Sword|74
+hero|Excalibur|77
+hero|Ragnarok|87
+hero|Excalibur II|108
+hero|Butterfly Sword|21
+hero|The Ogre|24
+hero|Exploda|31
+hero|Rune Tooth|37
+hero|Angel Bless|44
+hero|Sargatanas|53
+hero|Masamune|62
+hero|The Tower|86
+hero|Ultima Weapon|100
+hero|Javelin|18
+hero|Mythril Spear|20
+hero|Partisan|25
+hero|Ice Lance|32
+hero|Trident|37
+hero|Heavy Lance|42
+hero|Obelisk|52
+hero|Holy Lance|62
+hero|Kain's Lance|71
+hero|Dragon's Hair|77
+fighter|Cat's Claws|23
+fighter|Poison Knuckles|33
+fighter|Mythril Claws|39
+fighter|Scissor Fangs|45
+fighter|Dragon's Claws|53
+fighter|Tiger Fangs|62
+fighter|Avenger|70
+fighter|Kaiser Knuckles|75
+fighter|Duel Claws|79
+fighter|Rune Claws|83
+gunner|Pinwheel|25
+gunner|Rising Sun|36
+gunner|Wing Edge|64
+mage|Mage Staff|12
+mage|Flame Staff|16
+mage|Ice Staff|16
+mage|Lightning Staff|16
+mage|Oak Staff|23
+mage|Cypress Pile|27
+mage|Octagon Rod|29
+mage|High Mage Staff|32
+mage|Mace of Zeus|35
+mage|Rod|11
+mage|Mythril Rod|14
+mage|Stardust Rod|14
+mage|Healing Rod|23
+mage|Asura's Rod|27
+mage|Wizard Rod|31
+mage|Whale Whisker|36
+mage|Air Racket|13
+mage|Multina Racket|17
+mage|Magic Racket|23
+mage|Mythril Racket|27
+mage|Priest's Racket|35
+mage|Tiger Racket|45`,
+body9: `Aloha T-Shirt|0
+Leather Shirt|6
+Silk Shirt|7
+Leather Plate|8
+Bronze Vest|10
+Chain Plate|10
+Cotton Robe|12
+Mythril Vest|13
+Adaman Vest|15
+Magician Cloak|17
+Silk Robe|18
+Survival Vest|17
+Brigandine|20
+Magician Robe|24
+Judo Uniform|23
+Gaia Gear|27
+Power Vest|27
+Demons Vest|31
+Ninja Gear|34
+Dark Gear|37
+Rubber Suit|42
+Light-Robe|47
+Gluttons Robe|45
+White-Robe|46
+Black Robe|47
+Robe of Lords|51
+Brave Suit|42
+Bronze Armor|9
+Linen Cuirass|10
+Chain Mail|12
+Mythril Armor|15
+Plate Mail|18
+Gold Armor|19
+Shield Armor|28
+Demon's Mail|27
+Diamond Armor|35
+Minerva's Plate|35
+Platina Armor|36
+Carabini Mail|40
+Dragon Mail|42
+Genji Armor|46
+Maximillian|54
+Grand Armor|59`,
+head9: `Straw Hat|1
+Leather Hat|6
+Feather Hat|7
+Steepled Hat|9
+Magus Hat|10
+Bandana|14
+Mage's Hat|14
+Ritual Hat|17
+Lamia's Tiara|17
+Twist-Headband|17
+Mantra Band|20
+Dark Hat|21
+Green Beret|23
+Red Hat|27
+Black Hood|27
+Adaman Hat|36
+Coronet|36
+Flash Hat|39
+Holy Miter|39
+Golden Skullcap|49
+Circlet|51
+Rubber Helm|5
+Bronze Helm|6
+Iron Helm|7
+Barbut|9
+Mythril Helm|11
+Gold-Helm|13
+Cross Helm|16
+Diamond Helm|20
+Platinum Helm|23
+Kaiser Helm|26
+Genji Helmet|31
+Grand Helm|33
+Headgear|8
+Golden Hairpin|34
+Thief Hat|41`,
+wrist9: `Pearl Armlet|1
+Wrist|8
+Leather Wrist|12
+Glass Armlet|17
+Bone Wrist|22
+Mythril Armlet|28
+Magic Armlet|34
+Chimera Armlet|36
+Egoists Armlet|40
+Jade Armlet|29
+N-Kai Armlet|29
+Dragon Wrist|41
+Thief Gloves|52
+Power Wrist|40
+Bracer|53
+Bronze Gloves|10
+Silver Gloves|15
+Mythril Gloves|20
+Thunder Gloves|26
+Diamond Gloves|32
+Defense Gloves|46
+Genji Gloves|44
+Aegis Gloves|40
+Gauntlets|43`,
+acc7: `Power Wrist|atk:10
+Protect Vest|def:10
+Earrings|mag:10
+Talisman|mag:6,mp:30
+Chocofeather|spd:10
+Amulet|crit:6
+Champion Belt|atk:16,def:16
+Poison Ring|imm:poison+venom
+Tough Ring|def:24,mp:40
+Circlet|mag:18,mp:40
+Star Pendant|imm:poison+venom
+Silver Glasses|imm:dark
+Headband|imm:sleep
+Fairy Ring|imm:poison+venom+dark
+Jem Ring|imm:stone+stop
+White Cape|imm:mini
+Sprint Shoes|start:haste
+Peace Ring|imm:confuse+berserk
+Ribbon|imm:ALL
+Fire Ring|def:8
+Ice Ring|def:8
+Bolt Ring|def:8
+Water Ring|def:8
+Tetra Elemental|def:18
+Safety Bit|imm:stone,start:autolife
+Fury Ring|atk:26,start:berserk
+Curse Ring|atk:40,mag:40,spd:15,def:20,hp:120,start:venom
+Protect Ring|start:protect+shell
+Cat's Bell|start:regen
+Reflect Ring|mag:12
+Sneak Glove|crit:5
+Hypnocrown|mag:10`,
+acc9: `Ancient Aroma|Strength +2, Evasion +2
+Angel Earrings|Strength +2, Defense +2
+Anklet|Magic +3, Spirit +1, Evasion +5
+Barette|Strength +3, Magic +1, Spirit +1, Magic Defense +1
+Battle Boots|Strength +2, Defense +2, Magic Defense +1
+Black Belt|Strength +2, Spirit +2, Defense +1
+Cachusha|Speed +1, Magic +2, Spirit +1, Magic Defense +1
+Coral Ring|Spirit +2, Magic Evasion +3
+Dark Matter|Strength +3, Magic +2
+Desert Boots|Magic +1, Spirit +1, Evasion +2
+Extension|Strength +1, Magic +2, Spirit +1, Defense +1, Magic Defense +1
+Fairy Earrings|Spirit +2, Evasion +4, Magic Evasion +2
+Feather Boots|Evasion +3
+Germinas Boots|Strength +1, Evasion +2
+Glass Buckle|Strength +1, Magic +1, Spirit +2, Magic Evasion +5
+Gold Choker|Magic +2, Evasion +2, Magic Defense +1
+Madain's Ring|Spirit +2, Magic Defense +2
+Magician Shoes|Magic +2, Magic Evasion +6
+Maiden Prayer|Magic +1, Magic Defense +1, Magic Evasion +3
+Pearl Rouge|Magic +2, Spirit +4, Magic Evasion +4
+Power Belt|Strength +3, Defense +2
+Promist Ring|Strength +2, Evasion +3
+Protect Ring|Spirit +1, Defense +2, Evasion +4, Magic Defense +3, Magic Evasion +6
+Pumice|Defense +1, Magic Defense +2, Speed +2, Magic +1
+Pumice Piece|Defense +5, Magic Defense +1, Strength +2, Magic +2
+Rebirth Ring|Spirit +4, Magic Defense +2
+Reflect Ring|Strength +1, Magic +1, Magic Defense +1
+Ribbon|Strength +1, Magic +3, Spirit +1, Defense +1, Evasion +5, Magic Defense +1, Magic Evasion +4
+Rosetta Ring|Magic +1, Defense +1, Evasion +2, Magic Defense +3, Magic Evasion +2
+Running Shoes|Speed +2, Evasion +4, Magic Evasion +4
+Sandals|
+Yellow Scarf|Strength +2, Magic Defense +1`
+};
+/* ---------- build the catalogue ---------- */
+const SLOTS = [['weapon', 'Weapon'], ['head', 'Head'], ['body', 'Body'], ['wrist', 'Wrist'], ['acc', 'Accessory']];
+const CLASSES = [['hero', 'Hero', '⚔️'], ['gunner', 'Gunner', '🔫'], ['fighter', 'Fighter', '🥋']];
+const BAD = ['poison', 'venom', 'dark', 'silence', 'sleep', 'slow', 'stop', 'confuse', 'berserk', 'mini', 'stone'];
+const CHAR_CLS = { Cloud: 'hero', Cid: 'hero', Sephiroth: 'hero', Squall: 'hero', Seifer: 'hero', Kiros: 'hero', Ward: 'hero', Barret: 'gunner', Vincent: 'gunner', Yuffie: 'gunner', Rinoa: 'gunner', Irvine: 'gunner', Laguna: 'gunner', Tifa: 'fighter', Zell: 'fighter', Quistis: 'fighter', Aeris: 'mage', 'Red XIII': 'mage', 'Cait Sith': 'mage', Selphie: 'mage' };
+const MAXW = { 7: 100, 8: 30, 9: 108 };
+const rows = (t) => t.split('\n').map((l) => l.split('|'));
+const r10 = (n) => Math.max(10, Math.round(n / 10) * 10);
+const ITEMS = [];
+function wpn(g, who, name, raw) {
+  const cls = CHAR_CLS[who] || who, p = Math.min(1, raw / MAXW[g]), a = Math.round(4 + 150 * Math.pow(p, 1.2)), P = p * 100, b = {};
+  if (cls === 'mage') { b.atk = Math.round(a * 0.5); b.mag = Math.round(a * 0.75); b.mp = Math.round(a * 0.4); }
+  else if (cls === 'gunner') { b.atk = Math.round(a * 0.95); b.eva = Math.round(P * 0.06); b.crit = Math.round(P * 0.05); }
+  else if (cls === 'fighter') { b.atk = Math.round(a * 0.95); b.spd = Math.round(P * 0.12); }
+  else { b.atk = a; b.def = Math.round(P * 0.12); }
+  ITEMS.push({ id: g + '-w-' + slug(name) + (cls === 'mage' ? '-m' : ''), g, slot: 'weapon', cls: cls === 'mage' ? 'any' : cls, name, b, price: r10(Math.max(50, 12 * Math.pow(P, 1.95))), note: CHAR_CLS[who] ? who : '' });
+}
+function arm(g, slot, name, raw, max, w, extra) {
+  const p = Math.min(1, raw / max), d = Math.round((2 + 55 * Math.pow(p, 1.1)) * w), P = p * 100, b = { def: d, hp: Math.round(d * (slot === 'body' ? 4 : 2.2)) };
+  if (extra) Object.assign(b, extra);
+  ITEMS.push({ id: g + '-' + slot[0] + '-' + slug(name), g, slot, cls: 'any', name, b, price: r10(Math.max(40, 9 * Math.pow(P, 1.9) * (w + 0.25))) });
+}
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+for (const [who, name, raw] of rows(RAW.w7)) wpn(7, who, name, +raw);
+for (const [who, name, raw] of rows(RAW.w8)) wpn(8, who, name, +raw);
+for (const [who, name, raw] of rows(RAW.w9)) wpn(9, who, name, +raw);
+const X7 = { Edincoat: { mag: 12 }, 'Wizard Bracelet': { mag: 20, mp: 40 }, 'Gigas Armlet': { atk: 14 }, 'Aegis Armlet': { eva: 8 }, 'Fourth Brace': { mag: 16 }, Ziedrich: { atk: 20, mag: 20, eva: 8 }, Mystile: { eva: 10 }, Chocobobracelet: { spd: 12, crit: 3 }, 'Platinum Bangle': { mp: 20 }, 'Rune Armlet': { mp: 25 } };
+for (const [name, raw] of rows(RAW.a7)) arm(7, 'wrist', name, +raw, 100, 0.55, X7[name]);
+for (const [name, raw] of rows(RAW.body9)) arm(9, 'body', name, +raw, 59, 1);
+for (const [name, raw] of rows(RAW.head9)) arm(9, 'head', name, +raw, 51, 0.5);
+for (const [name, raw] of rows(RAW.wrist9)) arm(9, 'wrist', name, +raw, 53, 0.5);
+for (const [name, eff] of rows(RAW.acc7)) {
+  const b = {}, o = {}; eff.split(',').forEach((kv) => { const [k, v] = kv.split(':'); o[k] = v; });
+  for (const k of ['atk', 'def', 'mag', 'hp', 'mp', 'spd', 'eva', 'crit']) if (o[k]) b[k] = +o[k];
+  if (o.imm) b.imm = o.imm === 'ALL' ? BAD.slice() : o.imm.split('+'); if (o.start) b.start = o.start.split('+');
+  const power = (b.atk || 0) * 2 + (b.def || 0) * 2 + (b.mag || 0) * 2 + (b.mp || 0) * 0.3 + (b.hp || 0) * 0.3 + (b.spd || 0) * 3 + (b.imm ? b.imm.length * 30 : 0) + (b.start ? 40 : 0) + (b.crit || 0) * 6 + 10;
+  ITEMS.push({ id: '7-a-' + slug(name), g: 7, slot: 'acc', cls: 'any', name, b, price: r10(power * power * 0.35) });
+}
+for (const [name, eff] of rows(RAW.acc9)) {
+  const s = {}; String(eff || '').split(',').forEach((t) => { const m = t.trim().match(/^(.*?) \+(\d+)$/); if (m) s[m[1]] = +m[2]; });
+  const b = {}; const add = (k, v) => { if (v) b[k] = Math.round(((b[k] || 0) + v) * 10) / 10; };
+  add('atk', (s['Strength'] || 0) * 2.5); add('mag', (s['Magic'] || 0) * 3 + (s['Spirit'] || 0) * 1.5); add('mp', (s['Spirit'] || 0) * 5); add('def', (s['Defense'] || 0) * 2.5 + (s['Magic Defense'] || 0) * 1.2);
+  add('spd', (s['Speed'] || 0) * 3); add('eva', (s['Evasion'] || 0) * 1 + (s['Magic Evasion'] || 0) * 0.5);
+  for (const k in b) b[k] = Math.round(b[k]);
+  if (!Object.keys(b).length) b.def = 1;
+  const power = (b.atk || 0) * 2 + (b.def || 0) * 2 + (b.mag || 0) * 2 + (b.mp || 0) * 0.3 + (b.spd || 0) * 3 + (b.eva || 0) * 2 + 10;
+  ITEMS.push({ id: '9-a-' + slug(name), g: 9, slot: 'acc', cls: 'any', name, b, price: r10(power * power * 0.35) });
+}
+/* ---------- save data (shared with the game: same browser storage) ---------- */
+const KEY = 'oasis.gear';
+const P = (() => { try { return window.parent && window.parent !== window && window.parent.oasisGear ? window.parent : null; } catch (e) { return null; } })();
+let SAVE; function load() { try { SAVE = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { SAVE = {}; } SAVE.own = SAVE.own || {}; SAVE.worn = SAVE.worn || {}; for (const c of CLASSES) SAVE.worn[c[0]] = SAVE.worn[c[0]] || {}; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch (e) { toast('Could not save (storage is blocked).'); } if (P) try { P.oasisGear.changed(); } catch (e) { /* game not listening */ } }
+const gilGet = () => { try { if (window.parent && window.parent.oasisGil) return window.parent.oasisGil.get(); } catch (e) { /* standalone */ } return +localStorage.getItem('oasis.gil.demo') || 100000; };
+const gilAdd = (n) => { try { if (window.parent && window.parent.oasisGil) return window.parent.oasisGil.add(n, false); } catch (e) { /* standalone */ } localStorage.setItem('oasis.gil.demo', String(Math.max(0, gilGet() + n))); };
+const prog = (xp) => { try { if (P) return P.oasisGear.prog(xp); } catch (e) { /* fallback */ } const lv = Math.min(99, 1 + Math.floor(Math.sqrt((xp || 0) / 60))); return { lv, pct: 0 }; };
+const mult = (lv) => 1 + 0.02 * (lv - 1);
+/* ---------- state ---------- */
+let cls = 'hero', slot = 'weapon', game = 0, q = '';
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const NAMES = { atk: 'ATK', def: 'DEF', mag: 'MAG', hp: 'HP', mp: 'MP', spd: 'SPD', eva: 'EVA', crit: 'CRIT' };
+function chips(b, m) { let h = ''; for (const k of Object.keys(NAMES)) if (b[k]) h += `<span class="chip">${NAMES[k]} +${Math.round(b[k] * (m || 1))}${k === 'spd' || k === 'eva' || k === 'crit' ? '%' : ''}</span>`; if (b.imm && b.imm.length) h += `<span class="chip i">Immune: ${b.imm.length >= BAD.length ? 'all bad status' : b.imm.join(', ')}</span>`; if (b.start && b.start.length) h += `<span class="chip s">Starts: ${b.start.join(', ')}</span>`; return h; }
+function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 1800); }
+const fits = (it) => it.slot !== 'weapon' || it.cls === 'any' || it.cls === cls;
+function tabs() {
+  const t = $('tabs'); t.innerHTML = '';
+  const add = (label, on, fn, cl) => { const b = document.createElement('button'); b.className = 'tab' + (on ? ' on' : ''); b.textContent = label; b.onclick = fn; t.appendChild(b); };
+  CLASSES.forEach(([k, n, i]) => add(i + ' ' + n, cls === k, () => { cls = k; render(); }));
+  const s = document.createElement('span'); s.className = 'sep'; t.appendChild(s);
+  SLOTS.forEach(([k, n]) => add(n, slot === k, () => { slot = k; render(); }));
+  const s2 = document.createElement('span'); s2.className = 'sep'; t.appendChild(s2);
+  [[0, 'All games'], [7, 'FF VII'], [8, 'FF VIII'], [9, 'FF IX']].forEach(([k, n]) => add(n, game === k, () => { game = k; render(); }));
+  const i = document.createElement('input'); i.className = 'q'; i.placeholder = 'Search…'; i.value = q; i.oninput = () => { q = i.value.toLowerCase(); list(); }; t.appendChild(i);
+}
+function own(it) { return SAVE.own[it.id]; }
+function worn(it) { return SAVE.worn[cls][it.slot] === it.id; }
+function buy(it) { if (own(it)) return; if (gilGet() < it.price) { toast('Not enough Gil.'); return; } gilAdd(-it.price); SAVE.own[it.id] = { xp: 0, n: it.name, s: it.slot, g: it.g, b: it.b }; save(); toast('Bought ' + it.name); render(); }
+function sell(it) { const o = own(it); if (!o) return; for (const c of CLASSES) if (SAVE.worn[c[0]][it.slot] === it.id) delete SAVE.worn[c[0]][it.slot]; delete SAVE.own[it.id]; gilAdd(Math.round(it.price * 0.4)); save(); toast('Sold for ' + fmt(it.price * 0.4) + ' Gil'); render(); }
+function equip(it) { SAVE.worn[cls][it.slot] = it.id; save(); toast(it.name + ' equipped'); render(); }
+function unequip(it) { delete SAVE.worn[cls][it.slot]; save(); render(); }
+function list() {
+  const L = $('list'); L.innerHTML = '';
+  const items = ITEMS.filter((it) => it.slot === slot && (!game || it.g === game) && fits(it) && (!q || it.name.toLowerCase().includes(q))).sort((a, b) => a.price - b.price);
+  if (!items.length) L.innerHTML = '<div class="note">Nothing here for this class, slot and game.</div>';
+  for (const it of items) {
+    const o = own(it), w = o && worn(it), pr = o ? prog(o.xp) : null, d = document.createElement('div'); d.className = 'row' + (w ? ' worn' : '');
+    d.innerHTML = `<span class="g g${it.g}">${it.g === 7 ? 'VII' : it.g === 8 ? 'VIII' : 'IX'}</span><div><span class="nm">${it.name}</span> ${o ? `<span class="lv">Lv ${pr.lv}</span>` : ''}${it.note ? ` <small style="color:var(--dim)">${it.note}</small>` : ''}<div class="chips">${chips(it.b, o ? mult(pr.lv) : 1)}</div>${o ? `<div class="bar"><u style="width:${pr.pct}%"></u></div>` : ''}</div><div class="act"></div>`;
+    const a = d.querySelector('.act');
+    const mk = (t, c, fn, dis) => { const b = document.createElement('button'); b.className = 'btn ' + (c || ''); b.textContent = t; b.disabled = !!dis; b.onclick = fn; a.appendChild(b); a.appendChild(document.createTextNode(' ')); };
+    if (!o) mk('Buy ' + fmt(it.price), '', () => buy(it), gilGet() < it.price);
+    else { if (w) mk('Unequip', 'r', () => unequip(it)); else mk('Equip', 'g2', () => equip(it)); if (!w) mk('Sell', 'r', () => sell(it)); }
+    L.appendChild(d);
+  }
+}
+function totals(c) {
+  const t = { atk: 0, def: 0, mag: 0, hp: 0, mp: 0, spd: 0, eva: 0, crit: 0, imm: [], start: [] };
+  for (const s of SLOTS) { const id = SAVE.worn[c][s[0]], o = id && SAVE.own[id]; if (!o) continue; const m = mult(prog(o.xp).lv); for (const k of Object.keys(NAMES)) t[k] += (o.b[k] || 0) * m; (o.b.imm || []).forEach((x) => { if (!t.imm.includes(x)) t.imm.push(x); }); (o.b.start || []).forEach((x) => { if (!t.start.includes(x)) t.start.push(x); }); }
+  return t;
+}
+function me() {
+  const M = $('me'), t = totals(cls); let h = `<h3>${CLASSES.find((c) => c[0] === cls)[1].toUpperCase()} LOADOUT</h3><div class="tot">${chips(t)}</div>`;
+  for (const [k, n] of SLOTS) {
+    const id = SAVE.worn[cls][k], o = id && SAVE.own[id], pr = o ? prog(o.xp) : null;
+    h += `<div class="slot"><small>${n}</small><div>${o ? `<span class="nm">${o.n}</span> <span class="lv">Lv ${pr.lv}</span><div class="chips">${chips(o.b, mult(pr.lv))}</div><div class="bar"><u style="width:${pr.pct}%"></u></div>` : '<small>— empty —</small>'}</div>${o ? `<button class="btn r" data-u="${k}">✕</button>` : ''}</div>`;
+  }
+  h += '<div class="note">Gear levels up with your class XP (1 to 99): worn pieces gain the XP you earn, so the same item you have used longer is stronger. Stats apply in Warriors of Light fights. Weapons marked for one class only fit that class.</div>';
+  M.innerHTML = h; M.querySelectorAll('[data-u]').forEach((b) => { b.onclick = () => { delete SAVE.worn[cls][b.dataset.u]; save(); render(); }; });
+}
+function render() { load(); $('gil').textContent = fmt(gilGet()) + ' Gil'; tabs(); list(); me(); }
+$('meBtn').style.display = 'none'; if (matchMedia('(max-width:760px)').matches) { $('meBtn').style.display = ''; $('meBtn').onclick = () => document.body.classList.toggle('me-on'); }
+render();
+window.addEventListener('focus', render);
+setInterval(() => { $('gil').textContent = fmt(gilGet()) + ' Gil'; }, 1500);
+</script></body></html>
