@@ -183,12 +183,14 @@ A rush-hour shift game as a full-screen overlay: order tickets arrive with a pat
 ### Kitchen Clash (3D, multiplayer)
 The map is now compact (each kitchen is 12 m wide instead of 20): plates, soda, shake, fryer and grill sit in one row, the six toppings run down the outer wall, and the serving window and bin are a few steps away, so the whole map fits on screen in the top-down view. The big floating scoreboard is gone (the top bar shows the score).
 On the Key's Diner title screen press **Kitchen Clash**, or pick **Key's Kitchen Clash** in the lobby (public channel) or **Kitchen Clash** under private rooms (code starts with **K**, so friends can join the same match). It is a real 3D room with your own character: a **Red** kitchen on the left, a **Blue** kitchen on the right and a dining floor with a **START** console.
-- Walk into a kitchen with your friends and press START (button, console, or `F` at the console). Both teams cook the **same orders** for **2:30**, and everyone on a team shares the same grill and fryer. Alone, or with nobody on the other side, you cook against **Chef Key's crew**.
-- Per dish: grab a **plate**, put a **patty** on the grill (raw, medium, well, burnt: watch the bar above it), take it when it is done, add **toppings** from the bins, take **fries** from the fryer, pour a **soda** or **shake**, then **serve** it at the pass. Burnt food has to be scraped off. You carry one plate at a time and other players see it.
-- **Scoring is done by the game, 0 to 100 per dish:** patty doneness (30), toppings (15, extras cost points), fries ready (25), drink (15), and a speed bonus (up to 12) for serving before the ticket's patience runs out; ranks D, C, B, A and S. A plate is judged against the order it fits best. The team with the higher total wins; the results show each chef's points, dishes and best rank.
-- **View:** the kitchens are played from above, like an arcade cooking game: the camera looks almost straight down with north at the top, glides after your character, and the mouse wheel / pinch zooms (the camera cannot be turned in here). Movement keys move you across the screen.
-- Controls: `F` use / grab, `K` drop plate, big on-screen **USE** button on touch, controller A to use / grab and B to drop.
+- **Two modes (Overcooked-style):** **Versus** (Red vs Blue cook the same orders for 2:30, better dishes win; alone you cook against Chef Key's crew) and **Co-op Shift** (everyone works together toward 1 to 3 stars). Walk into a kitchen and press START (button, console, or `F` at the console).
+- **You carry ONE thing at a time** (a plate, one ingredient, or the extinguisher) and everyone sees it. Stations: **plate rack**, **meat crate -> grill**, **potato crate -> fryer**, **lettuce / tomato / onion / pickle -> chopping board (tap `F` to chop)**, cheese and bacon go straight on the plate, **drinks** pour onto your plate, **counters** hold anything you set down (build plates on a counter, then hand one over), and the **pass** (bell) serves it.
+- **Dishes come back dirty:** a served plate returns dirty after a short delay; wash it at the **sink** (tap `F`) or your team runs out of clean plates. The rack count and dirty pile are shared with your team.
+- **Fire:** leave a patty or fries too long and it burns, then the station **catches fire**. Set down what you hold, take the **extinguisher** from the wall, and put it out; hang it back afterwards.
+- **Scoring:** the game scores each dish 0 to 100 (doneness, toppings, fries, drink, speed bonus; ranks D to S); tickets show patience bars. Versus: higher total wins. Co-op: team points set the stars.
+- **View:** top-down arcade camera that follows you; wheel / pinch zooms. Controls: `F` use / grab / tap, `K` drop (bins it), on-screen **USE** button on touch, controller A to use and B to drop.
 - Opening the title screen still gives you the original solo shift game.
+- **Testing note:** I played one full dish cycle in an emulated browser (carry, chop, grill, fries, plate, serve and score, dirty plate, wash, fire starting). Extinguishing, Co-op stars, bot rivals and real two-player sync were not played through.
 
 Open the solo game from the Galleria doorway, Home > Key's Diner, or `/diner`. `Esc` pauses. This is my own take on a "cooking rush" game (I did not have the Discord game to copy), so tell me which rules to change.
 
@@ -458,6 +460,12 @@ An original bowling alley, built from scratch in the spirit of the free gecko-th
 
 ### Warriors of Light (new map, co-op turn-based fights)
 - **How it works:** open Games → Warriors of Light (or `/battle`). Walk to the console and press **F**, or use the buttons: Join the party, + CPU ally (up to 4 in the party), Start battle. Each fighter has a gauge that fills; when yours is full the battle pauses for you and a menu opens: **Attack, Magic** (Fire, Blizzard, Thunder on all enemies, Cure, Life), **Item** (Potion, Ether, Phoenix Down, shared stock), **Defend**, and **Limit** (Radiant Cross, when the orange gauge is full; it fills as you take hits). Keys: arrows or W/A/S/D to move, Enter / Space / F to choose, Esc / X to go back. Controller: d-pad, A, B. Touch: tap the rows. Enemies are weak to certain elements (shown as *Weak!*).
+
+**Limit breaks (the orange gauge, `Limit` row in the menu):** every class has its own.
+- **Sword Hero:** Radiant Cross (6 hits).
+- **Fighter:** pick the target, then type a **button combination** like a fighting game. `P` punch, `K` kick, `U D L R` directions (arrow keys, W/A/S/D, on-screen pad or controller). The prompt shows the moves, with a timer; running out cancels it without spending the gauge. Beat Rush `P P K` (3 hits), Somersault `D U K` (launcher), Dragon Fist `D R P` (rising, 4 hits), Meteodrive `L R P K` (slam), Final Heaven `D R D R U P K` (8 hits, biggest).
+- **Gunner, one signature per weapon:** pistol Dead Eye (6 shots), rifle Full Auto (16-round burst), shotgun Point Blank (3 blasts with splash), sniper Headhunter (one huge shot that cannot miss), rocket Rocket Barrage (hits every enemy), grenade Cluster Bomb (5 blasts with splash), knife Thousand Cuts.
+- Checked in an emulated browser: Radiant Cross, the Fighter combo prompt and animations, and each gun / knife limit played with damage numbers. Not checked: every Fighter combo individually, other players watching a limit over the network, or a real controller.
 - **Waves:** endless. Enemies get tougher every wave, every 5th wave is the Mako Golem boss. Between waves you get a little HP and sometimes items. Your best wave is saved in this browser.
 - **Battle camera:** a sweeping intro, a side-on view while choosing, a cut to the target for each hit, a wide shot for spells, an orbit during Limit, a pull-back on game over. The *Battle cam* button turns it off if you want to look around yourself.
 - **Attacks use your class animation** (the sword slashes, or the Fighter set's strikes for the Fighter class). Spells, items and guarding use simple arm poses.
@@ -702,3 +710,25 @@ Note: inside the studio the rain is deliberately hidden (shelter) until you walk
 
 ## Fix: battle YouTube music for other players
 The host's saved YouTube link (from a previous session, in the host's own settings) was only shared with the party when it was freshly pasted. Now it is shared with the party automatically when the music starts. Guests must not have "shared music" turned off. Not tested with two players.
+
+## Warriors of Light: boss numbers, balance (latest)
+- **Damage numbers over big bosses** are now kept on screen (they used to rise out of view when the camera was close on a tall boss).
+- **Monster balance**: a boss's "Frenzy" now only gives Haste (it used to also give Regen, which healed ~60% of its health per cast). Monster self-buffs last 12–16 s (bosses 12 s), a monster can use Fortify/Frenzy only every few turns, monster Regen is 1.5% (bosses 0.8%) per tick instead of 5%, and Drain heals the user 35% of the damage instead of 60%. Not tested over a full boss fight on a phone.
+
+## Hug emote (new)
+- Open Emotes > Basics > **Hug** (or type `/hug`) while standing within about 3 m of another player. They get an **Accept / No thanks** prompt. On accept you stand face to face and stay hugging until either of you walks away.
+- **Female characters put both arms around the neck, male characters around the waist** (uses the Male/Female setting in the character dialog). Two of the same gender both use their own pose; whoever asked stays still.
+- Verified: the pose in a render with the stock male and female avatars, and the whole request / accept / hold / let-go flow with a simulated second player. **Not verified**: two real players over the network (the sandbox could not connect two), and other VRoid characters (different arm lengths may leave the hands slightly off). No couple reference image came through, so the pose is built from the description and tuned by eye.
+
+## Warriors of Light backdrops: audit
+All 13 biomes (Mako Reactor, Glade, Frostwood, Plaza, Plains, Garden, Grand Hall, Jungle, Dunes, Crater, Shore, Cavern, Cliffs) were rendered again with this build: each shows its own floor, scenery and sky, with no script errors. I did not find a missing or broken one.
+
+## Harbor Inn: Survivor (new, `Survivor.html`)
+Original Resident Evil-style survival horror. Keep `Survivor.html` next to `Oasis.html`. Open it from the start menu (Harbor Inn: Survivor) or the Rooms list (Play button).
+- 10 rooms with fixed camera angles, PS1-style low-res picture, film grain, fog, tank controls (or camera-relative "modern" in Options).
+- Find the diary (locker code 417) → Brass Key → West Hall → Valve Handle + Library Fuse → boiler panel → beat the Stoker boss → Roof Key → lobby stairs → roof ending. Zombies, hounds, a boss, herbs (combine), ammo, Ink Ribbons.
+- Bag (8 slots) with Equip/Use/Examine/Combine/Discard, Files, item box (shared between boxes), typewriter saves (cost an Ink Ribbon), game over / continue.
+- Sound tab: per-slot music (title, explore, safe room, boss) from a pasted YouTube link, an uploaded audio file, or the Oasis battle library; interface sounds can be replaced by uploads. Built-in synthesized sounds otherwise.
+- Gear from the Equipment Shop boosts your weapon damage; finishing pays Gil when played inside the Oasis.
+- Keys: arrows/WASD, Z or Shift aim, Space/Enter/E action or fire, Q quick turn, R reload, Tab/I bag. Touch buttons on phones.
+- Verified (emulated desktop Chromium): all rooms render, no console errors, walking, aiming/shooting, bag menu, opening inside Oasis. NOT verified: phone touch layout/performance, YouTube/upload music, every puzzle end to end, boss fight balance, Gil payout, rooms-list button click. The layouts are original (I can't copy real RE maps); with RE2 screenshots I can match the camera angles more closely. Your VRoid avatar is not used yet (blocky placeholder player).
