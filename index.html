@@ -947,6 +947,7 @@
                 <div class="grid grid-cols-2 gap-2 mb-2">
                     <button id="wpn-fists" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">👊 Fists <span class="block text-[10px] font-normal text-gray-300">base animations</span></button>
                     <button id="wpn-sword" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">⚔ Sword <span class="block text-[10px] font-normal text-gray-300">Hero class</span></button>
+                    <button id="wpn-blitz" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🏐 Blitzball <span class="block text-[10px] font-normal text-gray-300">Wakka stance · ball emotes</span></button>
                     <button id="wpn-fighter" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🥋 Fighter <span class="block text-[10px] font-normal text-gray-300">Martial arts · bare hands</span></button>
                     <button id="wpn-pistol" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🔫 Gunner <span class="block text-[10px] font-normal text-gray-300">Military weapons below</span></button>
                     <div id="gw-grid" class="col-span-2 grid grid-cols-4 gap-1.5"></div>
@@ -1492,6 +1493,11 @@
         for (const [, list] of EMOTE_MENU.slice(1)) for (const [k, , , as] of list) EMOTES[k] = { dur: Infinity, hold: true, as };   // these play until you move, jump or use them again
         const VRMA_DUR = { show: 11.8, greet: 7.27, peace: 11.68, shoot: 9.6, spin: 9.32, modelpose: 7.52, squat: 11.52 };      // the VRoid Motion Pack clips (credit: pixiv Inc. VRoid Project) play once, then end
         for (const [k, d] of Object.entries(VRMA_DUR)) EMOTES[k] = { dur: d, as: null };
+        // Blitzball class (Wakka stance): hand-built poses plus a ball that follows the right hand. See blzPose / blzBall.
+        EMOTE_MENU.push(['Blitzball', [['wk_idle', '\uD83C\uDFD0', 'Wakka Stance', null], ['wk_point', '\u261D\uFE0F', 'Point', null], ['wk_toss', '\uD83C\uDFD0', 'Ball Toss', null], ['wk_spin', '\uD83C\uDF00', 'Ball Spin', null], ['wk_cheer', '\uD83D\uDE4C', 'Ya!', null]]]);
+        for (const [k, d] of [['wk_idle', Infinity], ['wk_point', 4.2], ['wk_toss', 5.2], ['wk_spin', 5], ['wk_cheer', 3.2]]) EMOTES[k] = { dur: d, hold: d === Infinity, as: null };
+        const BLZ = { on: false, pose: {} };
+        try { BLZ.on = localStorage.getItem('oasisBlitzCls') === '1'; } catch (e) { /* storage unavailable */ }
         // Emotes that play a baked clip (instead of the hand-built procedural poses). Gender-neutral: every VRM uses the same ones.
         const ANIM_EMOTES = { sit: JSON.parse(document.getElementById('anim-emote-sit').textContent) };
         // the dances and poses: one gzipped block of 16-bit quaternion tracks, unpacked at start-up into the same clip format
@@ -1874,6 +1880,7 @@
             { id: 'btl-01', name: 'Warriors of Light', tag: 'Channel 1', map: 'btl' },
             { id: 'blitz-01', name: 'Blitzball Arena', tag: 'Play now', map: 'blitz' },
             { id: 'surv-01', name: 'Harbor Inn: Survivor', tag: 'Survival horror', map: 'survivor' },
+            { id: 'rx-01', name: 'Ryder X', tag: 'Hoverboard racing', map: 'ryderx' },
             { id: 'diner-01', name: "Key's Kitchen Clash", tag: 'Channel 1', map: 'diner' },
             { id: 'tag-01', name: 'Laser Tag Arena', tag: 'Channel 1', map: 'tag' },
             { id: 'construct-01', name: 'The Construct (Hero class)', tag: 'Channel 1', map: 'construct' }
@@ -2824,6 +2831,7 @@
                 this.inAir = air;   // walking off a sofa or bed is not a jump: only a real jump (or a big drop) plays the air pose
                 fsTick(this, speed, air, dt);
 
+                if (this.kind === 'vrm') { try { blzIdle(this, speed, air); } catch (er) { /* blitz idle */ } }
                 // --- emote timeline ---
                 let e = 0, et = 0;
                 if (this.emote) {
@@ -2889,7 +2897,7 @@
                 if (this.kind === 'vrm' && this.pack) this.updateBase(dt, air);
 
                 // --- apply pose to whichever rig we have ---
-                if (this.kind === 'vrm') this.applyVRM(p, dt, now);
+                if (this.kind === 'vrm') { this.applyVRM(p, dt, now); try { blzBall(this, dt); } catch (er) { if (!window.__blzErr) { window.__blzErr = er; console.error('blzBall', er); } } }
                 else if (this.kind === 'robot') this.applyRobot(p);
                 else if (this.kind === 'sprite') this.applySprite(p, dt, speed, air);
                 else {
@@ -2934,8 +2942,8 @@
                 const L = this.lk, b = this.bones;
                 let ty = 0, tp = 0, has = false;
                 const other = this.lookId ? actorById(this.lookId) : null;
-                const gz = !other && this.gazePoint && (!this.emote || this.emote === 'oboy') ? this.gazePoint : null;   // a point in space to look at (the menu hologram)
-                if ((other && other !== this && other.group.parent && !this.emote) || gz) {
+                const gz = !other && this.gazePoint && (!this.emote || this.emote === 'oboy' || this.emote === 'wk_idle') ? this.gazePoint : null;   // a point in space to look at (the menu hologram)
+                if ((other && other !== this && other.group.parent && (!this.emote || this.emote === 'wk_idle')) || gz) {
                     const a = gz ? gz : lookPoint(other, _lkA), me2 = lookPoint(this, _lkB);
                     const dx = a.x - me2.x, dz = a.z - me2.z, dy = a.y - me2.y, hd = Math.hypot(dx, dz);
                     if (hd < 30 && hd > 0.15) {
@@ -2999,6 +3007,7 @@
                 if (b.chest) b.chest.rotation.x = p.breath * f;
                 if (b.head) b.head.rotation.z = p.headRoll * f;
                 if (this.emote === 'hug') { try { hugPose(this, p, Math.min(1, (nowS() - this.emoteStart) / 0.45), f); } catch (er) { if (!window.__hugErr) { window.__hugErr = er; console.error('hug', er); } } }
+                if (this.emote && this.emote.startsWith('wk_')) { try { blzPose(this, f); } catch (er) { if (!window.__blzErr) { window.__blzErr = er; console.error('blz', er); } } }
 
                 if (hasClip) {
                     for (const n of BONE_NAMES) {
@@ -4128,6 +4137,7 @@
                 case 'blitz': { try { bzInvite(from, m); } catch (e) { console.warn('blitz invite', e); } break; }
                 case 'gm': { try { gmOnMsg(from, m); } catch (e) { console.warn('game message', e); } break; }
                 case 'duel': { try { duelOnMsg(from, m); } catch (e) { console.warn('duel message', e); } break; }
+                case 'blz': { const p = peers.get(from); if (p && p.actor) { p.actor.blitz = m.on ? 1 : 0; p.actor.blitzSeen = Date.now(); } break; }
                 case 'emote': {
                     const p = peers.get(from);
                     if (p && typeof m.name === 'string') { if (m.u) p.actor.playUpper(m.name, typeof m.r === 'number' ? clamp(m.r, 0.5, 3) : 1); else { p.actor.playEmote(m.name); if (typeof m.r === 'number') p.actor.emoteRate = clamp(m.r, 0.5, 2); } }
@@ -4341,7 +4351,7 @@
             const pc = presCounts(), pm = presNet ? presNet.describe() : null;
             $('lobby-online').textContent = pm && pm.mode === 'online' || pc.total > 1 ? `${pc.total} player${pc.total === 1 ? '' : 's'} online right now` : pm && (pm.mode === 'connecting' || pm.mode === 'waiting') ? (pm.mode === 'waiting' ? 'You are the only one online right now' : 'Looking for other players...') : 'Online count unavailable (peer-to-peer is blocked here)';
             for (const d of DISTRICTS) {
-                if (d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
+                if (d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
                 const seen = dirSeen.get(d.id);
                 let count = Math.max(seen && Date.now() - seen.ts < 6000 ? seen.count : 0, pc.byRoom[d.id] || 0);      // tabs of this browser, and what other players report
                 if (room && room.id === d.id) count = Math.max(count, peers.size + 1);
@@ -4353,10 +4363,10 @@
                 left.children[1].textContent = `${d.tag} \u2022 ${count} online`;
                 const btn = document.createElement('button');
                 btn.className = 'bg-psGlow hover:bg-blue-600 px-4 py-1.5 rounded-lg text-xs font-semibold transition';
-                btn.textContent = d.map === 'blitz' || d.map === 'survivor' ? 'Play' : room && room.id === d.id ? 'Here' : 'Join';
+                btn.textContent = d.map === 'blitz' || d.map === 'survivor' || d.map === 'ryderx' ? 'Play' : room && room.id === d.id ? 'Here' : 'Join';
                 btn.disabled = !!(room && room.id === d.id);
                 if (btn.disabled) btn.classList.add('opacity-50');
-                btn.addEventListener('click', () => { if (d.map === 'survivor') { try { closeLobby(); svOpen(); } catch (e) { sysChat('Could not open Survivor.'); } return; } if (d.map === 'blitz') { try { closeLobby(); bzOpen(); } catch (e) { sysChat('Could not open Blitzball.'); } return; } joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); });
+                btn.addEventListener('click', () => { if (d.map === 'ryderx') { try { closeLobby(); rxOpen(); } catch (e) { sysChat('Could not open Ryder X.'); } return; } if (d.map === 'survivor') { try { closeLobby(); svOpen(); } catch (e) { sysChat('Could not open Survivor.'); } return; } if (d.map === 'blitz') { try { closeLobby(); bzOpen(); } catch (e) { sysChat('Could not open Blitzball.'); } return; } joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); });
                 row.append(left, btn);
                 list.appendChild(row);
             }
@@ -12880,13 +12890,28 @@
             if (SVX.ov) return; try { closeStart(); } catch (e) { /* menu */ } document.querySelectorAll('.xmb-col.open').forEach((e) => e.classList.remove('open'));
             const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:#000';
             const ld = document.createElement('div'); ld.textContent = 'Loading Harbor Inn…'; ld.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b33;font:800 14px Orbitron,Nunito,sans-serif;letter-spacing:.2em';
-            const fr = document.createElement('iframe'); fr.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0'; fr.allow = 'autoplay; fullscreen';
+            const fr = document.createElement('iframe'); fr.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0'; fr.allow = 'autoplay; gamepad; fullscreen';
             svFetch().then((html) => { if (SVX.fr === fr) fr.srcdoc = html; }).catch(() => { if (SVX.fr === fr) fr.src = 'Survivor.html'; });
             const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Exit'; x.style.cssText = 'position:absolute;right:8px;top:8px;z-index:2;font:800 12px Nunito,sans-serif;color:#fff;background:rgba(60,0,0,.85);border:2px solid #b33;border-radius:999px;padding:6px 14px;cursor:pointer';
             x.addEventListener('click', svClose); ov.append(ld, fr, x); document.body.appendChild(ov); SVX.ov = ov; SVX.fr = fr; fr.addEventListener('load', () => { try { ld.remove(); fr.contentWindow.focus(); } catch (e) { /* ok */ } });
         }
         function svClose() { if (SVX.ov) { try { SVX.fr.srcdoc = ''; } catch (e) { /* ok */ } SVX.ov.remove(); } SVX.ov = null; SVX.fr = null; try { window.focus(); } catch (e) { /* ok */ } }
         window.__sv2 = { open: svOpen, close: svClose };
+
+        const RXX = { ov: null, fr: null, html: '' };
+        async function rxFetch() { if (RXX.html) return RXX.html; const r = await fetch('RyderX.html'); if (!r.ok) throw new Error('RyderX.html ' + r.status); RXX.html = await r.text(); return RXX.html; }
+        function rxOpen() {
+            if (RXX.ov) return; try { closeStart(); } catch (e) { /* menu */ } document.querySelectorAll('.xmb-col.open').forEach((e) => e.classList.remove('open'));
+            const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:#050816';
+            const ld = document.createElement('div'); ld.textContent = 'Loading Ryder X…'; ld.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#19e3ff;font:800 14px Orbitron,Nunito,sans-serif;letter-spacing:.2em';
+            const fr = document.createElement('iframe'); fr.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0'; fr.allow = 'autoplay; gamepad; fullscreen';
+            rxFetch().then((html) => { if (RXX.fr === fr) fr.srcdoc = html; }).catch(() => { if (RXX.fr === fr) fr.src = 'RyderX.html'; });
+            const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Exit'; x.style.cssText = 'position:absolute;right:8px;bottom:8px;z-index:2;font:800 12px Nunito,sans-serif;color:#fff;background:rgba(5,20,50,.88);border:2px solid #19e3ff;border-radius:999px;padding:6px 14px;cursor:pointer';
+            x.addEventListener('click', rxClose); ov.append(ld, fr, x); document.body.appendChild(ov); RXX.ov = ov; RXX.fr = fr; fr.addEventListener('load', () => { try { ld.remove(); fr.contentWindow.focus(); } catch (e) { /* ok */ } });
+        }
+        function rxClose() { if (RXX.ov) { try { RXX.fr.srcdoc = ''; } catch (e) { /* ok */ } RXX.ov.remove(); } RXX.ov = null; RXX.fr = null; try { window.focus(); } catch (e) { /* ok */ } }
+        window.__rx2 = { open: rxOpen, close: rxClose };
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && RXX.ov && e.target === document.body) { /* the game handles Esc for its own pause menu */ } });
 
         /* ---------- Hug emote: ask a nearby player; if they accept you stand face to face and stay hugging until one of you walks off.
                         Female characters put their arms around the neck, male characters around the waist (set in the character dialog). ---------- */
@@ -12904,6 +12929,81 @@
             waist: { u: [0.1, -0.6, 0.8], l: [-0.88, -0.1, 0.5], lean: 0.14, hy: -0.3, hr: -0.1 }
         };
         function hugRole(a) { return a.gender === 'female' ? 'neck' : 'waist'; }
+        /* ---------- Blitzball class: Wakka's stance, five emotes and a ball that follows the hand ---------- */
+        const _blq1 = new THREE.Quaternion(), _blq2 = new THREE.Quaternion(), _blr = new THREE.Vector3(), _bld = new THREE.Vector3(), _blw = new THREE.Vector3();
+        function blzLeg(U, L, side, d1, d2, e, f) {   // upper leg and shin by direction (x outward, y up, z forward), like hugArm does for arms
+            if (!U || !L) return;
+            _blr.set(0, -1, 0); _bld.set(d1[0] * side * f, d1[1], d1[2] * f).normalize(); const Qu = _blq1.setFromUnitVectors(_blr, _bld).clone();
+            _bld.set(d2[0] * side * f, d2[1], d2[2] * f).normalize(); const Qd = _blq2.setFromUnitVectors(_blr, _bld), Q2 = Qu.clone().invert().multiply(Qd);
+            U.quaternion.slerp(Qu, e); L.quaternion.slerp(Q2, e);
+        }
+        const BLZ_IDLE = {   // arms and legs as directions, torso and head as small turns. The character's LEFT arm points, the RIGHT hand holds the ball on the hip.
+            hip: 0.17, lean: 0.16, twist: 0.16, chest: 0.1, headY: 0.42, headX: -0.05, headZ: -0.08,
+            lu: [0.9, 0.25, 0.3], lf: [0.15, 1, 0.4], ru: [0.25, -0.9, 0.25], rf: [0.15, 0.0, 1],
+            ll: [0.42, -0.72, 0.5], lk: [0.18, -0.95, -0.3], rl: [0.78, -0.62, 0.12], rk: [0.5, -0.86, -0.1]
+        };
+        function blzPose(a, f) {
+            const b = a.bones, k = a.emote, H = a.vrm && a.vrm.humanoid; if (!b) return;
+            const et = nowS() - a.emoteStart, dur = a.emoteDur || EMOTES[k].dur, e = Math.max(0, Math.min(1, et / 0.3, (dur - et) / 0.3));
+            const S = Object.assign({}, BLZ_IDLE, BLZ.pose); S.lu = S.lu.slice(); S.lf = S.lf.slice(); S.ru = S.ru.slice(); S.rf = S.rf.slice(); S.ll = S.ll.slice(); S.lk = S.lk.slice(); S.rl = S.rl.slice(); S.rk = S.rk.slice();
+            let hop = 0; a.blzBallOff = null;
+            if (k === 'wk_point') {
+                const j = Math.sin(et * 6.5) * 0.5 + 0.5;
+                S.lu = [0.45, 0.35 + 0.1 * j, 0.85]; S.lf = [0.1, 0.35 + 0.15 * j, 1]; S.lean += 0.08; S.headX = 0.02 + 0.06 * j; S.twist = 0.05;
+            } else if (k === 'wk_toss') {
+                const ph = (et % 1.5) / 1.5, fl = Math.sin(ph * Math.PI);
+                S.ru = [0.25, -0.4 + 0.95 * fl, 0.4]; S.rf = [0.1, 0.25 + 0.75 * fl, 0.75 - 0.3 * fl]; S.lu = [0.6, -0.35, 0.2]; S.lf = [0.1, -0.1, 0.9]; S.twist = -0.08; S.headY = 0; S.headX = -0.1 * fl; S.lean = 0.06 + 0.06 * fl;
+                a.blzBallOff = [0, 4 * ph * (1 - ph) * 0.95 * (ph > 0.12 && ph < 0.88 ? 1 : 0), 0, 0];
+            } else if (k === 'wk_spin') {
+                S.ru = [0.3, 0.95, 0.15]; S.rf = [0.1, 1, 0.05]; S.lu = [0.6, -0.5, 0.1]; S.lf = [-0.4, -0.1, 0.7]; S.twist = 0.25 * Math.sin(et * 2); S.headY = 0.1; S.headX = -0.18; S.lean = 0.02;
+                a.blzBallOff = [0, 0.03, 0, et * 10];
+            } else if (k === 'wk_cheer') {
+                hop = Math.abs(Math.sin(et * 7)) * 0.1; S.hip = 0.04; S.lu = [0.5, 0.9, 0.1]; S.lf = [0.3, 1, 0]; S.ru = [0.5, 0.9, 0.1]; S.rf = [0.3, 1, 0]; S.ll = [0.3, -0.95, 0.05]; S.lk = [0.2, -0.98, -0.05]; S.rl = [0.3, -0.95, 0.05]; S.rk = [0.2, -0.98, -0.05];
+                S.lean = -0.1; S.twist = 0; S.headY = 0; S.headX = -0.22; S.headZ = 0;
+                a.blzBallOff = [0, 0.05, 0, et * 3];
+            }
+            hugArm(b, 1, S.lu, S.lf, e, f); hugArm(b, -1, S.ru, S.rf, e, f);
+            if (H) { blzLeg(H.getNormalizedBoneNode('leftUpperLeg'), H.getNormalizedBoneNode('leftLowerLeg'), 1, S.ll, S.lk, e, f); blzLeg(H.getNormalizedBoneNode('rightUpperLeg'), H.getNormalizedBoneNode('rightLowerLeg'), -1, S.rl, S.rk, e, f); }
+            if (b.hips) b.hips.position.y += (hop - S.hip) * e;
+            if (b.spine) { b.spine.rotation.x += S.lean * e * f; b.spine.rotation.y += S.twist * e; }
+            if (b.chest) { b.chest.rotation.x += S.lean * 0.4 * e * f; b.chest.rotation.y += S.chest * e; }
+            if (b.head) { b.head.rotation.y += S.headY * e; b.head.rotation.x += S.headX * e * f; b.head.rotation.z += S.headZ * e * f; }
+            p0blz(a, e);
+        }
+        function p0blz(a, e) { a.blzE = e; }
+        function blzIdle(a, speed, air) {   // the class stance: whenever a Blitzball player stands still with nothing else going on
+            if (a !== localActor && a.blitz && a.blitzSeen && Date.now() - a.blitzSeen > 15000) a.blitz = 0;
+            if (a.blitz && !a.emote && speed < 0.4 && !air && !(a.boardLift > 0.02) && a.sitSmooth < 0.05) { a.emote = 'wk_idle'; a.emoteStart = nowS(); a.emoteClip = null; a.emoteDur = 0; a.emoteRate = 1; }
+        }
+        let _blzTex = null;
+        function blzBallMesh() {
+            if (!_blzTex) { const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#2d63d6'; g.fillRect(0, 0, 256, 128); g.fillStyle = '#7fb0ff'; g.fillRect(0, 0, 256, 10); g.fillRect(0, 118, 256, 10);
+                g.strokeStyle = '#f2f6ff'; g.lineWidth = 9; for (let i = 0; i < 4; i++) { g.beginPath(); for (let x = 0; x <= 256; x += 8) { const y = 64 + Math.sin((x / 256 + i * 0.25) * Math.PI * 4) * 34; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+                g.strokeStyle = '#1b3f9a'; g.lineWidth = 3; for (let i = 0; i < 4; i++) { g.beginPath(); for (let x = 0; x <= 256; x += 8) { const y = 64 + Math.sin((x / 256 + i * 0.25) * Math.PI * 4) * 34 + 7; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+                _blzTex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) _blzTex.colorSpace = THREE.SRGBColorSpace; }
+            const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshLambertMaterial({ map: _blzTex })); m.frustumCulled = false; return m;
+        }
+        function blzBall(a, dt) {   // the ball rides above the right hand, in world space so it does not depend on the rig's bone axes
+            const want = a.kind === 'vrm' && a.vrm && (a.blitz || (a.emote && a.emote.startsWith('wk_')));
+            if (!want) { if (a.blzMesh) a.blzMesh.visible = false; return; }
+            const H = a.vrm.humanoid, hand = H.getNormalizedBoneNode('rightHand') || H.getNormalizedBoneNode('rightLowerArm'); if (!hand) return;
+            if (!a.blzMesh) { a.blzMesh = blzBallMesh(); a.group.add(a.blzMesh); }
+            const M = a.blzMesh, hs = (a.height || 1.6) / 1.6 * (a.tweak ? a.tweak.scale : 1), r = 0.115 * hs, off = a.blzBallOff || [0, 0, 0, 0];
+            hand.getWorldPosition(_blw); const yaw = a.group.rotation.y;
+            _blw.x += Math.sin(yaw) * 0.035 * hs; _blw.z += Math.cos(yaw) * 0.035 * hs; _blw.y += (r * 0.8 + off[1] * hs);
+            a.group.worldToLocal(_blw); M.position.copy(_blw); M.scale.setScalar(r / (a.group.scale ? a.group.scale.x : 1)); M.visible = true;
+            M.rotation.y = off[3] || 0; if (!off[3]) M.rotation.y = (a.blzSpinBase = (a.blzSpinBase || 0) + dt * 0.4);
+        }
+        function blzSet(on, quiet) {   // the class is a stance, not a weapon: it clears any weapon class and has no combat of its own
+            BLZ.on = !!on; try { localStorage.setItem('oasisBlitzCls', on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+            if (on && CLS.wpn !== 'fists') { BLZ.keep = true; try { clsEquip('fists', true); } finally { BLZ.keep = false; } }
+            if (localActor) { localActor.blitz = on ? 1 : 0; if (!on && localActor.emote && localActor.emote.startsWith('wk_')) localActor.emote = null; }
+            try { net && net.send({ t: 'blz', on: on ? 1 : 0 }); } catch (e) { /* offline */ }
+            if (!quiet) sysChat(on ? 'Blitzball class: you take Wakka\'s stance when you stand still. Blitzball emotes are in the Emotes menu.' : 'Blitzball class off.');
+            clsRender();
+        }
+        setInterval(() => { try { if (localActor && localActor.blitz !== (BLZ.on ? 1 : 0)) localActor.blitz = BLZ.on ? 1 : 0; if (BLZ.on && net) net.send({ t: 'blz', on: 1 }); } catch (e) { /* ignore */ } }, 4000);
+        window.__blz = BLZ; BLZ.set = blzSet;
         function hugPose(a, p, e, f) {
             const b = a.bones, P = HUG_POSE[hugRole(a)]; if (!b) return;
             hugArm(b, 1, P.u, P.l, e, f); hugArm(b, -1, [P.u[0], P.u[1] - 0.03, P.u[2]], [P.l[0], P.l[1] - 0.08, P.l[2] - 0.06], e, f);
@@ -14422,6 +14522,7 @@ function btMusicStop() {
         }
         setTimeout(() => gilShow(GIL.n), 0);
         window.oasisGil = { get: () => GIL.n, add: gilAdd };
+        window.oasisAvatar = () => (myAvatar && myAvatar.buffer ? { buffer: myAvatar.buffer, name: myAvatar.name, kind: myAvatar.kind, gender: myAvatar.gender } : null);   // lets Harbor Inn (Survivor) load the character you are wearing
 
         const CH = { list: [], css: false, hint: null, msg: null };
         function chestCss() {
@@ -14570,7 +14671,7 @@ function btMusicStop() {
             if (BZ.ov) return; opts = opts || {}; try { closeStart(); } catch (e) { /* menu */ } document.querySelectorAll('.xmb-col.open').forEach((e) => e.classList.remove('open'));
             const ov = document.createElement('div'); ov.id = 'bz-ov'; ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:#010a14';
             const ld = document.createElement('div'); ld.textContent = 'Loading Blitzball\u2026'; ld.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8fe0ff;font:800 14px Orbitron,Nunito,sans-serif;letter-spacing:.2em';
-            const fr = document.createElement('iframe'); fr.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0'; fr.allow = 'autoplay; fullscreen';
+            const fr = document.createElement('iframe'); fr.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0'; fr.allow = 'autoplay; gamepad; fullscreen';
             const o = { name: me.name, host: !!opts.host, join: opts.join || '' };
             bzFetch().then((html) => { if (BZ.fr === fr) fr.srcdoc = bzHtml(o, html); }).catch(() => { if (BZ.fr === fr) fr.src = 'Blitzball.html#oasis=' + encodeURIComponent(JSON.stringify(o)); });   // no fetch (opened from a file): load the page straight into the frame
             const x = document.createElement('button'); x.type = 'button'; x.textContent = '\u2715 Back to the Oasis'; x.style.cssText = 'position:absolute;right:8px;bottom:8px;z-index:2;font:800 12px Nunito,sans-serif;color:#fff;background:rgba(10,30,70,.85);border:2px solid #42bdfb;border-radius:9px;padding:5px 11px;cursor:pointer;opacity:.75'; x.onclick = bzClose;
@@ -16208,6 +16309,7 @@ window.__ts = TSK;
             { const mm = /^\/name\s+(.+)$/i.exec(text); if (mm) { setMyName(mm[1]); return true; } }
             if (/^\/hug$/i.test(text)) { hugAsk(); return true; }
             { const wm = /^\/(weather|season)(?:\s+(.*))?$/i.exec(text); if (wm) return wxCommand(wm[1].toLowerCase(), wm[2]); }
+            if (/^\/(companions?|npcs?|cmp)$/i.test(text)) { cmpOpen(); return true; }
             if (/^\/diner$/i.test(text)) { dinerOpen(); return true; }
             if (/^\/(bowl|bowling)$/i.test(text)) { bowlOpen(); return true; }
             if (/^\/(battle|arena|ff)$/i.test(text)) { btlOpen(); return true; }
@@ -16224,6 +16326,7 @@ window.__ts = TSK;
             addChat(me.name, text, '#38bdf8');
             localActor.showBubble(text, myBubble);
             net && net.send({ t: 'chat', text, c: myBubble, ts: Date.now() });
+            try { cmpHear(text); } catch (e) { /* companions are optional */ }
             return true;
         }
         function announceTyping(on) {
@@ -16722,7 +16825,7 @@ window.__ts = TSK;
             $('tr-cancel').addEventListener('click', () => tradeEnd('Trade cancelled.', true));
             $('pc-trade').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) tradeBegin(p.id); });
             $('pc-duel').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) duelBegin(p.id); });
-            $('wpn-fists').addEventListener('click', () => clsEquip('fists')); $('wpn-sword').addEventListener('click', () => clsEquip('sword')); $('wpn-pistol').addEventListener('click', () => clsEquip('pistol')); $('wpn-fighter').addEventListener('click', () => clsEquip('fighter')); $('bm-default').addEventListener('click', () => baseMoveSet('default')); $('bm-starter').addEventListener('click', () => baseMoveSet('starter')); clsRender();
+            $('wpn-fists').addEventListener('click', () => { if (BLZ.on) blzSet(false, true); clsEquip('fists'); }); $('wpn-blitz').addEventListener('click', () => blzSet(!BLZ.on)); $('wpn-sword').addEventListener('click', () => clsEquip('sword')); $('wpn-pistol').addEventListener('click', () => clsEquip('pistol')); $('wpn-fighter').addEventListener('click', () => clsEquip('fighter')); $('bm-default').addEventListener('click', () => baseMoveSet('default')); $('bm-starter').addEventListener('click', () => baseMoveSet('starter')); clsRender();
             window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && tradeUiOpen()) { e.preventDefault(); e.stopPropagation(); tradeEnd('Trade cancelled.', true); } else if (e.key === 'Escape' && invOpen()) { e.preventDefault(); e.stopPropagation(); closeInv(); } }, true);
             window.__inv = { INVDIR, invDirSave, INV, TR, invAddFile, invList, tradeBegin, tradeAdd, tradeLockToggle, tradeConfirm, openInv, tradeOpenUi, renderTrade };
         }
@@ -20509,7 +20612,8 @@ window.__ts = TSK;
         function clsRender() {
             const card = document.getElementById('cls-card'); if (!card) return;
             if (!document.querySelector('#gw-grid button')) gnBuildUi();
-            for (const [id, w] of [['wpn-fists', 'fists'], ['wpn-sword', 'sword'], ['wpn-pistol', 'pistol'], ['wpn-fighter', 'fighter']]) { const b = document.getElementById(id); if (b) { b.classList.toggle('bg-psGlow', CLS.wpn === w); b.classList.toggle('bg-white/10', CLS.wpn !== w); } }
+            for (const [id, w] of [['wpn-fists', 'fists'], ['wpn-sword', 'sword'], ['wpn-pistol', 'pistol'], ['wpn-fighter', 'fighter']]) { const b = document.getElementById(id); if (b) { const on = CLS.wpn === w && !(w === 'fists' && BLZ.on); b.classList.toggle('bg-psGlow', on); b.classList.toggle('bg-white/10', !on); } }
+            { const b = document.getElementById('wpn-blitz'); if (b) { b.classList.toggle('bg-psGlow', BLZ.on); b.classList.toggle('bg-white/10', !BLZ.on); } }
             const sg = document.getElementById('sk-grid');
             if (sg) { if (!sg.children.length) for (let i = 0; i <= swdList().swords.length; i++) { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = i; b.textContent = swdName(i); b.className = 'py-1.5 px-1 rounded-lg text-[11px] font-semibold transition bg-white/10'; b.addEventListener('click', () => clsSkin(i)); sg.appendChild(b); }
                 for (const b of sg.children) { const on = +b.dataset.k === CLS.skin; b.classList.toggle('bg-psGlow', on); b.classList.toggle('bg-white/10', !on); } }
@@ -20522,12 +20626,14 @@ window.__ts = TSK;
                 row('hero', '#12d95a') + row('gunner', '#ffb347') + row('fighter', '#ff6b6b') +
                 (cur ? `<div class="text-gray-400">HP ${clsHpMax()} · damage +${Math.round((clsDmgMul() - 1) * 100)}%</div>` : '') +
                 `<div class="text-gray-500" style="margin-top:4px">Class XP comes from duels (and Construct kills for Hero). Sword / Fighter: J. Gunner: J / K or hold the 🔫 button to fire, R reload, 1-7 or Q (🔁 on touch, D-pad on a pad) to switch weapon.</div>`;
+            if (BLZ.on) card.innerHTML = '<b style="color:#7dffb4">Class: Blitzball</b> · ball in hand<div class="text-gray-400" style="margin-top:4px">Stand still and you take Wakka\'s stance. Blitzball emotes (Ya!, Point, Ball Toss, Ball Spin) are in the Emotes menu. This class has no combat or XP yet.</div>';
         }
         function clsSkin(i) {
             CLS.skin = i | 0; clsSave(); if (localActor) localActor.heroSkin = CLS.skin;
             try { net && net.send(helloMsg(false)); } catch (e) { /* offline */ } sysChat('Sword style: ' + swdName(CLS.skin) + '.'); clsRender();
         }
         function clsEquip(w, quiet) {
+            if (BLZ.on && !BLZ.keep && w !== 'fists') blzSet(false, true);
             if (w !== 'sword' && w !== 'fists' && w !== 'pistol' && w !== 'fighter') return; if (CLS.wpn === w) { clsRender(); return; }
             if (DUEL.s) duelAbort(w === 'fists' ? 'You put your weapon away, so the duel is forfeit.' : 'You changed weapon, so the duel is forfeit.', true);
             CLS.wpn = w; clsSave();
@@ -22583,6 +22689,232 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             else PERF.good = 0;
         }
         window.__perf = PERF;
+        /* ================================================================================================
+         *  COMPANIONS. Characters imported from MuchiGo (or made here) become NPC followers: a VRM from your bag,
+         *  walking behind you, and answering your chat with speech bubbles. Their brains are Claude, using the
+         *  persona prompt, memory and relationship from the MuchiGo save. Everything stays on this device.
+         * ================================================================================================ */
+        const CMP = { list: [], active: new Map(), ai: { key: '', model: 'haiku', ambient: false }, trail: [], map: 'mall', log: [], panel: null, busy: new Set(), warned: 0, nextAmb: 0, ready: false };
+        const CMP_MODELS = { haiku: ['claude-haiku-4-5-20251001', 'anthropic/claude-haiku-4.5', 'Haiku (fast)'], sonnet: ['claude-sonnet-4-6', 'anthropic/claude-sonnet-4.5', 'Sonnet (smarter)'] };
+        const CMP_MAPS = { mall: 'the Plaza mall', loft: 'a cozy loft and its garden', city: 'the city', plot: 'a build plot', galleria: 'the galleria', school: 'the school', bowl: 'the Zen Bowl', tag: 'the laser tag arena', btl: 'a battle arena' };
+        const cmpEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        function cmpLoad() {
+            try { const a = JSON.parse(localStorage.getItem('oasis.cmp.v1') || '[]'); if (Array.isArray(a)) CMP.list = a.filter((c) => c && c.id && c.name); } catch (e) { /* none yet */ }
+            try { const b = JSON.parse(localStorage.getItem('oasis.cmp.ai') || '{}'); if (b && typeof b === 'object') Object.assign(CMP.ai, { key: String(b.key || ''), model: CMP_MODELS[b.model] ? b.model : 'haiku', ambient: !!b.ambient }); } catch (e) { /* none yet */ }
+            CMP.ready = true;
+        }
+        let _cmpSaveT = 0;
+        function cmpSave(now) { clearTimeout(_cmpSaveT); const f = () => { try { localStorage.setItem('oasis.cmp.v1', JSON.stringify(CMP.list)); localStorage.setItem('oasis.cmp.ai', JSON.stringify(CMP.ai)); } catch (e) { sysChat('Companions could not be saved: the browser storage is full.'); } }; if (now) f(); else _cmpSaveT = setTimeout(f, 500); }
+        const cmpFind = (id) => CMP.list.find((c) => c.id === id);
+        const cmpColor = (c) => validHex(c.color) || colorFor('cmp_' + c.id);
+
+        /* ---- the brain ---- */
+        function cmpAffLevel(a) { a = a || 0; return a < 100 ? 'just getting to know each other' : a < 600 ? 'friendly and comfortable' : a < 2500 ? 'close friends' : a < 6000 ? 'deeply attached' : 'inseparable, devoted'; }
+        function cmpSystem(c, extra) {
+            const others = [...CMP.active.values()].filter((x) => x.c.id !== c.id).map((x) => x.c.name);
+            const near = [...peers.values()].map((p) => p.name).slice(0, 6);
+            const hr = new Date().getHours(), tod = hr < 5 ? 'late night' : hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : hr < 21 ? 'evening' : 'night';
+            const mem = (c.summary ? '\n\n[YOUR MEMORY OF ' + me.name.toUpperCase() + ' AND YOUR TIME TOGETHER]\n' + c.summary : '') + (c.facts && c.facts.length ? '\n\n[THINGS YOU KNOW FOR SURE]\n' + c.facts.map((f) => '- ' + f).join('\n') : '');
+            const talk = CMP.log.length ? '\n\n[WHAT WAS JUST SAID NEARBY]\n' + CMP.log.slice(-6).map((l) => l.who + ': ' + l.text).join('\n') : '';
+            return (c.prompt || 'You are ' + c.name + '.') + (c.trait && c.trait.length < 3000 ? '\n\nPersonality: ' + c.trait : '') + mem
+                + '\n\n[SITUATION]\nYou are ' + c.name + ', an NPC companion walking beside ' + me.name + ' in the Oasis, a social hangout world. Right now you are in ' + (CMP_MAPS[activeMap] || activeMap) + '. It is ' + tod + '. Your closeness with ' + me.name + ': ' + cmpAffLevel(c.aff) + '.'
+                + (others.length ? ' Also walking with you: ' + others.join(', ') + '.' : '') + (near.length ? ' Other players nearby: ' + near.join(', ') + '.' : '') + talk
+                + '\n\n[HOW TO ANSWER]\nYou are speaking out loud and your words appear in a speech bubble over your head. Reply only as ' + c.name + ', fully in character, in 1 to 3 short sentences, about 150 characters at most. No name prefix, no quotation marks, no stage directions beyond a very short *action* at most. Remember what you know about ' + me.name + ' and speak to them the way your relationship would. Keep it suitable for a public lobby with other people around. Never mention being an AI, a prompt or a game system.'
+                + (extra ? '\n' + extra : '');
+        }
+        async function cmpAI(system, messages, maxTokens) {
+            const key = (CMP.ai.key || '').trim(), mdl = CMP_MODELS[CMP.ai.model] || CMP_MODELS.haiku;
+            const msgs = messages.filter((m) => m && m.content); if (!msgs.length || msgs[0].role !== 'user') msgs.unshift({ role: 'user', content: '...' });
+            const merged = []; for (const m of msgs) { const l = merged[merged.length - 1]; if (l && l.role === m.role) l.content += '\n' + m.content; else merged.push({ role: m.role, content: m.content }); }
+            let res;
+            try {
+                if (key.startsWith('sk-or-')) res = await fetch('https://openrouter.ai/api/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key }, body: JSON.stringify({ model: mdl[1], max_tokens: maxTokens || 220, messages: [{ role: 'system', content: system }].concat(merged) }) });
+                else if (key) res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: mdl[0], max_tokens: maxTokens || 220, system, messages: merged }) });
+                else res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, system, messages: merged }) });
+            } catch (e) { throw new Error('Could not reach Claude. Check your connection.'); }
+            if (res.status === 401 || res.status === 403) throw new Error(key ? 'That API key was refused. Check it in Companions settings.' : 'Add an API key in Companions settings so they can talk.');
+            if (res.status === 429) throw new Error('Rate limited. Give it a moment.');
+            if (!res.ok) { let m = 'Claude returned an error (' + res.status + ').'; try { const d = await res.json(); m = (d.error && (d.error.message || d.error)) || m; } catch (e) { /* ignore */ } throw new Error(String(m).slice(0, 160)); }
+            const d = await res.json(); const t = key.startsWith('sk-or-') ? (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) : (d.content && d.content[0] && d.content[0].text);
+            if (!t) throw new Error('Empty reply.'); return String(t).trim();
+        }
+        function cmpClean(t, name) {
+            t = String(t).trim();
+            t = t.replace(new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[:：]\\s*', 'i'), '').replace(/^["“]+|["”]+$/g, '').replace(/\s*\n+\s*/g, ' ').trim(); return t;
+        }
+        function cmpChunks(t) { const out = []; let cur = ''; for (const s of t.split(/(?<=[.!?…~*])\s+/)) { if ((cur + ' ' + s).trim().length > 150 && cur) { out.push(cur.trim()); cur = s; } else cur = (cur + ' ' + s).trim(); } if (cur) out.push(cur.trim()); return out.slice(0, 3).map((x) => x.slice(0, 200)); }
+        function cmpSay(a, c, text) {
+            const parts = cmpChunks(text); parts.forEach((p, i) => setTimeout(() => { try { if (!CMP.active.has(c.id)) return; a.actor.showBubble(p, cmpColor(c)); addChat(c.name, p, cmpColor(c)); } catch (e) { /* actor gone */ } }, i * 1700));
+            CMP.log.push({ who: c.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
+        }
+        async function cmpReply(c, userText, extra, silent) {
+            const a = CMP.active.get(c.id); if (!a || CMP.busy.has(c.id)) return; CMP.busy.add(c.id); a.actor.setTyping(true);
+            const tk = setInterval(() => { try { a.actor.setTyping(true); } catch (e) { /* ignore */ } }, 2500);
+            try {
+                const hist = (c.hist || []).slice(-14).map((m) => ({ role: m.r === 'user' ? 'user' : 'assistant', content: m.c }));
+                const msgs = hist.concat([{ role: 'user', content: userText }]);
+                const reply = cmpClean(await cmpAI(cmpSystem(c, extra), msgs, 260), c.name);
+                if (reply) {
+                    c.hist = (c.hist || []).concat(silent ? [] : [{ r: 'user', c: userText }], [{ r: 'assistant', c: reply }]).slice(-60); c.aff = (c.aff || 0) + 3; c.since = (c.since || 0) + 2; cmpSay(a, c, reply); cmpSave();
+                    if (c.since >= 20) cmpSummarize(c);
+                }
+            } catch (e) { if (Date.now() - CMP.warned > 8000) { CMP.warned = Date.now(); sysChat(c.name + ' could not answer: ' + (e.message || e)); } }
+            finally { clearInterval(tk); CMP.busy.delete(c.id); try { a.actor.setTyping(false); } catch (e) { /* ignore */ } }
+        }
+        async function cmpSummarize(c) {
+            c.since = 0; const recent = (c.hist || []).slice(-24).map((m) => (m.r === 'user' ? me.name : c.name) + ': ' + m.c).join('\n');
+            try {
+                const t = await cmpAI('You keep ' + c.name + '\'s private memory about ' + me.name + '. Reply with ONLY the updated memory text (first person as ' + c.name + ', under 1400 characters), no preface.', [{ role: 'user', content: 'Existing memory:\n' + (c.summary || '(none yet)') + '\n\nNew conversation:\n' + recent + '\n\nWrite the updated memory, keeping important facts about ' + me.name + ' and what happened.' }], 700);
+                if (t && t.length > 40) { c.summary = t.slice(0, 2400); cmpSave(); }
+            } catch (e) { /* try again later */ }
+        }
+        /* chat routing: who answers a line you just typed */
+        function cmpHear(text) {
+            if (!CMP.active.size) return; const act = [...CMP.active.values()].map((x) => x.c); const low = text.toLowerCase();
+            if (!CMP.ai.key && !CMP.keyless) { if (Date.now() - CMP.warned > 20000) { CMP.warned = Date.now(); sysChat('Your companions need an API key to talk. Open /companions and paste one.'); } }
+            let tg = act.filter((c) => low.includes(c.name.toLowerCase().split(' ')[0]));
+            if (/\b(everyone|everybody|you guys|you all|guys|all of you)\b/.test(low)) tg = act.slice(0, 4);
+            if (!tg.length) { const ranked = act.slice().sort((x, y) => (x.lastSpoke || 0) - (y.lastSpoke || 0)); tg = [ranked[0]]; if (act.length > 1 && Math.random() < 0.3) tg.push(ranked[1]); }
+            CMP.log.push({ who: me.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
+            tg.forEach((c, i) => { c.lastSpoke = Date.now(); setTimeout(() => cmpReply(c, text), 350 + i * 1400 + Math.random() * 500); });
+        }
+        setInterval(() => {
+            if (!CMP.ai.ambient || !CMP.active.size || document.hidden || Date.now() < CMP.nextAmb) return; if (!CMP.ai.key) return; CMP.nextAmb = Date.now() + 150000 + Math.random() * 150000;
+            const act = [...CMP.active.values()].map((x) => x.c), c = act[Math.floor(Math.random() * act.length)];
+            cmpReply(c, '(' + me.name + ' says nothing. Make a brief, natural unprompted remark: something about where you are, what is around, or something you remember about them.)', null, true);
+        }, 15000);
+
+        /* ---- bodies and following ---- */
+        async function cmpBuildActor(c) {
+            const actor = new Actor('cmp_' + c.id, c.name); actor.gender = c.gender === 'male' ? 'male' : 'female';
+            if (c.vrm) { try { const buf = await btSkinBuffer(c.vrm); if (buf) { const { root, vrm } = await buildModel(buf, 'gltf', { asAvatar: true }); actor.setModel(root, vrm); } } catch (e) { console.warn('companion model', e); } }
+            return actor;
+        }
+        function cmpAnchor(i) { const g = localActor.group, y = g.rotation.y, a = y + Math.PI + (i % 2 ? 0.7 : -0.7) * (1 + Math.floor(i / 2) * 0.5); return { x: g.position.x + Math.sin(a) * (1.6 + i * 0.5), z: g.position.z + Math.cos(a) * (1.6 + i * 0.5), y: g.position.y }; }
+        async function cmpSummon(id) {
+            const c = cmpFind(id); if (!c || CMP.active.has(id)) return; if (CMP.active.size >= 4) { sysChat('Four companions at a time is the limit. Dismiss one first.'); return; }
+            const rec = { c, actor: null }; CMP.active.set(id, rec); cmpPanelRender();
+            try { rec.actor = await cmpBuildActor(c); } catch (e) { CMP.active.delete(id); sysChat('Could not build ' + c.name + '.'); cmpPanelRender(); return; }
+            if (!CMP.active.has(id)) { rec.actor.dispose(); return; }
+            const idx = [...CMP.active.keys()].indexOf(id), p = cmpAnchor(idx); rec.actor.group.position.set(p.x, p.y, p.z); rec.actor.group.rotation.y = localActor.group.rotation.y; rec.actor.firstFrame = true;
+            sysChat(c.name + ' joins you.'); cmpPanelRender();
+        }
+        function cmpDismiss(id) { const r = CMP.active.get(id); if (!r) return; CMP.active.delete(id); try { r.actor && r.actor.dispose(); } catch (e) { /* ignore */ } sysChat(r.c.name + ' heads off.'); cmpPanelRender(); }
+        function cmpTrailPoint(D, P) {
+            const L = CMP.trail; let px = P.x, pz = P.z, py = P.y;
+            for (let i = L.length - 1; i >= 0; i--) { const q = L[i], d = Math.hypot(q.x - px, q.z - pz); if (d >= D) { const k = D / (d || 1); return { x: px + (q.x - px) * k, z: pz + (q.z - pz) * k, y: py + (q.y - py) * k }; } D -= d; px = q.x; pz = q.z; py = q.y; }
+            return null;
+        }
+        function cmpFrame(dt) {
+            if (!CMP.active.size) { CMP.trail.length = 0; return; }
+            const g = localActor.group, P = g.position; let snap = false;
+            if (activeMap !== CMP.map) { CMP.map = activeMap; CMP.trail.length = 0; snap = true; }
+            const L = CMP.trail, last = L[L.length - 1]; if (!last || Math.hypot(P.x - last.x, P.z - last.z) > 0.4) { L.push({ x: P.x, y: P.y, z: P.z }); if (L.length > 500) L.shift(); } else last.y = P.y;
+            let i = 0;
+            for (const r of CMP.active.values()) {
+                if (!r.actor) { i++; continue; }
+                const ag = r.actor.group, D = 2.0 + 1.3 * i; let t = cmpTrailPoint(D, P); if (!t) { const an = cmpAnchor(i); t = an; }
+                r.actor.group.visible = activeMap !== 'btl';
+                let dx = t.x - ag.position.x, dz = t.z - ag.position.z, d = Math.hypot(dx, dz);
+                if (snap || d > 45) { const an = cmpAnchor(i); ag.position.set(an.x, an.y, an.z); r.actor.firstFrame = true; dx = dz = d = 0; }
+                let step = 0; if (d > 0.12) { const spd = Math.min(7.2, 0.5 + d * 2.6); step = Math.min(d, spd * dt); ag.position.x += dx / d * step; ag.position.z += dz / d * step; }
+                ag.position.y += (t.y - ag.position.y) * (1 - Math.exp(-dt * 10));
+                const want = step > 0.004 ? Math.atan2(dx, dz) : Math.atan2(P.x - ag.position.x, P.z - ag.position.z);
+                ag.rotation.y = lerpAngle(ag.rotation.y, want, 1 - Math.exp(-dt * (step > 0.004 ? 9 : 4)));
+                r.actor.update(dt); i++;
+            }
+        }
+
+        /* ---- MuchiGo import ---- */
+        function cmpMemClean(s) {
+            s = String(s || '').trim(); if (/^(I'?m not going to|I can'?t |I won'?t |I'?m sorry)/i.test(s) || s.length < 40) return '';
+            s = s.replace(/^[^\n]{0,80}(memory|summary)[^\n]{0,40}:?\*{0,2}\s*\n+(?:-{3,}\s*\n+)?/i, '').replace(/^\*\*[^\n]*\*\*\s*\n+/, '').trim(); return s.slice(0, 2400);
+        }
+        async function cmpPortrait(src) {
+            try { return await new Promise((res) => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 112; const g = c.getContext('2d'), s = Math.min(im.width, im.height); g.drawImage(im, (im.width - s) / 2, 0, s, s, 0, 0, 112, 112); res(c.toDataURL('image/jpeg', 0.72)); }; im.onerror = () => res(''); im.src = src; }); } catch (e) { return ''; }
+        }
+        async function cmpImport(file) {
+            sysChat('Reading ' + file.name + ' (' + (file.size / 1e6).toFixed(0) + ' MB). This can take a few seconds.');
+            let d; try { d = JSON.parse(await file.text()); } catch (e) { sysChat('That file could not be read as a MuchiGo save (' + (e.message || e) + ').'); return 0; }
+            if (!d || !Array.isArray(d.personas)) { sysChat('That does not look like a MuchiGo save.'); return 0; }
+            let n = 0, upd = 0;
+            for (const p of d.personas) {
+                if (!p || !p.name) continue; const mem = d.characterMemories && d.characterMemories[p.id];
+                const hist = ((d.histories && d.histories[p.id]) || []).filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content && !m.hidden && !m.content.startsWith('__HTML__') && m.content.length < 4000).slice(-16).map((m) => ({ r: m.role === 'user' ? 'user' : 'assistant', c: m.content.replace(/\n{2,}/g, '\n').slice(0, 400) }));
+                const rec = { id: 'mg_' + p.id, name: String(p.name).slice(0, 24), prompt: String(p.prompt || '').slice(0, 6000), trait: String(p.trait || '').slice(0, 3000), mood: p.mood || '', summary: cmpMemClean(mem && mem.summary), facts: Array.isArray(mem && mem.facts) ? mem.facts.map(String).slice(0, 20) : [], aff: (d.affections && d.affections[p.id]) | 0, hist, vrm: null, gender: 'female', portrait: p.media && p.mediaType === 'image' ? await cmpPortrait(p.media) : '', color: '', since: 0 };
+                const old = cmpFind(rec.id); if (old) { rec.vrm = old.vrm; rec.gender = old.gender; rec.color = old.color; Object.assign(old, rec); upd++; } else { CMP.list.push(rec); n++; }
+            }
+            if (d.apiKey && typeof d.apiKey === 'string' && d.apiKey.length > 20 && !CMP.ai.key && window.confirm('This save contains an API key. Use it for your companions? It stays on this device only.')) CMP.ai.key = d.apiKey.trim();
+            cmpSave(true); sysChat('Imported ' + n + ' new and updated ' + upd + ' companion(s). Give each one a VRM in the Companions panel, then summon them.'); cmpPanelRender(); return n + upd;
+        }
+
+        /* ---- the panel ---- */
+        function cmpCss() {
+            if (document.getElementById('cmp-css')) return; const st = document.createElement('style'); st.id = 'cmp-css';
+            st.textContent = `#cmp-btn{position:fixed;z-index:35;left:10px;bottom:84px;padding:8px 13px;border-radius:999px;background:rgba(16,20,34,.86);color:#fff;border:1px solid rgba(125,211,252,.55);font:700 13px Inter,system-ui,sans-serif;cursor:pointer;backdrop-filter:blur(6px)}#cmp-btn:hover{background:rgba(40,60,100,.92)}#cmp-btn b{color:#7dd3fc}
+#cmp-panel{position:fixed;z-index:80;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,18,.55);backdrop-filter:blur(3px)}#cmp-panel.on{display:flex}
+#cmp-box{width:min(96vw,760px);max-height:90vh;overflow:auto;background:rgba(14,18,32,.97);border:1px solid rgba(125,211,252,.4);border-radius:16px;padding:16px 18px;color:#e6eefc;font:500 14px Inter,system-ui,sans-serif}
+#cmp-box h3{margin:0 0 4px;font-size:20px;font-weight:800}#cmp-box .sub{color:#93a4c4;font-size:12.5px;margin-bottom:10px;line-height:1.45}
+#cmp-box .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}#cmp-box input[type=text],#cmp-box input[type=password],#cmp-box textarea,#cmp-box select{background:#0b1020;color:#e6eefc;border:1px solid #2c3b5e;border-radius:8px;padding:7px 9px;font:inherit}#cmp-box textarea{width:100%;min-height:120px;resize:vertical}
+#cmp-box button{background:#1c2a4a;color:#fff;border:1px solid #3a5388;border-radius:8px;padding:6px 11px;font:700 12.5px Inter,system-ui,sans-serif;cursor:pointer}#cmp-box button:hover{background:#2a4070}#cmp-box button.pri{background:#2563eb;border-color:#60a5fa}#cmp-box button.on{background:#16a34a;border-color:#4ade80}#cmp-box button.bad{background:#4a1c24;border-color:#a33}
+.cmp-card{display:flex;gap:11px;align-items:center;background:#0b1224;border:1px solid #22304f;border-radius:12px;padding:9px;margin:7px 0}.cmp-card img,.cmp-card .ph{width:56px;height:56px;border-radius:12px;object-fit:cover;background:#1c2a4a;flex:none;display:flex;align-items:center;justify-content:center;font-size:24px}
+.cmp-card .nm{font-weight:800;font-size:15px}.cmp-card .meta{color:#93a4c4;font-size:12px}.cmp-card .btns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}`;
+            document.head.appendChild(st);
+            const b = document.createElement('button'); b.id = 'cmp-btn'; b.type = 'button'; b.innerHTML = '👥 <b>Companions</b>'; b.addEventListener('click', () => cmpOpen()); document.body.appendChild(b);
+            const p = document.createElement('div'); p.id = 'cmp-panel'; p.innerHTML = '<div id="cmp-box"></div>'; document.body.appendChild(p); CMP.panel = p;
+            p.addEventListener('mousedown', (e) => { if (e.target === p) cmpClose(); });
+            const fi = document.createElement('input'); fi.type = 'file'; fi.id = 'cmp-file'; fi.accept = '.json,application/json'; fi.style.display = 'none'; document.body.appendChild(fi);
+            fi.addEventListener('change', async () => { const f = fi.files[0]; fi.value = ''; if (f) { try { await cmpImport(f); } catch (e) { sysChat('Import failed: ' + (e.message || e)); } } });
+            const vf = document.createElement('input'); vf.type = 'file'; vf.id = 'cmp-vrm'; vf.accept = '.vrm'; vf.style.display = 'none'; document.body.appendChild(vf);
+            vf.addEventListener('change', async () => { const f = vf.files[0]; vf.value = ''; const id = CMP.vrmFor; if (!f || !id) return; try { if (typeof INV !== 'undefined' && !INV.loaded) await invLoad(); const e = await invAddFile(f.name, await f.arrayBuffer()); const c = cmpFind(id); c.vrm = e.id; c.vrmName = e.name; cmpSave(true); cmpPanelRender(); cmpRespawn(id); } catch (err) { sysChat(String(err.message || err)); } });
+        }
+        function cmpOpen() { if (!CMP.panel) cmpCss(); CMP.view = 'list'; cmpPanelRender(); CMP.panel.classList.add('on'); try { document.activeElement && document.activeElement.blur(); } catch (e) { /* ignore */ } }
+        function cmpClose() { if (CMP.panel) CMP.panel.classList.remove('on'); }
+        async function cmpRespawn(id) { if (CMP.active.has(id)) { cmpDismiss(id); await cmpSummon(id); } }
+        function cmpBagVrms() { try { return invList().filter((i) => i.k === 'vrm'); } catch (e) { return []; } }
+        async function cmpPanelRender() {
+            const box = $('cmp-box'); if (!box) return; if (typeof INV !== 'undefined' && !INV.loaded) { try { await invLoad(); } catch (e) { /* ignore */ } }
+            if (CMP.view === 'edit') return cmpEditRender(box);
+            const bag = cmpBagVrms();
+            let h = '<h3>👥 Companions</h3><div class="sub">Import characters from MuchiGo, give each a VRM, and bring them along. Talk in the normal chat: they answer out loud with a bubble over their head. Say a name to talk to one, or "everyone". Up to four at once. Companions are only visible to you.</div>';
+            h += '<div class="row"><button class="pri" data-a="import">⬆ Import MuchiGo save</button><button data-a="new">＋ New companion</button><button data-a="close" style="margin-left:auto">Close</button></div>';
+            h += '<div class="row"><span>API key</span><input type="password" id="cmp-key" placeholder="sk-ant-… or OpenRouter sk-or-…" value="' + cmpEsc(CMP.ai.key) + '" style="flex:1;min-width:180px"><select id="cmp-model">' + Object.keys(CMP_MODELS).map((k) => '<option value="' + k + '"' + (CMP.ai.model === k ? ' selected' : '') + '>' + CMP_MODELS[k][2] + '</option>').join('') + '</select><label><input type="checkbox" id="cmp-amb"' + (CMP.ai.ambient ? ' checked' : '') + '> they chat on their own now and then</label></div>';
+            if (!CMP.list.length) h += '<div class="sub" style="margin-top:14px">No companions yet. Use <b>Import MuchiGo save</b> with your exported .json, or create one.</div>';
+            for (const c of CMP.list) {
+                const on = CMP.active.has(c.id), vname = c.vrm ? ((bag.find((b) => b.id === c.vrm) || {}).name || c.vrmName || 'VRM') : 'no model yet (robot)';
+                h += '<div class="cmp-card" data-id="' + c.id + '">' + (c.portrait ? '<img src="' + c.portrait + '">' : '<div class="ph">👤</div>') + '<div><div class="nm">' + cmpEsc(c.name) + '</div><div class="meta">' + cmpEsc(vname) + ' · ' + cmpAffLevel(c.aff) + (c.summary ? ' · has memories' : '') + '</div></div><div class="btns">'
+                    + '<select data-a="vrmpick"><option value="">Choose VRM…</option>' + bag.map((b) => '<option value="' + b.id + '"' + (c.vrm === b.id ? ' selected' : '') + '>' + cmpEsc(b.name) + '</option>').join('') + '<option value="__up">⬆ Upload a .vrm…</option></select>'
+                    + '<button data-a="' + (on ? 'dismiss' : 'summon') + '" class="' + (on ? 'on' : 'pri') + '">' + (on ? 'Dismiss' : 'Summon') + '</button><button data-a="edit">Edit</button><button data-a="del" class="bad">✕</button></div></div>';
+            }
+            box.innerHTML = h;
+        }
+        function cmpEditRender(box) {
+            const c = cmpFind(CMP.editId); if (!c) { CMP.view = 'list'; return cmpPanelRender(); }
+            box.innerHTML = '<h3>Edit ' + cmpEsc(c.name) + '</h3><div class="sub">The personality prompt is the character\'s brain. Memory is what they remember about you; it updates itself as you talk.</div>'
+                + '<div class="row"><span>Name</span><input type="text" id="ce-name" value="' + cmpEsc(c.name) + '" maxlength="24"><span>Body</span><select id="ce-g"><option value="female"' + (c.gender !== 'male' ? ' selected' : '') + '>female animations</option><option value="male"' + (c.gender === 'male' ? ' selected' : '') + '>male animations</option></select><span>Bubble colour</span><input type="color" id="ce-col" value="' + cmpColor(c) + '"></div>'
+                + '<div>Personality prompt</div><textarea id="ce-prompt">' + cmpEsc(c.prompt) + '</textarea><div>Traits</div><textarea id="ce-trait" style="min-height:70px">' + cmpEsc(c.trait) + '</textarea><div>Memory</div><textarea id="ce-mem" style="min-height:110px">' + cmpEsc(c.summary) + '</textarea>'
+                + '<div class="row"><button class="pri" data-a="saveedit">Save</button><button data-a="cancel">Back</button><button data-a="clearhist" class="bad">Forget the chat history</button></div>';
+        }
+        document.addEventListener('click', (e) => {
+            const t = e.target.closest && e.target.closest('#cmp-box [data-a]'); if (!t || t.tagName === 'SELECT') return; const a = t.dataset.a, card = t.closest('.cmp-card'), id = card && card.dataset.id;
+            if (a === 'close') cmpClose(); else if (a === 'import') $('cmp-file').click();
+            else if (a === 'new') { const c = { id: 'c_' + uid(), name: 'New friend', prompt: 'You are a friendly, curious companion who loves exploring the Oasis.', trait: '', summary: '', facts: [], aff: 0, hist: [], vrm: null, gender: 'female', portrait: '', color: '', since: 0 }; CMP.list.push(c); cmpSave(true); CMP.view = 'edit'; CMP.editId = c.id; cmpPanelRender(); }
+            else if (a === 'summon') cmpSummon(id); else if (a === 'dismiss') cmpDismiss(id);
+            else if (a === 'edit') { CMP.view = 'edit'; CMP.editId = id; cmpPanelRender(); }
+            else if (a === 'del') { const c = cmpFind(id); if (c && window.confirm('Remove ' + c.name + ' and their memories from this device?')) { cmpDismiss(id); CMP.list = CMP.list.filter((x) => x.id !== id); cmpSave(true); cmpPanelRender(); } }
+            else if (a === 'cancel') { CMP.view = 'list'; cmpPanelRender(); }
+            else if (a === 'clearhist') { const c = cmpFind(CMP.editId); if (c) { c.hist = []; cmpSave(true); sysChat(c.name + ' will not recall the recent chat (their memory stays).'); } }
+            else if (a === 'saveedit') { const c = cmpFind(CMP.editId); if (c) { c.name = ($('ce-name').value.trim() || c.name).slice(0, 24); c.gender = $('ce-g').value; c.color = $('ce-col').value; c.prompt = $('ce-prompt').value.slice(0, 6000); c.trait = $('ce-trait').value.slice(0, 3000); c.summary = $('ce-mem').value.slice(0, 2400); cmpSave(true); CMP.view = 'list'; cmpPanelRender(); cmpRespawn(c.id); } }
+        });
+        document.addEventListener('change', (e) => {
+            const t = e.target; if (!t.closest || !t.closest('#cmp-box')) return;
+            if (t.id === 'cmp-key') { CMP.ai.key = t.value.trim(); cmpSave(true); } else if (t.id === 'cmp-model') { CMP.ai.model = t.value; cmpSave(true); } else if (t.id === 'cmp-amb') { CMP.ai.ambient = t.checked; cmpSave(true); }
+            else if (t.dataset.a === 'vrmpick') { const id = t.closest('.cmp-card').dataset.id, c = cmpFind(id); if (t.value === '__up') { CMP.vrmFor = id; $('cmp-vrm').click(); t.value = c.vrm || ''; } else { c.vrm = t.value || null; c.vrmName = ''; cmpSave(true); cmpPanelRender(); cmpRespawn(id); } }
+        });
+        document.addEventListener('input', (e) => { if (e.target && e.target.id === 'cmp-key') { CMP.ai.key = e.target.value.trim(); cmpSave(); } });
+        cmpLoad(); setTimeout(() => { try { cmpCss(); } catch (e) { console.warn('companions ui', e); } }, 1500);
+        window.__cmp = { CMP, cmpSummon, cmpDismiss, cmpHear, cmpImport, cmpOpen, cmpAI };
+
         function animate() {
             requestAnimationFrame(animate);
             gfxFrame(performance.now());
@@ -22596,6 +22928,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             updateLookMarker();
             levelTick(dt); updateHolo(dt);
             localActor.update(dt);
+            try { cmpFrame(dt); } catch (e) { /* companions must never stop the loop */ }
 
             const k = 1 - Math.exp(-dt * 14);
             peers.forEach((p) => {
