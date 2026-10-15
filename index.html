@@ -13064,8 +13064,10 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 _blzTex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) _blzTex.colorSpace = THREE.SRGBColorSpace; }
             const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshLambertMaterial({ map: _blzTex })); m.frustumCulled = false; return m;
         }
+        const _blw2 = new THREE.Vector3();
+        function blzThrow(a, p, dur, col) { a.blzThrow = { t0: nowS(), dur: dur || 0.46, p: new THREE.Vector3(p[0], p[1], p[2]), col: col || 0 }; }   // the ball flies from the hand to p and back
         function blzBall(a, dt) {   // the ball rides above the right hand, in world space so it does not depend on the rig's bone axes
-            const want = a.kind === 'vrm' && a.vrm && (a.blitz || (a.emote && a.emote.startsWith('wk_')));
+            const want = a.kind === 'vrm' && a.vrm && (a.blitz || a.blzThrow || (a.emote && a.emote.startsWith('wk_')));
             if (!want) { if (a.blzMesh) a.blzMesh.visible = false; return; }
             const H = a.vrm.humanoid, hand = H.getNormalizedBoneNode('rightHand') || H.getNormalizedBoneNode('rightLowerArm'); if (!hand) return;
             if (!a.blzMesh) { a.blzMesh = blzBallMesh(); a.group.add(a.blzMesh); }
@@ -13074,6 +13076,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             _blw.x += Math.sin(yaw) * 0.035 * hs; _blw.z += Math.cos(yaw) * 0.035 * hs; _blw.y += (r * 0.8 + off[1] * hs);
             a.group.worldToLocal(_blw); M.position.copy(_blw); M.scale.setScalar(r / (a.group.scale ? a.group.scale.x : 1)); M.visible = true;
             M.rotation.y = off[3] || 0; if (!off[3]) M.rotation.y = (a.blzSpinBase = (a.blzSpinBase || 0) + dt * 0.4);
+            if (a.blzThrow) { const T = a.blzThrow, k = (nowS() - T.t0) / T.dur; if (k >= 1) { a.blzThrow = null; if (M.material.emissive) M.material.emissive.setHex(0); } else { const sp = 1 - Math.abs(2 * k - 1); hand.getWorldPosition(_blw2); _blw2.lerp(T.p, sp); _blw2.y += Math.sin(Math.PI * sp) * 0.3 + r * 0.8; a.group.worldToLocal(_blw2); M.position.copy(_blw2); M.rotation.y += k * 24; if (M.material.emissive) M.material.emissive.setHex(T.col); } }
         }
         function blzSet(on, quiet) {   // the class is a stance, not a weapon: it clears any weapon class and has no combat of its own
             BLZ.on = !!on; try { localStorage.setItem('oasisBlitzCls', on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
@@ -13508,7 +13511,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             if (u.cmpId && u.order) { try { if (cmpRunOrder(u)) return; } catch (e) { console.warn('battle order', e); } }   // an order from chat, if the player gave one
             if (u.cmpId) { try { if (cmpBotCmd(u) !== false) return; } catch (e) { /* stock ally AI below */ } }
             const foes = btAlive(BT.foes), hurt = BT.party.filter((p) => !p.dead && p.hp < p.hpMax * 0.45), dead = BT.party.filter((p) => p.dead);
-            if (u.limit >= 1 && foes.length) return btHandle(u.id, { kind: 'limit', tgt: foes.sort((a, b) => b.hp - a.hp)[0].id, lm: btBotLm() });
+            if (u.limit >= 1 && foes.length) return btHandle(u.id, { kind: 'limit', tgt: foes.sort((a, b) => b.hp - a.hp)[0].id, ...btBotPick() });
             const sick = BT.party.filter((p) => !p.dead && p.st && BT_BAD.some((k) => p.st[k] > 0 && k !== 'mini'));
             if (sick.length && Math.random() < 0.7) { const p = sick[0]; if (u.mp >= 10 && btLvl() >= 2 && !btHas(u, 'silence')) return btHandle(u.id, { kind: 'mag', spell: 'esuna', tgt: p.id }); if ((BT.inv.remedy | 0) > 0) return btHandle(u.id, { kind: 'item', item: 'remedy', tgt: p.id }); }
             if (!btHas(u, 'silence') && Math.random() < 0.22 && foes.length) { const sup = [['haste', 3], ['protect', 4], ['shell', 4], ['regen', 5]].filter((q) => btLvl() >= q[1] && u.mp >= BT_SPELLS[q[0]].mp + 8), q = sup.length ? btPick(sup) : null; const who = q ? BT.party.filter((p) => !p.dead && !btHas(p, q[0])) : []; if (who.length) return btHandle(u.id, { kind: 'mag', spell: q[0], tgt: btPick(who).id }); }
@@ -13549,7 +13552,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             const foes = btAlive(BT.foes); let ev = { a: 'ev', kind: c.kind, who, name: '', tgt: [], res: [], dur: 1.5, imp: [0.62], fx: 'hit' };
             if (c.kind === 'atk') { const t = btUnit(c.tgt); if (!t || t.dead || (!t.isFoe && !btHas(u, 'confuse'))) return; ev.name = 'Attack'; ev.tgt = [t.id]; ev.res = [btHit(u, t, 1)]; ev.dur = 1.55; }
             else if (c.kind === 'def') { ev.name = 'Defend'; ev.dur = 0.9; ev.imp = [0.3]; }
-            else if (c.kind === 'limit') { if (u.limit < 1) return; const t = btUnit(c.tgt); if (!t || !t.isFoe || t.dead) return; Object.assign(ev, btLimitEv(u, t, BT_LIMITS[c.lm] ? c.lm : 'radiant', foes)); }
+            else if (c.kind === 'limit') { if (u.limit < 1) return; const t = btUnit(c.tgt); if (!t || !t.isFoe || t.dead) return; Object.assign(ev, btLimitEv(u, t, BT_LIMITS[c.lm] ? c.lm : 'radiant', foes, c.q)); }
             else if (c.kind === 'mag') {
                 const sp = BT_SPELLS[c.spell]; if (!sp || u.mp < sp.mp || (BT_LV[c.spell] || 1) > btLvl() || btHas(u, 'silence')) return; ev.name = sp.n; ev.spell = c.spell; ev.mp = sp.mp; ev.fx = 'spell'; ev.dur = 2.0; ev.imp = [1.05];
                 if (sp.esuna || sp.buff) { const t = btUnit(c.tgt); if (!t || t.isFoe || t.dead) return; ev.tgt = [t.id]; ev.res = [sp.esuna ? { id: t.id, d: 0, cl: BT_BAD.slice() } : { id: t.id, d: 0, st: [sp.buff] }]; }
@@ -13654,7 +13657,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             if (ev.kind === 'atk' || ev.kind === 'foe' && ['hit', 'bash'].includes(ev.fx) || ev.kind === 'limit') {
                 const lim = ev.kind === 'limit', runIn = lim ? 0.7 : 0.45, hitT = ev.imp, back = an.dur - 0.5, mvTo = lim ? [tp[0] + (tg && tg.big ? 3.6 : 1.7), tp[1]] : front;
                 const LL = lim ? (BT_LIMITS[ev.lm] || BT_LIMITS.radiant) : null, rng = !u.isFoe && !u.bot && btClsOf(act, mine) === 'pistol' && !(LL && LL.melee);
-                let k = t < runIn ? btEase(t / runIn) : t < back ? 1 : 1 - btEase((t - back) / 0.45); if (rng) k = 0; if (!u.isFoe && !lim && ev.kind === 'atk' || lim) { /* run to the target */ }
+                let k = t < runIn ? btEase(t / runIn) : t < back ? 1 : 1 - btEase((t - back) / 0.45); if (rng || (LL && LL.stay)) k = 0; if (!u.isFoe && !lim && ev.kind === 'atk' || lim) { /* run to the target */ }
                 if (obj) { btMoveTo(obj, pos0, mvTo, btCl01(k)); if (!u.isFoe) obj.rotation.y = lerpAngle(obj.rotation.y, Math.atan2(tp[0] - obj.position.x, tp[1] - obj.position.z), 0.4); else obj.rotation.y = lerpAngle(obj.rotation.y, Math.atan2(tp[0] - obj.position.x, tp[1] - obj.position.z), 0.4); if (u.isFoe) obj.position.y = u.type === 'drone' ? 0 : Math.abs(Math.sin(t * 14)) * 0.15 * (k > 0 && k < 1 ? 1 : 0); }
                 if (!u.isFoe) { const want = lim ? [] : [ev.imp[0] - (rng ? 0.12 : 0.32)]; if (lim) btLimitWind(ev, u, act, mine, an, t); while ((an.sw || 0) < want.length && t >= want[an.sw || 0]) { if (rng) btGunShot(act, btObjPos(u), tp, tg ? (tg.h || 1.5) * 0.55 : 1, lim && an.sw === want.length - 1); else { btPlayAtk(act, an.sw || 0, mine); try { btSfx(btClsOf(act, mine) === 'fighter' ? 'punch' : 'swing'); } catch (e) { /* sound */ } } an.sw = (an.sw || 0) + 1; } if (t < runIn) setPose('ready', t); else setPose(undefined, undefined); if (u.bot && obj) { obj.userData.hop = 0; obj.rotation.x = k > 0.9 && t < back ? Math.sin(t * 30) * 0.15 : 0; } }
                 if (lim && t > 0.7 && t < 3.3) { an.orbit = true; }
@@ -13696,26 +13699,55 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             headhunter: { n: 'Headhunter', who: 'sniper', hits: [6.6], t0: 1.9, gap: 0, dur: 3.5, col: 0xffffff, cam: 'snipe', mode: 'one', gun: 'sniper', sure: true },
             barrage: { n: 'Rocket Barrage', who: 'rocket', hits: [0.9, 0.9, 1.7], t0: 1.0, gap: 0.65, dur: 3.9, col: 0xff8a3a, cam: 'wide', mode: 'all', gun: 'rocket', proj: 'rocket' },
             cluster: { n: 'Cluster Bomb', who: 'grenade', hits: [0.7, 0.7, 0.7, 0.7, 1.2], t0: 1.0, gap: 0.42, dur: 3.9, col: 0xc8ff6a, cam: 'wide', mode: 'splash', splash: 0.5, gun: 'grenade', proj: 'grenade' },
-            cuts: { n: 'Thousand Cuts', who: 'knife', hits: [0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 1.8], t0: 0.95, gap: 0.14, dur: 3.1, melee: true, col: 0xe8f6ff, cam: 'orbit', mode: 'one', gun: 'knife' }
+            cuts: { n: 'Thousand Cuts', who: 'knife', hits: [0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 1.8], t0: 0.95, gap: 0.14, dur: 3.1, melee: true, col: 0xe8f6ff, cam: 'orbit', mode: 'one', gun: 'knife' },
+            // minigame limits: the hits are built from how well you played (see btVarHits)
+            gunblade: { n: 'Renzokuken', who: 'sword', vr: 'gb', t0: 1.0, gap: 0.28, dur: 4.5, melee: true, col: 0xcfe8ff, cam: 'orbit', mode: 'one', blurb: 'Gunblade: pull the trigger on the beat' },
+            spiralcut: { n: 'Spiral Cut', who: 'blitz', vr: 'sp', t0: 1.0, gap: 0.26, dur: 4.5, melee: true, col: 0x7fd8ff, cam: 'orbit', mode: 'one', blurb: 'Overdrive: follow the spiral' },
+            energyrain: { n: 'Energy Rain', who: 'blitz', vr: 'er', t0: 1.0, gap: 0.2, dur: 4.5, melee: true, col: 0x9ff0ff, cam: 'wide', mode: 'all', blurb: 'Overdrive: mash for power' },
+            reels: { n: 'Attack Reels', who: 'blitz', vr: 'rl', t0: 1.0, gap: 0.45, dur: 4.0, melee: false, stay: true, ball: true, col: 0xffffff, cam: 'side', mode: 'one', blurb: 'Wakka: stop the elemental reels' }
         };
+        const BT_REEL_COL = [0xff7a2a, 0xffe14a, 0x4aa8ff, 0x9ff0ff], BT_REEL_CSS = ['#ffb070', '#fff4a0', '#a8d4ff', '#dff8ff'], BT_REEL_SYM = ['\ud83d\udd25', '\u26a1', '\ud83d\udca7', '\u2744\ufe0f'], BT_REEL_N = ['Fire', 'Thunder', 'Water', 'Ice'], BT_REEL_KEY = ['fire', 'bolt', 'water', 'ice'];
+        function btReelDom(q) { const e = [q & 3, (q >> 2) & 3, (q >> 4) & 3], c = [0, 0, 0, 0]; e.forEach((x) => c[x]++); let b = e[0]; for (const x of e) if (c[x] > c[b]) b = x; return { el: b, match: c[b], e }; }
+        const btReelEl = (tr, i) => (i < 3 ? (tr >> (2 * i)) & 3 : btReelDom(tr).el);
+        // hits for the minigame limits. gunblade: q = which of the 8 slashes you pulled the trigger on (bitmask); spiralcut: q = arrows you got right; energyrain: q = taps
+        function btVarHits(lm, q) {
+            q = Math.max(0, Math.min(255, Math.floor(+q || 0))); const hits = [], imp = [], els = [], push = (m, t) => { hits.push(m); imp.push(+t.toFixed(3)); }; let tr = 0, name = BT_LIMITS[lm].n, t;
+            if (lm === 'gunblade') {
+                let n = 0; for (let i = 0; i < 8; i++) { const on = (q >> i) & 1; if (on) { tr |= 1 << i; n++; } push(on ? 0.8 : 0.5, 1.0 + 0.28 * i); }
+                const fin = n >= 8 ? ['Lion Heart', [1.2, 1.2, 1.2, 1.2, 1.8], 0.38] : n >= 6 ? ['Blasting Zone', [1.4, 1.4, 1.4], 0.5] : n >= 3 ? ['Fated Circle', [1.2, 1.9], 0.5] : ['Rough Divide', [1.7], 0.5];
+                t = 1.0 + 0.28 * 7 + 0.5; fin[1].forEach((m) => { push(m, t); t += fin[2]; }); name = 'Renzokuken: ' + fin[0];
+            } else if (lm === 'reels') {
+                const D = btReelDom(q & 63); tr = q & 63; for (let i = 0; i < 3; i++) { push(0.8, 1.0 + 0.45 * i); els.push(BT_REEL_KEY[D.e[i]]); } push(D.match === 3 ? 4.6 : D.match === 2 ? 2.8 : 1.6, 1.0 + 0.45 * 2 + 0.7); els.push(BT_REEL_KEY[D.el]); name = 'Attack Reels: ' + (D.match === 3 ? 'Triple ' : D.match === 2 ? 'Double ' : '') + BT_REEL_N[D.el];
+            } else if (lm === 'spiralcut') {
+                const n = 3 + Math.floor(Math.min(16, q) / 2); for (let i = 0; i < n; i++) push(0.45, 1.0 + 0.26 * i); push(3.0, 1.0 + 0.26 * (n - 1) + 0.55);
+            } else {
+                const n = Math.min(12, 4 + Math.floor(Math.min(40, q) / 4)); for (let i = 0; i < n; i++) push(0.32, 1.0 + 0.2 * i); push(2.2, 1.0 + 0.2 * (n - 1) + 0.55);
+            }
+            return { hits, imp, tr, name, els: els.length ? els : null, dur: Math.min(8.5, imp[imp.length - 1] + 1.0) };
+        }
         const BT_FIGHT_LIMITS = ['beatrush', 'somersault', 'dragonfist', 'meteodrive', 'finalheaven'];
         const BT_GUN_LIMIT = { pistol: 'deadeye', rifle: 'fullauto', shotgun: 'pointblank', sniper: 'headhunter', rocket: 'barrage', grenade: 'cluster', knife: 'cuts' };
         const btGunKey = (a, isMe) => { let k = isMe ? (typeof GN !== 'undefined' ? GN.cur : 'pistol') : (a && a.gw) || 'pistol'; return BT_GUN_LIMIT[k] ? k : 'pistol'; };
         // the limit a class uses without asking (the Fighter asks with a combo, so she has none here)
-        function btMyLm() { const c = btClsOf(btActorOf(me.id), true); return c === 'fighter' ? null : c === 'pistol' ? BT_GUN_LIMIT[btGunKey(null, true)] : 'radiant'; }
-        const btLimitName = () => { const lm = btMyLm(); return lm ? BT_LIMITS[lm].n : 'Command combo'; };
-        function btLimitEv(u, t, lm, foes) {
-            const L = BT_LIMITS[lm] || BT_LIMITS.radiant, ev = { tgt: [t.id], res: [], imp: [], dur: L.dur, fx: 'limit', lm: BT_LIMITS[lm] ? lm : 'radiant', name: L.n }, others = foes.filter((f) => f.id !== t.id);
+        function btMyMg() {   // which limit minigame your class plays: the Fighter's command combo, the Hero's gunblade, or the Blitzball stance's overdrive
+            let blz = false; try { blz = !!BLZ.on && CLS.wpn === 'fists'; } catch (e) { /* no stance */ }
+            if (blz) return 'over'; const c = btClsOf(btActorOf(me.id), true); return c === 'fighter' ? 'fight' : c === 'sword' && CLS.wpn === 'sword' ? 'gb' : null;
+        }
+        function btMyLm() { if (btMyMg()) return null; const c = btClsOf(btActorOf(me.id), true); return c === 'pistol' ? BT_GUN_LIMIT[btGunKey(null, true)] : 'radiant'; }
+        const btLimitName = () => { const lm = btMyLm(), g = btMyMg(); return lm ? BT_LIMITS[lm].n : g === 'gb' ? 'Renzokuken' : g === 'over' ? 'Overdrive' : 'Command combo'; };
+        function btLimitEv(u, t, lm, foes, q) {
+            const L = BT_LIMITS[lm] || BT_LIMITS.radiant, H = L.vr ? btVarHits(lm, q) : null, ev = { tgt: [t.id], res: [], imp: [], dur: H ? H.dur : L.dur, fx: 'limit', lm: BT_LIMITS[lm] ? lm : 'radiant', name: H ? H.name : L.n, tr: H ? H.tr : 0 }, others = foes.filter((f) => f.id !== t.id);
             if (L.mode !== 'one') ev.tgt = [t.id, ...others.map((f) => f.id)].slice(0, 8);
-            L.hits.forEach((m, i) => {
-                ev.imp.push(+(L.t0 + L.gap * i).toFixed(3)); const last = i === L.hits.length - 1;
-                const one = (tt, mul) => { const r = btHit(u, tt, mul); if (L.sure && r.miss) { r.miss = false; r.d = Math.max(1, Math.round(btAtk(u) * mul)); } r.i = i; if (last && !r.miss) r.crit = true; ev.res.push(r); };
+            (H ? H.hits : L.hits).forEach((m, i, arr) => {
+                ev.imp.push(H ? H.imp[i] : +(L.t0 + L.gap * i).toFixed(3)); const last = i === arr.length - 1;
+                const one = (tt, mul) => { const r = btHit(u, tt, mul, H && H.els ? H.els[i] : undefined); if (L.sure && r.miss) { r.miss = false; r.d = Math.max(1, Math.round(btAtk(u) * mul)); } r.i = i; if (last && !r.miss) r.crit = true; ev.res.push(r); };
                 one(t, m); if (L.mode === 'all') for (const f of others) one(f, m); else if (L.mode === 'splash') for (const f of others) one(f, m * L.splash);
             });
             return ev;
         }
         // what a CPU ally or an unattended fighter does: pick by luck
-        const btBotLm = () => (Math.random() < 0.3 ? btPick(['finalheaven', 'meteodrive']) : btPick(['beatrush', 'somersault', 'dragonfist', 'radiant']));
+        const btBotLm = () => (Math.random() < 0.3 ? btPick(['finalheaven', 'meteodrive']) : btPick(['beatrush', 'somersault', 'dragonfist', 'radiant', 'gunblade', 'gunblade', 'spiralcut', 'energyrain', 'reels', 'reels']));
+        const btBotPick = () => { const lm = btBotLm(); let q = 0; if (lm === 'gunblade') { for (let i = 0; i < 8; i++) if (Math.random() < 0.6) q |= 1 << i; } else if (lm === 'spiralcut') q = 6 + Math.floor(Math.random() * 8); else if (lm === 'energyrain') q = 12 + Math.floor(Math.random() * 20); else if (lm === 'reels') q = Math.floor(Math.random() * 64); return { lm, q }; };
         // ---- the limit's effects at each impact
         function btLimitProj(from, to, kind, dur, col) {   // a rocket or grenade crossing the field
             if (!BT.fxRoot) return; const m = new THREE.Mesh(kind === 'rocket' ? new THREE.CylinderGeometry(0.07, 0.07, 0.5, 6) : new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshBasicMaterial({ color: kind === 'rocket' ? 0xd8dde6 : 0x5a7a2a, transparent: true, opacity: 1, fog: false }));
@@ -13736,7 +13768,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                     else if (L.gun === 'rifle') { btGunShot(act, up, [tp[0] + btRand(-0.3, 0.3), tp[1]], ty + btRand(-0.3, 0.3), i === ev.imp.length - 1); try { btSmp(O1(['rifle_fire1', 'rifle_fire2', 'rifle_fire3']), 0.55, btRand(0.95, 1.15)); } catch (e) { /* sound */ } }
                     else if (L.gun === 'sniper') { btGunShot(act, up, tp, ty, true); try { btSmp(O1(['sniper_fire1', 'sniper_fire2']), 1, 0.95); } catch (e) { /* sound */ } }
                     else btGunShot(act, up, tp, ty, i === ev.imp.length - 1);
-                } else if (!u.isFoe) { btPlayAtk(act, i, mine); try { btSfx(cls === 'fighter' ? 'punch' : 'swing'); } catch (e) { /* sound */ } }
+                } else if (!u.isFoe) { btPlayAtk(act, i, mine); try { btSfx(cls === 'fighter' ? 'punch' : 'swing'); } catch (e) { /* sound */ } if (L.ball && act) { try { blzThrow(act, [tp[0], (tgt && tgt.h ? tgt.h : 1.5) * 0.55, tp[1]], 0.46, BT_REEL_COL[btReelEl(ev.tr | 0, i)]); } catch (e) { /* no ball */ } } }
             }
         }
         const O1 = (a) => a[Math.floor(Math.random() * a.length)];
@@ -13748,6 +13780,29 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 if (i === 0) { try { btSfx('limit'); } catch (e) { /* sound */ } }
                 const p = tp; btFxBurst(p[0], hy, p[1], L.col, last ? 22 : 12, 5, 0.5, 0.07); if (L.who === 'fighter') { btFxBurst(p[0], hy, p[1], 0xffffff, 6, 3, 0.35, 0.06); if (last) { btFxRing(p[0], 0.06, p[1], L.col, 3.0, 0.7); btFxRing(p[0], 0.9, p[1], 0xffffff, 2.0, 0.5); try { btSfx('limit'); } catch (e) { /* sound */ } } else { try { S(O1(['hit_body1', 'hit_body2']), 0.9, btRand(0.8, 1.1)); } catch (e) { /* sound */ } } }
                 btFlash(last ? '#ffffff' : (L.who === 'fighter' ? '#ffe9b0' : '#ffffff'), last ? 0.8 : 0.22); btShake(last ? 0.85 : 0.3); return;
+            }
+            if (ev.lm === 'reels') {
+                const el = btReelEl(ev.tr | 0, i), col = BT_REEL_COL[el], css = BT_REEL_CSS[el], p = tp, D = btReelDom(ev.tr | 0);
+                btFxBurst(p[0], hy, p[1], col, last ? 44 : 14, last ? 7 : 4.5, last ? 0.7 : 0.4, last ? 0.11 : 0.07); btFxRing(p[0], last ? 0.06 : hy, p[1], col, last ? (D.match === 3 ? 4.4 : 3.2) : 1.7, last ? 0.7 : 0.35);
+                try { if (last && btFxOk()) fxPlay('explosion', { x: p[0], y: 0.9, z: p[1] }, { kind: ['fire', 'thunder', 'water', 'ice'][el], scale: D.match === 3 ? 1.4 : 1 }); } catch (e) { /* fx */ }
+                try { S(O1(['hit_body1', 'hit_body2']), last ? 1 : 0.7, btRand(0.8, 1.1)); if (last) btSfx(el === 1 ? 'bolt' : el === 3 ? 'ice' : el === 0 ? 'fire' : 'crit'); } catch (e) { /* sound */ }
+                btFlash(css, last ? 0.8 : 0.3); btShake(last ? 0.9 : 0.25); return;
+            }
+            if (ev.lm === 'gunblade') {
+                const p = tp, fin = i >= 8, trig = !fin && ((ev.tr >> i) & 1), lion = fin && n - 8 >= 5;
+                if (i === 0) { try { S('rocket_raise', 0.5, 1.6); } catch (e) { /* sound */ } }
+                if (trig) { btFxBurst(p[0], hy, p[1], 0xfff0b0, 18, 5.5, 0.4, 0.07); btFxRing(p[0], hy, p[1], 0xffe08a, 1.7, 0.3); btFlash('#fff2c0', 0.55); btShake(0.55); try { S(O1(['pistol_fire1', 'pistol_fire2', 'pistol_fire3']), 0.9, btRand(0.7, 0.85)); S(O1(['hit_body1', 'hit_body2']), 0.8, 0.8); } catch (e) { /* sound */ } }
+                else if (!fin) { btFxBurst(p[0], hy, p[1], L.col, 7, 3.5, 0.35, 0.06); btShake(0.18); try { S(O1(['knife_hit1', 'knife_hit2']), 0.6, btRand(0.9, 1.2)); } catch (e) { /* sound */ } }
+                else { btFxBurst(p[0], hy, p[1], lion ? 0xffd24a : 0xcfe8ff, last ? 40 : 20, last ? 7 : 5, 0.6, 0.09); btFxRing(p[0], 0.5, p[1], lion ? 0xffd24a : 0xcfe8ff, last ? 3.6 : 2.2, 0.55); btFlash(last ? '#ffffff' : '#fff2c0', last ? 0.95 : 0.5); btShake(last ? 1 : 0.6); try { btSfx(last ? 'crit' : 'hit'); if (last) S('rocket_boom1', 0.7, lion ? 0.8 : 1.1); } catch (e) { /* sound */ } }
+                return;
+            }
+            if (ev.lm === 'spiralcut') {
+                const p = tp; btFxRing(p[0], 0.15 + (i % 5) * 0.28, p[1], last ? 0xffffff : L.col, last ? 3.8 : 1.8, last ? 0.7 : 0.35); btFxBurst(p[0], hy, p[1], L.col, last ? 36 : 8, last ? 6.5 : 3.5, last ? 0.6 : 0.35, 0.07);
+                if (i === 0) { try { btSfx('swing'); } catch (e) { /* sound */ } } try { S(O1(['knife_hit1', 'knife_hit2']), last ? 1 : 0.5, btRand(1.0, 1.35)); } catch (e) { /* sound */ } btShake(last ? 0.9 : 0.15); if (last) { btFlash('#dff6ff', 0.85); try { btSfx('crit'); } catch (e) { /* sound */ } } return;
+            }
+            if (ev.lm === 'energyrain') {
+                for (const f of foes) { const q2 = btSlotPos(f); btFxBurst(q2[0] + btRand(-0.7, 0.7), 2.6, q2[1] + btRand(-0.7, 0.7), 0x9ff0ff, last ? 24 : 7, 1.5, 0.7, last ? 0.12 : 0.07, 2.5, 0.3); btFxBurst(q2[0], 0.4, q2[1], 0xffffff, last ? 18 : 4, 3, 0.35, 0.06); if (last) btFxRing(q2[0], 0.06, q2[1], 0x9ff0ff, 3.2, 0.6); }
+                try { S(O1(['hit_body1', 'hit_body2']), last ? 0.9 : 0.3, btRand(1.2, 1.7)); if (last) btSfx('crit'); } catch (e) { /* sound */ } btShake(last ? 0.9 : 0.1); btFlash(last ? '#ffffff' : '#cff8ff', last ? 0.8 : 0.12); return;
             }
             if (ev.lm === 'deadeye') { const p = tp; btFxBurst(p[0], hy, p[1], 0xfff2a0, last ? 20 : 10, 4, 0.4, 0.06); if (last) { btFlash('#ffffff', 0.7); btShake(0.7); try { btSfx('crit'); } catch (e) { /* sound */ } } else btShake(0.25); return; }
             if (ev.lm === 'fullauto') { const p = tp; btFxBurst(p[0] + btRand(-0.3, 0.3), hy + btRand(-0.3, 0.3), p[1], 0xffe08a, last ? 18 : 4, last ? 4 : 2.5, 0.3, 0.05); try { S(O1(['hit_body1', 'hit_body2']), 0.3, btRand(1.1, 1.5)); } catch (e) { /* sound */ } btShake(last ? 0.8 : 0.12); if (last) { btFlash('#ffffff', 0.7); try { btSfx('crit'); } catch (e) { /* sound */ } } return; }
@@ -13761,15 +13816,79 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
         // ---- the Fighter's command input
         const BT_ARROW = { U: '⬆', D: '⬇', L: '⬅', R: '➡', P: '👊', K: '🦶' };
         function btComboOpen(cmd) {
-            if (!btMyTurn()) return; BT.combo = { cmd, buf: '', t0: performance.now(), life: 8000, done: false }; BT.menu.mode = 'combo'; btSfx('ok'); btComboDraw(true);
+            if (!btMyTurn()) return; const mg = btMyMg() === 'gb' ? 'gb' : btMyMg() === 'over' ? 'pick' : 'fight'; BT.combo = { cmd, mg, buf: '', t0: performance.now(), life: 8000, done: false };
+            if (mg === 'gb') { const per = 520, st = performance.now() + 1000; BT.combo.g = { per, st, res: [0, 0, 0, 0, 0, 0, 0, 0], fb: 0, fbT: 0 }; BT.combo.life = 1e9; }
+            if (mg === 'pick') BT.combo.life = 1e9; BT.menu.mode = 'combo'; btSfx('ok'); btComboDraw(true);
         }
         function btComboClose(send) {
             const C = BT.combo; BT.combo = null; const el = document.getElementById('bt-combo'); if (el) el.style.display = 'none';
             if (BT.menu.mode === 'combo') { BT.menu.mode = send ? 'root' : 'tgt'; if (send) { BT.menu.stack = []; BT.menu.list = null; } }
             BT.hudDirty = true; return C;
         }
+        function btMgCss() {
+            if (document.getElementById('bt-mg-css')) return; const st = document.createElement('style'); st.id = 'bt-mg-css';
+            st.textContent = '#bt-combo .mgr{position:relative;width:150px;height:150px;margin:6px auto}#bt-combo .mgr .tgt{position:absolute;inset:45px;border:4px solid #ffe14a;border-radius:50%;box-shadow:0 0 14px #ffe14a}#bt-combo .mgr .ring{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px;border:3px solid #fff;border-radius:50%;opacity:0}#bt-combo .mgr .fb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 16px Orbitron,sans-serif;color:#fff;text-shadow:0 0 8px #000;opacity:0}#bt-combo .pips{display:flex;gap:6px;justify-content:center;margin:4px 0}#bt-combo .pips i{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.2);display:block}#bt-combo .pips i.ok{background:#ffe14a;box-shadow:0 0 8px #ffe14a}#bt-combo .pips i.no{background:#ff5a5a}#bt-combo .sp{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:4px;justify-content:center;margin:6px auto}#bt-combo .sp i{font-style:normal;font-size:26px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(255,255,255,.1);opacity:.5}#bt-combo .sp i.nx{opacity:1;background:rgba(127,216,255,.4);outline:2px solid #7fd8ff;box-shadow:0 0 12px #7fd8ff}#bt-combo .reels{display:flex;gap:10px;justify-content:center;margin:10px 0}#bt-combo .reel{width:64px;height:72px;border-radius:12px;background:rgba(0,0,0,.45);border:2px solid #ffe14a;display:flex;align-items:center;justify-content:center;font-size:38px}#bt-combo .reel.lk{box-shadow:0 0 14px #ffe14a;background:rgba(255,225,74,.18)}#bt-combo .mgc{font:800 26px Orbitron,sans-serif;color:#fff;margin:4px 0}#bt-combo .big{padding:14px 26px;font:800 15px Orbitron,sans-serif}';
+            document.head.appendChild(st);
+        }
+        function btMgHtml(C) {
+            btMgCss(); const x = '<button data-c="X">\u2715</button>';
+            if (C.mg === 'gb') return '<h5>RENZOKUKEN \u00b7 pull the trigger on the beat</h5><div class="mgr"><div class="tgt"></div><div class="ring"></div><div class="fb"></div></div><div class="pips">' + '<i></i>'.repeat(8) + '</div><div class="pd"><button data-c="P" class="big">\ud83d\udd2b TRIGGER</button>' + x + '</div><em>Space, Enter or F (or tap TRIGGER) the moment the ring meets the circle. More triggers = a bigger finisher; all 8 is Lion Heart. Esc cancels.</em>';
+            if (C.mg === 'pick') return '<h5>OVERDRIVE \u00b7 choose</h5><div class="pd"><button data-c="L" class="big">\ud83c\udfd0 Attack Reels<br><small>\u2b05 stop the elemental reels</small></button><button data-c="U" class="big">\ud83c\udf00 Spiral Cut<br><small>\u2b06 follow the arrows</small></button><button data-c="R" class="big">\u2614 Energy Rain<br><small>\u27a1 mash for power</small></button>' + x + '</div><em>Left, Up or Right (Enter picks Attack Reels), or tap. Esc cancels.</em>';
+            if (C.mg === 'rl') return '<h5>ATTACK REELS \u00b7 stop each reel</h5><div class="reels"><div class="reel"></div><div class="reel"></div><div class="reel"></div></div><div class="mgc">Stop reel 1</div><div class="pd"><button data-c="P" class="big">\u23f9 STOP</button>' + x + '</div><em>Space, Enter or F stops a reel. Matching elements hit much harder; a weakness hits harder still.</em>';
+            if (C.mg === 'sp') return '<h5>SPIRAL CUT \u00b7 follow the spiral</h5><div class="sp"><i data-a="U" style="grid-area:1/2">\u2b06</i><i data-a="R" style="grid-area:2/3">\u27a1</i><i data-a="D" style="grid-area:3/2">\u2b07</i><i data-a="L" style="grid-area:2/1">\u2b05</i></div><div class="mgc">0</div><div class="cb"><div class="tm"><u style="width:100%"></u></div></div><div class="pd">' + ['U', 'L', 'D', 'R'].map((k) => '<button data-c="' + k + '">' + BT_ARROW[k] + '</button>').join('') + x + '</div><em>Press the lit arrow: up, right, down, left, round and round. Five seconds from your first press.</em>';
+            return '<h5>ENERGY RAIN \u00b7 mash!</h5><div class="mgc">0</div><div class="cb"><div class="tm"><u style="width:100%"></u></div></div><div class="pd"><button data-c="P" class="big">\u26a1 TAP \u26a1</button>' + x + '</div><em>Mash Space, Enter, F or the button. Four seconds from your first tap.</em>';
+        }
+        const btReelSym = (C, i, now) => { const R = C.rl; return (((Math.floor((now - C.t0) / R.spd[i] + R.off[i]) * (i === 1 ? -1 : 1)) % 4) + 4) % 4; };
+        function btReelDone(C) { const R = C.rl, q = R.v[0] | (R.v[1] << 2) | (R.v[2] << 4); C.shown = performance.now(); btMgSend(C, 'reels', q); }
+        function btMgStart(C, mg) { if (mg === 'rl') C.rl = { v: [0, 0, 0], i: 0, spd: [88, 70, 56], off: [Math.random() * 4, Math.random() * 4, Math.random() * 4] }; C.mg = mg; C.mgBuilt = null; C.n = 0; C.started = 0; C.t0 = performance.now(); btSfx('ok'); btComboDraw(true); }
+        function btMgSend(C, lm, q) { if (C.done) return; C.done = true; setTimeout(() => { if (BT.combo !== C) return; btComboClose(true); btSendCmd({ ...C.cmd, lm, q }); }, 450); }
+        function btMgInput(C, ch) {
+            const now = performance.now();
+            if (C.mg === 'pick') { if (ch === 'L' || ch === 'P') btMgStart(C, 'rl'); else if (ch === 'U') btMgStart(C, 'sp'); else if (ch === 'R') btMgStart(C, 'er'); return; }
+            if (C.mg === 'rl') { if (C.done || (ch !== 'P' && ch !== 'K')) return; const R = C.rl; R.v[R.i] = btReelSym(C, R.i, now); R.i++; try { btSfx('ok'); } catch (e) { /* sound */ } if (R.i >= 3) btReelDone(C); return; }
+            if (C.mg === 'gb') {
+                if (ch !== 'P' && ch !== 'K') return; const g = C.g; let best = -1, bd = 1e9;
+                for (let r = 0; r < 8; r++) { if (g.res[r]) continue; const d = Math.abs(now - (g.st + r * g.per)); if (d < bd) { bd = d; best = r; } }
+                if (best < 0 || bd > 260) { try { btSfx('no'); } catch (e) { /* sound */ } return; }
+                if (bd <= 150) { g.res[best] = 1; g.fb = 1; try { btSmp('pistol_fire1', 0.6, btRand(0.9, 1.1)); } catch (e) { /* sound */ } } else { g.res[best] = 2; g.fb = 2; try { btSfx('no'); } catch (e) { /* sound */ } }
+                g.fbT = now; return;
+            }
+            if (C.mg === 'sp') {
+                if (C.done || !'UDLR'.includes(ch)) return; const seq = 'URDL'; if (C.started && now - C.started > 5000) return;
+                if (ch === seq[C.n % 4]) { if (!C.started) C.started = now; C.n++; try { btSfx('move'); } catch (e) { /* sound */ } if (C.n >= 16) btMgSend(C, 'spiralcut', 16); } else { try { btSfx('no'); } catch (e) { /* sound */ } }
+                return;
+            }
+            if (C.mg === 'er') { if (C.done || (ch !== 'P' && ch !== 'K')) return; if (C.started && now - C.started > 4000) return; if (!C.started) C.started = now; C.n++; try { btSfx('move'); } catch (e) { /* sound */ } if (C.n >= 40) btMgSend(C, 'energyrain', 40); }
+        }
+        function btMgTick(C) {
+            const el = document.getElementById('bt-combo'); if (!el) return; if (C.mgBuilt !== C.mg) { el.style.display = 'block'; el.innerHTML = btMgHtml(C); C.mgBuilt = C.mg; }
+            const now = performance.now();
+            if (C.mg === 'gb') {
+                const g = C.g; let cur = -1; for (let r = 0; r < 8; r++) { if (!g.res[r] && now - (g.st + r * g.per) > 260) g.res[r] = 2; if (cur < 0 && !g.res[r]) cur = r; }
+                const ring = el.querySelector('.ring'), fb = el.querySelector('.fb'), pips = el.querySelectorAll('.pips i');
+                if (ring) { if (cur >= 0) { const d = (g.st + cur * g.per - now) / (g.per * 1.3); const s = 1 + Math.max(0, d) * 1.6; ring.style.opacity = d > 1.1 ? 0 : 0.95; ring.style.transform = 'scale(' + s.toFixed(3) + ')'; ring.style.borderColor = d < 0.12 && d > -0.3 ? '#ffe14a' : '#fff'; } else ring.style.opacity = 0; }
+                pips.forEach((p, r) => { p.className = g.res[r] === 1 ? 'ok' : g.res[r] === 2 ? 'no' : ''; });
+                if (fb) { const a = now - g.fbT; if (g.fb && a < 450) { fb.textContent = g.fb === 1 ? 'TRIGGER!' : 'MISS'; fb.style.opacity = 1 - a / 450; fb.style.color = g.fb === 1 ? '#ffe14a' : '#ff7a7a'; } else fb.style.opacity = 0; }
+                if (!C.done && cur < 0) { let mask = 0; for (let r = 0; r < 8; r++) if (g.res[r] === 1) mask |= 1 << r; btMgSend(C, 'gunblade', mask); }
+                return;
+            }
+            if (C.mg === 'rl') {
+                const R = C.rl, rs = el.querySelectorAll('.reel'), cnt = el.querySelector('.mgc'); if (!R) return;
+                if (!C.done && now - C.t0 > 9000) { while (R.i < 3) { R.v[R.i] = btReelSym(C, R.i, now); R.i++; } btReelDone(C); }
+                rs.forEach((d, i) => { const locked = i < R.i, sy = locked ? R.v[i] : btReelSym(C, i, now); d.textContent = BT_REEL_SYM[sy]; d.classList.toggle('lk', locked); });
+                if (cnt) { if (C.done) { const D = btReelDom(R.v[0] | (R.v[1] << 2) | (R.v[2] << 4)); cnt.textContent = (D.match === 3 ? 'TRIPLE ' : D.match === 2 ? 'DOUBLE ' : '') + BT_REEL_N[D.el].toUpperCase(); cnt.style.color = '#' + BT_REEL_COL[D.el].toString(16).padStart(6, '0'); } else cnt.textContent = 'Stop reel ' + (R.i + 1); }
+                return;
+            }
+            if (C.mg === 'sp' || C.mg === 'er') {
+                const lim = C.mg === 'sp' ? 5000 : 4000, left = C.started ? Math.max(0, lim - (now - C.started)) : lim, bar = el.querySelector('.tm u'), cnt = el.querySelector('.mgc');
+                if (bar) bar.style.width = (left / lim * 100).toFixed(0) + '%'; if (cnt) cnt.textContent = C.n;
+                if (C.mg === 'sp') { const nx = 'URDL'[C.n % 4]; el.querySelectorAll('.sp i').forEach((i) => i.classList.toggle('nx', i.dataset.a === nx && !C.done)); }
+                if (C.started && left <= 0 && !C.done) btMgSend(C, C.mg === 'sp' ? 'spiralcut' : 'energyrain', Math.min(C.mg === 'sp' ? 16 : 40, C.n));
+                else if (!C.started && now - C.t0 > 7000 && !C.done) { btComboClose(false); try { btSfx('no'); } catch (e) { /* sound */ } }
+            }
+        }
         function btComboInput(ch) {
-            const C = BT.combo; if (!C || C.done) return; const L = BT_FIGHT_LIMITS.map((k) => [k, BT_LIMITS[k].seq]);
+            const C = BT.combo; if (!C || C.done) return; if (C.mg && C.mg !== 'fight') { btMgInput(C, ch); return; } const L = BT_FIGHT_LIMITS.map((k) => [k, BT_LIMITS[k].seq]);
             const cand = (s) => L.filter((q) => q[1].startsWith(s)); let buf = C.buf + ch, c = cand(buf);
             if (!c.length) { c = cand(ch); if (c.length) buf = ch; else { buf = ''; try { btSfx('no'); } catch (e) { /* sound */ } } }
             C.buf = buf; C.flash = performance.now(); if (buf) { try { btSfx('move'); } catch (e) { /* sound */ } }
@@ -13787,11 +13906,12 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
         function btComboDraw(force) {
             const C = BT.combo; let el = document.getElementById('bt-combo'); if (!C) { if (el) el.style.display = 'none'; return; }
             if (!el) { el = document.createElement('div'); el.id = 'bt-combo'; el.className = 'btw'; BT.hud.appendChild(el); el.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-c]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const k = b.dataset.c; if (k === 'X') { btComboClose(false); btSfx('no'); } else btComboInput(k); }); }
+            if (C.mg && C.mg !== 'fight') { el.style.display = 'block'; btMgTick(C); return; }
             const left = Math.max(0, C.life - (performance.now() - C.t0)), sig = C.buf + '|' + Math.ceil(left / 250) + '|' + (C.done ? 1 : 0); if (!force && sig === C.sig) return; C.sig = sig;
             const rows = BT_FIGHT_LIMITS.map((k) => { const L = BT_LIMITS[k], on = C.buf && L.seq.startsWith(C.buf), full = C.done && L.seq === C.buf; return `<div class="cr${on ? ' on' : ''}${full ? ' full' : ''}"><b>${L.n}</b><span>${[...L.seq].map((ch, j) => `<i class="${on && j < C.buf.length ? 'h' : ''}">${BT_ARROW[ch]}</i>`).join('')}</span><small>${L.blurb}</small></div>`; }).join('');
             el.style.display = 'block'; el.innerHTML = `<h5>LIMIT · enter a command</h5>${rows}<div class="cb"><span>${[...C.buf].map((ch) => BT_ARROW[ch]).join(' ') || '…'}</span><div class="tm"><u style="width:${(left / C.life * 100).toFixed(0)}%"></u></div></div><div class="pd">${['U', 'L', 'D', 'R', 'P', 'K'].map((k) => `<button data-c="${k}">${BT_ARROW[k]}</button>`).join('')}<button data-c="X">✕</button></div><em>Arrows / WASD + P (Enter, Space, F, J, Z) and K (K, X). Esc cancels. No input in time: nothing is used.</em>`;
         }
-        function btComboTick() { const C = BT.combo; if (!C) return; if (!btMyTurn()) { btComboClose(false); return; } if (!C.done && performance.now() - C.t0 > C.life) { btComboClose(false); try { btSfx('no'); } catch (e) { /* sound */ } return; } btComboDraw(false); }
+        function btComboTick() { const C = BT.combo; if (!C) return; if (!btMyTurn()) { btComboClose(false); return; } if (C.mg && C.mg !== 'fight') { btMgTick(C); return; } if (!C.done && performance.now() - C.t0 > C.life) { btComboClose(false); try { btSfx('no'); } catch (e) { /* sound */ } return; } btComboDraw(false); }
         const btSfxIf = (k) => { if (k) btSfx(k); };
 
         /* ---- WARRIORS OF LIGHT: toasts, camera, poses, music, HUD, input, network, map hooks ---- */
@@ -14151,7 +14271,7 @@ function btMusicStop() {
         // ---- network
         function btCleanEv(m) {
             const kinds = ['atk', 'def', 'limit', 'mag', 'item', 'foe'], fxs = ['hit', 'bolt', 'quake', 'beam', 'spell', 'item', 'limit', 'fire', 'ice', 'drain', 'buff']; if (!kinds.includes(m.kind)) return null; const num = (v, lo, hi, d = 0) => (Number.isFinite(+v) ? clamp(+v, lo, hi) : d), ids = (a) => (Array.isArray(a) ? a.slice(0, 8).map((x) => String(x).slice(0, 40)) : []);
-            const imp = (Array.isArray(m.imp) ? m.imp : [0.6]).slice(0, 24).map((v) => num(v, 0, 6, 0.6)); return { a: 'ev', kind: m.kind, who: String(m.who).slice(0, 40), name: String(m.name || '').replace(/[<>&"'`]/g, '').slice(0, 24), tgt: ids(m.tgt), res: (Array.isArray(m.res) ? m.res : []).slice(0, 48).map((r) => ({ i: (r || {}).i === undefined ? undefined : num((r || {}).i, 0, 23), id: String((r || {}).id).slice(0, 40), d: num((r || {}).d, -99999, 99999), crit: !!(r || {}).crit, weak: !!(r || {}).weak, rev: !!(r || {}).rev, miss: !!(r || {}).miss, st: btStKeys((r || {}).st), cl: btStKeys((r || {}).cl), mp: num((r || {}).mp, 0, 99) })), dur: num(m.dur, 0.5, 6, 1.5), imp: imp.length ? imp : [0.6], fx: fxs.includes(m.fx) ? m.fx : 'hit', lm: BT_LIMITS[m.lm] ? m.lm : undefined, spell: BT_SPELLS[m.spell] ? m.spell : undefined, mp: num(m.mp, 0, 99), item: BT_ITEMS[m.item] ? m.item : undefined };
+            const imp = (Array.isArray(m.imp) ? m.imp : [0.6]).slice(0, 24).map((v) => num(v, 0, 9, 0.6)); return { a: 'ev', kind: m.kind, who: String(m.who).slice(0, 40), name: String(m.name || '').replace(/[<>&"'`]/g, '').slice(0, 32), tr: num(m.tr, 0, 255), tgt: ids(m.tgt), res: (Array.isArray(m.res) ? m.res : []).slice(0, 120).map((r) => ({ i: (r || {}).i === undefined ? undefined : num((r || {}).i, 0, 23), id: String((r || {}).id).slice(0, 40), d: num((r || {}).d, -99999, 99999), crit: !!(r || {}).crit, weak: !!(r || {}).weak, rev: !!(r || {}).rev, miss: !!(r || {}).miss, st: btStKeys((r || {}).st), cl: btStKeys((r || {}).cl), mp: num((r || {}).mp, 0, 99) })), dur: num(m.dur, 0.5, 9, 1.5), imp: imp.length ? imp : [0.6], fx: fxs.includes(m.fx) ? m.fx : 'hit', lm: BT_LIMITS[m.lm] ? m.lm : undefined, spell: BT_SPELLS[m.spell] ? m.spell : undefined, mp: num(m.mp, 0, 99), item: BT_ITEMS[m.item] ? m.item : undefined };
         }
         function btOnMsg(from, m) {
             const pe = peers.get(from); if (!pe || activeMap !== 'btl' || !BT.ready) return; if (m.a === 'skin' && m.to && m.to !== me.id) { BT.skinSeen.add(String(m.to) + '|' + String(m.skin)); return; } if (m.to && m.to !== me.id) return; const a = m.a;
@@ -14170,7 +14290,7 @@ function btMusicStop() {
             if (a === 'tk') { if (from !== BT.hostId || !btActive() || !Array.isArray(m.r)) return; btStTickApply(m.r.slice(0, 12).filter((q) => Array.isArray(q) && typeof q[0] === 'string').map((q) => [String(q[0]).slice(0, 40), Math.max(-9999, Math.min(9999, q[1] | 0))])); return; }
             if (a === 'gear') { if (!btIsHost()) return; const u = BT.party.find((q) => q.id === from); if (u) { const ng = btGearClean(m.gear), og = u.gear || { hp: 0, mp: 0 }; u.gear = ng; if (ng) { u.hpMax += ng.hp - og.hp; u.mpMax += ng.mp - og.mp; u.hp = Math.min(u.hp, u.hpMax); u.mp = Math.min(u.mp, u.mpMax); } btBroadcast(); } return; }
             if (a === 'ev') { if (from !== BT.hostId || !btActive()) return; const ev = btCleanEv(m); if (!ev) return; BT.stateAt = BT.t; if (ev.who === BT.turn) BT.turn = null; btQueueEv(ev); return; }
-            if (a === 'cmd') { if (!btIsHost() || !BT.party.some((u) => u.id === from)) return; const c = { kind: String(m.kind), lm: BT_LIMITS[m.lm] ? m.lm : undefined, tgt: m.tgt ? String(m.tgt).slice(0, 40) : undefined, spell: BT_SPELLS[m.spell] ? m.spell : undefined, item: BT_ITEMS[m.item] ? m.item : undefined }; btHandle(from, c); }
+            if (a === 'cmd') { if (!btIsHost() || !BT.party.some((u) => u.id === from)) return; const c = { kind: String(m.kind), lm: BT_LIMITS[m.lm] ? m.lm : undefined, q: Number.isFinite(+m.q) ? Math.max(0, Math.min(255, Math.floor(+m.q))) : 0, tgt: m.tgt ? String(m.tgt).slice(0, 40) : undefined, spell: BT_SPELLS[m.spell] ? m.spell : undefined, item: BT_ITEMS[m.item] ? m.item : undefined }; btHandle(from, c); }
         }
         // ---- per frame
         function btFacePos(obj, u, dt) { const s = btSlotPos(u); const d = Math.hypot(obj.position.x - s[0], obj.position.z - s[1]); if (d > 0.02) { const sp = Math.min(d, 4 * dt); obj.position.x += (s[0] - obj.position.x) / d * sp; obj.position.z += (s[1] - obj.position.z) / d * sp; } obj.rotation.y = lerpAngle(obj.rotation.y, -Math.PI / 2, 1 - Math.exp(-dt * 8)); }
@@ -14416,6 +14536,7 @@ function btMusicStop() {
             d.addEventListener('click', (e) => {
                 const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k, v = b.dataset.v;
                 if (k === 'close') { GFX.bench = null; gfxToggle(false); return; }
+                if (k && k.startsWith('cs-')) { csClick(k); return; }
                 if (GFX.bench && k !== 'fps') return;
                 if (k === 'fps') GFX.fps = !GFX.fps;
                 else if (k === 'preset') { gfxSetPreset(v); }
@@ -14443,11 +14564,67 @@ function btMusicStop() {
 <div class="row"><b>While a game is running</b><div class="opts">${o('emu', GFX.emu, [['first', 'Game first'], ['balanced', 'Balanced'], ['full', 'Full world']])}</div><p>How much the 3D world draws while an emulator game is on.</p></div>
 <hr><div class="row"><b>Screen shape</b><div class="opts">${o('fit', fit, [['fill', 'Fill screen'], ['wide', 'Wide picture'], ['169', 'Framed']])}</div><p>Fill uses the whole screen. Framed keeps the chosen shape with black bars. Wide keeps the menus in the shape and lets the picture fill the screen.</p></div>
 <div class="row"><b>Aspect ratio</b><div class="opts">${o('ar', Math.round(ar * 1000), [[1778, '16:9'], [1600, '16:10'], [1500, '3:2'], [1333, '4:3'], [2370, '21:9']])}</div><p>Used by Framed and Wide.</p></div>
-<hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>`;
+<hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>` + csHtml();
         }
         function gfxToggle(on) { gfxBuild(); const open = on === undefined ? GFX.panel.classList.contains('hidden') : !!on; GFX.panel.classList.toggle('hidden', !open); if (open) { try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (e) { /* none */ } gfxRender(); } }
         setTimeout(() => { const b = document.getElementById('btn-settings'); if (b) b.addEventListener('click', () => gfxToggle(true)); }, 0);
-        window.__gfx = { GFX, toggle: gfxToggle, preset: gfxSetPreset, bench: gfxBench, sweep: gfxShadowSweep };
+
+        /* ---- Cloud save: sign in with Google; progress is saved to the player's own Google Drive (a hidden app-only folder, no server of ours).
+           Needs a Google OAuth "Web" client ID: paste it into CS_CLIENT_ID below, or into Settings on a device to try it. The ID is public, not a secret.
+           Never synced: companion AI keys (oasis.cmp.ai), graphics settings, uploaded avatar files. ---- */
+        const CS_CLIENT_ID = '';
+        const CS_KEYS = ['oasis.gear', 'oasis.bag', 'oasis.gil', 'oasisXP', 'oasisClass', 'oasisBtlBest', 'oasisGmRec', 'oasis.cmp.v1', 'oasis.diner', 'oasisTTDecks', 'oasisTTDeck2', 'oasis.hbDesigns', 'oasis.hbVariant', 'oasis.recentColors', 'psHomeName', 'oasisBlitzCls', 'oasisGun'], CS_PRE = ['oasis.chest.'];
+        const CS = { tok: null, exp: 0, busy: false, msg: '', auto: 0 };
+        const csGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
+        const csSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage */ } };
+        const csId = () => (csGet('oasis.gcid', '') || CS_CLIENT_ID || '').trim();
+        const csOk = (k) => CS_KEYS.includes(k) || CS_PRE.some((p) => k.startsWith(p));
+        function csSnap() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && csOk(k)) o[k] = localStorage.getItem(k); } } catch (e) { /* storage */ } return o; }
+        const csHash = (o) => { const s = JSON.stringify(o, Object.keys(o).sort()); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h + ':' + s.length; };
+        const csFresh = (o) => !o['oasis.gear'] && !o['oasis.bag'] && !o['oasisBtlBest'] && !o['oasisGmRec'] && !(+o['oasis.gil'] > 0) && !(+o['oasisXP'] > 0) && !(o['oasis.cmp.v1'] && o['oasis.cmp.v1'].length > 4);   // a device with no real progress yet loads the Drive save without asking
+        function csMsg(t) { CS.msg = t; try { if (GFX.panel && !GFX.panel.classList.contains('hidden')) gfxRender(); } catch (e) { /* panel not built */ } }
+        function csLoad() { return window.google && google.accounts && google.accounts.oauth2 ? Promise.resolve() : new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = () => res(); s.onerror = () => rej(new Error('Could not reach Google (offline or blocked).')); document.head.appendChild(s); }); }
+        async function csToken() {
+            if (CS.tok && Date.now() < CS.exp - 60000) return CS.tok; const id = csId(); if (!id) throw new Error('Add your Google client ID first.'); await csLoad();
+            return new Promise((res, rej) => {
+                const tc = google.accounts.oauth2.initTokenClient({ client_id: id, scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email', callback: (r) => { if (r.error) return rej(new Error(r.error_description || r.error)); CS.tok = r.access_token; CS.exp = Date.now() + (+r.expires_in || 3600) * 1000; res(CS.tok); }, error_callback: (e) => rej(new Error(e && e.type === 'popup_failed_to_open' ? 'The sign-in window was blocked. Allow pop-ups, or open the game in Chrome.' : e && e.type === 'popup_closed' ? 'Sign-in was closed.' : 'Sign-in failed' + (e && e.type ? ' (' + e.type + ')' : '') + '. Inside an app that embeds web pages, Google may refuse sign-in: open the game in Chrome instead.')) });
+                tc.requestAccessToken({ prompt: csGet('oasis.gemail', '') ? '' : 'consent' });
+            });
+        }
+        async function csApi(url, opt) { const r = await fetch(url, { ...opt, headers: { ...((opt && opt.headers) || {}), Authorization: 'Bearer ' + CS.tok } }); if (!r.ok) throw new Error('Google Drive said ' + r.status + (r.status === 403 ? ' (is the Drive API turned on for the project?)' : '')); return r; }
+        async function csWho() { try { const j = await (await csApi('https://www.googleapis.com/oauth2/v3/userinfo')).json(); if (j && j.email) csSet('oasis.gemail', String(j.email).slice(0, 80)); } catch (e) { /* email is cosmetic */ } }
+        async function csFind() { const j = await (await csApi('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + encodeURIComponent("name='oasis-save.json'") + '&fields=files(id,modifiedTime)&pageSize=5')).json(); return (j.files || [])[0] || null; }
+        async function csUp(blob, id) { const b = 'oasis' + Date.now(), meta = id ? {} : { name: 'oasis-save.json', parents: ['appDataFolder'] }; const body = '--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(blob) + '\r\n--' + b + '--'; return (await csApi('https://www.googleapis.com/upload/drive/v3/files' + (id ? '/' + id : '') + '?uploadType=multipart&fields=id,modifiedTime', { method: id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body })).json(); }
+        function csApply(blob) { let n = 0; if (!blob || typeof blob.keys !== 'object' || !blob.keys) return 0; for (const k of Object.keys(blob.keys)) { const v = blob.keys[k]; if (csOk(k) && typeof v === 'string' && v.length < 4e6) { csSet(k, v); n++; } } return n; }
+        async function csSync(interactive) {
+            if (CS.busy) return; CS.busy = true; csMsg('Syncing…');
+            try {
+                await csToken(); await csWho(); const snap = csSnap(), h = csHash(snap), empty = csFresh(snap), last = csGet('oasis.gsync', ''), [lh, lt] = last.split('|'), f = await csFind();
+                const put = async (id) => { const j = await csUp({ v: 1, t: Date.now(), keys: snap }, id); csSet('oasis.gsync', h + '|' + j.modifiedTime); csMsg('Saved to your Google Drive (' + new Date().toLocaleTimeString() + ').'); };
+                const take = async () => { const blob = await (await csApi('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media')).json(); window.__csNoXp = true; try { clearTimeout(_cmpSaveT); } catch (e) { /* none */ } const n = csApply(blob); csSet('oasis.gsync', csHash(csSnap()) + '|' + f.modifiedTime); csMsg('Loaded ' + n + ' items from your Google Drive. Reloading…'); setTimeout(() => location.reload(), 300); };
+                if (!f) await put(null);
+                else { const cloudNew = !lt || f.modifiedTime !== lt, dirty = !empty && h !== lh;
+                    if (!cloudNew && !dirty) csMsg('Up to date' + (csGet('oasis.gemail', '') ? ' (' + csGet('oasis.gemail', '') + ')' : '') + '.');
+                    else if (!cloudNew) await put(f.id);
+                    else if (empty || !dirty) await take();
+                    else if (!interactive) csMsg('Your Drive save and this device differ. Open Settings and press Sync now to choose.');
+                    else if (window.confirm('There is a save in your Google Drive (' + new Date(f.modifiedTime).toLocaleString() + ') and this device has different progress.\n\nOK = load the Drive save (replaces this device).\nCancel = keep this device and overwrite the Drive save.')) await take();
+                    else await put(f.id); }
+            } catch (e) { csMsg('Cloud save: ' + (e.message || e)); } finally { CS.busy = false; csMsg(CS.msg); }
+        }
+        function csOut() { try { if (CS.tok && window.google) google.accounts.oauth2.revoke(CS.tok, () => {}); } catch (e) { /* ignore */ } CS.tok = null; csSet('oasis.gemail', ''); csSet('oasis.gsync', ''); csMsg('Signed out. Your save stays on this device and in your Drive.'); }
+        function csClick(k) {
+            if (k === 'cs-in' || k === 'cs-now') csSync(true); else if (k === 'cs-out') csOut();
+            else if (k === 'cs-idsave') { const v = (document.getElementById('cs-id') || {}).value || ''; if (/^[\w.-]+\.apps\.googleusercontent\.com$/.test(v.trim())) { csSet('oasis.gcid', v.trim()); csMsg('Client ID saved. Now press Sign in.'); } else csMsg('That does not look like a Google client ID (it ends in .apps.googleusercontent.com).'); }
+        }
+        function csHtml() {
+            const id = csId(), em = csGet('oasis.gemail', ''), linked = !!em;
+            return '<hr><div class="row"><b>Cloud save (Google Drive)</b><div class="opts">' + (linked ? '<button data-k="cs-now">☁ Sync now</button><button data-k="cs-out">Sign out</button>' : '<button data-k="cs-in"' + (id ? '' : ' disabled') + '>☁ Sign in with Google</button>') + '</div><p>' + (CS.msg ? CS.msg + '<br>' : '') + (linked ? 'Signed in as ' + em.replace(/[<>&"]/g, '') + '. Progress (gear, bag, Gil, class levels, companions) follows you to any device where you sign in. Avatar files and AI keys are never uploaded.' : id ? 'Sign in to save your progress to your own Google Drive.' : 'Paste the Google client ID below first.') + '</p><details' + (id ? '' : ' open') + '><summary>Google client ID</summary><input id="cs-id" type="text" value="' + id.replace(/[<>&"]/g, '') + '" placeholder="123456-abc.apps.googleusercontent.com" style="width:100%;margin:4px 0;padding:6px;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2)"><button data-k="cs-idsave">Save ID</button></details></div>';
+        }
+        setInterval(() => { try { if (csGet('oasis.gemail', '') && CS.tok && Date.now() < CS.exp - 120000 && !CS.busy && csHash(csSnap()) !== (csGet('oasis.gsync', '').split('|')[0])) csSync(false); } catch (e) { /* retry later */ } }, 120000);
+        document.addEventListener('visibilitychange', () => { try { if (document.hidden && csGet('oasis.gemail', '') && CS.tok && Date.now() < CS.exp - 60000 && !CS.busy && csHash(csSnap()) !== (csGet('oasis.gsync', '').split('|')[0])) csSync(false); } catch (e) { /* ignore */ } });
+        window.addEventListener('click', () => { try { if (csGet('oasis.gemail', '') && csId() && !CS.tok) csSync(false); } catch (e) { /* ignore */ } }, { capture: true, once: true });
+        window.__gfx = { cs: { CS, csSnap, csApply, csHash, csHtml, csFresh, csSync }, GFX, toggle: gfxToggle, preset: gfxSetPreset, bench: gfxBench, sweep: gfxShadowSweep };
 
         /* ---- THE FOREST EDGE behind the Harbor Studio: a hillside of pines and leafy trees, a valley and layered mountains (replaces the old bay and city) ---- */
         LOFT.forestU = { value: 0 }; LOFT.forestS = { value: null };   // seasons: x leaf cover, y autumn colour, z blossom, w snow depth
@@ -16590,7 +16767,7 @@ window.__ts = TSK;
             if (/^\/diner$/i.test(text)) { dinerOpen(); return true; }
             if (/^\/(bowl|bowling)$/i.test(text)) { bowlOpen(); return true; }
             if (/^\/(battle|arena|ff)$/i.test(text)) { btlOpen(); return true; }
-            if (/^\/(settings|graphics|fps)$/i.test(text)) { gfxToggle(true); return true; }
+            if (/^\/(settings|graphics|fps|cloud)$/i.test(text)) { gfxToggle(true); return true; }
             if (/^\/(tag|lasertag)$/i.test(text)) { tgOpen(); return true; }
             if (/^\/(construct|hero|training)$/i.test(text)) { constructOpen(); return true; }
             if (/^\/(industries|hoverboard)$/i.test(text)) { if (typeof industriesOpen === 'function') industriesOpen(); return true; }
@@ -17201,7 +17378,7 @@ window.__ts = TSK;
         }
         window.__actor = () => localActor; window.__loft = LOFT;   // (handy for tests)
         window.__lv = { LV, add: lvAdd, at: lvAt, start: lvStart, title: lvTitle };
-        window.addEventListener('pagehide', () => { try { localStorage.setItem('oasisXP', String(Math.floor(LV.xp))); } catch (e) { /* storage unavailable */ } });
+        window.addEventListener('pagehide', () => { try { if (!window.__csNoXp) localStorage.setItem('oasisXP', String(Math.floor(LV.xp))); } catch (e) { /* storage unavailable */ } });
 
         /* ------------------------------------------------------------------ *
          *  Menu hologram: while a menu is open a small see-through blue screen floats in front of your character and they look at it.
@@ -23107,7 +23284,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const allyBy = (t, dflt) => t.t === 'me' ? btMine() : t.t === 'self' ? u : t.t === 'ally' ? BT.party.find((p) => p.id === t.id) : dflt;
             const done = () => BT.turn !== u.id;   // btHandle clears the turn when the action went through
             if (o.kind === 'def') { btHandle(u.id, { kind: 'def' }); return done(); }
-            if (o.kind === 'limit') { if (u.limit < 1) return say('My limit gauge is not full yet.'); if (!foes.length) return false; btHandle(u.id, { kind: 'limit', tgt: foeBy(o.tgt).id, lm: btBotLm() }); return done(); }
+            if (o.kind === 'limit') { if (u.limit < 1) return say('My limit gauge is not full yet.'); if (!foes.length) return false; btHandle(u.id, { kind: 'limit', tgt: foeBy(o.tgt).id, ...btBotPick() }); return done(); }
             if (o.kind === 'atk') { if (!foes.length) return false; btHandle(u.id, { kind: 'atk', tgt: foeBy(o.tgt).id }); return done(); }
             if (o.kind === 'item') {
                 const it = o.item, fx = BT_IFX[it]; if (!fx) return false;
@@ -23562,7 +23739,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const r = CMP.active.get(c.id), u = cmpUnit(c), a = (r && r.actor && r.actor.group && r.actor.group.visible !== false ? r.actor : null) || (u && u.actor); if (!a || !a.playEmote) return false;
             try { a.playEmote(key); } catch (e) { return false; } return true;
         }
-        window.__cmp = { btVictory, btcSpawn, btcOpen, btcGrant, btcCatalog, BTC, gilTrade, BT_IFX, ensureBtl, cmpBtState, cmpBtOrder, cmpRunOrder, cmpOrderParse, CMP, cmpSummon, cmpDismiss, cmpHear, cmpImport, cmpOpen, cmpAI, BT, btJoin, btStart, btHostTick, cmpBtSync, cmpGearStats, cmpBotCmd, cmpUnit, CE, ceImport, cmpEmoteFor, cmpEmote, cmpBtEvent, cmpBtNote, gearLoad, CMPB, ensureBtl , get map() { return activeMap; }, setLookTarget, cycleLookTarget, CMPN, cmpnTell, cmpnOnMsg, cmpnSend, cmpnFrame, partyOnMsg, PARTY, peers, addPeer, onNetMessage };
+        window.__cmp = { btVictory, btcSpawn, btcOpen, btcGrant, btcCatalog, BTC, gilTrade, BT_IFX, ensureBtl, cmpBtState, cmpBtOrder, cmpRunOrder, cmpOrderParse, CMP, cmpSummon, cmpDismiss, cmpHear, cmpImport, cmpOpen, cmpAI, BT, btJoin, btStart, btHostTick, cmpBtSync, cmpGearStats, cmpBotCmd, cmpUnit, CE, ceImport, cmpEmoteFor, cmpEmote, cmpBtEvent, cmpBtNote, gearLoad, CMPB, ensureBtl , get map() { return activeMap; }, blzSet, BLZ, CLS, btChoose, btEnterTgt, btMyTurn, btMine, btHandle, btVarHits, btComboInput, btMyMg, setLookTarget, cycleLookTarget, CMPN, cmpnTell, cmpnOnMsg, cmpnSend, cmpnFrame, partyOnMsg, PARTY, peers, addPeer, onNetMessage };
 
         function animate() {
             requestAnimationFrame(animate);
