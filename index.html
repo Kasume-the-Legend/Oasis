@@ -3608,7 +3608,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const p = peers.get(id);
             if (!p) return;
             if (p.av && p.av.state === 'loading') avActive = Math.max(0, avActive - 1);
-            p.actor.dispose();
+            p.actor.dispose(); try { cmpnPeerGone(p); } catch (e) { /* ignore */ }
             peers.delete(id);
             emuPeerGone(id);
             if (announce) sysChat(`${p.name} left the room.`);
@@ -4124,6 +4124,9 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 }
                 case 'decor': dcOnWire(from, m.d); break;
                 case 'gilgift': try { gilGiftRecv(from, m); } catch (e) { /* ignore */ } break;
+                case 'cmps': try { cmpnOnMsg(from, m); } catch (e) { console.warn('companions', e); } break;
+                case 'cmpwant': try { cmpnOnWant(from, m); } catch (e) { /* ignore */ } break;
+                case 'cmpbuf': try { cmpnOnBuf(from, m); } catch (e) { /* ignore */ } break;
                 case 'pinv': partyOnInvite(from, m); break;
                 case 'wantAsset': dcOnWant(from, m); break;
                 case 'asset': dcOnAsset(from, m); break;
@@ -14012,7 +14015,7 @@ function btMusicStop() {
             const M = BT.menu, u = btMine(); if (!u) return [];
             if (M.mode === 'root') { const a = [{ k: 'atk', n: 'Attack', ok: true }, { k: 'mag', n: 'Magic', ok: true }]; for (const [ck, cn] of [['sup', 'Support'], ['hex', 'Hex']]) if (Object.keys(BT_SPELLS).some((k) => BT_SPELLS[k].cat === ck && (BT_LV[k] || 1) <= btLvl())) a.push({ k: ck, n: cn, ok: true }); a.push({ k: 'item', n: 'Item', ok: true }, { k: 'def', n: 'Defend', ok: true }); if (u.limit >= 1) a.unshift({ k: 'limit', n: 'Limit', ok: true, sub: btLimitName() }); return a; }
             if (M.mode === 'mag' || M.mode === 'sup' || M.mode === 'hex') return Object.keys(BT_SPELLS).filter((k) => (BT_SPELLS[k].cat || 'mag') === M.mode && (BT_LV[k] || 1) <= btLvl()).map((k) => ({ k, n: BT_SPELLS[k].n, sub: btHas(u, 'silence') ? 'Silenced' : BT_SPELLS[k].mp + ' MP', ok: !btHas(u, 'silence') && u.mp >= BT_SPELLS[k].mp && (k !== 'raise' || BT.party.some((p) => p.dead)) }));
-            if (M.mode === 'item') return Object.keys(BT_ITEMS).map((k) => ({ k, n: BT_ITEMS[k].n, sub: '×' + (BT.inv[k] | 0), ok: (BT.inv[k] | 0) > 0 && (!(BT_IFX[k] && BT_IFX[k].rev) || BT.party.some((p) => p.dead)) }));
+            if (M.mode === 'item') return (Object.keys(BT_ITEMS).some((k) => (BT.inv[k] | 0) > 0) ? Object.keys(BT_ITEMS).filter((k) => (BT.inv[k] | 0) > 0) : ['potion']).map((k) => ({ k, n: BT_ITEMS[k].n, sub: '×' + (BT.inv[k] | 0), ok: (BT.inv[k] | 0) > 0 && (!(BT_IFX[k] && BT_IFX[k].rev) || BT.party.some((p) => p.dead)) }));
             return [];
         }
         function btSendCmd(c) { BT.menu.mode = 'root'; BT.menu.stack = []; BT.menu.list = null; if (btIsHost()) btHandle(me.id, c); else { btSend({ a: 'cmd', ...c }); } BT.hudDirty = true; }
@@ -14838,14 +14841,14 @@ function btMusicStop() {
                     for (const k in got) { btBagAdd(k, got[k]); if (btIsHost() || !btActive()) BT.inv[k] = Math.min(99, (BT.inv[k] | 0) + got[k]); parts.push((got[k] > 1 ? got[k] + '× ' : '') + BT_ITEMS[k].n); }
                     lines.push('<b>' + esc(m.name) + '</b>: ' + parts.map(esc).join(', '));
                 } else {
-                    const it = btcPickGear(wave, m.cls);
+                    const it = Math.random() < 0.65 ? btcPickGear(wave, m.cls) : null;
                     if (!it) { const gil = 60 + wave * 25; if (m.kind === 'me') { try { window.oasisGil.add(gil, true); } catch (e) { /* no gil */ } } lines.push('<b>' + esc(m.name) + '</b>: ' + gil + ' Gil'); continue; }
                     lines.push('<b>' + esc(m.name) + '</b>: ' + esc(btcGrantGear(m, it)));
                 }
             }
             BT.hudDirty = true; try { chestCss(); } catch (e) { /* css */ }
             const head = kind === 'items' ? '🧪 Item chest' : '🛡️ Equipment chest';
-            if (CH.msg) { CH.msg.innerHTML = head + '<small style="display:block;text-align:left;margin-top:8px;line-height:1.7">' + lines.join('<br>') + '</small>'; CH.msg.classList.add('on'); clearTimeout(BTC.msgT); BTC.msgT = setTimeout(() => CH.msg && CH.msg.classList.remove('on'), 7000); }
+            if (CH.msg) { CH.msg.innerHTML = head + '<small style="display:block;text-align:left;margin-top:8px;line-height:1.7">' + lines.join('<br>') + '</small>'; CH.msg.classList.add('on'); clearTimeout(BTC.msgT); BTC.msgT = setTimeout(() => CH.msg && CH.msg.classList.remove('on'), 5000); if (!CH.msg.__tap) { CH.msg.__tap = 1; CH.msg.style.pointerEvents = 'auto'; CH.msg.addEventListener('pointerdown', () => CH.msg.classList.remove('on')); } }
             try { sysChat(head.replace(/^\S+\s/, '') + ' opened: ' + lines.map((l) => l.replace(/<[^>]+>/g, '')).join(' | ')); } catch (e) { /* chat */ }
             return lines;
         }
@@ -14863,16 +14866,17 @@ function btMusicStop() {
             if (activeMap !== 'btl' || !BT.group || !btMine()) return; const key = BT.run + ':' + BT.wave; if (BTC.run === key) return; BTC.run = key; btcClear(true); chestCss(); btcUi();
             await btcCatalog(); if (BT.phase !== 'victory' || activeMap !== 'btl') return;
             const mem = BT.party.filter((u) => !u.isFoe).map((u) => btSlotPos(u)), cx = mem.length ? mem.reduce((s, p) => s + p[0], 0) / mem.length : 3, cz = mem.length ? mem.reduce((s, p) => s + p[1], 0) / mem.length : 0;
-            [['items', -1.5, 'ITEMS'], ['gear', 1.5, 'EQUIPMENT']].forEach(([k, off, label]) => {
+            let hs = 7; for (const ch of key) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0; const wv = BT.wave | 0, gearWave = wv > 1 && (wv % 5 === 0 || (hs % 100) < 24); BTC.gearWave = gearWave;
+            (gearWave ? [['items', -1.5, 'ITEMS'], ['gear', 1.5, 'EQUIPMENT']] : [['items', 0, 'ITEMS']]).forEach(([k, off, label]) => {
                 const x = cx > 0 ? cx - 4.2 : cx + 4.2, z = cz + off, ry = Math.atan2(cx - x, cz - z), c = makeChest({ x, z, ry, scale: 1.35, onOpen: () => { btcGrant(k); } });
                 try { const lb = makeLabel(label, { size: 26, border: '#ffd24a', plain: true }); lb.position.set(0, 1.55, 0); c.group.add(lb); c.label = lb; } catch (e) { /* no label */ }
                 BT.group.add(c.group); BTC.list.push({ kind: k, c, opened: false });
             });
-            const ui = btcUi(); ui.classList.add('on'); ui.querySelectorAll('button').forEach((b) => { b.disabled = false; }); BTC.last = performance.now(); if (!BTC.raf) BTC.raf = requestAnimationFrame(btcLoop);
+            const ui = btcUi(); ui.classList.add('on'); ui.querySelectorAll('button').forEach((b) => { b.disabled = false; b.style.display = b.dataset.k === 'gear' && !gearWave ? 'none' : ''; }); BTC.last = performance.now(); if (!BTC.raf) BTC.raf = requestAnimationFrame(btcLoop);
         }
         function btcOpen(kind) {
             const e = BTC.list.find((x) => x.kind === kind && !x.opened); if (!e) return; e.opened = true; try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (er) { /* none */ }
-            e.c.open(); try { chestOpenSound(0); } catch (er) { /* sound */ } if (BTC.ui) BTC.ui.querySelector('button[data-k="' + kind + '"]').disabled = true; try { btSfx('ok'); } catch (er) { /* sound */ }
+            e.c.open(); try { chestOpenSound(0); } catch (er) { /* sound */ } if (BTC.ui) { const bb = BTC.ui.querySelector('button[data-k="' + kind + '"]'); bb.disabled = true; bb.style.display = 'none'; if (!BTC.list.some((x) => !x.opened)) BTC.ui.classList.remove('on'); } try { btSfx('ok'); } catch (er) { /* sound */ }
         }
         function btcClear(auto) {
             if (auto) for (const e of BTC.list) if (!e.opened && e.c.state === 'closed') { e.opened = true; try { btcGrant(e.kind); } catch (er) { console.warn('chest', er); } }
@@ -15979,7 +15983,8 @@ window.__ts = TSK;
             const p = padNearestPeer(14);
             if (p) setLookTarget(p.id); else padToast('Nobody close enough to target');
         }
-        function padCycleParty(dir) {    // D-pad up / down: you, then each party member who is here
+        function padCycleParty(dir) {
+            if (activeMap === 'btl') return;    // D-pad up / down: you, then each party member who is here
             const ids = [me.id]; for (const id of PARTY.members.keys()) if (id !== me.id && peers.has(id) && peers.get(id).actor.group.parent) ids.push(id);
             const cur = SELF.on ? me.id : localActor.lookId, i = ids.indexOf(cur);
             const nx = ids[(i < 0 ? (dir > 0 ? 0 : ids.length - 1) : (i + dir + ids.length) % ids.length)];
@@ -16591,6 +16596,7 @@ window.__ts = TSK;
             if (/^\/(industries|hoverboard)$/i.test(text)) { if (typeof industriesOpen === 'function') industriesOpen(); return true; }
             { const pm = /^\/(?:p|party)(?:\s+(.*))?$/i.exec(text); if (pm) { if (pm[1]) return partyChat(pm[1]); partyToggle(true); return true; } }
             { const fm = /^\/fx(?:\s+(.*))?$/i.exec(text); if (fm) return fxCommand(fm[1]); }
+            { const cm = /^\/cmpshare(?:\s+(on|off))?$/i.exec(text); if (cm) { if (cm[1]) cmpnShareSet(cm[1].toLowerCase() === 'on'); sysChat('Companions are ' + (CMPN.share ? 'shown to other players (their words go to your party only). /cmpshare off hides them.' : 'hidden from other players. /cmpshare on shows them.')); return true; } }
             if (/^\/(games?|cards?|tt|c4)$/i.test(text)) { gmOpen(); return true; }
             if (text.startsWith('/') && EMOTES[text.slice(1)]) { performEmote(text.slice(1)); return true; }
             try { if (gilTrade(text)) return true; } catch (e) { console.warn('gil trade', e); }
@@ -17132,6 +17138,7 @@ window.__ts = TSK;
         }
 
         function setLookTarget(id, announce = true) {
+            if (id && activeMap === 'btl') return;   // no character targeting in a Warriors of Light battle
             id = id && id !== me.id && peers.has(id) ? id : null;
             if (id) SELF.on = false;
             if (localActor.lookId === id) return;
@@ -17140,10 +17147,11 @@ window.__ts = TSK;
             if (announce) sysChat(id ? `Targeting ${peers.get(id).name}. (D-pad left/right or T to switch, B or click them again to clear)` : 'Target cleared.');
         }
         function setSelfTarget(on) {
-            on = !!on; if (SELF.on === on) return; SELF.on = on;
+            on = !!on; if (on && activeMap === 'btl') return; if (SELF.on === on) return; SELF.on = on;
             if (on) { if (localActor.lookId) setLookTarget(null, false); sysChat('Targeting yourself. (D-pad down, T or B to clear)'); } else sysChat('Target cleared.');
         }
         function cycleLookTarget(dir = 0) {
+            if (activeMap === 'btl') return;
             const here = localActor.group.position;
             const list = [...peers.values()].filter((p) => p.actor.group.parent).sort((a, b) => a.actor.group.position.distanceTo(here) - b.actor.group.position.distanceTo(here));
             if (!list.length) { setSelfTarget(!SELF.on); return; }
@@ -17316,6 +17324,7 @@ window.__ts = TSK;
             la.gazePoint = HOLO.gaze.set(px, py, pz);
         }
         function updateLookMarker() {
+            if (activeMap === 'btl' && (localActor.lookId || SELF.on)) { SELF.on = false; setLookTarget(null, false); try { EXM.id = null; } catch (e) { /* none */ } }
             const other = localActor && localActor.lookId ? actorById(localActor.lookId) : null;
             if (localActor && localActor.lookId && !other) setLookTarget(null, false);   // they left
             if (!other) { if (lookMarker) lookMarker.visible = false; return; }
@@ -18435,6 +18444,7 @@ window.__ts = TSK;
                 case 'pbye': if (cur) { PARTY.members.delete(id); sysParty(`${cur.name} left the party.`); partyRender(); } break;
                 case 'plead': if (id === partyLeaderId() && m.to === me.id) { PARTY.myLead = true; PARTY.era = partyEra() + 1; partyAnnounce(); } break;
                 case 'pkick': if (id === partyLeaderId() && m.to === me.id) { partyLeave(true); sysChat('The party leader removed you from the party.'); } break;
+                case 'pcs': { if (!cur) break; const t = String(m.text || '').slice(0, 240); if (!t || Date.now() - (cur.lastPcs || 0) < 500) break; cur.lastPcs = Date.now(); const nm = String(m.n || 'Companion').slice(0, 24), col = validHex(m.col) || '#c4b5fd'; addChat(nm + ' (' + cur.name + ')', t, col); const pe = peers.get(id), r = pe && pe.cm && pe.cm.get(String(m.i || '').slice(0, 40)); if (r) r.actor.showBubble(t, col); break; }
                 case 'pchat': { const t = String(m.text || '').slice(0, 140); if (t && cur) addChat('[Party] ' + cur.name, t, '#c4b5fd'); break; }
                 case 'psum': {
                     const rm = partyRmOk(m.rm); if (!rm || !cur) break;
@@ -22635,7 +22645,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                 ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
                 ray.setFromCamera(ndc, camera);
                 if (hasScreen() && SCREEN.hit.length && ray.intersectObjects(SCREEN.hit, false).length) { openScreenPanel(); return; }   // click the screen
-                { const pls = [...peers.values()].filter((p) => p.actor.group.parent), hitP = ray.intersectObjects(pls.map((p) => p.actor.group), true)[0], hitProp = ray.intersectObjects(props, true)[0];
+                { const pls = activeMap === 'btl' ? [] : [...peers.values()].filter((p) => p.actor.group.parent), hitP = ray.intersectObjects(pls.map((p) => p.actor.group), true)[0], hitProp = ray.intersectObjects(props, true)[0];
                   if (hitP && (!hitProp || hitP.distance < hitProp.distance)) {
                       const pp = pls.find((p) => { let o = hitP.object; while (o) { if (o === p.actor.group) return true; o = o.parent; } return false; });
                       if (pp) { openProfile(pp); return; }
@@ -23025,7 +23035,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         }
         function cmpChunks(t) { const MAX = 230, out = []; let cur = ''; const pieces = []; for (const s of String(t).trim().split(/(?<=[.!?…~*])\s+/)) { if (s.length <= MAX) { pieces.push(s); continue; } let rest = s; while (rest.length > MAX) { let k = rest.lastIndexOf(', ', MAX); if (k < 40) k = rest.lastIndexOf(' ', MAX); if (k < 20) k = MAX; pieces.push(rest.slice(0, k + 1).trim()); rest = rest.slice(k + 1).trim(); } if (rest) pieces.push(rest); } for (const s of pieces) { if (cur && (cur + ' ' + s).length > MAX) { out.push(cur.trim()); cur = s; } else cur = (cur + ' ' + s).trim(); } if (cur) out.push(cur.trim()); return out.slice(0, 6); }
         function cmpSay(a, c, text) {
-            const parts = cmpChunks(text); let delay = 0; parts.forEach((p) => { const d = delay; delay += Math.max(1700, p.length * 38); setTimeout(() => { try { if (!CMP.active.has(c.id) && !cmpUnit(c)) return; a.actor.showBubble(p, cmpColor(c)); addChat(c.name, p, cmpColor(c)); } catch (e) { /* actor gone */ } }, d); });
+            const parts = cmpChunks(text); let delay = 0; parts.forEach((p) => { const d = delay; delay += Math.max(1700, p.length * 38); setTimeout(() => { try { if (!CMP.active.has(c.id) && !cmpUnit(c)) return; a.actor.showBubble(p, cmpColor(c)); addChat(c.name, p, cmpColor(c)); cmpnTell(c, p); } catch (e) { /* actor gone */ } }, d); });
             CMP.log.push({ who: c.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
         }
         async function cmpReply(c, userText, extra, silent) {
@@ -23184,6 +23194,71 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             }
         }
 
+
+        /* ---- companions seen by other players ----
+           Everyone in the room sees your active companions walking with you (they arrive like avatars: a robot first, then the model).
+           What they SAY (bubble + chat line) is sent only to your party, over the party's own encrypted room. Turn sharing off with /cmpshare off. */
+        const CMPN = { acc: 0, had: false, share: (() => { try { return localStorage.getItem('oasis.cmp.share') !== '0'; } catch (e) { return true; } })(), bufs: new Map(), sent: new Map(), live: 0 };
+        function cmpnShareSet(on) { CMPN.share = !!on; try { localStorage.setItem('oasis.cmp.share', on ? '1' : '0'); } catch (e) { /* private mode */ } if (!on && net) { try { net.send({ t: 'cmps', l: [] }); } catch (e) { /* ignore */ } CMPN.had = false; } }
+        function cmpnSend(dt) {
+            if (!net || !room) return;
+            const on = CMPN.share && activeMap !== 'btl' && CMP.active.size > 0;
+            if (!on) { if (CMPN.had) { CMPN.had = false; try { net.send({ t: 'cmps', l: [] }); } catch (e) { /* ignore */ } } return; }
+            CMPN.acc += dt; if (CMPN.acc < 0.2) return; CMPN.acc = 0;
+            const list = [], r2 = (v) => Math.round(v * 100) / 100;
+            for (const r of CMP.active.values()) { if (!r.actor) continue; const g = r.actor.group; list.push({ i: String(r.c.id).slice(0, 40), n: String(r.c.name).slice(0, 24), g: r.c.gender === 'male' ? 'male' : 'female', k: r.c.vrm ? String(r.c.vrm).slice(0, 60) : '', c: cmpColor(r.c), x: r2(g.position.x), y: r2(g.position.y), z: r2(g.position.z), ry: r2(g.rotation.y) }); }
+            if (list.length) { CMPN.had = true; net.send({ t: 'cmps', l: list }); }
+        }
+        function cmpnTell(c, text) {   // party only
+            try { if (!CMPN.share || !PARTY.net || PARTY.members.size < 2) return; PARTY.net.send({ t: 'pcs', i: String(c.id).slice(0, 40), n: String(c.name).slice(0, 24), text: String(text).slice(0, 240), col: cmpColor(c) }); } catch (e) { /* party is optional */ }
+        }
+        function cmpnDrop(r) { try { r.actor.dispose(); } catch (e) { /* ignore */ } }
+        function cmpnPeerGone(p) { if (p.cm) { for (const r of p.cm.values()) cmpnDrop(r); p.cm.clear(); } }
+        function cmpnOnMsg(from, m) {
+            const p = peers.get(from); if (!p || !Array.isArray(m.l)) return;
+            if (!p.cm) p.cm = new Map(); const now = Date.now(), seen = new Set();
+            for (const e of m.l.slice(0, 4)) {
+                if (!e || typeof e !== 'object') continue; const id = String(e.i || '').slice(0, 40); if (!id) continue;
+                if (![e.x, e.y, e.z, e.ry].every((v) => Number.isFinite(v) && Math.abs(v) < 1e4)) continue;
+                seen.add(id); let r = p.cm.get(id);
+                if (!r) {
+                    let n = 0; peers.forEach((q) => { if (q.cm) n += q.cm.size; }); if (n >= 12) continue;
+                    const a = new Actor('rc_' + from + '_' + id, String(e.n || 'Companion').slice(0, 24)); a.gender = e.g === 'male' ? 'male' : 'female'; a.group.position.set(e.x, e.y, e.z); a.group.rotation.y = e.ry; a.firstFrame = true;
+                    r = { id, actor: a, k: typeof e.k === 'string' ? e.k.slice(0, 60) : '', tries: 0, at: 0, has: false, t: null, seen: now }; p.cm.set(id, r);
+                }
+                r.t = { x: e.x, y: e.y, z: e.z, ry: e.ry }; r.seen = now;
+                if (r.k && !r.has && r.tries < 4 && now - r.at > 20000) { r.at = now; r.tries++; const hit = CMPN.bufs.get(from + '|' + r.k); if (hit) cmpnApply(p, r, hit); else net.send({ t: 'cmpwant', to: from, k: r.k }); }
+            }
+            for (const [id, r] of [...p.cm]) if (!seen.has(id)) { cmpnDrop(r); p.cm.delete(id); }
+        }
+        function cmpnApply(p, r, buf) {
+            r.has = true;
+            buildModel(buf, 'gltf', { asAvatar: true }).then(({ root, vrm }) => { if (peers.get(p.id) === p && p.cm && p.cm.get(r.id) === r) r.actor.setModel(root, vrm); }).catch((e) => { r.has = false; console.warn('companion model', e); });
+        }
+        function cmpnOnWant(from, m) {
+            if (!CMPN.share || typeof m.k !== 'string' || !peers.has(from)) return; const k = m.k.slice(0, 60);
+            let mine = false; for (const r of CMP.active.values()) if (r.c.vrm && String(r.c.vrm).slice(0, 60) === k) mine = r.c.vrm;
+            if (!mine) return; const key = from + '|' + k, t = CMPN.sent.get(key) || 0; if (Date.now() - t < 60000) return; CMPN.sent.set(key, Date.now());
+            btSkinBuffer(mine).then((b) => { if (!b) return; const buf = b instanceof ArrayBuffer ? b : (b.buffer ? b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) : null); if (!buf || buf.byteLength > 30e6) return; net.send({ t: 'cmpbuf', to: from, k, buffer: buf }); }).catch(() => {});
+        }
+        function cmpnOnBuf(from, m) {
+            const p = peers.get(from); if (!p || !p.cm || typeof m.k !== 'string' || !(m.buffer instanceof ArrayBuffer) || m.buffer.byteLength > 30e6) return;
+            const k = m.k.slice(0, 60); let any = false; for (const r of p.cm.values()) if (r.k === k && r.tries > 0 && !r.has) any = true; if (!any) return;
+            CMPN.bufs.set(from + '|' + k, m.buffer); while (CMPN.bufs.size > 6) CMPN.bufs.delete(CMPN.bufs.keys().next().value);
+            for (const r of p.cm.values()) if (r.k === k && r.tries > 0 && !r.has) cmpnApply(p, r, m.buffer);
+        }
+        function cmpnFrame(dt) {
+            const k = 1 - Math.exp(-dt * 10), now = Date.now();
+            peers.forEach((p) => {
+                if (!p.cm || !p.cm.size) return;
+                for (const [id, r] of [...p.cm]) {
+                    if (now - r.seen > 4000) { cmpnDrop(r); p.cm.delete(id); continue; }
+                    const g = r.actor.group, t = r.t; if (t) { if (Math.hypot(t.x - g.position.x, t.z - g.position.z) > 40) { g.position.set(t.x, t.y, t.z); r.actor.firstFrame = true; } g.position.x = lerp(g.position.x, t.x, k); g.position.y = lerp(g.position.y, t.y, k); g.position.z = lerp(g.position.z, t.z, k); g.rotation.y = lerpAngle(g.rotation.y, t.ry, k); }
+                    r.actor.update(dt);
+                }
+            });
+        }
+
         /* ---- MuchiGo import ---- */
         function cmpMemClean(s) {
             s = String(s || '').trim(); if (/^(I'?m not going to|I can'?t |I won'?t |I'?m sorry)/i.test(s) || s.length < 40) return '';
@@ -23336,7 +23411,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const u = pool[(Math.random() * pool.length) | 0]; CMPB.lastAny = now; CMPB.last[u.id] = now; cmpBtSpeak(u, text, kind);
         }
         function cmpBtSay(u, c, text) {
-            text = cmpClean(text, c.name).slice(0, 140); if (!text) return; const a = u.actor || (btActorOf(u.id)); try { if (a && a.showBubble) a.showBubble(text, cmpColor(c)); } catch (e) { /* no actor yet */ } try { addChat(c.name, text, cmpColor(c)); } catch (e) { /* chat */ }
+            text = cmpClean(text, c.name).slice(0, 140); if (!text) return; const a = u.actor || (btActorOf(u.id)); try { if (a && a.showBubble) a.showBubble(text, cmpColor(c)); } catch (e) { /* no actor yet */ } try { addChat(c.name, text, cmpColor(c)); } catch (e) { /* chat */ } cmpnTell(c, text);
             CMP.log.push({ who: c.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
         }
         function cmpBtGear(u) {   // your level, class, equipment, bag and gil, plus what this companion wears: the same things the Equipment and Class screens show
@@ -23487,7 +23562,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const r = CMP.active.get(c.id), u = cmpUnit(c), a = (r && r.actor && r.actor.group && r.actor.group.visible !== false ? r.actor : null) || (u && u.actor); if (!a || !a.playEmote) return false;
             try { a.playEmote(key); } catch (e) { return false; } return true;
         }
-        window.__cmp = { btVictory, btcSpawn, btcOpen, btcGrant, btcCatalog, BTC, gilTrade, BT_IFX, ensureBtl, cmpBtState, cmpBtOrder, cmpRunOrder, cmpOrderParse, CMP, cmpSummon, cmpDismiss, cmpHear, cmpImport, cmpOpen, cmpAI, BT, btJoin, btStart, btHostTick, cmpBtSync, cmpGearStats, cmpBotCmd, cmpUnit, CE, ceImport, cmpEmoteFor, cmpEmote, cmpBtEvent, cmpBtNote, gearLoad, CMPB, ensureBtl };
+        window.__cmp = { btVictory, btcSpawn, btcOpen, btcGrant, btcCatalog, BTC, gilTrade, BT_IFX, ensureBtl, cmpBtState, cmpBtOrder, cmpRunOrder, cmpOrderParse, CMP, cmpSummon, cmpDismiss, cmpHear, cmpImport, cmpOpen, cmpAI, BT, btJoin, btStart, btHostTick, cmpBtSync, cmpGearStats, cmpBotCmd, cmpUnit, CE, ceImport, cmpEmoteFor, cmpEmote, cmpBtEvent, cmpBtNote, gearLoad, CMPB, ensureBtl , get map() { return activeMap; }, setLookTarget, cycleLookTarget, CMPN, cmpnTell, cmpnOnMsg, cmpnSend, cmpnFrame, partyOnMsg, PARTY, peers, addPeer, onNetMessage };
 
         function animate() {
             requestAnimationFrame(animate);
@@ -23503,6 +23578,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             levelTick(dt); updateHolo(dt);
             localActor.update(dt);
             try { cmpFrame(dt); } catch (e) { /* companions must never stop the loop */ }
+            try { cmpnFrame(dt); cmpnSend(dt); } catch (e) { /* other players' companions are optional */ }
 
             const k = 1 - Math.exp(-dt * 14);
             peers.forEach((p) => {
