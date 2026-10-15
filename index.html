@@ -55,11 +55,12 @@
                 if (m === '169' || m === 'fill' || m === 'wide') return m;
                 try { return window.matchMedia('(pointer: coarse)').matches ? 'wide' : 'fill'; } catch (e) { return 'fill'; }
             }
+            function ar() { var v = 0; try { v = parseFloat(localStorage.getItem('psHomeAR')); } catch (e) { /* storage blocked */ } return v >= 1.2 && v <= 2.5 ? v : 16 / 9; }
             function apply() {
                 var W = window.innerWidth, H = window.innerHeight, w = W, h = H, x = 0, y = 0, m = mode(), wide = m === 'wide';
-                if ((m === '169' || wide) && Math.abs(W / H - 16 / 9) > 0.03) {
-                    w = W; h = Math.round(W * 9 / 16);
-                    if (h > H) { h = H; w = Math.round(H * 16 / 9); }
+                var AR = ar(); if ((m === '169' || wide) && Math.abs(W / H - AR) > 0.03) {
+                    w = W; h = Math.round(W / AR);
+                    if (h > H) { h = H; w = Math.round(H * AR); }
                     x = (W - w) >> 1; y = (H - h) >> 1;
                 }
                 var framed = (m === '169' || wide) && (w !== W || h !== H), wideOn = wide && framed, b = document.body;
@@ -79,7 +80,8 @@
             window.__stage = { w: window.innerWidth, h: window.innerHeight, x: 0, y: 0, mode: 'fill', framed: false, vw: window.innerWidth, vh: window.innerHeight };
             window.__fitApply = apply;
             window.__setFit = function (m) { try { localStorage.setItem('psHomeFit', m); } catch (e) { /* storage blocked */ } apply(); window.dispatchEvent(new Event('resize')); };
-            window.__fitMode = mode;
+            window.__fitMode = mode; window.__fitAR = ar;
+            window.__setAR = function (v) { try { localStorage.setItem('psHomeAR', String(v / 1000)); } catch (e) { /* storage blocked */ } apply(); window.dispatchEvent(new Event('resize')); };
             apply();
             document.addEventListener('DOMContentLoaded', apply);
             window.addEventListener('resize', apply);
@@ -14355,30 +14357,94 @@ function btMusicStop() {
         { const iv = setInterval(() => { try { if (typeof renderer !== 'undefined' && renderer && renderer.domElement) { clearInterval(iv); ssWire(); } } catch (e) { /* renderer not ready */ } }, 500); }   // the canvas does not exist yet when this loads
 
         /* ---- SETTINGS: frame counter (Info > Settings, or /settings) ---- */
-        const GFX = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('oasis.gfx') || '{}') || {}; } catch (e) { /* storage */ } const res = ['auto', '0.5', '0.75', '1', '1.5', 'native'].includes(s.res) ? s.res : 'auto', cap = [0, 30, 45, 60, 90].includes(+s.cap) ? +s.cap : 0; return { res, cap, emu: ['first', 'balanced', 'full'].includes(s.emu) ? s.emu : 'first', fps: !!s.fps, last: 0, fc: 0, ft: 0, shown: 0, el: null, panel: null }; })();
-        function gfxSave() { try { localStorage.setItem('oasis.gfx', JSON.stringify({ res: GFX.res, cap: GFX.cap, fps: GFX.fps, emu: GFX.emu })); } catch (e) { /* storage */ } }
-        function gfxFixedRatio() { const d = window.devicePixelRatio || 1; return GFX.res === 'native' ? Math.min(d, 3) : Math.min(+GFX.res, Math.max(d, 1.5)); }
+        const GFX_PRESETS = {
+            optimal: { n: 'Optimal', d: 'Coolest and quietest: lowest heat and battery use', res: '0.6', shadow: 'off', cap: 30, emu: 'first' },
+            performance: { n: 'Performance', d: 'Smooth and light, no shadows', res: '0.75', shadow: 'off', cap: 60, emu: 'first' },
+            balanced: { n: 'Balanced', d: 'Soft shadows, sensible sharpness', res: '1', shadow: 'low', cap: 60, emu: 'balanced' },
+            nice: { n: 'Nice', d: 'Good shadows and a sharper picture', res: '1.25', shadow: 'med', cap: 60, emu: 'balanced' },
+            supernice: { n: 'Super Nice', d: 'Sharp, detailed shadows', res: '1.5', shadow: 'high', cap: 0, emu: 'full' },
+            perfect: { n: 'Perfect', d: 'Everything maxed: your device\'s full resolution and the biggest shadows', res: 'native', shadow: 'ultra', cap: 0, emu: 'full' }
+        };
+        const GFX_SH = { off: { n: 'Off', on: false, max: 512, every: 1 }, low: { n: 'Low', on: true, max: 512, every: 3 }, med: { n: 'Medium', on: true, max: 1024, every: 2 }, high: { n: 'High', on: true, max: 2048, every: 1 }, ultra: { n: 'Ultra', on: true, max: 4096, every: 1 } };
+        const GFX = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('oasis.gfx') || '{}') || {}; } catch (e) { /* storage */ } const fresh = !s.preset && s.res === undefined, pr = GFX_PRESETS[s.preset] ? s.preset : (fresh ? 'balanced' : 'custom'), P = GFX_PRESETS[pr] || {};
+            const res = ['auto', '0.5', '0.6', '0.75', '1', '1.25', '1.5', 'native'].includes(s.res) ? s.res : (P.res || 'auto'), cap = [0, 30, 45, 60, 90].includes(+s.cap) && s.cap !== undefined ? +s.cap : (P.cap === undefined ? 0 : P.cap);
+            return { preset: pr, res, cap, shadow: GFX_SH[s.shadow] ? s.shadow : (P.shadow || 'ultra'), emu: ['first', 'balanced', 'full'].includes(s.emu) ? s.emu : (P.emu || 'first'), fps: !!s.fps, fresh, last: 0, fc: 0, ft: 0, sw: 0, shown: 0, el: null, panel: null, bench: null }; })();
+        function gfxSave() { try { localStorage.setItem('oasis.gfx', JSON.stringify({ preset: GFX.preset, res: GFX.res, cap: GFX.cap, fps: GFX.fps, emu: GFX.emu, shadow: GFX.shadow })); } catch (e) { /* storage */ } }
+        function gfxFixedRatio() { const d = window.devicePixelRatio || 1; return GFX.res === 'native' ? Math.min(d, 2) : Math.min(+GFX.res, Math.max(d, 1.5)); }
         const gfxEmuCap = () => (GFX.emu === 'full' ? 4 : GFX.emu === 'first' ? 0.75 : 1);   // the drawing size while a game is on
         const gfxEmuSkip = () => { if (GFX.emu === 'full') return 1; if (GFX.emu === 'balanced') return 2; try { return tvTheaterOn ? 12 : 4; } catch (e) { return 4; } };   // draw the world every Nth frame while a game is on
+        function gfxShadowSweep() {   // shadows: switch the lights' shadows on or off and cap their map size to the chosen quality
+            if (typeof scene === 'undefined' || !scene) return; const L = GFX_SH[GFX.shadow] || GFX_SH.ultra;
+            scene.traverse((o) => {
+                if (!o.isLight || !o.shadow) return; const u = o.userData;
+                if (!L.on) { if (o.castShadow) { o.castShadow = false; u.gfxOff = true; } } else if (u.gfxOff) { o.castShadow = true; u.gfxOff = false; }
+                if (u.gfxMs === undefined) u.gfxMs = o.shadow.mapSize.x; const sz = Math.min(u.gfxMs, L.max);
+                if (o.shadow.mapSize.x !== sz) { o.shadow.mapSize.set(sz, sz); if (o.shadow.map) { try { o.shadow.map.dispose(); } catch (e) { /* gone */ } o.shadow.map = null; } }
+            });
+        }
         function gfxFrame(t) {   // called at the top of every animation frame; returns false to skip this frame (frame-rate cap)
-                        if (GFX.fps) { GFX.fc++; if (t - GFX.ft >= 500) { const f = GFX.fc * 1000 / (t - GFX.ft); GFX.fc = 0; GFX.ft = t; if (!GFX.el) { const e = document.createElement('div'); e.style.cssText = 'position:fixed;right:8px;bottom:3px;z-index:60;font:700 11px/1.2 ui-monospace,Menlo,monospace;color:#9fffc8;background:rgba(0,0,0,.55);padding:2px 7px;border-radius:6px;pointer-events:none;text-shadow:0 1px 1px #000'; document.body.appendChild(e); GFX.el = e; } let r = 1; try { r = renderer.getPixelRatio(); } catch (x) { /* none */ } GFX.el.textContent = Math.round(f) + ' fps · ' + Math.round(innerWidth * r) + '×' + Math.round(innerHeight * r); } }
+            if (GFX.cap && GFX.last && t - GFX.last < 1000 / GFX.cap - 2) return false; GFX.last = t;
+            if (t - GFX.sw > 1500) { GFX.sw = t; try { gfxShadowSweep(); } catch (e) { /* scene not ready */ } }
+            try { if (typeof renderer !== 'undefined' && renderer && !PERF.emu) { const ev = (GFX_SH[GFX.shadow] || GFX_SH.ultra).every; renderer.shadowMap.autoUpdate = ev <= 1; if (ev > 1 && animFrameNo % ev === 0) renderer.shadowMap.needsUpdate = true; } } catch (e) { /* not ready */ }
+            if (GFX.fps) { GFX.fc++; if (t - GFX.ft >= 500) { const f = GFX.fc * 1000 / (t - GFX.ft); GFX.fc = 0; GFX.ft = t; if (!GFX.el) { const e = document.createElement('div'); e.style.cssText = 'position:fixed;right:8px;bottom:3px;z-index:60;font:700 11px/1.2 ui-monospace,Menlo,monospace;color:#9fffc8;background:rgba(0,0,0,.55);padding:2px 7px;border-radius:6px;pointer-events:none;text-shadow:0 1px 1px #000'; document.body.appendChild(e); GFX.el = e; } let r = 1; try { r = renderer.getPixelRatio(); } catch (x) { /* none */ } GFX.el.textContent = Math.round(f) + ' fps · ' + Math.round(innerWidth * r) + '×' + Math.round(innerHeight * r); } }
             else if (GFX.el) { GFX.el.remove(); GFX.el = null; }
             return true;
         }
-        function gfxApply() { gfxSave(); }
+        function gfxApply() { gfxSave(); try { perfApply(); } catch (e) { /* renderer not ready */ } try { gfxShadowSweep(); } catch (e) { /* scene not ready */ } }
+        function gfxSetPreset(id) { const P = GFX_PRESETS[id]; if (!P) return; GFX.preset = id; GFX.res = P.res; GFX.shadow = P.shadow; GFX.cap = P.cap; GFX.emu = P.emu; gfxApply(); }
+        function gfxBench() {   // find the best preset this device holds at about 60 fps: start in the middle, step up while it holds, down while it does not
+            if (GFX.bench) return; const order = ['optimal', 'performance', 'balanced', 'nice', 'supernice', 'perfect'], prev = { preset: GFX.preset, res: GFX.res, shadow: GFX.shadow, cap: GFX.cap, emu: GFX.emu }; let i = 2, best = -1, step = 0, fail = 99;
+            GFX.bench = { msg: 'Starting…' }; const note = (m) => { GFX.bench.msg = m; gfxRender(); };
+            const measure = (cb) => { let n = 0, t0 = 0, tw = performance.now(), worst = 0, lastT = 0; const loop = (t) => { if (!GFX.bench) return; if (t - tw < 700) { requestAnimationFrame(loop); return; } if (!t0) { t0 = t; lastT = t; } else { worst = Math.max(worst, t - lastT); lastT = t; n++; } if (t - t0 < 1600) requestAnimationFrame(loop); else cb(n * 1000 / (t - t0), worst); }; requestAnimationFrame(loop); };
+            const next = () => {
+                if (!GFX.bench) return; const id = order[i]; GFX.cap = 0; gfxSetPreset(id); GFX.cap = 0; gfxSave(); note('Testing ' + GFX_PRESETS[id].n + '…');
+                measure((fps, worst) => {
+                    const ok = fps >= 52 && worst < 90; step++; if (ok) best = Math.max(best, i); else fail = Math.min(fail, i); note(GFX_PRESETS[id].n + ': ' + Math.round(fps) + ' fps ' + (ok ? '✓' : '✗'));
+                    if (step >= 6) return done();
+                    if (ok) { if (i + 1 >= fail || i >= order.length - 1) return done(); i++; setTimeout(next, 250); } else { if (best >= 0 || i === 0) return done(); i--; setTimeout(next, 250); }
+                });
+            };
+            const done = () => { const pick = best >= 0 ? order[best] : 'optimal'; GFX.bench = null; gfxSetPreset(pick); GFX.fresh = false; gfxRender(); try { sysChat('Auto graphics chose ' + GFX_PRESETS[pick].n + ' for this device. You can change it any time in Info → Settings.'); } catch (e) { /* chat */ } };
+            setTimeout(next, 100);
+        }
         function gfxBuild() {
-            if (GFX.panel) return; const css = document.createElement('style'); css.textContent = `#gfx-panel{position:fixed;z-index:62;left:50%;top:50%;transform:translate(-50%,-50%);width:min(400px,94vw);max-height:90vh;overflow:auto;color:#e5e7eb;background:rgba(14,22,40,.96);border:1px solid rgba(255,255,255,.18);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.55);font:13px/1.45 Nunito,Inter,system-ui,sans-serif;padding:12px 16px 16px}#gfx-panel.hidden{display:none}#gfx-panel h3{margin:0 0 8px;font:800 14px Orbitron,Nunito,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;display:flex;align-items:center}#gfx-panel h3 span{flex:1}#gfx-panel .row{display:flex;flex-direction:column;gap:4px;margin:10px 0}#gfx-panel .row b{font-size:12px}#gfx-panel .opts{display:flex;flex-wrap:wrap;gap:6px}#gfx-panel button{padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font:800 12px Nunito,sans-serif;cursor:pointer;touch-action:manipulation}#gfx-panel button.on{background:#0ea5e9;border-color:#7dd3fc}#gfx-panel p{margin:0;color:#9ca3af;font-size:11.5px}`; document.head.appendChild(css);
+            if (GFX.panel) return; const css = document.createElement('style'); css.textContent = `#gfx-panel{position:fixed;z-index:62;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,94vw);max-height:90vh;overflow:auto;color:#e5e7eb;background:rgba(14,22,40,.96);border:1px solid rgba(255,255,255,.18);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.55);font:13px/1.45 Nunito,Inter,system-ui,sans-serif;padding:12px 16px 16px}#gfx-panel.hidden{display:none}#gfx-panel h3{margin:0 0 8px;font:800 14px Orbitron,Nunito,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;display:flex;align-items:center}#gfx-panel h3 span{flex:1}#gfx-panel .row{display:flex;flex-direction:column;gap:4px;margin:10px 0}#gfx-panel .row b{font-size:12px}#gfx-panel .opts{display:flex;flex-wrap:wrap;gap:6px}#gfx-panel button{padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font:800 12px Nunito,sans-serif;cursor:pointer;touch-action:manipulation}#gfx-panel button.on{background:#0ea5e9;border-color:#7dd3fc}#gfx-panel button.auto{background:linear-gradient(180deg,#22c55e,#15803d);border-color:#86efac}#gfx-panel p{margin:0;color:#9ca3af;font-size:11.5px}#gfx-panel hr{border:0;border-top:1px solid rgba(255,255,255,.12);margin:12px 0 4px}`; document.head.appendChild(css);
             const d = document.createElement('div'); d.id = 'gfx-panel'; d.className = 'hidden'; d.addEventListener('pointerdown', (e) => e.stopPropagation()); d.addEventListener('keydown', (e) => { if (e.key === 'Escape') gfxToggle(false); e.stopPropagation(); });
-            d.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k, v = b.dataset.v; if (k === 'fps') GFX.fps = !GFX.fps; else if (k === 'close') { gfxToggle(false); return; } gfxApply(); gfxRender(); });
+            d.addEventListener('click', (e) => {
+                const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k, v = b.dataset.v;
+                if (k === 'close') { GFX.bench = null; gfxToggle(false); return; }
+                if (GFX.bench && k !== 'fps') return;
+                if (k === 'fps') GFX.fps = !GFX.fps;
+                else if (k === 'preset') { gfxSetPreset(v); }
+                else if (k === 'auto') { gfxBench(); return; }
+                else if (k === 'res') { GFX.res = v; GFX.preset = 'custom'; gfxApply(); }
+                else if (k === 'shadow') { GFX.shadow = v; GFX.preset = 'custom'; gfxApply(); }
+                else if (k === 'cap') { GFX.cap = +v; GFX.preset = 'custom'; gfxApply(); }
+                else if (k === 'emu') { GFX.emu = v; GFX.preset = 'custom'; gfxApply(); }
+                else if (k === 'fit') { window.__setFit(v); try { window.__fitSub && window.__fitSub(); } catch (x) { /* label */ } }
+                else if (k === 'ar') { window.__setAR(+v); }
+                gfxApply(); gfxRender();
+            });
             document.body.appendChild(d); GFX.panel = d;
         }
         function gfxRender() {
             const d = GFX.panel; if (!d) return; const o = (k, cur, list) => list.map(([v, l]) => `<button data-k="${k}" data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${l}</button>`).join(''); let r = 1; try { r = renderer.getPixelRatio(); } catch (e) { /* none */ }
-            d.innerHTML = `<h3><span>Settings</span><button data-k="close">Close</button></h3><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']]).replace('data-k="fps" data-v="1"', 'data-k="fps" data-v="1"')}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>`;
+            const pr = GFX.preset, pd = GFX_PRESETS[pr] ? GFX_PRESETS[pr].d : 'Your own mix of the settings below';
+            const ar = (window.__fitAR && window.__fitAR()) || 16 / 9, fit = (window.__stage && window.__stage.mode) || 'fill';
+            d.innerHTML = `<h3><span>Settings</span><button data-k="close">Close</button></h3>
+<div class="row"><b>Graphics quality</b><div class="opts">${Object.keys(GFX_PRESETS).map((id) => `<button data-k="preset" data-v="${id}" class="${pr === id ? 'on' : ''}">${GFX_PRESETS[id].n}</button>`).join('')}${pr === 'custom' ? '<button class="on" disabled>Custom</button>' : ''}</div><p>${pd}.</p></div>
+<div class="row"><div class="opts"><button class="auto" data-k="auto">${GFX.bench ? '⏳ ' + GFX.bench.msg : '⚡ Auto: test my device and choose'}</button></div><p>Runs a short test (about 10 seconds) and picks the best setting your device can hold at a smooth frame rate.</p></div>
+<hr><div class="row"><b>Resolution</b><div class="opts">${o('res', GFX.res, [['0.5', '50%'], ['0.6', '60%'], ['0.75', '75%'], ['1', '100%'], ['1.25', '125%'], ['1.5', '150%'], ['native', 'Native']])}</div><p>How sharp the picture is. Lower is much cooler: a 2K screen at 100% draws a quarter of the pixels of Native on a 2× display. Drawing now: ${Math.round(innerWidth * r)}×${Math.round(innerHeight * r)}.</p></div>
+<div class="row"><b>Shadows</b><div class="opts">${o('shadow', GFX.shadow, Object.keys(GFX_SH).map((k) => [k, GFX_SH[k].n]))}</div><p>Shadows are the heaviest part of the picture. Off is the biggest saving; Low and Medium also refresh them less often.</p></div>
+<div class="row"><b>Frame rate limit</b><div class="opts">${o('cap', GFX.cap, [[0, 'Max'], [30, '30'], [45, '45'], [60, '60']])}</div><p>Capping the frame rate keeps a phone or laptop from running flat out.</p></div>
+<div class="row"><b>While a game is running</b><div class="opts">${o('emu', GFX.emu, [['first', 'Game first'], ['balanced', 'Balanced'], ['full', 'Full world']])}</div><p>How much the 3D world draws while an emulator game is on.</p></div>
+<hr><div class="row"><b>Screen shape</b><div class="opts">${o('fit', fit, [['fill', 'Fill screen'], ['wide', 'Wide picture'], ['169', 'Framed']])}</div><p>Fill uses the whole screen. Framed keeps the chosen shape with black bars. Wide keeps the menus in the shape and lets the picture fill the screen.</p></div>
+<div class="row"><b>Aspect ratio</b><div class="opts">${o('ar', Math.round(ar * 1000), [[1778, '16:9'], [1600, '16:10'], [1500, '3:2'], [1333, '4:3'], [2370, '21:9']])}</div><p>Used by Framed and Wide.</p></div>
+<hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>`;
         }
         function gfxToggle(on) { gfxBuild(); const open = on === undefined ? GFX.panel.classList.contains('hidden') : !!on; GFX.panel.classList.toggle('hidden', !open); if (open) { try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (e) { /* none */ } gfxRender(); } }
         setTimeout(() => { const b = document.getElementById('btn-settings'); if (b) b.addEventListener('click', () => gfxToggle(true)); }, 0);
-        window.__gfx = { GFX, toggle: gfxToggle };
+        window.__gfx = { GFX, toggle: gfxToggle, preset: gfxSetPreset, bench: gfxBench, sweep: gfxShadowSweep };
 
         /* ---- THE FOREST EDGE behind the Harbor Studio: a hillside of pines and leafy trees, a valley and layered mountains (replaces the old bay and city) ---- */
         LOFT.forestU = { value: 0 }; LOFT.forestS = { value: null };   // seasons: x leaf cover, y autumn colour, z blossom, w snow depth
@@ -22719,7 +22785,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const FIT_TXT = { wide: ['Wide: picture fills the screen (tap to change)', 'Screen fit: wide. The picture fills your whole screen and the menus stay in a 16:9 frame.'], '169': ['Console 16:9 frame (tap to change)', 'Screen fit: console 16:9 frame (black bars on wider or taller screens).'], fill: ['Filling the screen (tap to change)', 'Screen fit: filling the whole screen.'] };
             const fitSub = () => { const el = $('btn-fit').querySelector('small'); if (el) el.textContent = FIT_TXT[window.__stage.mode][0]; };
             $('btn-fit').addEventListener('click', () => { window.__setFit(FIT_NEXT[window.__stage.mode] || 'wide'); fitSub(); sysChat(FIT_TXT[window.__stage.mode][1]); });
-            fitSub();
+            fitSub(); window.__fitSub = fitSub;
             const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
             const inApp = () => (window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches)) || navigator.standalone === true;
             const fsSupported = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
@@ -22883,7 +22949,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         // below 80 %), and it climbs back only after a long stretch of smooth frames. While you host or play an emulator (it runs in this same page, so every millisecond the
         // 3D world takes is one the game does not get) the world is drawn at half rate with slowly-updating shadows and no more than 1x resolution.
         const PERF = { acc: 0, n: 0, ratio: 0, max: 0, good: 0, lastDown: -99, emu: false, fps: 60 };
-        function perfRatio() { if (!PERF.max) { PERF.max = Math.min(window.devicePixelRatio || 1, 2); PERF.ratio = PERF.max; } return Math.min(PERF.ratio, PERF.emu ? 1 : 4); }
+        function perfRatio() { if (!PERF.max) { PERF.max = Math.min(window.devicePixelRatio || 1, 2); PERF.ratio = PERF.max; } if (GFX.res !== 'auto') return PERF.emu ? Math.min(gfxFixedRatio(), gfxEmuCap()) : gfxFixedRatio(); return Math.min(PERF.ratio, PERF.emu ? 1 : 4); }
         function perfApply() { try { const r = perfRatio(); if (Math.abs(renderer.getPixelRatio() - r) > 0.01) renderer.setPixelRatio(r); } catch (e) { /* renderer not ready */ } }
         function perfTick(dt) {
             const emu = !!(EMU.on && (EMU.isHost || EMU.playing));
@@ -23425,7 +23491,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
 
         function animate() {
             requestAnimationFrame(animate);
-            gfxFrame(performance.now());
+            if (gfxFrame(performance.now()) === false) return;
             const dt = Math.min(clock.getDelta(), 0.1);
             try { perfTick(dt); } catch (e) { /* governor must never stop the loop */ }
 
@@ -23489,6 +23555,8 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            try { renderer.setPixelRatio(perfRatio()); } catch (e) { /* default ratio */ }
+            if (GFX.fresh) setTimeout(() => { try { sysChat('Graphics are set to ' + GFX_PRESETS[GFX.preset].n + ' to keep your device cool. Open Info → Settings to change it, or press Auto to test your device.'); GFX.fresh = false; gfxSave(); } catch (e) { /* chat */ } }, 6000);
             renderer.toneMapping = THREE.NoToneMapping;           // flat, saturated colours: matches how VRoid / MToon avatars are drawn
             container.appendChild(renderer.domElement);
             setupScreenLayer(container);
