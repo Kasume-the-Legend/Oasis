@@ -465,10 +465,54 @@ function makeSwimmer(team, pd) {
     const o = { root, body, mark, tag, jersey: mats.jersey, mx: rig, mt: Math.random() * 2, gest: null }; MXR.pose(rig, MXL.clips.swim, o.mt, true); return o;
 }
 function gest(p, name) { const m = p && p.m; if (!m || !m.mx) return; if (m.gest && m.gest.c === name && m.gest.t < 0.9) return; m.gest = { c: name, t: 0 }; }
+/* ---- idle: treading water, driven procedurally through the humanoid (VRM-named) bones ----
+   Every delta is a rotation about the rig's world axes (X = character left, Y = up, Z = forward) laid on the rest pose, so the same
+   table works for any VRM humanoid retargeted with MXR.VRM_MAP. Legs run an eggbeater kick, forearms scull, the torso rides up and down. */
+const TRD = (() => {
+    const Q = THREE.Quaternion, D = MXD.bones, n = D.length, V = MXR.VRM_MAP, idx = {};
+    D.forEach((b, i) => { idx[b.n.replace('mixamorig:', '')] = i; });
+    const rl = D.map((b) => new Q().fromArray(b.q)), wr = [];
+    D.forEach((b, i) => { wr[i] = b.p < 0 ? rl[i].clone() : wr[b.p].clone().multiply(rl[i]); });
+    const wi = wr.map((q) => q.clone().invert()), out = new Float32Array(n * 4), qx = new Q(), qy = new Q(), qz = new Q(), dq = new Q(), t1 = new Q();
+    for (let i = 0; i < n; i++) { rl[i].toArray(out, i * 4); }
+    const X = new THREE.Vector3(1, 0, 0), Yv = new THREE.Vector3(0, 1, 0), Zv = new THREE.Vector3(0, 0, 1);
+    // humanoid bone name (VRM) -> rig bone index
+    const hb = (vrm) => idx[V[vrm]];
+    const put = (i, rx, ry, rz) => { if (i === undefined) return; qx.setFromAxisAngle(X, rx); qy.setFromAxisAngle(Yv, ry); qz.setFromAxisAngle(Zv, rz); dq.copy(qy).multiply(qz).multiply(qx); t1.copy(wi[i]).multiply(dq).multiply(wr[i]); dq.copy(rl[i]).multiply(t1); dq.toArray(out, i * 4); };
+    const B = { hips: hb('hips'), spine: hb('spine'), chest: hb('chest'), uchest: hb('upperChest'), neck: hb('neck'), head: hb('head'), sh: [hb('leftShoulder'), hb('rightShoulder')], ua: [hb('leftUpperArm'), hb('rightUpperArm')], la: [hb('leftLowerArm'), hb('rightLowerArm')], hand: [hb('leftHand'), hb('rightHand')], ul: [hb('leftUpperLeg'), hb('rightUpperLeg')], ll: [hb('leftLowerLeg'), hb('rightLowerLeg')], ft: [hb('leftFoot'), hb('rightFoot')] };
+    const TAU = Math.PI * 2;
+    function pose(t, amp) {
+        const k = amp === undefined ? 1 : amp, sw = Math.sin(t * TAU * 0.42), bob = Math.sin(t * TAU * 0.62);
+        put(B.hips, 0, 0.06 * sw * k, 0.035 * Math.sin(t * TAU * 0.5) * k);
+        put(B.spine, -0.03, 0, 0); put(B.chest, -0.03, 0, 0); put(B.uchest, -0.02, 0, 0); put(B.neck, 0.02, -0.05 * sw * k, 0); put(B.head, 0.05, 0, 0);
+        for (let s = 0; s < 2; s++) {
+            const sg = s === 0 ? 1 : -1, th = t * TAU * 1.15 + (s ? Math.PI : 0), ta = t * TAU * 0.85 + (s ? 1.6 : 0);
+            put(B.sh[s], 0, 0, sg * 0.05 * Math.sin(ta));
+            put(B.ua[s], 0.1 * Math.sin(ta + 0.8) * k, -sg * 0.38 + sg * 0.1 * Math.sin(ta) * k, -sg * 0.95);
+            put(B.la[s], 0, -sg * (1.0 + 0.5 * Math.sin(ta + 1.0) * k), 0);
+            put(B.hand[s], 0, -sg * 0.25 * Math.sin(ta + 2.0) * k, sg * 0.15 * Math.sin(ta + 1.0));
+            put(B.ul[s], -(1.15 + 0.17 * Math.sin(th) * k), 0, sg * (0.46 + 0.17 * Math.cos(th) * k));
+            put(B.ll[s], 1.3 + 0.45 * Math.sin(th + 1.2) * k, 0, 0);
+            put(B.ft[s], -0.35 + 0.22 * Math.sin(th + 2.2) * k, 0, 0);
+        }
+        return { q: out, bob: bob * 2.2 * k };
+    }
+    return { pose, idx };
+})();
 function mxAnim(p, m, dt, sp) {
-    m.mt += dt * (0.5 + Math.min(1.7, sp * 0.15)); let B = null, w = 0, tB = 0; const g = m.gest;
+    // measured speed (the animation must follow what the swimmer really does, not a stale velocity)
+    if (!m.lp) { m.lp = p.pos.clone(); m.ms = 0; m.iw = 1; m.it = Math.random() * 4; }
+    const mv = p.pos.distanceTo(m.lp) / Math.max(dt, 1e-3); m.lp.copy(p.pos); m.ms += (Math.min(mv, 40) - m.ms) * Math.min(1, dt * 8); sp = m.ms;
+    const goal = sp < 1.0 ? 1 : sp > 3.0 ? 0 : 1 - (sp - 1.0) / 2.0; m.iw += (goal - m.iw) * Math.min(1, dt * 4.5); if (Math.abs(goal - m.iw) < 0.002) m.iw = goal;
+    m.mt += dt * (0.5 + Math.min(1.7, sp * 0.15)); m.it += dt; let B = null, w = 0, tB = 0; const g = m.gest;
     if (g) { g.t += dt; const L = MXL.clips[g.c]; if (g.t >= L.dur) m.gest = null; else { B = L; tB = g.t; w = Math.min(1, g.t / 0.14, (L.dur - g.t) / 0.24); w = w * w * (3 - 2 * w); } }
     MXR.pose(m.mx, MXL.clips.swim, m.mt, true, B, tB, false, w);
+    const iw = m.iw * (1 - w); if (iw > 0.003) {
+        const T0 = TRD.pose(m.it), bs = m.mx.bones, q = T0.q, e = iw * iw * (3 - 2 * iw);
+        for (let i = 0; i < bs.length; i++) { const o = i * 4, b = bs[i].quaternion; let x = q[o], y = q[o + 1], z = q[o + 2], ww = q[o + 3]; const d = b.x * x + b.y * y + b.z * z + b.w * ww; if (d < 0) { x = -x; y = -y; z = -z; ww = -ww; } b.set(b.x + (x - b.x) * e, b.y + (y - b.y) * e, b.z + (z - b.z) * e, b.w + (ww - b.w) * e).normalize(); }
+        const hp = bs[0].position; hp.y += (58 + T0.bob - hp.y) * e;
+    }
+    m.tag.position.y = 4.4 + 0.7 * m.iw;
 }
 
 /* ------------------------------------------------------------------ GAME STATE */
@@ -539,7 +583,7 @@ function assignCarrier(p) {
     if (p.gk || !humanTeam(p.team) || seatOf(p)) return; let best = null, bd = 1e9;
     M.seats.forEach((s) => { if (s.team !== p.team) return; const d = s.ctrl ? s.ctrl.pos.distanceTo(p.pos) : 1e8; if (d < bd) { bd = d; best = s; } }); if (best) { best.ctrl = p; best.lock = 0; }
 }
-function takeBall(p) { if (p.gk) gest(p, 'catch'); if (M.B.lastTeam !== p.team) p.cool = Math.max(p.cool, 3.4); else p.cool = Math.max(p.cool, 2.2); M.B.carrier = p; M.B.flight = null; p.hold = 0; if (p.gk) p.hold = 1.15; assignCarrier(p); }
+function takeBall(p) { if (p.gk) gest(p, 'catch'); if (M.B.lastTeam !== p.team) p.cool = Math.max(p.cool, 3.4); else p.cool = Math.max(p.cool, 2.2); M.B.carrier = p; M.B.flight = null; M.B.ct = 0; M.B.loose = 0; p.hold = 0; if (p.gk) p.hold = 1.15; assignCarrier(p); }
 function launch(from, to, dur, arc, onLand, follow) { M.B.carrier = null; M.B.flight = { from: from.clone(), to: to.clone(), follow: follow || null, t: 0, dur, arc, onLand }; }
 function flightEnd() { const f = M.B.flight; return f.follow ? f.follow.pos : f.to; }
 
@@ -560,7 +604,7 @@ function doPass(c, r, tech, blockers) {
     cinema('pass', { from: c });
     if (res.ok) {
         say(`${tn(c)} passes to ${tn(r)}…`);
-        launch(from, r.pos, clamp(c.pos.distanceTo(r.pos) / 46, 0.35, 1.3), 3, () => { M.stats[t].passOk++; takeBall(r); AU.catchSnd(); say(`${tn(r)} receives it.`); });
+        launch(from, r.pos, clamp(c.pos.distanceTo(r.pos) / 46, 0.35, 1.3), 3, () => { M.stats[t].passOk++; takeBall(r); AU.catchSnd(); say(`${tn(r)} receives it.`); }, r);
     } else {
         const foes = M.players.filter((e) => e.team !== t && !e.gk && e.stun <= 0), mid = from.clone().lerp(r.pos, 0.62);
         let ic = foes.sort((a, b) => a.pos.distanceTo(mid) - b.pos.distanceTo(mid))[0] || keeper(1 - t);
@@ -655,8 +699,14 @@ function aiEncounter(c, defs) {
     let sh = null, shootP = 0;
     if (dist < 50) { const techs = bestShootTech(c).filter((tc) => !tc.k || c.techCd <= 0); let best = null, bv = -1; techs.forEach((tc) => { let g = 0; for (let i = 0; i < 24; i++) if (calcShot(c, { ...NORMAL, ...tc }, 0, rem).goal) g++; g -= tc.hp * 8; if (g > bv) { bv = g; best = tc; } }); sh = best; let g = 0; for (let i = 0; i < 24; i++) if (calcShot(c, { ...NORMAL, ...sh }, 0, rem).goal) g++; shootP = g / 24; }
     const shoot = () => { const t = { ...NORMAL, ...sh }; if (t.k) c.techCd = 28; doShoot(c, t, rnd(-0.3, 1.2) * df.aim, rem); };
-    if (rem.length === 0) { if (sh && shootP >= 0.36) shoot(); else c.cool = 4; return; }
-    if (sh && shootP >= 0.34) { shoot(); return; }
+    const hold = M.B.ct || 0, thr = Math.max(0.22, 0.42 - 0.02 * hold);   // the longer she keeps it, the more willing she is to take the shot
+    if (rem.length === 0) {
+        if (sh && shootP >= thr) { shoot(); return; }
+        if (tm.length && (hold > 4.5 || dist > 40)) { doPass(c, tm[0], null, []); return; }
+        if (sh && dist < 32 && hold > 8) { shoot(); return; }
+        c.cool = hold > 3 ? 1.2 : 2.4; return;
+    }
+    if (sh && shootP >= thr) { shoot(); return; }
     if (tm.length) { const r = tm[0], pt = c.d.tech.map((id) => TECH[id]).find((x) => x && x.k === 'pass' && c.hp > c.max * 0.2); doPass(c, r, rem.length > 1 ? pt : null, rem); return; }
     if (sh) { shoot(); return; } c.cool = 4;
 }
@@ -665,6 +715,16 @@ function aiEncounter(c, defs) {
 const IN = { x: 0, y: 0, v: 0, boost: false, dir: new V3(), any: false };
 const myDir = () => (M.myTeam === 1 ? -1 : 1);
 const Y = new V3(0, 1, 0);
+/* defence plan, recomputed a few times a second so roles stick (no flip-flopping between chasers) and every marker gets its own man */
+function defPlan(t, ref, c) {
+    M.plan = M.plan || [null, null]; let pl = M.plan[t];
+    if (pl && M.clock - pl.t < 0.4 && pl.c === c) return pl;
+    const old = pl, mates = field(t).filter((q) => q.stun <= 0 || true), prev = (q) => !!(old && old.chase.includes(q));
+    const sc = (q) => q.pos.distanceTo(ref) - (prev(q) ? 5 : 0), sorted = mates.slice().sort((a, b) => sc(a) - sc(b)), chase = c ? sorted.slice(0, 2) : [];
+    const rest = mates.filter((q) => !chase.includes(q)), foes = field(1 - t).filter((e) => e !== c).sort((a, b) => (t === 0 ? b.pos.x - a.pos.x : a.pos.x - b.pos.x)), mark = new Map(), used = new Set();
+    for (const f of foes) { let best = null, bd = 1e9; for (const q of rest) { if (mark.has(q)) continue; const dd = q.pos.distanceTo(f.pos) - (old && old.mark.get(q) === f ? 6 : 0); if (dd < bd) { bd = dd; best = q; } } if (best) mark.set(best, f); }
+    pl = { t: M.clock, c, chase, mark }; M.plan[t] = pl; return pl;
+}
 function aiThink(p) {
     const t = p.team, o = 1 - t, B = M.B, c = B.carrier, d = p.dir, tg = p.target; p.sp = 0.92;
     if (p.gk) {
@@ -675,9 +735,15 @@ function aiThink(p) {
     const poss = c ? c.team : B.lastTeam, ref = c ? c.pos : B.pos;
     if (poss === t) {
         if (p === c) {
-            const goal = goalPos(t), v = goal.clone().sub(p.pos).normalize(), foes = field(o).filter((e) => e.stun <= 0); let near = 99;
-            foes.forEach((f) => { const dd = f.pos.distanceTo(p.pos); near = Math.min(near, dd); if (dd < 30) v.add(p.pos.clone().sub(f.pos).normalize().multiplyScalar((1 - dd / 30) * 1.4)); });
-            v.y += Math.sin(M.clock * 0.9 + p.ph) * 0.14; v.normalize(); tg.copy(p.pos).addScaledVector(v, 20); p.sp = 0.95;
+            const goal = goalPos(t), gd = goal.clone().sub(p.pos).normalize(), v = gd.clone(), foes = field(o).filter((e) => e.stun <= 0); let near = 99;
+            foes.forEach((f) => {
+                const off = f.pos.clone().sub(p.pos), dd = off.length(); near = Math.min(near, dd); if (dd >= 30 || off.dot(gd) < -4) return;
+                const perp = off.addScaledVector(gd, -off.dot(gd)), pl = perp.length();
+                if (pl < 2.5) { if (!p.avoid || M.clock > (p.avoidT || 0)) { const a = new V3(gd.z, 0, -gd.x); if (a.lengthSq() < 0.01) a.set(0, 0, 1); a.normalize().multiplyScalar(Math.random() < 0.5 ? 1 : -1); p.avoid = a; p.avoidT = M.clock + 1.6; } perp.copy(p.avoid).multiplyScalar(-1); } else perp.divideScalar(pl);
+                v.addScaledVector(perp, -(1 - dd / 30) * 1.5);
+            });
+            v.y += Math.sin(M.clock * 0.9 + p.ph) * 0.1; v.normalize(); if (!p.cdir) p.cdir = v.clone(); p.cdir.lerp(v, 0.3).normalize(); tg.copy(p.pos).addScaledVector(p.cdir, 20); p.sp = 0.95;
+            if (B.ct > 9 && p.cool <= 0 && p.hold <= 0 && M.mode === 'play' && !M.lock && !M.holdT) { const dist = p.pos.distanceTo(goal), r = openTeammates(p).sort((a, b) => passScore(p, b) - passScore(p, a))[0]; if (dist < 48) aiEncounter(p, []); else if (r) doPass(p, r, null, []); B.ct = 5; return; }
             if (p.cool <= 0 && p.hold <= 0 && M.mode === 'play' && !M.lock && !M.holdT) {
                 const dist = p.pos.distanceTo(goal);
                 if (near > 17 && dist < 37 && Math.random() < 0.3) aiEncounter(p, []);
@@ -688,10 +754,10 @@ function aiThink(p) {
         const A = { LF: [11, 6, -15], RF: [11, -6, 15], MF: [-2, 0, 0], LD: [-14, 6, -16], RD: [-14, -6, 16] }[p.role] || [0, 0, 0], s = d;
         tg.set(clamp(ref.x + d * A[0], -GX + 12, GX - 10), A[1] * s + Math.sin(M.clock * 0.7 + p.ph) * 2.5, A[2] * s + Math.cos(M.clock * 0.6 + p.ph) * 2.5); p.sp = 0.9; return;
     }
-    const mates = field(t).sort((a, b) => a.pos.distanceTo(ref) - b.pos.distanceTo(ref)), rank = mates.indexOf(p);
-    if (rank < 2 && c) { tg.copy(ref).addScaledVector(c.fwd, 3); p.sp = rank === 0 ? 0.9 : 0.8; return; }
-    const foe = field(o).filter((e) => e !== c).sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
-    if (foe) { tg.copy(foe.pos).lerp(new V3(-d * GX, 0, 0), 0.3); } else tg.copy(ref); p.sp = 0.92;
+    const pl = defPlan(t, ref, c), rank = pl.chase.indexOf(p);
+    if (rank >= 0 && c) { tg.copy(ref).addScaledVector(c.fwd, 3); if (rank === 1) { const s = new V3(c.fwd.z, 0, -c.fwd.x); if (s.lengthSq() > 0.01) tg.addScaledVector(s.normalize(), 4.5); } p.sp = rank === 0 ? 0.9 : 0.8; return; }
+    const foe = pl.mark.get(p);
+    if (foe) { const og = new V3(-d * GX, 0, 0); tg.copy(foe.pos).addScaledVector(og.sub(foe.pos).normalize(), 4); } else tg.copy(ref); p.sp = 0.92;
 }
 function stepPlayers(dt) {
     const c = M.B.carrier;
@@ -717,10 +783,10 @@ function stepPlayers(dt) {
 function updateCtrl(dt = 0.016) {
     const c = M.B.carrier; if (c) assignCarrier(c);
     for (const s of M.seats) {
-        s.lock = Math.max(0, s.lock - dt); if (c && s.ctrl === c) continue;
+        s.lock = Math.max(0, s.lock - dt); s.sw = Math.max(0, (s.sw || 0) - dt); if (c && s.ctrl === c) continue;
         const ref = c ? c.pos : M.B.pos, mates = field(s.team).filter((p) => p.stun <= 0 || p === s.ctrl).filter((p) => p === s.ctrl || !seatOf(p)).sort((a, b) => a.pos.distanceTo(ref) - b.pos.distanceTo(ref));
         if (!mates.length) continue; if (s.lock > 0 && s.ctrl && !s.ctrl.gk) continue;
-        const cur = s.ctrl && !s.ctrl.gk ? s.ctrl : null; if (!cur || cur.pos.distanceTo(ref) > mates[0].pos.distanceTo(ref) + 7) s.ctrl = mates[0];
+        const cur = s.ctrl && !s.ctrl.gk ? s.ctrl : null; if (!cur || (s.sw <= 0 && cur.pos.distanceTo(ref) > mates[0].pos.distanceTo(ref) + 7)) { if (s.ctrl !== mates[0]) s.sw = 0.9; s.ctrl = mates[0]; }
     }
 }
 function stepPlay(dt) {
@@ -729,13 +795,14 @@ function stepPlay(dt) {
     const B = M.B; if (!B.flight) M.time -= dt;
     if (M.time <= 0 && !B.flight) { M.time = 0; endHalf(); return; }
     updateCtrl(dt); stepPlayers(dt);
+    if (!B.carrier && !B.flight) { B.loose = (B.loose || 0) + dt; if (B.loose > 0.6) { const ref = B.pos, near = M.players.filter((q) => !q.gk && q.stun <= 0).sort((a, b) => a.pos.distanceTo(ref) - b.pos.distanceTo(ref))[0] || M.players[0]; B.loose = 0; if (near) takeBall(near); } } else B.loose = 0;
     if (B.flight) {
         const f = B.flight; f.t += dt / f.dur; const e = flightEnd(), k = Math.min(1, f.t);
         B.pos.lerpVectors(f.from, e, k); B.pos.y += Math.sin(k * Math.PI) * f.arc; B.spin += dt * 14;
         if (f.dive) { f.dive.target.copy(e); }
         if (k >= 1) { const fn = f.onLand; if (fn) fn(); if (B.flight === f) B.flight = null; }
     } else if (B.carrier) {
-        const c = B.carrier; M.stats[c.team].poss += dt; B.lastTeam = c.team; carryBall();
+        const c = B.carrier; B.ct = (B.ct || 0) + dt; M.stats[c.team].poss += dt; B.lastTeam = c.team; carryBall();
         if (c.gk) { c.hold -= dt; if (c.hold <= 0) { const r = openTeammates(c).sort((a, b) => passScore(c, b) - passScore(c, a))[0]; if (r) { say(`${tn(c)} throws it out.`); doPass(c, r, null, []); } else c.hold = 0.5; } }
         else if (c.cool <= 0 && c.stun <= 0 && !M.lock) {
             const defs = field(1 - c.team).filter((e) => e.stun <= 0 && e.pos.distanceTo(c.pos) < ENG).sort((a, b) => a.pos.distanceTo(c.pos) - b.pos.distanceTo(c.pos));
