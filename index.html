@@ -1757,6 +1757,9 @@
             try { asset = new FBXLoader().parse(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength), ''); }
             catch (e) { throw new Error('could not read this FBX file'); }
             asset.updateMatrixWorld(true);
+            try {   // an A-pose (or slightly off) rest pose in the file is straightened to T first, so its frames land on the VRM as the same absolute pose
+                const fm = { map: {} }; asset.traverse((o) => { if (o.isBone) { const vb = MIXAMO_MAP[o.name.replace(/^.*mixamorig:?/i, '')]; if (vb) fm.map[vb] = o; } }); tposeFix(fm, asset); asset.updateMatrixWorld(true);
+            } catch (e) { /* keep the file's own rest pose */ }
             const clip = asset.animations.slice().sort((x, y) => y.tracks.length - x.tracks.length)[0];
             if (!clip || !clip.tracks.length) throw new Error('there is no animation in this file');
             const dur = clip.duration;
@@ -2029,7 +2032,7 @@
                 return { root: vrm.scene, vrm };
             }
             if (asAvatar) {                                    // not a VRM: if it has a humanoid skeleton it can still walk, run and emote like one
-                const found = autoHumanoid(gltf.scene), pseudo = found ? makePseudoVrm(gltf.scene, found) : null;
+                const found = autoHumanoid(gltf.scene); if (found) { try { tposeFix(found, gltf.scene); } catch (e) { console.warn('t-pose fix', e); } } const pseudo = found ? makePseudoVrm(gltf.scene, found) : null;
                 toonify(gltf.scene); outlineAll(gltf.scene, { any: true, min: 0.05, thick: 0.01, color: 0x2a2530 });   // cel shaded like the world
                 return { root: gltf.scene, vrm: pseudo };
             }
@@ -5545,6 +5548,25 @@
             return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(lat, up, fwd)).invert();
         }
 
+        // Re-poses a recognised skeleton into the T-pose the animations were made for (arms straight out, legs straight down), the same
+        // correction the Mixamo-to-Unreal retarget tools make for A-pose and slightly-off rest poses. Rest of the rig is read AFTER this.
+        function tposeFix(found, root) {
+            root.updateMatrixWorld(true);
+            const m = found.map, V = (x, y, z) => new THREE.Vector3(x, y, z), wp = (n) => n.getWorldPosition(new THREE.Vector3()), wq = (n) => n.getWorldQuaternion(new THREE.Quaternion());
+            if (!m.hips || !m.head || !m.leftUpperLeg || !m.rightUpperLeg) return;
+            if (wp(m.head).sub(wp(m.hips)).normalize().y < 0.9 || wp(m.leftUpperLeg).sub(wp(m.rightUpperLeg)).normalize().x < 0.9) return;   // only when it stands upright with its left on +X (the frame the animations use)
+            const fix = (bone, child, target) => {
+                if (!bone || !child || !bone.parent) return;
+                const d = wp(child).sub(wp(bone)); if (d.lengthSq() < 1e-12) return; d.normalize();
+                const ang = d.angleTo(target); if (ang < 0.02 || d.dot(target) < -0.2) return;       // already straight, or not a believable rest pose to correct
+                const dq = new THREE.Quaternion().setFromUnitVectors(d, target);
+                bone.quaternion.copy(wq(bone.parent).invert().multiply(dq.multiply(wq(bone)))); bone.updateMatrixWorld(true);
+            };
+            for (const [s, sx] of [['left', 1], ['right', -1]]) {
+                fix(m[s + 'UpperArm'], m[s + 'LowerArm'], V(sx, 0, 0)); fix(m[s + 'LowerArm'], m[s + 'Hand'], V(sx, 0, 0));
+                fix(m[s + 'UpperLeg'], m[s + 'LowerLeg'], V(0, -1, 0)); fix(m[s + 'LowerLeg'], m[s + 'Foot'], V(0, -1, 0));
+            }
+        }
         // A VRM stand-in for a recognised skeleton: the same humanoid object a VRM has, so the Actor needs no special case.
         function makePseudoVrm(root, found) {
             const humanBones = {};
