@@ -159,6 +159,10 @@ const AUD = {
             case 'launch': N(0.5, 0.15, 500, 2200, 0.8); break;
             case 'land': N(0.18, Math.min(0.5, 0.15 + (d || 0) * 0.012), 300, 80, 1, 'lowpass'); T(90, 0.2, 'sine', 0.35, 45); break;
             case 'trick': T(660 + 120 * (d || 1), 0.12, 'square', 0.12, 1100 + 120 * (d || 1)); break;
+            case 'grindstart': T(900, 0.1, 'sawtooth', 0.12, 1500); N(0.4, 0.18, 2000, 6000, 1.5); break;
+            case 'grindend': for (let i = 0; i < 3; i++) T([587, 784, 988][i], 0.14, 'triangle', 0.16, 0, this.ctx.currentTime + i * 0.05); break;
+            case 'bail': N(0.5, 0.35, 700, 90, 1); T(140, 0.3, 'sawtooth', 0.2, 50); break;
+            case 'grind': N(0.16, 0.07, 3500, 5500, 1.8); break;
             case 'trickland': for (let i = 0; i < 3; i++) T([523, 659, 784][i] * (1 + 0.06 * (d.n || 1)), 0.18, 'triangle', 0.18, 0, this.ctx.currentTime + i * 0.06); break;
             case 'sloppy': N(0.3, 0.3, 500, 100, 1); break;
             case 'boost': N(0.55, 0.3, 300, 3200, 0.9); T(110, 0.5, 'sawtooth', 0.16, 330); break;
@@ -301,7 +305,7 @@ class Track {
         const used = []; const free = (s, g) => used.every((q) => Math.abs(this.relS(s, q)) > g);
         const spot = (c0, jitter, span, gap, lim) => { for (let tries = 0; tries < 40; tries++) { const s = this.wrap(c0 + (rng() - 0.5) * jitter * (1 + tries * 0.15)); if (calm(s, span) < lim && free(s, gap) && Math.abs(this.relS(s, 0)) > 120) { used.push(s); return s; } } return null; };
         const hw = (s) => this.at(s, this._f || (this._f = {})).w / 2;
-        this.ramps = []; this.pads = []; this.rings = []; this.stations = []; this.blocks = [];
+        this.ramps = []; this.pads = []; this.rings = []; this.stations = []; this.blocks = []; this.rails = [];
         const nR = def.ramps; for (let i = 0; i < nR; i++) { const big = i % 3 === 1; const s = spot(L * (i + 0.6) / nR, L / nR * 0.7, big ? 46 : 30, big ? 150 : 100, big ? 0.0042 : 0.007); if (s == null) continue; const w = hw(s), uw = big ? w * 0.34 : w * 0.28, u = (rng() - 0.5) * w * (big ? 0.7 : 1.1); this.ramps.push({ s, u, hw: uw, len: big ? 28 : 18, H: big ? 9.5 : 4.4, big }); }
         // pads follow each ramp approach and sprinkle the rest
         for (const r of this.ramps) this.pads.push({ s: this.wrap(r.s - 40 - rng() * 12), u: r.u, hw: 4.8, len: 12 });
@@ -310,6 +314,7 @@ class Track {
         const nRing = def.rings; for (let i = 0; i < nRing; i++) { const s = this.wrap(L * (i + 0.15 + rng() * 0.5) / nRing), high = i % 3 === 2, w = hw(s); if (Math.abs(this.relS(s, 0)) < 90) continue; this.rings.push({ s, u: (rng() - 0.5) * w * 1.1, h: high ? 11 + rng() * 5 : 2.8, r: high ? 4.4 : 3.6, high, got: new Set() }); }
         for (let i = 0; i < 3; i++) { const s = spot(L * (0.18 + i * 0.33), L * 0.14, 30, 160, 0.022); if (s != null) this.stations.push({ s, len: 56 }); }
         const nB = def.blocks * 2; for (let i = 0; i < nB; i++) { const s = spot(L * (i + 0.45) / nB, L / nB * 0.7, 25, 110, 0.022); if (s == null) continue; const w = hw(s); this.blocks.push({ s, u: (rng() - 0.5) * w * 1.3, r: 2.3, h: 2.6, up: true, hit: 0, crate: rng() < 0.5 }); }
+        const nRl = 2 + (def.diff || 1) + (def.ramps > 5 ? 1 : 0), railUsed = []; for (let i = 0; i < nRl; i++) { const len = 100 + Math.floor(rng() * 45); let best = null, bs = 1e9; for (let k = -12; k <= 12; k++) { const sc = this.wrap(L * (i + 0.55) / nRl + k * L / nRl * 0.06), h2 = len / 2; if (Math.abs(this.relS(sc, 0)) < h2 + 40 || railUsed.some((q) => Math.abs(this.relS(sc, q)) < len + 40)) continue; if (this.ramps.some((r) => this.relS(r.s + r.len / 2, sc) > -(h2 + r.len / 2 + 25) && this.relS(r.s + r.len / 2, sc) < h2 + r.len / 2 + 25)) continue; const cv = calm(sc, h2); if (cv < bs) { bs = cv; best = sc; } } if (best == null) continue; railUsed.push(best); const w = hw(best), u = (rng() - 0.5) * w * 0.8, s0 = this.wrap(best - len / 2); for (const b of this.blocks) { const d = this.relS(b.s, s0); if (d > -6 && d < len + 6 && Math.abs(b.u - u) < 6) b.u = u + (b.u >= u ? 1 : -1) * (6 + b.r); } this.rails.push({ s: s0, len, u, h: 1.3 }); }   // grind rails: hop on, balance, hop off
     }
     /* extra ground height from ramps at (s,u) */
     ground(s, u) { for (const r of this.ramps) { const d = this.relS(s, r.s); if (d >= 0 && d <= r.len && Math.abs(u - r.u) < r.hw) { const t = d / r.len; return r.H * (t * t * 0.35 + t * 0.65); } } return 0; }
@@ -403,6 +408,13 @@ function buildTrackMeshes(T, assets) {
     // blocks
     T.blockMeshes = []; const hz = cvTex(64, 64, (g, w, h) => { g.fillStyle = '#ffd23f'; g.fillRect(0, 0, w, h); g.fillStyle = '#111'; for (let i = -2; i < 6; i++) { g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16 + 8, 0); g.lineTo(i * 16 + 40, h); g.lineTo(i * 16 + 32, h); g.fill(); } }, true);
     for (const b of T.blocks) { const m = b.crate ? new THREE.Mesh(new THREE.BoxGeometry(b.r * 1.5, b.h, b.r * 1.5), new THREE.MeshLambertMaterial({ map: hz, emissive: 0x201400 })) : new THREE.Mesh(new THREE.CylinderGeometry(b.r * 0.8, b.r, b.h, 10), new THREE.MeshLambertMaterial({ map: hz, emissive: 0x201400 })); T.pos(b.s, b.u, b.h / 2, m.position); T.at(b.s, F); const q = new THREE.Matrix4(); basisMatrix(F, 0.3, q); m.quaternion.setFromRotationMatrix(q); grp.add(m); T.blockMeshes.push(m); b.mesh = m; }
+    // grind rails: a glowing bar on posts, ends marked with arrows
+    { const rm = new THREE.MeshBasicMaterial({ color: new THREE.Color(th.edge).multiplyScalar(1.3) }), pm2 = new THREE.MeshLambertMaterial({ color: 0x9aa6c8, emissive: 0x141a30 }); const Fr = {};
+      for (const rl of T.rails) { const pts = []; const n = Math.max(6, Math.round(rl.len / 3)); for (let i = 0; i <= n; i++) { const p = new THREE.Vector3(); T.pos(rl.s + rl.len * i / n, rl.u, rl.h, p); pts.push(p); }
+        const crv = new THREE.CatmullRomCurve3(pts), tube = new THREE.Mesh(new THREE.TubeGeometry(crv, n * 3, 0.13, 8, false), rm); grp.add(tube);
+        const glow = new THREE.Mesh(new THREE.TubeGeometry(crv, n * 3, 0.32, 8, false), new THREE.MeshBasicMaterial({ color: new THREE.Color(th.edge), transparent: true, opacity: 0.22, depthWrite: false })); grp.add(glow);
+        for (let i = 0; i <= Math.floor(rl.len / 9); i++) { const p = new THREE.Vector3(), g0 = new THREE.Vector3(); T.pos(rl.s + i * 9, rl.u, rl.h, p); T.pos(rl.s + i * 9, rl.u, 0, g0); const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, rl.h, 6), pm2); post.position.copy(p).lerp(g0, 0.5); grp.add(post); }
+        for (const e of [0, 1]) { const p = new THREE.Vector3(); T.pos(rl.s + (e ? rl.len : 0), rl.u, rl.h + 1.1, p); const cone = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 4), new THREE.MeshBasicMaterial({ color: e ? 0xff3da6 : 0x7dffb0 })); cone.position.copy(p); cone.rotation.x = Math.PI; grp.add(cone); } } }
     // start / finish gate
     T.at(0, F); const hw = F.w / 2, gate = new THREE.Group(); const stripe = new THREE.Mesh(new THREE.PlaneGeometry(F.w, 4), new THREE.MeshBasicMaterial({ map: (() => { const t = checkerTex(); t.repeat.set(Math.round(F.w / 4), 1); return t; })(), transparent: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); stripe.rotation.x = -Math.PI / 2; stripe.position.y = 0.09; gate.add(stripe);
     const pm = new THREE.MeshLambertMaterial({ color: 0x20284a, emissive: 0x0a1030 }); for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(1.8, 13, 1.8), pm); p.position.set(sx * (hw + 0.8), 6.5, 0); gate.add(p); const l = new THREE.Mesh(new THREE.BoxGeometry(0.4, 12, 0.4), new THREE.MeshBasicMaterial({ color: sx > 0 ? 0xff3da6 : 0x19e3ff })); l.position.set(sx * (hw - 0.3), 6.5, 0.9); gate.add(l); }
@@ -695,22 +707,27 @@ class Racer {
     reset(s, u) {
         this.s = s; this.u = u; this.h = 0.3; this.vh = 0; this.v = 0; this.phi = 0; this.phiV = 0; this.lap = 0; this.dist = s; this.gr = 0; this.vhG = 0; this.air = false;
         this.airm = 100; this.boostT = 0; this.padT = 0; this.turboT = 0; this.stun = 0; this.padCool = 0; this.drift = 0; this.driftCharge = 0; this.driftDir = 0; this.jumpCh = 0; this.trickN = 0; this.trickAnim = 0; this.trickRot = 0; this.trickScore = 0;
-        this.lean = 0; this.boosting = false; this.finished = false; this.finT = 0; this.place = 1; this.draft = 0; this.rank = ''; this.lastLand = 0; this.rings = 0; this.hits = 0; this.wallCool = 0; this.dead = 0;
+        this.lean = 0; this.boosting = false; this.finished = false; this.finT = 0; this.place = 1; this.draft = 0; this.rank = ''; this.lastLand = 0; this.rings = 0; this.hits = 0; this.wallCool = 0; this.dead = 0; this.grind = null; this.gT = 0; this.gBal = 0; this.gArm = false; this.gScore = 0; this.railCool = 0; this.trickSet = new Set(); this.trickName = '';
         this.ai = { lane: u, laneT: 0, jumpAt: -1, think: 0, boostHold: 0, trickT: 0, target: u };
         this.yaw = 0; this.pitchV = 0; this.startBoost = 0; this.T.at(s, this.F);
     }
     step(dt, inp, R) {
         const T = this.T, ty = this.ty, F = this.F; T.at(this.s, F); const K = F.k, KP = F.kp, P = F.pitch, cosP = Math.cos(P), sinP = Math.sin(P);
-        this.boostT -= dt; this.padT -= dt; this.turboT -= dt; this.stun -= dt; this.padCool -= dt; this.wallCool -= dt; this.trickAnim -= dt;
-        const air = this.h > this.gr + 0.08; this.air = air; const stunned = this.stun > 0;
+        this.boostT -= dt; this.padT -= dt; this.turboT -= dt; this.stun -= dt; this.padCool -= dt; this.wallCool -= dt; this.trickAnim -= dt; this.railCool -= dt;
+        const grinding = !!this.grind; const air = !grinding && this.h > this.gr + 0.08; this.air = air; const stunned = this.stun > 0;
         let st = stunned ? 0 : inp.steer;
         // ---- drift
-        if (!air && !stunned && inp.drift && this.v > 26 && (this.drift || Math.abs(st) > 0.25)) { if (!this.drift) { this.drift = 1; this.driftDir = Math.sign(st) || 1; this.driftCharge = 0; R.ev('driftstart', this); } this.driftCharge += dt * (0.8 + 0.5 * Math.abs(st)); st = clamp(this.driftDir * 0.55 + st * 0.6, -1, 1); }
+        if (!air && !grinding && !stunned && inp.drift && this.v > 26 && (this.drift || Math.abs(st) > 0.25)) { if (!this.drift) { this.drift = 1; this.driftDir = Math.sign(st) || 1; this.driftCharge = 0; R.ev('driftstart', this); } this.driftCharge += dt * (0.8 + 0.5 * Math.abs(st)); st = clamp(this.driftDir * 0.55 + st * 0.6, -1, 1); }
         else if (this.drift) { if (this.driftCharge > 0.6 && !air) { this.turboT = Math.min(1.8, 0.55 + this.driftCharge * 0.4); R.ev('minit', this, this.turboT); } this.drift = 0; this.driftCharge = 0; }
         // ---- jump charge
-        if (!air && !stunned) { if (inp.jump) { this.jumpCh = Math.min(0.75, this.jumpCh + dt); } else if (this.jumpCh > 0) { this.vh = (6.5 + this.jumpCh * 11) * (0.7 + 0.3 * ty.launch + 0.3 * (ty.launch - 1)); this.vh *= 1; this.h += 0.05; this.jumpCh = 0; this.air = true; R.ev('jump', this); } } else if (!inp.jump) this.jumpCh = 0;
+        if (!air && !grinding && !stunned) { if (inp.jump) { this.jumpCh = Math.min(0.75, this.jumpCh + dt); } else if (this.jumpCh > 0) { this.vh = (6.5 + this.jumpCh * 11) * (0.7 + 0.3 * ty.launch + 0.3 * (ty.launch - 1)); this.vh *= 1; this.h += 0.05; this.jumpCh = 0; this.air = true; R.ev('jump', this); } } else if (!inp.jump) this.jumpCh = 0;
         // ---- aerial tricks
-        if (air && inp.trick && this.trickAnim <= 0 && this.h > this.gr + 1.6 && !stunned) { this.trickAnim = 0.6 / Math.pow(ty.trick, 0.25); this.trickDur = this.trickAnim; this.trickN++; this.trickKind = (this.trickKind || 0) + 1; this.trickDirV = inp.steer; R.ev('trick', this, this.trickN); }
+        if (air && inp.trick && this.trickAnim <= 0 && this.h > this.gr + 1.6 && !stunned) {
+            const sv = inp.steer, KS = ['backflip', 'barrel', 'kickflip', 'shuvit', 'corkscrew', 'frontflip']; let kd;
+            if (inp.brake) kd = 'grab'; else if (sv < -0.4) kd = 'spinL'; else if (sv > 0.4) kd = 'spinR'; else kd = KS[this.trickN % KS.length];
+            const NM = { backflip: 'BACKFLIP', barrel: 'BARREL ROLL', kickflip: 'KICKFLIP', shuvit: 'SHOVE-IT', corkscrew: 'CORKSCREW', frontflip: 'FRONTFLIP', grab: 'INDY GRAB', spinL: '360 SPIN', spinR: '360 SPIN' };
+            this.trickAnim = (kd === 'grab' ? 0.85 : kd === 'shuvit' || kd === 'kickflip' ? 0.5 : 0.62) / Math.pow(ty.trick, 0.25); this.trickDur = this.trickAnim; this.trickN++; this.trickKind = kd; this.trickName = NM[kd]; this.trickSet.add(kd); this.trickDirV = inp.steer; R.ev('trick', this, this.trickN);
+        }
         // ---- speed target
         let top = ty.top * this.skill * (R.mult ? R.mult(this) : 1); if (R.mirrorTop) top *= R.mirrorTop;
         this.boosting = !!(inp.boost && this.airm > 0.5 && !stunned && R.go);
@@ -730,17 +747,18 @@ class Racer {
         const turn = 2.05 * ty.handle * (1 - 0.3 * clamp(this.v / 75, 0, 1)) * (this.drift ? 1.45 : 1) * (air ? 0.55 : 1) * (this.v < 6 ? this.v / 6 : 1);
         this.phi += st * turn * dt; this.phi = clamp(this.phi, -1.25, 1.25);
         const grip = this.drift ? 1.5 : air ? 0.7 : 7.2; this.phiV += (this.phi - this.phiV) * (1 - Math.exp(-grip * dt));
-        const ds = this.v * Math.cos(this.phiV) / Math.max(0.35, 1 - K * this.u) * dt, du = this.v * Math.sin(this.phiV) * dt;
+        const ds = this.v * Math.cos(this.phiV) / Math.max(0.35, 1 - K * this.u) * dt, du = grinding ? 0 : this.v * Math.sin(this.phiV) * dt; if (grinding) { this.phi *= Math.exp(-9 * dt); this.phiV *= Math.exp(-9 * dt); }
         const asst = this.isPlayer ? (R.assist == null ? 0.3 : R.assist) : 0.0; const dpsi = K * ds * (1 - asst * (st !== 0 ? 0.3 : 1)); this.phi -= dpsi; this.phiV -= dpsi;
         const s0 = this.s; this.s += ds; this.u += du; this.dist += ds; if (this.s >= T.L) { this.s -= T.L; } else if (this.s < 0) this.s += T.L;
         // lap crossing: lap index derived from cumulative distance
         const lapNow = Math.floor(this.dist / T.L); if (lapNow > this.lap) { this.lap = lapNow; R.ev('lap', this); } else if (lapNow < this.lap) this.lap = lapNow;
         // ---- walls
         T.at(this.s, F); const hw = F.w / 2 - 1.3;
-        if (Math.abs(this.u) > hw) { const sg = Math.sign(this.u); this.u = sg * hw; if (Math.sign(Math.sin(this.phiV)) === sg || Math.abs(this.phiV) < 0.01) { const hit = Math.abs(Math.sin(this.phiV)) * this.v; this.phiV = -this.phiV * 0.25; this.phi *= 0.4; this.v *= 0.94; if (hit > 8 && this.wallCool <= 0) { this.wallCool = 0.35; R.ev('wall', this, hit); } } }
+        if (!grinding && Math.abs(this.u) > hw) { const sg = Math.sign(this.u); this.u = sg * hw; this.v *= 1 - 0.18 * dt; if (Math.sign(Math.sin(this.phiV)) === sg || Math.abs(this.phiV) < 0.01) { const sn = Math.abs(Math.sin(this.phiV)), hit = sn * this.v; this.phiV = -this.phiV * 0.2; this.phi = Math.min(Math.abs(this.phi), 0.12) * Math.sign(this.phi || 0) * 0.5; this.v *= 1 - 0.14 * sn; if (hit > 8 && this.wallCool <= 0) { this.wallCool = 0.35; R.ev('wall', this, hit); } } }   // glancing contact scrubs only a little: you slide along the wall instead of sticking
         // ---- vertical
         const ng = T.ground(this.s, this.u) + (this.T.hoverBase || 0); const ah = -GRAV * cosP - this.v * this.v * KP * 0.92;
-        if (this.air || this.vh > 0) {
+        if (grinding) { this.h = ng + this.grind.h; this.vh = 0; this.gr = ng; this.vhG = 0; this.air = false; }
+        else if (this.air || this.vh > 0) {
             this.vh += ah * dt; this.h += this.vh * dt; this.gr = ng;
             if (this.h <= ng && this.vh <= 0) { const imp = -this.vh; this.h = ng; this.vh = 0; this.landed(imp, R); }
         } else {
@@ -749,7 +767,22 @@ class Racer {
             else { this.vhG = (ng - this.h) / Math.max(dt, 1e-4) * 0.5 + this.vhG * 0.5; this.h = ng; }
             this.gr = ng;
         }
-        if (!this.air && this.h > this.gr + 0.08) this.air = true;
+        if (!this.grind && this.h > this.gr + 0.08) this.air = true;
+        // ---- rails: hop onto one and grind it, balance with the steering
+        if (!this.grind && this.railCool <= 0 && !stunned && this.trickAnim <= 0 && this.v > 14) { for (const rl of T.rails) { const d = T.relS(this.s, rl.s); if (d > 0 && d < rl.len - 4 && Math.abs(this.u - rl.u) < 1.9) { const rh = this.gr + rl.h; if (this.h > rh - 0.75 && this.h < rh + 1.5 && this.vh < 4.5) { if (this.trickN > 0) this.landed(0, R); this.grind = rl; this.gT = 0; this.gBal = 0.12 * (Math.random() < 0.5 ? -1 : 1); this.gArm = !inp.jump; this.gScore = 0; this.u = rl.u; this.h = rh; this.vh = 0; this.air = false; this.drift = 0; this.jumpCh = 0; R.ev('grindstart', this, rl); break; } } } }
+        if (this.grind) {
+            const rl = this.grind; this.gT += dt; if (!inp.jump) this.gArm = true;
+            this.gBal += (this.gBal * 1.15 + Math.sin(this.gT * 2.1 + this.id * 1.7) * 0.55 + 2.6 * st) * dt; this.gBal = clamp(this.gBal, -1.2, 1.2);
+            this.gScore += dt * (80 + 60 * this.gT); this.airm = Math.min(100, this.airm + 8 * dt); this.u = rl.u;
+            const dEnd = T.relS(this.s, rl.s) - rl.len; let out = 0;
+            if (Math.abs(this.gBal) > 1) out = 'bail'; else if (inp.jump && this.gArm) out = 'jump'; else if (dEnd > 0) out = 'end';
+            if (out) {
+                const t = this.gT, sc = Math.round(this.gScore); this.grind = null; this.railCool = out === 'jump' ? 1.1 : 0.7; this.trickScore += sc;
+                if (out === 'bail') { this.stun = 0.6; this.v *= 0.55; this.vh = 2.5; this.phi = 0; this.phiV = 0; R.ev('bail', this, t); }
+                else { this.vh = out === 'jump' ? 9.5 * (0.8 + 0.2 * ty.launch) : 3; this.turboT = Math.max(this.turboT, 0.35 + Math.min(1.4, t * 0.18)); this.airm = Math.min(100, this.airm + Math.min(30, t * 4)); this.trickN = 0; this.trickSet = new Set(); R.ev('grindend', this, { t, score: sc, jump: out === 'jump' }); }
+                this.h += 0.05; this.air = true;
+            }
+        }
         // ---- pickups
         const rem = air || this.air;
         for (const p of T.pads) { if (Math.abs(T.relS(this.s, p.s)) < p.len / 2 && Math.abs(this.u - p.u) < p.hw && this.h < this.gr + 2 && this.padCool <= 0) { this.padT = 1.25; this.padCool = 0.9; this.airm = Math.min(100, this.airm + 4); R.ev('pad', this); } }
@@ -757,22 +790,23 @@ class Racer {
         this.inStation = false; for (const q of T.stations) { const d = T.relS(this.s, q.s); if (d > 0 && d < q.len && this.h < this.gr + 2.5) { this.inStation = true; this.airm = Math.min(100, this.airm + 46 * dt); } }
         for (const b of T.blocks) { if (b.hit > 0) continue; const d = T.relS(this.s, b.s); if (Math.abs(d) < b.r + 1.3 && Math.hypot(this.u - b.u, 0) < b.r + 1.2 && this.h < this.gr + b.h) { if (ty.smash && this.v > 30) { b.hit = 1; b.t = 0; this.v *= 0.93; R.ev('smash', this, b); } else if (this.stun <= 0) { this.stun = 0.55; this.v *= 0.45; this.phi = 0; this.phiV = 0; R.ev('crash', this, b); } } }
         // ---- visuals state
-        this.lean += ((this.drift ? this.driftDir * 1.0 : st) - this.lean) * (1 - Math.exp(-8 * dt)); this.yaw += ((this.phi) - this.yaw) * (1 - Math.exp(-14 * dt));
+        this.lean += ((this.grind ? this.gBal * 0.9 : this.drift ? this.driftDir * 1.0 : st) - this.lean) * (1 - Math.exp(-8 * dt)); this.yaw += ((this.phi) - this.yaw) * (1 - Math.exp(-14 * dt));
         const tp = air ? clamp(this.vh / 40, -0.5, 0.5) : 0; this.pitchV += (tp - this.pitchV) * (1 - Math.exp(-6 * dt));
         if (this.trickAnim > 0) this.trickRot += dt / (this.trickDur || 0.6) * TAU; else if (this.trickRot > 0) this.trickRot = 0;
     }
     landed(imp, R) {
         const rot = this.trickAnim > 0;
         if (rot) { this.v *= 0.85; this.stun = 0.25; R.ev('sloppy', this); }
-        else if (this.trickN > 0) { const g = Math.min(45, this.trickN * 11 * this.ty.trick); this.airm = Math.min(100, this.airm + g); this.trickScore += this.trickN * 100; const rk = ['', 'D', 'C', 'B', 'A', 'S'][Math.min(5, this.trickN)]; this.rank = rk; this.turboT = Math.max(this.turboT, 0.3 + this.trickN * 0.25); R.ev('trickland', this, { n: this.trickN, g, rank: rk }); }
+        else if (this.trickN > 0) { const g = Math.min(45, this.trickN * 11 * this.ty.trick); this.airm = Math.min(100, this.airm + g); this.trickScore += this.trickN * 100; const nv = this.trickSet.size, rk = ['', 'D', 'C', 'B', 'A', 'S'][Math.min(5, this.trickN + (nv >= 3 ? 1 : 0))]; this.trickScore += Math.round(this.trickN * 40 * Math.max(0, nv - 1)); this.rank = rk; this.turboT = Math.max(this.turboT, 0.3 + this.trickN * 0.25); R.ev('trickland', this, { n: this.trickN, g, rank: rk }); }
         else if (imp > 14) { this.v *= 0.97; }
-        this.trickN = 0; this.trickAnim = 0; this.trickRot = 0; this.trickKind = 0; this.lastLand = imp; if (imp > 5) R.ev('land', this, imp);
+        this.trickN = 0; this.trickSet = new Set(); this.trickAnim = 0; this.trickRot = 0; this.trickKind = 0; this.lastLand = imp; if (imp > 5) R.ev('land', this, imp);
     }
 }
 
 /* ---- bot driver ---- */
 function aiInput(r, R, dt) {
     const T = r.T, a = r.ai, inp = { steer: 0, boost: false, drift: false, jump: false, trick: false, brake: false };
+    if (r.grind) { inp.steer = clamp(-r.gBal * 1.7 + (Math.random() - 0.5) * 0.4 * (1.2 - r.skill), -1, 1); return inp; }
     a.think -= dt; const look = clamp(r.v * 0.7, 20, 55); const F2 = {}; T.at(r.s + look, F2); const F3 = {}; T.at(r.s + look * 2.4, F3); const Kn = F2.k, Kf = F3.k; const hw = F2.w / 2 - 4;
     if (a.think <= 0) {
         a.think = 0.25 + Math.random() * 0.35; let target = clamp(a.lane, -hw, hw);
@@ -784,10 +818,14 @@ function aiInput(r, R, dt) {
         if (!r.ty.smash) for (const b of T.blocks) { if (b.hit > 0) continue; const d = T.relS(b.s, r.s); if (d > 0 && d < 55) avoid(b.u, d, b.r + 3.2); }
         for (const o of R.racers) { if (o === r) continue; const d = T.relS(o.s, r.s); if (d > 1 && d < 28 && Math.abs(o.u - target) < 3.6) { target = o.u + (target >= o.u ? 1 : -1) * 4.2; if (Math.abs(target) > hw) target = o.u - Math.sign(target) * 4.2; } }
         a.target = clamp(target, -hw, hw);
+        // rail ahead: line up and hop on
+        a.rail = null; if (r.railCool <= 0) for (const rl of T.rails) { const d = T.relS(rl.s, r.s); if (d > 6 && d < 60 && Math.abs(rl.u) < hw && Math.random() < 0.5 * r.skill) { a.rail = rl; a.target = clamp(rl.u, -hw, hw); break; } }
         // jump plan: ramp ahead
         for (const rp of T.ramps) { const d = T.relS(rp.s, r.s); if (d > 5 && d < 50 && Math.abs(rp.u - r.u) < rp.hw) a.rampAhead = rp; }
         if (Math.random() < 0.02) a.lane = (Math.random() - 0.5) * hw * 1.4;
     }
+    if (a.jumpT > 0) { inp.jump = true; a.jumpT -= dt; }
+    else if (a.rail && !r.air && r.railCool <= 0) { const d = T.relS(a.rail.s, r.s); if (d > 0 && d < 15 && Math.abs(r.u - a.rail.u) < 1.5) { a.jumpT = 0.1; a.rail = null; } }
     // heading target: toward the lane, following the road's curve ahead
     const need = clamp((a.target - r.u) * 0.045, -0.45, 0.45); const err = need - r.phi; inp.steer = clamp(err * 3.2 + (Kn * 28), -1, 1) * (0.8 + 0.2 * r.skill);
     // drift through hard corners
@@ -884,9 +922,9 @@ function clearRacers() { for (const v of G.vis) { G.scene.remove(v.root, v.blob)
 const _m4 = new THREE.Matrix4(), _v3 = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p3 = new THREE.Vector3();
 function placeVisual(vis, r, dt, ghost) {
     const T = r.T, F = r.F; basisMatrix(F, r.yaw, _m4); T.pos(r.s, r.u, r.h + 0.32, _p3, F); _m4.setPosition(_p3); vis.root.matrix.copy(_m4); vis.root.matrixWorldNeedsUpdate = true;
-    let rx = r.pitchV * 0.8, rz = -r.lean * 0.38, ry = 0; if (r.trickAnim > 0 || r.trickRot > 0) { const k = (r.trickKind || 1) % 3, a = r.trickRot; if (k === 1) ry = a; else if (k === 2) rz += a; else rx -= a; } if (r.drift) ry += -r.driftDir * 0.28;
+    let rx = r.pitchV * 0.8, rz = -r.lean * 0.38, ry = 0; let bx = 0, by = 0, bz = 0; if (r.grind) { ry = Math.PI / 2; rz += r.gBal * 0.35; } else if (r.trickAnim > 0 || r.trickRot > 0) { const k = r.trickKind, a = r.trickRot; switch (k) { case 'spinL': ry = -a; break; case 'spinR': ry = a; break; case 'backflip': rx -= a; break; case 'frontflip': rx += a; break; case 'barrel': rz += a; break; case 'corkscrew': ry = a; rz += a * 0.5; rx -= a * 0.5; break; case 'kickflip': bz = a; break; case 'shuvit': by = a * 0.5; break; case 'grab': bz = 0.55 * Math.sin(a / TAU * Math.PI); bx = -0.3 * Math.sin(a / TAU * Math.PI); break; default: ry = a; } } vis.board.rotation.set(bx, by, bz); if (r.drift) ry += -r.driftDir * 0.28;
     _e.set(rx, ry, rz, 'YXZ'); vis.tilt.quaternion.setFromEuler(_e);
-    const sp = { lean: r.lean, crouch: clamp(r.jumpCh / 0.75, 0, 1) * 0.9 + (r.drift ? 0.45 : 0) + (r.boosting ? 0.25 : 0), tuck: r.trickAnim > 0 ? 1 : 0, fwd: r.boosting ? 1 : clamp(r.v / 70, 0, 0.5), speed: r.v, boost: r.boosting || r.padT > 0 || r.turboT > 0 };
+    const sp = { lean: r.lean, crouch: clamp(r.jumpCh / 0.75, 0, 1) * 0.9 + (r.drift ? 0.45 : 0) + (r.boosting ? 0.25 : 0), tuck: r.trickAnim > 0 || r.grind ? 1 : 0, fwd: r.boosting ? 1 : clamp(r.v / 70, 0, 0.5), speed: r.v, boost: r.boosting || r.padT > 0 || r.turboT > 0 };
     vis.pose(dt, sp);
     const gh = r.gr, hh = Math.max(0, r.h - gh); T.pos(r.s, r.u, gh + 0.08, _p3, F); basisMatrix(F, r.yaw, _m4); _m4.setPosition(_p3); vis.blob.matrix.copy(_m4); vis.blob.matrixWorldNeedsUpdate = true; const k = 1 / (1 + hh * 0.12); vis.blob.scale.set(k, 1, k); vis.blob.material.opacity = 0.5 * k * (ghost ? 0.3 : 1);
 }
@@ -920,6 +958,10 @@ function raceEvent(type, r, d) {
         case 'launch': if (pl && d > 14) { popup('BIG AIR!', '#ff3da6', 0.9); } break;
         case 'jump': dust(r, 10, [0.8, 0.9, 1]); break;
         case 'land': { dust(r, Math.min(26, 8 + d), [0.85, 0.85, 0.9]); if (pl) G.shake = Math.max(G.shake, clamp(d / 28, 0.1, 0.8)); break; }
+        case 'trick': if (pl) popup(r.trickName + (r.trickN > 1 ? '  x' + r.trickN : ''), '#ffd23f', 0.7); break;
+        case 'grindstart': if (pl) { popup('GRIND!', '#19e3ff', 0.9); G.shake = Math.max(G.shake, 0.15); } sparkBurst(r, 1, 0.85, 0.3, 24); break;
+        case 'grindend': if (pl) { popup('GRIND  +' + d.score + (d.jump ? '  HOP!' : ''), '#7dffb0', 1.4); G.flash = Math.max(G.flash, 0.08); } sparkBurst(r, 0.4, 1, 0.8, 30); break;
+        case 'bail': if (pl) { popup('BAIL!', '#ff7a4a', 1); G.shake = Math.max(G.shake, 0.5); } sparkBurst(r, 1, 0.4, 0.2, 30); break;
         case 'trickland': if (pl) { popup('TRICK ' + d.rank + '  +' + Math.round(d.g) + ' AIR', d.rank === 'S' ? '#ffd23f' : '#ff3da6', 1.4); G.flash = Math.max(G.flash, 0.08); } sparkBurst(r, 1, 0.3, 0.8, 30); break;
         case 'sloppy': if (pl) popup('SLOPPY LANDING', '#ff7a4a', 0.9); break;
         case 'smash': { const b = d; for (let i = 0; i < 30; i++) emit(r.vis.root.matrix.elements[12], r.vis.root.matrix.elements[13] + 1, r.vis.root.matrix.elements[14], (Math.random() - 0.5) * 22, Math.random() * 14, (Math.random() - 0.5) * 22, 0.9, 1, 0.7, 0.2, 18); if (pl) G.shake = Math.max(G.shake, 0.6); break; }
@@ -938,7 +980,7 @@ function dust(r, n, c) { const m = r.vis.root.matrix.elements; for (let i = 0; i
 function sparkBurst(r, cr, cg, cb, n) { const m = r.vis.root.matrix.elements; for (let i = 0; i < n; i++) emit(m[12], m[13] + 0.2, m[14], (Math.random() - 0.5) * 16, Math.random() * 9, (Math.random() - 0.5) * 16, 0.5 + Math.random() * 0.3, cr, cg, cb, 14); }
 
 /* ---- camera ---- */
-function camSnap() { const r = G.player; const wf = worldFwd(r, _v3); G.camF.copy(wf); const bp = boardPos(r, _p3); G.camP.copy(bp).addScaledVector(wf, -8).addScaledVector(r.F.ux !== undefined ? new THREE.Vector3(r.F.ux, r.F.uy, r.F.uz) : G.camUp, 3.4); G.cam.position.copy(G.camP); G.cam.lookAt(bp); }
+function camSnap() { const r = G.player; const wf = worldFwd(r, _v3); G.camF.copy(wf); const bp = boardPos(r, _p3); G.camP.copy(bp).addScaledVector(wf, -4.6).addScaledVector(r.F.ux !== undefined ? new THREE.Vector3(r.F.ux, r.F.uy, r.F.uz) : G.camUp, 1.9); G.cam.position.copy(G.camP); G.cam.lookAt(bp); }
 function worldFwd(r, out) { const F = r.F, c = Math.cos(r.phi), s = Math.sin(r.phi); out.set(F.tx * c + F.rx * s, F.ty * c + F.ry * s, F.tz * c + F.rz * s); if (r.air) { out.y += clamp(r.vh / 60, -0.3, 0.3) * 0.3; } return out.normalize(); }
 function boardPos(r, out) { return r.T.pos(r.s, r.u, r.h + 0.4, out, r.F); }
 const _cf = new THREE.Vector3(), _cp = new THREE.Vector3(), _cu = new THREE.Vector3(), _ct = new THREE.Vector3();
@@ -947,14 +989,14 @@ function updateCamera(dt) {
     if (ph === 'intro') { const t = G.phaseT / 2.4, F = r.F; boardPos(r, _ct); const a = lerp(2.3, 0.0, sstep(clamp(t, 0, 1))); const d = lerp(7, 9, t); _cf.set(F.tx, F.ty, F.tz); const rr = new THREE.Vector3(F.rx, F.ry, F.rz); _cp.copy(_ct).addScaledVector(_cf, -d * Math.cos(a) - 0.0).addScaledVector(rr, d * Math.sin(a) * 1.1 + 0).addScaledVector(G.camUp.set(F.ux, F.uy, F.uz), lerp(1.8, 3.4, t)); cam.position.lerp(_cp, 1 - Math.exp(-14 * dt)); G.camP.copy(cam.position); cam.up.set(F.ux, F.uy, F.uz); cam.lookAt(_ct.addScaledVector(G.camUp, 0.8)); cam.fov = damp(cam.fov, 62, 6, dt); cam.updateProjectionMatrix(); G.camF.set(F.tx, F.ty, F.tz); return; }
     if (ph === 'results' || r.finished && ph === 'finish') { G.orbit += dt * 0.5; boardPos(r, _ct); const F = r.F; _cf.set(F.tx, F.ty, F.tz); const rr = _v3.set(F.rx, F.ry, F.rz); const a = G.orbit + 1.2; _cp.copy(_ct).addScaledVector(_cf, Math.cos(a) * 9 * -1).addScaledVector(rr, Math.sin(a) * 9).add(_cu.set(F.ux, F.uy, F.uz).multiplyScalar(3.2)); cam.position.lerp(_cp, 1 - Math.exp(-3 * dt)); G.camP.copy(cam.position); cam.up.set(0, 1, 0); cam.lookAt(_ct); cam.fov = damp(cam.fov, 58, 4, dt); cam.updateProjectionMatrix(); return; }
     const F = r.F, wf = worldFwd(r, _cf); const kPlan = 1 - Math.exp(-(r.air ? 3.2 : 6.5) * dt); G.camF.lerp(wf, kPlan).normalize();
-    const boost = r.boosting || r.padT > 0 || r.turboT > 0 || r.startBoost > 0; const back = 6.6 + r.v * 0.024 + (boost ? 1.3 : 0), up = 2.6 + (r.air ? clamp((r.h - r.gr) * 0.04, 0, 1.2) : 0);
+    const boost = r.boosting || r.padT > 0 || r.turboT > 0 || r.startBoost > 0; const back = 4.3 + r.v * 0.012 + (boost ? 0.9 : 0), up = 1.75 + (r.air ? clamp((r.h - r.gr) * 0.04, 0, 1.0) : 0);   // close behind the rider, Mario Kart style
     boardPos(r, _ct); _cu.set(F.ux, F.uy, F.uz).lerp(_v3.set(0, 1, 0), r.air ? 0.8 : 0.35).normalize();
     _cp.copy(_ct).addScaledVector(G.camF, -back).addScaledVector(_cu, up);
     const kx = 1 - Math.exp(-11 * dt), ky = 1 - Math.exp(-(r.air ? 3.5 : 9) * dt); G.camP.x += (_cp.x - G.camP.x) * kx; G.camP.z += (_cp.z - G.camP.z) * kx; G.camP.y += (_cp.y - G.camP.y) * ky;
     // keep above the track surface
     const sh = G.shake * (SAVE.opt.shake == null ? 1 : SAVE.opt.shake) * (0.12 + r.v * 0.0016); cam.position.copy(G.camP); cam.position.x += (Math.random() - 0.5) * sh; cam.position.y += (Math.random() - 0.5) * sh; cam.position.z += (Math.random() - 0.5) * sh;
     cam.up.copy(_cu).lerp(_v3.set(0, 1, 0), 0.5); cam.up.x += r.lean * 0.04 * _cf.z; _ct.addScaledVector(G.camF, 12).addScaledVector(_cu, 0.9 + (r.air ? clamp(r.vh * 0.02, -0.6, 0.8) : 0)); cam.lookAt(_ct);
-    const fov = 66 + clamp(r.v, 0, 90) * 0.2 + (boost ? 9 : 0) + (r.drift ? 3 : 0); cam.fov = damp(cam.fov, fov, 5, dt); cam.updateProjectionMatrix();
+    const fov = 62 + clamp(r.v, 0, 90) * 0.17 + (boost ? 9 : 0) + (r.drift ? 3 : 0); cam.fov = damp(cam.fov, fov, 5, dt); cam.updateProjectionMatrix();
 }
 function updateSpeedLines(dt) {
     const r = G.player, S = G.sl, sp = r ? r.v : 0; const boost = r && (r.boosting || r.padT > 0 || r.turboT > 0 || r.startBoost > 0); const k = clamp((sp - 52) / 40, 0, 1) + (boost ? 0.45 : 0); G.lines.material.opacity = damp(G.lines.material.opacity, clamp(k, 0, 1) * 0.55, 6, dt);
@@ -969,7 +1011,8 @@ function boardFX(r, dt) {
     const boost = r.boosting || r.padT > 0 || r.turboT > 0 || r.startBoost > 0; const rate = boost ? 1 : clamp((r.v - 20) / 60, 0, 0.5);
     if (Math.random() < rate * 60 * dt * 0.6) for (const sx of [-0.2, 0.2]) { const wx = m[12] + m[0] * sx + bx * 1.3, wy = m[13] + m[1] * sx + by * 1.3 + 0.1, wz = m[14] + m[2] * sx + bz * 1.3; emit(wx, wy, wz, bx * (6 + (boost ? 10 : 0)) + (Math.random() - 0.5) * 2, by * 6 + Math.random() * 1.2, bz * (6 + (boost ? 10 : 0)) + (Math.random() - 0.5) * 2, 0.35 + Math.random() * 0.2, jc.r * (boost ? 1 : 0.6), jc.g * (boost ? 1 : 0.6), jc.b * (boost ? 1 : 0.6), 0); }
     if (r.drift && Math.random() < 0.9) { const c = r.driftCharge > 1.2 ? [1, 0.3, 0.9] : r.driftCharge > 0.6 ? [0.2, 0.8, 1] : [1, 0.8, 0.3]; emit(m[12] + bx * 0.9 + m[0] * -r.driftDir * 0.3, m[13], m[14] + bz * 0.9 + m[2] * -r.driftDir * 0.3, (Math.random() - 0.5) * 6 - m[0] * r.driftDir * 3, 1 + Math.random() * 4, (Math.random() - 0.5) * 6 - m[2] * r.driftDir * 3, 0.4, c[0], c[1], c[2], 10); }
-    if (!r.air && r.v > 12 && Math.random() < 0.5) emit(m[12] + (Math.random() - 0.5) * 1.4, m[13] - 0.15, m[14] + (Math.random() - 0.5) * 1.4, bx * 3, 0.5, bz * 3, 0.5, jc.r * 0.25, jc.g * 0.25, jc.b * 0.25, -0.5);
+    if (r.grind) { for (let i = 0; i < 2; i++) emit(m[12] + bx * 0.6 + (Math.random() - 0.5) * 0.4, m[13] - 0.1, m[14] + bz * 0.6 + (Math.random() - 0.5) * 0.4, bx * (4 + Math.random() * 6) + (Math.random() - 0.5) * 5, 2 + Math.random() * 5, bz * (4 + Math.random() * 6) + (Math.random() - 0.5) * 5, 0.35 + Math.random() * 0.25, 1, 0.8 + Math.random() * 0.2, 0.3, 12); if (Math.random() < 0.08) AUD.ev('grind', r); }
+    if (!r.air && !r.grind && r.v > 12 && Math.random() < 0.5) emit(m[12] + (Math.random() - 0.5) * 1.4, m[13] - 0.15, m[14] + (Math.random() - 0.5) * 1.4, bx * 3, 0.5, bz * 3, 0.5, jc.r * 0.25, jc.g * 0.25, jc.b * 0.25, -0.5);
 }
 
 /* ---- HUD ---- */
@@ -984,6 +1027,7 @@ function updateHUD(dt) {
     const a = Math.round(r.airm); if (_hudCache.air !== a) { _hudCache.air = a; $('airf').style.width = a + '%'; $('airn').textContent = a; $('airf').classList.toggle('low', a < 20); }
     const bw = r.drift ? Math.min(100, r.driftCharge / 1.4 * 100) : Math.max(0, Math.max(r.turboT, r.padT) / 1.5 * 100); $('boostf').style.width = bw.toFixed(0) + '%';
     if (G.popT > 0) { G.popT -= dt; if (G.popT <= 0) $('trick').classList.remove('on'); } if (G.msgT > 0) { G.msgT -= dt; if (G.msgT <= 0) { $('msg').classList.remove('on'); $('sub').classList.remove('on'); } }
+    { let gb = $('gbal'); if (!gb) { gb = document.createElement('div'); gb.id = 'gbal'; gb.style.cssText = 'position:fixed;left:50%;bottom:26%;width:min(36vmin,260px);height:10px;transform:translateX(-50%);background:rgba(10,16,40,.7);border:2px solid #19e3ff;border-radius:8px;display:none;z-index:6;pointer-events:none'; gb.innerHTML = '<div style="position:absolute;left:50%;top:-4px;width:2px;height:14px;background:rgba(255,255,255,.4)"></div><div id="gbm" style="position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:#ffd23f;left:50%;margin-left:-7px"></div>'; document.body.appendChild(gb); } gb.style.display = r.grind ? 'block' : 'none'; if (r.grind) { const gm = $('gbm'); gm.style.left = (50 + clamp(r.gBal, -1, 1) * 46) + '%'; gm.style.background = Math.abs(r.gBal) > 0.7 ? '#ff4a4a' : '#ffd23f'; } }
     drawMini();
 }
 function drawMini() {
@@ -1086,7 +1130,7 @@ const UI = {
         s.appendChild(m); const st = SAVE.stats || {}; s.appendChild(el('div', 'hint', (st.races ? 'RACES ' + st.races + ' · WINS ' + (st.wins || 0) : 'Arrow keys / WASD to steer · Space boost · Shift drift · X jump & trick') + (IN.used === 'pad' ? '' : ''))); this.show(s, null, 'title');
     },
     how() {
-        const s = el('div', 'scr bgd'); s.innerHTML = '<h2>How to ride</h2><div class="hint" style="max-width:min(88vmin,760px);text-align:left;font-size:min(2.2vmin,17px)"><b style="color:#19e3ff">STEER</b> ← → / A D / stick. Your board runs on its own.<br><b style="color:#ffd23f">BOOST</b> Space / Z / A button — burns AIR. Empty air means no boost.<br><b style="color:#7dffb0">REFILL AIR</b> Fly through rings, ride green AIR STATIONS and land tricks.<br><b style="color:#ff3da6">DRIFT</b> Shift / C — hold into a corner, release for a MINI TURBO (hold longer for more).<br><b style="color:#19e3ff">JUMP</b> Hold ↑ / W / X to charge, release to leap. Ramps launch you automatically.<br><b style="color:#ffd23f">TRICKS</b> Press jump again while you are high up in the air. Finish them before you land for AIR and a speed kick. Land mid-trick and you stumble.<br><b style="color:#ff3da6">START</b> Hold boost just before GO for a rocket start. Too early and you stall.<br><b style="color:#7dffb0">BOARDS</b> SPEED is fastest on the flat. FLY jumps huge and scores big tricks. POWER smashes crates and shoves rivals.<br>Gold chevron pads give a free boost. Sit in a rival\'s slipstream to catch up.</div>'; const m = el('div', 'menu'); m.style.marginTop = '2vmin'; m.append(this.btn('BACK', () => this.title())); s.appendChild(m); this.show(s, () => this.title(), 'how');
+        const s = el('div', 'scr bgd'); s.innerHTML = '<h2>How to ride</h2><div class="hint" style="max-width:min(88vmin,760px);text-align:left;font-size:min(2.2vmin,17px)"><b style="color:#19e3ff">STEER</b> ← → / A D / stick. Your board runs on its own.<br><b style="color:#ffd23f">BOOST</b> Space / Z / A button — burns AIR. Empty air means no boost.<br><b style="color:#7dffb0">REFILL AIR</b> Fly through rings, ride green AIR STATIONS and land tricks.<br><b style="color:#ff3da6">DRIFT</b> Shift / C — hold into a corner, release for a MINI TURBO (hold longer for more).<br><b style="color:#19e3ff">JUMP</b> Hold ↑ / W / X to charge, release to leap. Ramps launch you automatically.<br><b style="color:#ffd23f">TRICKS</b> Press jump again while you are high up in the air. Finish them before you land for AIR and a speed kick. Land mid-trick and you stumble. Steer left or right while tricking for a 360 spin, hold brake for a grab, or just tap for flips, barrel rolls, kickflips and more. Chain different tricks for bonus rank.<br><b style="color:#19e3ff">GRIND</b> Hop onto a glowing rail (jump so you land on it) and you lock on and grind. Steer the opposite way to keep the dot in the middle, or you bail. Press jump to hop off for a boost.<br><b style="color:#ff3da6">START</b> Hold boost just before GO for a rocket start. Too early and you stall.<br><b style="color:#7dffb0">BOARDS</b> SPEED is fastest on the flat. FLY jumps huge and scores big tricks. POWER smashes crates and shoves rivals.<br>Gold chevron pads give a free boost. Sit in a rival\'s slipstream to catch up.</div>'; const m = el('div', 'menu'); m.style.marginTop = '2vmin'; m.append(this.btn('BACK', () => this.title())); s.appendChild(m); this.show(s, () => this.title(), 'how');
     },
     outline(def, cv) {
         const g = cv.getContext('2d'), W = cv.width = 360, H = cv.height = 240; g.clearRect(0, 0, W, H); const pts = []; for (let i = 0; i < 200; i++) { const a = i / 200 * TAU; let r = def.R; for (const [k, amp, ph] of def.harm) r += def.R * amp * Math.cos(k * a + ph); let y = 0; for (const [k, amp, ph] of def.ey) y += amp * Math.sin(k * a + ph); pts.push([Math.cos(a) * r, Math.sin(a) * r, y]); }
