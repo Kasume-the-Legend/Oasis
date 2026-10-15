@@ -2194,7 +2194,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const accentFill = !fill && !!validHex(accent);
             if (accentFill) fill = validHex(accent);              // PlayStation Home look: a solid bubble in the speaker's colour
             const bodyFill = fill || 'rgba(255,255,255,0.97)', inkOn = fill ? textOn(fill, accentFill ? 0.72 : 0.6) : '#0f172a';
-            const S = 2, font = '600 28px Inter, system-ui, sans-serif', maxText = 320, padX = 20, padY = 14, lineH = 36, tail = 20, r = 22;
+            const S = 2, font = '600 28px Inter, system-ui, sans-serif', maxText = 440, padX = 20, padY = 14, lineH = 36, tail = 20, r = 22;
             const mc = document.createElement('canvas');
             const g = mc.getContext('2d');
             const fontOf = (t) => (t.c ? '600 25px ui-monospace, Menlo, Consolas, monospace' : (t.i && !t.k ? 'italic ' : '') + (t.b ? '800' : t.k ? '700' : '600') + ' 28px Inter, system-ui, sans-serif');
@@ -2227,9 +2227,9 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 else { cur.push(tk); curW += add; }
             }
             flush();
-            const shown = lines.slice(0, 5);
-            if (lines.length > 5) {
-                const L = shown[4], ell = { t: '…', gap: false, w: wOf({}, '…') };
+            const shown = lines.slice(0, 9);
+            if (lines.length > 9) {
+                const L = shown[8], ell = { t: '…', gap: false, w: wOf({}, '…') };
                 while (L.toks.length > 1 && L.w + ell.w > maxText) { const x = L.toks.pop(); L.w -= x.w + (x.gap ? SP : 0); }
                 L.toks.push(ell); L.w += ell.w;
             }
@@ -22811,9 +22811,9 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             t = String(t).trim();
             t = t.replace(new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[:：]\\s*', 'i'), '').replace(/^["“]+|["”]+$/g, '').replace(/\s*\n+\s*/g, ' ').trim(); return t;
         }
-        function cmpChunks(t) { const out = []; let cur = ''; for (const s of t.split(/(?<=[.!?…~*])\s+/)) { if ((cur + ' ' + s).trim().length > 150 && cur) { out.push(cur.trim()); cur = s; } else cur = (cur + ' ' + s).trim(); } if (cur) out.push(cur.trim()); return out.slice(0, 3).map((x) => x.slice(0, 200)); }
+        function cmpChunks(t) { const MAX = 230, out = []; let cur = ''; const pieces = []; for (const s of String(t).trim().split(/(?<=[.!?…~*])\s+/)) { if (s.length <= MAX) { pieces.push(s); continue; } let rest = s; while (rest.length > MAX) { let k = rest.lastIndexOf(', ', MAX); if (k < 40) k = rest.lastIndexOf(' ', MAX); if (k < 20) k = MAX; pieces.push(rest.slice(0, k + 1).trim()); rest = rest.slice(k + 1).trim(); } if (rest) pieces.push(rest); } for (const s of pieces) { if (cur && (cur + ' ' + s).length > MAX) { out.push(cur.trim()); cur = s; } else cur = (cur + ' ' + s).trim(); } if (cur) out.push(cur.trim()); return out.slice(0, 6); }
         function cmpSay(a, c, text) {
-            const parts = cmpChunks(text); parts.forEach((p, i) => setTimeout(() => { try { if (!CMP.active.has(c.id) && !cmpUnit(c)) return; a.actor.showBubble(p, cmpColor(c)); addChat(c.name, p, cmpColor(c)); } catch (e) { /* actor gone */ } }, i * 1700));
+            const parts = cmpChunks(text); let delay = 0; parts.forEach((p) => { const d = delay; delay += Math.max(1700, p.length * 38); setTimeout(() => { try { if (!CMP.active.has(c.id) && !cmpUnit(c)) return; a.actor.showBubble(p, cmpColor(c)); addChat(c.name, p, cmpColor(c)); } catch (e) { /* actor gone */ } }, d); });
             CMP.log.push({ who: c.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
         }
         async function cmpReply(c, userText, extra, silent) {
