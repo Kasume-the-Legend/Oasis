@@ -1030,6 +1030,15 @@
             <button id="screen-fade" type="button" title="Quieter the further you stand from the screen" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-psGlow text-white">Fade</button>
         </div>
         <div id="tv-recent" class="hidden flex flex-wrap gap-1.5 mb-2"></div>
+        <div class="mb-2">
+            <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider">Bookmarks</span>
+                <button id="tv-mark-add" type="button" class="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-[11px] text-gray-200" title="Save the page that is on the TV (or the link in the box) as a bookmark"><i class="fa-solid fa-star"></i> Save</button>
+                <button id="tv-reload" type="button" class="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-[11px] text-gray-200" title="Reload what is on the TV"><i class="fa-solid fa-rotate-right"></i> Reload</button>
+                <button id="tv-popout" type="button" class="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-[11px] text-gray-200" title="Open the page in its own small browser window next to the game. Works for sites that refuse to appear on the TV."><i class="fa-solid fa-up-right-from-square"></i> Pop-out window</button>
+            </div>
+            <div id="tv-marks" class="flex flex-wrap gap-1.5"></div>
+        </div>
         <div id="emu-box" class="mt-3 pt-3 border-t border-white/10">
             <h4 class="text-xs font-semibold text-psGlow mb-1"><i class="fa-solid fa-gamepad"></i> Retro games <span class="text-gray-400 font-normal">&middot; up to 4 players on the TV</span></h4>
             <div class="flex flex-wrap items-center gap-2 mb-2">
@@ -7292,8 +7301,27 @@
             let note = '';
             try { if (location.protocol === 'file:') note = 'This page is open as a local file. YouTube refuses to play embedded videos for pages opened this way (error 153), so serve the page over http(s), for example from GitHub Pages or with "python -m http.server" next to the file. Your own video files still work.'; } catch (e) { /* no location */ }
             if (!$('screen-note').dataset.err) $('screen-note').textContent = note;
+            try { renderTvMarks(); } catch (e) { /* bookmarks not ready yet */ }
             tvTick();
         }
+        // ---- bookmarks for the TV browser (saved on this device) ----
+        const TV_MARK_DEFAULTS = [{ label: 'Toonami Aftermath', raw: 'https://www.toonamiaftermath.com/', fixed: 1 }];
+        const tvMarks = () => { try { const a = JSON.parse(localStorage.getItem('psHomeTvMarks') || '[]'); return Array.isArray(a) ? a.filter((m) => m && typeof m.raw === 'string' && typeof m.label === 'string').slice(0, 12) : []; } catch (e) { return []; } };
+        const tvMarksSave = (a) => { try { localStorage.setItem('psHomeTvMarks', JSON.stringify(a.slice(0, 12))); } catch (e) { /* storage unavailable */ } };
+        const tvCurrentUrl = () => { const src = activeSrc(); if (src && src.kind === 'web') return src.url; if (src && src.kind === 'yt') return 'https://www.youtube.com/watch?v=' + src.id; if (src && src.kind === 'video') return src.url; return ''; };
+        function renderTvMarks() {
+            const box = $('tv-marks'); if (!box) return;
+            const mk = (m, del) => { const w = document.createElement('span'); w.className = 'inline-flex items-center rounded-md bg-white/10 hover:bg-white/15 overflow-hidden'; const b = document.createElement('button'); b.type = 'button'; b.textContent = m.label; b.title = m.raw; b.className = 'px-2 py-1 text-[11px] text-gray-100 truncate max-w-[10rem]'; b.addEventListener('click', () => { $('screen-url').value = m.raw; playScreenFromInput(); }); w.appendChild(b); if (del) { const x = document.createElement('button'); x.type = 'button'; x.textContent = '\u00d7'; x.title = 'Remove bookmark'; x.className = 'px-1.5 py-1 text-[12px] text-gray-400 hover:text-rose-300'; x.addEventListener('click', () => { tvMarksSave(tvMarks().filter((q) => q.raw !== m.raw)); renderTvMarks(); }); w.appendChild(x); } return w; };
+            box.replaceChildren(...TV_MARK_DEFAULTS.map((m) => mk(m, false)), ...tvMarks().map((m) => mk(m, true)));
+        }
+        function tvMarkAdd() {
+            let raw = tvCurrentUrl() || $('screen-url').value.trim(); if (!raw) { setScreenNote('Put a page on the TV (or type its link in the box) first, then press Save.'); return; }
+            const src = parseSource(raw); if (!src || !(src.kind === 'web' || src.kind === 'yt')) { setScreenNote('Only web pages and YouTube links can be bookmarked.'); return; }
+            let label = ''; try { const u = new URL(src.kind === 'web' ? src.url : 'https://www.youtube.com'); label = u.hostname.replace(/^www\./, '') + (src.kind === 'yt' ? ' video' : ''); } catch (e) { label = 'Bookmark'; }
+            const a = tvMarks().filter((q) => q.raw !== raw); a.unshift({ label: label.slice(0, 24), raw: raw.slice(0, 600) }); tvMarksSave(a); renderTvMarks(); setScreenNote('Saved to bookmarks.');
+        }
+        function tvPopout() { const u = tvCurrentUrl() || (parseSource($('screen-url').value) || {}).url; if (!u || !/^https:\/\//.test(u)) { setScreenNote('Put a web page on the TV first, then press Pop-out window.'); return; } const w = window.open(u, 'oasis-tv', 'popup=yes,width=980,height=600'); if (!w) setScreenNote('Your browser blocked the pop-up. Allow pop-ups for this page, or use "Open in a new tab".'); }
+        function tvReload() { const src = screenState.local || screenState.shared; if (!src) return; if (screenState.local && (src.kind === 'web' || src.kind === 'video')) { showSource(src, { quiet: true }); setScreenNote(''); } else setScreenNote('Reload is for pages and videos only you are watching.'); }
         function setScreenNote(text) { const n = $('screen-note'); n.dataset.err = text ? '1' : ''; n.textContent = text || ''; if (!text) renderScreenPanel(); }
         function playScreenFromInput() {
             const raw = $('screen-url').value, src = parseSource(raw);
@@ -7302,7 +7330,7 @@
             $('screen-url').value = '';
             tvRecentAdd(raw.trim(), src);
             showSource(src);
-            if (!isShared(src)) setScreenNote(src.kind === 'web' ? 'Only you can see this. Many sites refuse to be shown inside another page; if it stays blank, use \u201cOpen in a new tab\u201d.' : '');
+            if (!isShared(src)) setScreenNote(src.kind === 'web' ? 'Only you can see this. Many sites refuse to be shown inside another page (streaming sites like Toonami Aftermath often do). If it stays blank, press \u201cPop-out window\u201d to open it in its own browser window next to the game.' : '');
             return true;
         }
         function openScreenPanel() {
@@ -16031,6 +16059,7 @@ window.__ts = TSK;
             grp.rotation.order = 'YXZ'; return grp;
         }
         try { const sv = parseInt(localStorage.getItem('oasis.hbVariant') || '0', 10); if (sv >= 0 && sv < hbTotal()) hbVariant = sv; } catch (e) { /* storage unavailable */ }
+        window.oasisBoard = () => ({ variant: hbVariant, total: hbTotal() });   // lets Ryder X start on the board you have equipped
         const _hbCache = {};
         function hbMake(vi) {
             const V = HB_VARIANTS[vi % HB_VARIANTS.length], ramp = getToonRamp(), grp = new THREE.Group(), fl = [];
@@ -22588,6 +22617,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             // Central TV panel
             $('screen-close').addEventListener('click', closeScreenPanel);
             $('screen-play').addEventListener('click', playScreenFromInput);
+            $('tv-mark-add').addEventListener('click', tvMarkAdd); $('tv-popout').addEventListener('click', tvPopout); $('tv-reload').addEventListener('click', tvReload);
             $('screen-url').addEventListener('keydown', (e) => { if (isEnterKey(e) && !isComposingKey(e)) { e.preventDefault(); playScreenFromInput(); } });
             $('screen-url').addEventListener('paste', () => setTimeout(() => { if ($('screen-url').value.trim()) playScreenFromInput(); }, 0));   // pasting a link plays it (anything else says why not)
             $('screen-stop').addEventListener('click', () => stopTv());

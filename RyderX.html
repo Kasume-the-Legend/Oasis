@@ -1164,8 +1164,8 @@ const UI = {
         const ref = () => { rebuildMenuBoard(); save(); this.garage(); };
         row('BOARD', (p) => Object.keys(BTYPES).forEach((k) => p.appendChild(this.pill(BTYPES[k].name, SAVE.board.type === k, () => { SAVE.board.type = k; ref(); }))));
         const bt = BTYPES[SAVE.board.type]; const info = el('div', 'hint', bt.desc + '  TOP ' + bt.top + ' · BOOST +' + bt.boost + ' · JUMP ' + bt.launch.toFixed(1) + '× · TRICKS ' + bt.trick.toFixed(1) + '×'); info.style.margin = '0 0 1vmin'; s.appendChild(info);
-        row('COLOUR', (p) => allVariants().forEach((v, i) => p.appendChild(this.pill(v.name, SAVE.board.color === i, () => { SAVE.board.color = i; ref(); }))));
-        row('RIDER', (p) => { RIDER_LOOKS.forEach((l, i) => p.appendChild(this.pill(l.name, SAVE.board.rider === i, () => { SAVE.board.rider = i; ref(); }))); if (AV.on) p.appendChild(this.pill('MY AVATAR', SAVE.board.rider === 'avatar', () => { SAVE.board.rider = 'avatar'; ref(); })); });
+        row('COLOUR', (p) => allVariants().forEach((v, i) => p.appendChild(this.pill(v.name, SAVE.board.color === i, () => { SAVE.board.color = i; SAVE.pickBoard = 1; ref(); }))));
+        row('RIDER', (p) => { RIDER_LOOKS.forEach((l, i) => p.appendChild(this.pill(l.name, SAVE.board.rider === i, () => { SAVE.board.rider = i; SAVE.pickRider = 1; ref(); }))); if (AV.on) p.appendChild(this.pill('MY AVATAR', SAVE.board.rider === 'avatar', () => { SAVE.board.rider = 'avatar'; ref(); })); });
         const ar = el('div', 'opt'); ar.style.cssText += ';min-width:min(92vmin,820px);flex-wrap:wrap;justify-content:center'; ar.innerHTML = '<span style="min-width:12ch;text-align:left">VRM</span>'; const ap = el('span');
         ap.append(this.btn(AV.on ? 'CHANGE .VRM' : 'LOAD .VRM', () => $('vrmfile').click(), 'sm'));
         if (AV.on) ap.append(this.btn('USE OASIS', async () => { SAVE.avatar = 'oasis'; save(); AV.loading = null; await avBoot(); ref(); }, 'sm')); ar.appendChild(ap); s.appendChild(ar);
@@ -1216,10 +1216,12 @@ $('pausebtn').style.display = 'block';
 (function () { const f = el('input'); f.type = 'file'; f.accept = '.vrm,.glb'; f.id = 'vrmfile'; f.style.display = 'none'; document.body.appendChild(f); f.onchange = async () => { const file = f.files[0]; if (!file) return; const m = $('avmsg'); if (m) m.textContent = 'Loading ' + file.name + '...'; try { const buf = await file.arrayBuffer(); await avLoad(buf, file.name); await idbPut('avatar', file); SAVE.avatar = 'upload'; SAVE.board.rider = 'avatar'; save(); rebuildMenuBoard(); UI.garage(); } catch (e) { AV.err = 'That file did not load: ' + (e && e.message || e); if (m) m.textContent = AV.err; } f.value = ''; }; })();
 
 /* ============================== boot ============================== */
+/* when opened from the Oasis (or with a saved avatar), ride as your character on your equipped board, until you pick something yourself in the Garage */
+function oasisDefaults() { try { if (!SAVE.pickRider && AV.on) SAVE.board.rider = 'avatar'; const p = window.parent; if (!SAVE.pickBoard && p && p !== window && p.oasisBoard) { const b = p.oasisBoard(); if (b && Number.isInteger(b.variant) && b.variant >= 0) SAVE.board.color = b.variant; } save(); } catch (e) { /* storage or cross-origin parent */ } }
 (async function boot() {
     const lf = $('loadf'); lf.style.width = '15%';
     try { initGL(); lf.style.width = '40%'; } catch (e) { $('load').innerHTML = '<div class="hint">Ryder X needs WebGL. ' + (e && e.message || '') + '</div>'; return; }
-    G.menuTrack = 0; setTimeout(() => { try { menuScene(0); lf.style.width = '85%'; UI.title(); } catch (e) { console.error(e); window.__bootErr = String(e && e.stack || e); } $('load').style.opacity = 0; setTimeout(() => { $('load').style.display = 'none'; }, 600); requestAnimationFrame(frame); avBoot().then(() => { if (G.mode === 'menu' && UI.cur === 'garage') UI.garage(); }); }, 60);
+    G.menuTrack = 0; setTimeout(() => { try { menuScene(0); lf.style.width = '85%'; UI.title(); } catch (e) { console.error(e); window.__bootErr = String(e && e.stack || e); } $('load').style.opacity = 0; setTimeout(() => { $('load').style.display = 'none'; }, 600); requestAnimationFrame(frame); avBoot().then(() => { oasisDefaults(); if (G.mode === 'menu') { try { rebuildMenuBoard(); } catch (e) { /* menu not ready */ } if (UI.cur === 'garage') UI.garage(); } }); }, 60);
     window.__rx = { updateCamera, camSnap, placeVisual, stepRace, aiInput, Racer, G, UI, IN, AUD, SAVE, TRACKS, Track, startRace, menuScene, endRace, togglePause, BTYPES, AV };
 })();
 </script></body></html>
