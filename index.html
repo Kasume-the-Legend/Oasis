@@ -2845,7 +2845,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 this.phase += dt * (4 + speed * 1.1);
                 const gap = pos.y - getGroundHeight(pos.x, pos.z, pos.y);
                 if (gap <= 0.08) this.hopped = false; else if (vyA > 2) this.hopped = true;
-                const air = gap > 0.08 && (this.hopped || gap > 1.1);
+                const air = gap > 0.08 && (this.hopped || gap > 1.1) && activeMap !== 'btl';   // no jump pose in a battle: casters only hop for show
                 this.inAir = air;   // walking off a sofa or bed is not a jump: only a real jump (or a big drop) plays the air pose
                 fsTick(this, speed, air, dt);
 
@@ -4121,6 +4121,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     break;
                 }
                 case 'decor': dcOnWire(from, m.d); break;
+                case 'gilgift': try { gilGiftRecv(from, m); } catch (e) { /* ignore */ } break;
                 case 'pinv': partyOnInvite(from, m); break;
                 case 'wantAsset': dcOnWant(from, m); break;
                 case 'asset': dcOnAsset(from, m); break;
@@ -12824,6 +12825,25 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         Object.assign(BT_LV, { esuna: 2, sleep: 2, poison: 2, haste: 3, blind: 3, slow: 3, protect: 4, shell: 4, silence: 4, regen: 5, float: 6, vanish: 7, autolife: 9 });
         Object.assign(BT_ITEMS, { antidote: { n: 'Antidote', d: 'Cures Poison and Venom', price: 60 }, remedy: { n: 'Remedy', d: 'Cures every bad status', price: 250 } });
         Object.assign(BT_ICON, { antidote: '🌿', remedy: '💊' });
+        /* ---- the rest of the Final Fantasy item list. One table of effects (BT_IFX) drives every item in battle ---- */
+        Object.assign(BT_ITEMS, {
+            xpotion: { n: 'X-Potion', d: 'Heals 2000 HP', price: 450 }, megapotion: { n: 'Mega-Potion', d: 'Heals 600 HP to the whole party', price: 750 },
+            hiether: { n: 'Hi-Ether', d: 'Restores 100 MP', price: 320 }, turboether: { n: 'Turbo Ether', d: 'Fully restores MP', price: 950 },
+            megalixir: { n: 'Megalixir', d: 'Fully restores HP and MP for the whole party', price: 2600 }, megaphoenix: { n: 'Mega Phoenix', d: 'Revives every fallen ally', price: 950 },
+            eyedrops: { n: 'Eye Drops', d: 'Cures Darkness', price: 50 }, echoscreen: { n: 'Echo Screen', d: 'Cures Silence', price: 60 }, soft: { n: 'Soft', d: 'Cures Petrify', price: 120 },
+            maidenskiss: { n: "Maiden's Kiss", d: 'Cures Mini', price: 80 }, alarmclock: { n: 'Alarm Clock', d: 'Cures Sleep', price: 60 }, smellingsalts: { n: 'Smelling Salts', d: 'Cures Sleep and Confuse', price: 80 },
+            tranquilizer: { n: 'Tranquilizer', d: 'Cures Berserk', price: 80 }, holywater: { n: 'Holy Water', d: 'Cures Slow and Stop', price: 100 },
+            herodrink: { n: 'Hero Drink', d: 'Grants Protect and Shell', price: 220 }, speeddrink: { n: 'Speed Drink', d: 'Grants Haste', price: 160 },
+            tent: { n: 'Tent', d: 'Restores half HP and MP to the whole party', price: 420 }, cottage: { n: 'Cottage', d: 'Fully restores the party and cures every bad status', price: 1600 }
+        });
+        Object.assign(BT_ICON, { xpotion: '🧴', megapotion: '🍶', hiether: '🔷', turboether: '💠', megalixir: '🌈', megaphoenix: '🕊️', eyedrops: '👁️', echoscreen: '🔔', soft: '🧼', maidenskiss: '💋', alarmclock: '⏰', smellingsalts: '🧂', tranquilizer: '💉', holywater: '💧', herodrink: '🥤', speeddrink: '⚡', tent: '⛺', cottage: '🏠' });
+        const BT_IFX = {
+            potion: { hp: 250 }, hipotion: { hp: 700 }, xpotion: { hp: 2000 }, megapotion: { hp: 600, party: 1 }, ether: { mp: 40 }, hiether: { mp: 100 }, turboether: { mp: 'full' }, elixir: { hp: 'full', mp: 'full' }, megalixir: { hp: 'full', mp: 'full', party: 1 },
+            phoenix: { rev: 0.3 }, megaphoenix: { rev: 0.5, party: 1 }, antidote: { cure: ['poison', 'venom'] }, eyedrops: { cure: ['dark'] }, echoscreen: { cure: ['silence'] }, soft: { cure: ['stone'] }, maidenskiss: { cure: ['mini'] },
+            alarmclock: { cure: ['sleep'] }, smellingsalts: { cure: ['sleep', 'confuse'] }, tranquilizer: { cure: ['berserk'] }, holywater: { cure: ['slow', 'stop'] }, remedy: { cure: 'all' },
+            herodrink: { st: ['protect', 'shell'] }, speeddrink: { st: ['haste'] }, tent: { hpPct: 0.5, mpPct: 0.5, party: 1 }, cottage: { hp: 'full', mp: 'full', cure: 'all', party: 1 }
+        };
+
         const btHas = (u, k) => !!(u && u.st && u.st[k] > 0);
         const btCanAct = (u) => !(btHas(u, 'sleep') || btHas(u, 'stop') || btHas(u, 'stone'));
         function btStImmune(u, k) { if (u && !u.isFoe && u.gear && u.gear.imm.includes(k)) return true; if (!u || !u.isFoe) return false; const d = BT_FOES[u.type] || {}; if (BT_ST[k] && BT_ST[k].g) return false; if (d.boss && BT_BOSS_IMM.includes(k)) return true; return (BT_IMMT[u.type] || []).includes(k); }
@@ -13397,6 +13417,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
         function btPhaseChanged(was, ph) {
             try { if (btIsHost()) cmpBtPhase(was, ph); } catch (e) { /* companions are optional */ }
             BT.phaseAt = BT.t; BT.menu.mode = 'root'; BT.menu.stack = [];
+            try { if (ph === 'victory') btcSpawn(); else btcClear(true); } catch (e) { console.warn('chests', e); }
             if (ph === 'intro') { BT.intro = BT.t; const lv = btLvl(); if (BT.wave > 1 && BT.wave === (lv - 1) * 2 + 1) for (const k in BT_LV) if (BT_LV[k] === lv) btToast('New magic learned: ' + BT_SPELLS[k].n + '!'); }
             if (ph === 'victory') { const live = BT.party.filter((u) => !u.dead && !u.bot); for (const u of BT.party) { const a = btActorOf(u.id); if (a && a.playEmote && !u.dead) { try { a.playEmote('cheer'); } catch (e) { /* none */ } } } }
             if (ph === 'over') { for (const u of BT.party) { const a = btActorOf(u.id); if (a && a.group) a.group.rotation.z = 0; } }
@@ -13454,7 +13475,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             if (!btAlive(BT.foes).length) { btVictory(); return; } if (!btAlive(BT.party).length) { btOver(); return; } btBroadcast();
         }
         function btVictory() {
-            BT.phase = 'victory'; BT.phaseT = 8; const boss = BT.foes.some((f) => BT_FOES[f.type].boss), gil = BT.foes.reduce((m, f) => m + BT_FOES[f.type].gil, 0) * (1 + 0.1 * BT.wave) | 0; BT.kills += BT.foes.length; const drops = [];
+            BT.phase = 'victory'; BT.phaseT = 20; const boss = BT.foes.some((f) => BT_FOES[f.type].boss), gil = BT.foes.reduce((m, f) => m + BT_FOES[f.type].gil, 0) * (1 + 0.1 * BT.wave) | 0; BT.kills += BT.foes.length; const drops = [];
             BT.lootWave = {}; const add = (k) => { BT.inv[k] = Math.min(99, (BT.inv[k] | 0) + 1); BT.lootWave[k] = (BT.lootWave[k] | 0) + 1; drops.push(BT_ITEMS[k].n); };
             if (Math.random() < 0.65) add('potion'); if (BT.wave >= 2 && Math.random() < 0.2) add('antidote'); if (BT.wave >= 5 && Math.random() < 0.12) add('remedy'); if (BT.wave >= 3 && Math.random() < 0.25) add('hipotion'); if (Math.random() < 0.4) add('ether'); if (Math.random() < 0.16 || BT.wave % 5 === 0) add('phoenix'); if (boss ? Math.random() < 0.6 : Math.random() < 0.05) add('elixir');
             BT.gilWave = gil; BT.runGil += gil; BT.reward = `Wave ${BT.wave} cleared! +${gil.toLocaleString('en-US')} Gil` + (drops.length ? ' · found ' + drops.join(', ') : '') + ' · added to your bag'; try { const b = +localStorage.getItem('oasisBtlBest') || 0; if (BT.wave > b) { localStorage.setItem('oasisBtlBest', String(BT.wave)); } BT.best = Math.max(b, BT.wave); } catch (e) { /* storage */ }
@@ -13479,6 +13500,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
         function btMagicPow(u) { return 62 + 10 * btLvl() + (u.gear ? u.gear.mag : 0); }
         // ---- commands
         function btBotCmd(u) {
+            if (u.cmpId && u.order) { try { if (cmpRunOrder(u)) return; } catch (e) { console.warn('battle order', e); } }   // an order from chat, if the player gave one
             if (u.cmpId) { try { if (cmpBotCmd(u) !== false) return; } catch (e) { /* stock ally AI below */ } }
             const foes = btAlive(BT.foes), hurt = BT.party.filter((p) => !p.dead && p.hp < p.hpMax * 0.45), dead = BT.party.filter((p) => p.dead);
             if (u.limit >= 1 && foes.length) return btHandle(u.id, { kind: 'limit', tgt: foes.sort((a, b) => b.hp - a.hp)[0].id, lm: btBotLm() });
@@ -13533,8 +13555,10 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 else { const t = btUnit(c.tgt); if (!t || !t.isFoe || t.dead) return; const weak = BT_FOES[t.type].weak === sp.el; ev.tgt = [t.id]; ev.res = [{ id: t.id, d: Math.round(btMagicPow(u) * sp.pw * 1.25 * btRand(0.9, 1.1) * (weak ? 1.6 : 1)), weak }]; }
             }
             else if (c.kind === 'item') {
-                const it = c.item; if (!BT_ITEMS[it] || (BT.inv[it] | 0) < 1) return; const t = btUnit(c.tgt); if (!t || t.isFoe) return; ev.name = BT_ITEMS[it].n; ev.item = it; ev.tgt = [t.id]; ev.fx = 'item'; ev.dur = 1.6; ev.imp = [0.8];
-                if (it === 'potion' || it === 'hipotion') { if (t.dead) return; ev.res = [{ id: t.id, d: it === 'potion' ? -250 : -700 }]; } else if (it === 'antidote' || it === 'remedy') { if (t.dead) return; ev.res = [{ id: t.id, d: 0, cl: it === 'remedy' ? BT_BAD.slice() : ['poison', 'venom'] }]; } else if (it === 'ether') { if (t.dead) return; ev.res = [{ id: t.id, d: 0, mp: 40 }]; } else if (it === 'elixir') { if (t.dead) return; ev.res = [{ id: t.id, d: -Math.max(0, Math.round(t.hpMax - t.hp)), mp: 99 }]; } else { if (!t.dead) return; ev.res = [{ id: t.id, d: -Math.round(t.hpMax * 0.3), rev: 1 }]; }
+                const it = c.item, fx = BT_IFX[it]; if (!BT_ITEMS[it] || !fx || (BT.inv[it] | 0) < 1) return; const t = btUnit(c.tgt); if (!t || t.isFoe) return; ev.name = BT_ITEMS[it].n; ev.item = it; ev.fx = 'item'; ev.dur = 1.6; ev.imp = [0.8];
+                const one = (x) => { const r = { id: x.id, d: 0 }; if (fx.rev) { r.rev = 1; r.d = -Math.round(x.hpMax * fx.rev); return r; } if (fx.hp) r.d = -(fx.hp === 'full' ? Math.max(0, Math.round(x.hpMax - x.hp)) : fx.hp); if (fx.hpPct) r.d = -Math.round(x.hpMax * fx.hpPct); if (fx.mp) r.mp = fx.mp === 'full' ? 99 : fx.mp; if (fx.mpPct) r.mp = Math.round(x.mpMax * fx.mpPct); if (fx.cure) r.cl = fx.cure === 'all' ? BT_BAD.slice() : fx.cure.slice(); if (fx.st) r.st = fx.st.slice(); return r; };
+                const pool = fx.party ? BT.party.filter((p) => (fx.rev ? p.dead : !p.dead)) : [t]; if (!pool.length) return; if (!fx.party && (fx.rev ? !t.dead : t.dead)) return;
+                ev.tgt = pool.map((p) => p.id); ev.res = pool.map(one);
             } else return;
             if (!u.isFoe) { let sm = 0; for (const r of ev.res) { const tt = btUnit(r.id); if (tt && tt.isFoe && r.d > 0) sm += r.d; } if (sm) { BT.dmg[who] = (BT.dmg[who] | 0) + sm; BT.dmgName[who] = u.name; } }
             btExec(ev);
@@ -13986,7 +14010,7 @@ function btMusicStop() {
             const M = BT.menu, u = btMine(); if (!u) return [];
             if (M.mode === 'root') { const a = [{ k: 'atk', n: 'Attack', ok: true }, { k: 'mag', n: 'Magic', ok: true }]; for (const [ck, cn] of [['sup', 'Support'], ['hex', 'Hex']]) if (Object.keys(BT_SPELLS).some((k) => BT_SPELLS[k].cat === ck && (BT_LV[k] || 1) <= btLvl())) a.push({ k: ck, n: cn, ok: true }); a.push({ k: 'item', n: 'Item', ok: true }, { k: 'def', n: 'Defend', ok: true }); if (u.limit >= 1) a.unshift({ k: 'limit', n: 'Limit', ok: true, sub: btLimitName() }); return a; }
             if (M.mode === 'mag' || M.mode === 'sup' || M.mode === 'hex') return Object.keys(BT_SPELLS).filter((k) => (BT_SPELLS[k].cat || 'mag') === M.mode && (BT_LV[k] || 1) <= btLvl()).map((k) => ({ k, n: BT_SPELLS[k].n, sub: btHas(u, 'silence') ? 'Silenced' : BT_SPELLS[k].mp + ' MP', ok: !btHas(u, 'silence') && u.mp >= BT_SPELLS[k].mp && (k !== 'raise' || BT.party.some((p) => p.dead)) }));
-            if (M.mode === 'item') return Object.keys(BT_ITEMS).map((k) => ({ k, n: BT_ITEMS[k].n, sub: '×' + (BT.inv[k] | 0), ok: (BT.inv[k] | 0) > 0 && (k !== 'phoenix' || BT.party.some((p) => p.dead)) }));
+            if (M.mode === 'item') return Object.keys(BT_ITEMS).map((k) => ({ k, n: BT_ITEMS[k].n, sub: '×' + (BT.inv[k] | 0), ok: (BT.inv[k] | 0) > 0 && (!(BT_IFX[k] && BT_IFX[k].rev) || BT.party.some((p) => p.dead)) }));
             return [];
         }
         function btSendCmd(c) { BT.menu.mode = 'root'; BT.menu.stack = []; BT.menu.list = null; if (btIsHost()) btHandle(me.id, c); else { btSend({ a: 'cmd', ...c }); } BT.hudDirty = true; }
@@ -13998,7 +14022,7 @@ function btMusicStop() {
             const foes = btAlive(BT.foes).map((f) => f.id);
             if (M.mode === 'root') { if (it.k === 'atk') btEnterTgt({ kind: 'atk' }, foes); else if (it.k === 'limit') btEnterTgt({ kind: 'limit', lm: btMyLm() || undefined }, foes); else if (it.k === 'def') btSendCmd({ kind: 'def' }); else { M.stack.push('root'); M.mode = it.k; M.idx = 0; BT.hudDirty = true; } }
             else if (M.mode === 'mag' || M.mode === 'sup' || M.mode === 'hex') { const sp = BT_SPELLS[it.k]; if (sp.all || sp.party) btSendCmd({ kind: 'mag', spell: it.k }); else if (sp.ally) btEnterTgt({ kind: 'mag', spell: it.k }, BT.party.filter((p) => (sp.dead ? p.dead : !p.dead)).map((p) => p.id)); else btEnterTgt({ kind: 'mag', spell: it.k }, foes); }
-            else if (M.mode === 'item') btEnterTgt({ kind: 'item', item: it.k }, BT.party.filter((p) => (it.k === 'phoenix' ? p.dead : !p.dead)).map((p) => p.id));
+            else if (M.mode === 'item') btEnterTgt({ kind: 'item', item: it.k }, BT.party.filter((p) => ((BT_IFX[it.k] && BT_IFX[it.k].rev) ? p.dead : !p.dead)).map((p) => p.id));
         }
         function btBack() { const M = BT.menu; if (M.mode === 'tgt') { const k = M.cmd && M.cmd.kind; M.mode = k === 'mag' ? (BT_SPELLS[M.cmd.spell].cat || 'mag') : k === 'item' ? 'item' : 'root'; M.idx = 0; M.list = null; } else if (M.mode !== 'root') { M.mode = 'root'; M.idx = 0; } else return; btSfx('no'); BT.hudDirty = true; }
         function btNav(d) {
@@ -14701,6 +14725,93 @@ function btMusicStop() {
         function chestEnsure() { try { if (typeof activeMap !== 'undefined' && activeMap === 'loft') chestSpawn({ id: 'gift-royalreina-1m', only: 'RoyalReina', gil: 1000000, note: 'A gift for RoyalReina' }); } catch (e) { console.warn('chest', e); } }
         window.oasisChest = { make: makeChest, spawn: chestSpawn, ensure: chestEnsure, list: CH.list, open: chestOpen, near: chestNear };
 
+
+        /* ---- Warriors of Light treasure chests: when a wave is cleared two chests appear, one with items and one with equipment.
+           Opening one gives a share to every member of your party (you and your companions). Unopened chests are opened for you when the next wave starts. ---- */
+        const BTC = { list: [], ui: null, cat: null, pr: null, raf: 0, last: 0, wave: 0, run: '' };
+        const BTC_ITEMS = [['potion', 30, 1], ['ether', 14, 1], ['antidote', 10, 1], ['eyedrops', 10, 1], ['echoscreen', 8, 2], ['alarmclock', 7, 2], ['maidenskiss', 6, 2], ['phoenix', 9, 2], ['hipotion', 14, 3], ['smellingsalts', 6, 3], ['tranquilizer', 5, 3], ['holywater', 5, 3], ['soft', 5, 4], ['speeddrink', 6, 4], ['herodrink', 5, 5], ['hiether', 8, 5], ['remedy', 6, 5], ['xpotion', 7, 6], ['tent', 4, 6], ['megapotion', 5, 7], ['turboether', 4, 8], ['elixir', 3, 8], ['megaphoenix', 3, 9], ['cottage', 2, 10], ['megalixir', 1.5, 12]];
+        function btcCatalog() {   // the Equipment shop's own list, read once from Equipment.html so chest gear is real shop gear (it shows up there and can be sold)
+            if (BTC.cat) return Promise.resolve(BTC.cat); if (BTC.pr) return BTC.pr;
+            BTC.pr = new Promise((res) => {
+                eqpFetch().then((html) => {
+                    const fr = document.createElement('iframe'); fr.style.cssText = 'position:fixed;width:2px;height:2px;left:-9px;top:-9px;border:0;visibility:hidden;pointer-events:none'; fr.srcdoc = html;
+                    const fin = () => { let c = []; try { c = (fr.contentWindow.EQ_CATALOG || []).map((x) => ({ id: x.id, g: x.g, slot: x.slot, cls: x.cls, name: x.name, b: x.b, price: x.price })); } catch (e) { /* blocked */ } BTC.cat = c; try { fr.remove(); } catch (e) { /* gone */ } res(c); };
+                    fr.onload = fin; setTimeout(() => { if (!BTC.cat) fin(); }, 6000); document.body.appendChild(fr);
+                }).catch(() => { BTC.cat = []; res([]); });
+            }); return BTC.pr;
+        }
+        const btcPow = (b) => (b ? (+b.atk || 0) + (+b.def || 0) + (+b.mag || 0) + (+b.hp || 0) / 10 + (+b.mp || 0) / 5 + (+b.spd || 0) + (+b.eva || 0) + (+b.crit || 0) : 0);
+        function btcMembers() {
+            const out = [{ kind: 'me', name: me.name || 'You', cls: clsCur() }];
+            for (const u of BT.party) if (u.cmpId) { const c = cmpFind(u.cmpId); if (c) out.push({ kind: 'cmp', name: u.name || c.name, c, u, cls: ['hero', 'gunner', 'fighter'].includes(c.cls) ? c.cls : 'hero' }); }
+            return out;
+        }
+        function btcRollItems(wave) {
+            const pool = BTC_ITEMS.filter((x) => x[2] <= Math.max(1, wave)), tot = pool.reduce((m, x) => m + x[1], 0), n = 1 + (Math.random() < 0.5 ? 1 : 0) + (wave % 5 === 0 ? 1 : 0), got = {};
+            for (let i = 0; i < n; i++) { let r = Math.random() * tot, k = pool[0][0]; for (const x of pool) { r -= x[1]; if (r <= 0) { k = x[0]; break; } } got[k] = (got[k] || 0) + (/^(potion|ether|antidote|eyedrops)$/.test(k) && Math.random() < 0.4 ? 2 : 1); }
+            return got;
+        }
+        function btcPickGear(wave, cls) {
+            const ok = (BTC.cat || []).filter((it) => it.slot !== 'weapon' || it.cls === 'any' || it.cls === cls).sort((a, b) => a.price - b.price); if (!ok.length) return null;
+            const frac = Math.min(1, 0.05 + Math.max(1, wave) * 0.04), hi = Math.max(1, Math.floor(ok.length * frac)); return ok[Math.floor(Math.max(Math.random(), Math.random()) * hi)];
+        }
+        function btcGrantGear(m, it) {
+            const g = gearLoad(); if (g.own[it.id]) { const gil = Math.round(it.price * 0.4); if (m.kind === 'me') { try { window.oasisGil.add(gil, true); } catch (e) { /* no gil */ } } else { m.c.gil = Math.min(9999999, (m.c.gil | 0) + gil); cmpSave(); } return it.name + ' (a spare, sold for ' + gil + ' Gil)'; }
+            g.own[it.id] = { xp: 0, n: it.name, s: it.slot, g: it.g, b: it.b }; let wore = false;
+            if (m.kind === 'me') { g.worn[m.cls] = g.worn[m.cls] || {}; if (!g.worn[m.cls][it.slot]) { g.worn[m.cls][it.slot] = it.id; wore = true; } }
+            else { const c = m.c; c.worn = c.worn || {}; const cur = c.worn[it.slot] && g.own[c.worn[it.slot]]; if (!cur || btcPow(it.b) > btcPow(cur.b)) { c.worn[it.slot] = it.id; wore = true; } cmpSave(); }
+            try { localStorage.setItem(GEAR_KEY, JSON.stringify(g)); } catch (e) { /* storage */ }
+            try { if (m.kind === 'me') btGearChanged(); else if (m.u) cmpBtApplyGear(m.u, m.c); } catch (e) { /* not in a fight */ }
+            return it.name + (wore ? ' (equipped)' : ' (in your Equipment shop)');
+        }
+        function btcGrant(kind) {   // roll and hand out one share per party member
+            const wave = BT.wave | 0, lines = [];
+            for (const m of btcMembers()) {
+                if (kind === 'items') {
+                    const got = btcRollItems(wave), parts = [];
+                    for (const k in got) { btBagAdd(k, got[k]); if (btIsHost() || !btActive()) BT.inv[k] = Math.min(99, (BT.inv[k] | 0) + got[k]); parts.push((got[k] > 1 ? got[k] + '× ' : '') + BT_ITEMS[k].n); }
+                    lines.push('<b>' + esc(m.name) + '</b>: ' + parts.map(esc).join(', '));
+                } else {
+                    const it = btcPickGear(wave, m.cls);
+                    if (!it) { const gil = 60 + wave * 25; if (m.kind === 'me') { try { window.oasisGil.add(gil, true); } catch (e) { /* no gil */ } } lines.push('<b>' + esc(m.name) + '</b>: ' + gil + ' Gil'); continue; }
+                    lines.push('<b>' + esc(m.name) + '</b>: ' + esc(btcGrantGear(m, it)));
+                }
+            }
+            BT.hudDirty = true; try { chestCss(); } catch (e) { /* css */ }
+            const head = kind === 'items' ? '🧪 Item chest' : '🛡️ Equipment chest';
+            if (CH.msg) { CH.msg.innerHTML = head + '<small style="display:block;text-align:left;margin-top:8px;line-height:1.7">' + lines.join('<br>') + '</small>'; CH.msg.classList.add('on'); clearTimeout(BTC.msgT); BTC.msgT = setTimeout(() => CH.msg && CH.msg.classList.remove('on'), 7000); }
+            try { sysChat(head.replace(/^\S+\s/, '') + ' opened: ' + lines.map((l) => l.replace(/<[^>]+>/g, '')).join(' | ')); } catch (e) { /* chat */ }
+            return lines;
+        }
+        function btcUi() {
+            if (BTC.ui) return BTC.ui; const st = document.createElement('style'); st.textContent = '#bt-chests{position:fixed;z-index:61;left:50%;bottom:9.5rem;transform:translateX(-50%);display:none;gap:10px}#bt-chests.on{display:flex}#bt-chests button{padding:10px 18px;border-radius:999px;background:linear-gradient(180deg,#27408f,#0b1442);border:2px solid #ffd58a;color:#ffe9b0;font:800 14px Nunito,system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.5)}#bt-chests button:disabled{opacity:.45;cursor:default;border-color:#7a8ab8;color:#aab4d8}';
+            document.head.appendChild(st); const d = document.createElement('div'); d.id = 'bt-chests'; d.innerHTML = '<button data-k="items" type="button">🧪 Open the item chest</button><button data-k="gear" type="button">🛡️ Open the equipment chest</button>';
+            d.addEventListener('pointerdown', (e) => { const b = e.target.closest && e.target.closest('button'); if (!b || b.disabled) return; e.preventDefault(); e.stopPropagation(); btcOpen(b.dataset.k); }); document.body.appendChild(d); BTC.ui = d; return d;
+        }
+        function btcLoop() {
+            const now = performance.now(), dt = Math.min(0.1, (now - (BTC.last || now)) / 1000); BTC.last = now;
+            for (const e of BTC.list.slice()) { try { e.c.update(dt); } catch (er) { /* ignore */ } if (e.c.state === 'gone') { const i = BTC.list.indexOf(e); if (i >= 0) BTC.list.splice(i, 1); } }
+            BTC.raf = BTC.list.length ? requestAnimationFrame(btcLoop) : 0;
+        }
+        async function btcSpawn() {
+            if (activeMap !== 'btl' || !BT.group || !btMine()) return; const key = BT.run + ':' + BT.wave; if (BTC.run === key) return; BTC.run = key; btcClear(true); chestCss(); btcUi();
+            await btcCatalog(); if (BT.phase !== 'victory' || activeMap !== 'btl') return;
+            const mem = BT.party.filter((u) => !u.isFoe).map((u) => btSlotPos(u)), cx = mem.length ? mem.reduce((s, p) => s + p[0], 0) / mem.length : 3, cz = mem.length ? mem.reduce((s, p) => s + p[1], 0) / mem.length : 0;
+            [['items', -1.5, 'ITEMS'], ['gear', 1.5, 'EQUIPMENT']].forEach(([k, off, label]) => {
+                const x = cx > 0 ? cx - 4.2 : cx + 4.2, z = cz + off, ry = Math.atan2(cx - x, cz - z), c = makeChest({ x, z, ry, scale: 1.35, onOpen: () => { btcGrant(k); } });
+                try { const lb = makeLabel(label, { size: 26, border: '#ffd24a', plain: true }); lb.position.set(0, 1.55, 0); c.group.add(lb); c.label = lb; } catch (e) { /* no label */ }
+                BT.group.add(c.group); BTC.list.push({ kind: k, c, opened: false });
+            });
+            const ui = btcUi(); ui.classList.add('on'); ui.querySelectorAll('button').forEach((b) => { b.disabled = false; }); BTC.last = performance.now(); if (!BTC.raf) BTC.raf = requestAnimationFrame(btcLoop);
+        }
+        function btcOpen(kind) {
+            const e = BTC.list.find((x) => x.kind === kind && !x.opened); if (!e) return; e.opened = true; try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (er) { /* none */ }
+            e.c.open(); try { chestOpenSound(0); } catch (er) { /* sound */ } if (BTC.ui) BTC.ui.querySelector('button[data-k="' + kind + '"]').disabled = true; try { btSfx('ok'); } catch (er) { /* sound */ }
+        }
+        function btcClear(auto) {
+            if (auto) for (const e of BTC.list) if (!e.opened && e.c.state === 'closed') { e.opened = true; try { btcGrant(e.kind); } catch (er) { console.warn('chest', er); } }
+            for (const e of BTC.list) { try { if (e.c.label) disposeSprite(e.c.label); e.c.group.removeFromParent(); } catch (er) { /* gone */ } } BTC.list.length = 0; if (BTC.ui) BTC.ui.classList.remove('on');
+        }
         /* ---- the shared bag panel: click your Gil in the top bar. Same items and Gil in every mode. ---- */
         function bagShopHtml() {
             const gold = window.oasisGil ? window.oasisGil.get() : 0, bag = btBagLoad(), lock = btActive() && BT.phase !== 'over' && !!btMine();
@@ -16364,6 +16475,40 @@ window.__ts = TSK;
             sysChat('You are now ' + n + '.');
             return true;
         }
+
+        /* ---- trading Gil: "/give Ryoko 500", "give 500 gil to Ryoko", "/take 200 from Ryoko", "/pay SomePlayer 1000" ---- */
+        const GIL_SEEN = new Set();
+        function gilTrade(text) {
+            const num = (s) => Math.floor(+String(s).replace(/,/g, '')) || 0, slash = text.startsWith('/'), t = text.replace(/^\//, '').trim();
+            let m, who = '', amt = 0, all = false, mode = '';
+            if ((m = /^(?:give|pay|send|gift)\s+(\d[\d,]*)\s*(?:gil)?\s+(?:to\s+)?(.+)$/i.exec(t))) { mode = 'give'; amt = num(m[1]); who = m[2]; }
+            else if ((m = /^(?:give|pay|send|gift)\s+(.+?)\s+(\d[\d,]*)\s*(?:gil)?$/i.exec(t))) { mode = 'give'; amt = num(m[2]); who = m[1]; }
+            else if ((m = /^take\s+(all|\d[\d,]*)\s*(?:gil)?\s+(?:back\s+)?from\s+(.+)$/i.exec(t))) { mode = 'take'; all = /^all$/i.test(m[1]); amt = all ? 0 : num(m[1]); who = m[2]; }
+            else if ((m = /^take\s+(?:back\s+)?(?:the\s+)?gil\s+from\s+(.+)$/i.exec(t))) { mode = 'take'; all = true; who = m[1]; }
+            if (!mode) return false; who = who.replace(/[.!?]+$/, '').trim(); const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const c = CMP.list.find((q) => norm(q.name) === norm(who) || norm(q.name.split(' ')[0]) === norm(who.split(' ')[0]));
+            const pr = !c && mode === 'give' ? [...peers.values()].find((p) => norm(p.name) === norm(who)) : null;
+            if (!c && !pr) { if (slash) sysChat('Nobody named "' + who + '" here. Companions and players in this room can receive Gil.'); return slash; }
+            if (mode === 'give') {
+                if (amt < 1) { sysChat('Give how much Gil?'); return true; } const have = window.oasisGil.get(); if (amt > have) { sysChat('You only have ' + gilFmt(have) + ' Gil.'); return true; }
+                if (c) {
+                    if ((c.gil | 0) + amt > 9999999) { sysChat(c.name + ' cannot carry that much.'); return true; }
+                    window.oasisGil.add(-amt, true); c.gil = (c.gil | 0) + amt; c.aff = (c.aff || 0) + Math.min(5, 1 + Math.floor(amt / 500)); cmpSave(true); if (CMP.view === 'gear' && CMP.panel && CMP.panel.classList.contains('on')) cmpPanelRender();
+                    sysChat('You gave ' + c.name + ' ' + gilFmt(amt) + ' Gil.'); const a = CMP.active.get(c.id); try { a && a.actor && a.actor.showBubble(['Thank you!', 'For me? Thanks!', 'I will put it to good use.'][(Math.random() * 3) | 0], cmpColor(c)); } catch (e) { /* no actor */ }
+                } else {
+                    window.oasisGil.add(-amt, true); net && net.send({ t: 'gilgift', to: pr.id, n: amt, ts: Date.now(), k: Math.random().toString(36).slice(2, 10) }); sysChat('You sent ' + pr.name + ' ' + gilFmt(amt) + ' Gil.');
+                }
+                return true;
+            }
+            const have = c.gil | 0; if (!have) { sysChat(c.name + ' has no Gil on them.'); return true; } const n = all ? have : Math.min(have, amt); if (n < 1) { sysChat('Take how much Gil?'); return true; }
+            c.gil = have - n; window.oasisGil.add(n, true); cmpSave(true); if (CMP.view === 'gear' && CMP.panel && CMP.panel.classList.contains('on')) cmpPanelRender(); sysChat(c.name + ' handed you ' + gilFmt(n) + ' Gil.');
+            const a = CMP.active.get(c.id); try { a && a.actor && a.actor.showBubble(['Here you go.', 'Sure, take it.'][(Math.random() * 2) | 0], cmpColor(c)); } catch (e) { /* no actor */ }
+            return true;
+        }
+        function gilGiftRecv(from, m) {
+            const p = peers.get(from); if (!p || m.to !== me.id) return; const n = Math.floor(+m.n) || 0, k = String(from) + ':' + String(m.k || ''); if (n < 1 || n > 9999999 || GIL_SEEN.has(k)) return; GIL_SEEN.add(k);
+            window.oasisGil.add(n, true); sysChat(p.name + ' sent you ' + gilFmt(n) + ' Gil.'); try { btSfx('gil'); } catch (e) { /* sound */ }
+        }
         function sendChat(raw) {
             const text = String(raw || '').trim().slice(0, 140);
             if (!text) return false;
@@ -16382,6 +16527,7 @@ window.__ts = TSK;
             { const fm = /^\/fx(?:\s+(.*))?$/i.exec(text); if (fm) return fxCommand(fm[1]); }
             if (/^\/(games?|cards?|tt|c4)$/i.test(text)) { gmOpen(); return true; }
             if (text.startsWith('/') && EMOTES[text.slice(1)]) { performEmote(text.slice(1)); return true; }
+            try { if (gilTrade(text)) return true; } catch (e) { console.warn('gil trade', e); }
             if (Date.now() - lastChat < 400) return false;
             lastChat = Date.now(); lvAward('chat', 4, 8);
             addChat(me.name, text, '#38bdf8');
@@ -22820,6 +22966,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const a = (cmpUnit(c) && activeMap === 'btl' ? cmpPartyStub(c) : null) || CMP.active.get(c.id) || cmpPartyStub(c); if (!a || CMP.busy.has(c.id)) return; CMP.busy.add(c.id); a.actor.setTyping(true);
             const tk = setInterval(() => { try { a.actor.setTyping(true); } catch (e) { /* ignore */ } }, 2500);
             try {
+                try { const bu = cmpUnit(c); if (bu && BT.phase !== 'idle') extra = (extra ? extra + '\n' : '') + cmpBtState(bu) + '\n(You can see the whole fight. Use it only when it matters to what was said; do not recite numbers.)'; } catch (e) { /* no battle */ }
                 const hist = (c.hist || []).slice(-14).map((m) => ({ role: m.r === 'user' ? 'user' : 'assistant', content: m.c }));
                 const msgs = hist.concat([{ role: 'user', content: userText }]);
                 let raw = await cmpAI(cmpSystem(c, extra), msgs, 260); const em = raw.match(/\[emote:\s*([A-Za-z0-9_]+)\s*\]/); raw = raw.replace(/\[emote:[^\]]*\]/gi, '').trim(); if (em) setTimeout(() => cmpEmote(c, em[1].toLowerCase()), 600);
@@ -22840,11 +22987,85 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             } catch (e) { /* try again later */ }
         }
         /* chat routing: who answers a line you just typed */
+
+        /* ---- battle orders: "Ryoko, use a potion on me" / "Sakura cast Fire on the Dread Knight" / "everyone attack" ----
+           Parsed with plain keywords (no AI needed, so it is free and instant). The order waits for that companion's next turn. */
+        const CMP_O_ITEMS = [['hipotion', /hi[- ]?potions?|high[- ]?potions?/], ['xpotion', /\bx[- ]?potions?/], ['megapotion', /mega[- ]?potions?/], ['potion', /\bpotions?\b/], ['turboether', /turbo[- ]?ethers?/], ['hiether', /hi[- ]?ethers?|high[- ]?ethers?/], ['ether', /\bethers?\b/], ['megalixir', /megalixirs?/], ['elixir', /\belixirs?\b/], ['megaphoenix', /mega[- ]?phoenix/], ['phoenix', /phoenix|\brevive\b|bring \w+ back/], ['remedy', /\bremed(y|ies)\b/], ['antidote', /\bantidotes?\b/], ['eyedrops', /eye[- ]?drops?/], ['echoscreen', /echo( screens?)?\b/], ['soft', /\bsofts?\b|gold needle/], ['maidenskiss', /maidens? kiss/], ['alarmclock', /alarm clock/], ['smellingsalts', /smelling salts?/], ['tranquilizer', /tranquili[sz]er/], ['holywater', /holy water/], ['herodrink', /hero drink/], ['speeddrink', /speed drink/], ['tent', /\btents?\b/], ['cottage', /\bcottages?\b/]];
+        const CMP_O_SPELLS = [['curaga', /\bcuraga\b|heal (everyone|everybody|all|the party|us)\b/], ['cure', /\bcure\b|\bheal(ing)?\b/], ['raise', /\braise\b|\blife\b|\bresurrect\b/], ['esuna', /\besuna\b|\bcleanse\b/], ['haste', /\bhaste\b/], ['protect', /\bprotect\b/], ['shell', /\bshell\b/], ['regen', /\bregen\b/], ['float', /\bfloat\b/], ['vanish', /\bvanish\b/], ['autolife', /auto-?life/], ['flare', /\bflare\b/], ['bolt', /\bthunder\b|\bbolt\b|\blightning\b/], ['ice', /\bblizzard\b|\bice\b/], ['fire', /\bfire\b/], ['poison', /\bpoison\b/], ['sleep', /\bsleep\b/], ['blind', /\bblind\b/], ['slow', /\bslow\b/], ['silence', /\bsilence\b/]];
+        function cmpOrderParse(low) {
+            if (/\blimit( break)?\b/.test(low)) return { kind: 'limit' };
+            if (/\b(defend|guard|brace yourself|take cover)\b/.test(low)) return { kind: 'def' };
+            for (const [id, re] of CMP_O_ITEMS) if (re.test(low)) return { kind: 'item', item: id };
+            for (const [id, re] of CMP_O_SPELLS) if (re.test(low)) return { kind: 'mag', spell: id };
+            if (/\b(attack|hit|strike|slash|smash|fight|kill|focus|target|go after|take (out|down)|get (that|the|him|her|it))\b/.test(low)) return { kind: 'atk' };
+            return null;
+        }
+        function cmpOrderSay(u, c, text) { try { cmpBtSay(u, c, text); } catch (e) { /* no actor yet */ } }
+        function cmpBtOrder(text, act) {
+            if (!BT || BT.phase === 'idle') return []; const low = ' ' + String(text).toLowerCase().replace(/[“”"']/g, '').replace(/[,!?.:;]+/g, ' ') + ' ';
+            const inB = act.filter((c) => cmpUnit(c)); if (!inB.length) return [];
+            const cut = low.search(/\b(on|onto|at|to|for|towards?|toward)\b/), head = cut > 0 ? low.slice(0, cut) : low, tail = cut > 0 ? low.slice(cut) : '';
+            const first = (c) => c.name.toLowerCase().split(' ')[0].replace(/[^a-z0-9]/g, ''), has = (s, w) => !!w && new RegExp('\\b' + w + '\\b').test(s);
+            let who = /\b(everyone|everybody|you guys|you all|all of you|guys|team|party)\b/.test(head) ? inB.slice() : inB.filter((c) => has(head, first(c)));
+            if (!who.length) who = inB.filter((c) => has(tail, first(c)) && cut >= 0 && !/\b(me|myself)\b/.test(tail)).slice(0, 1);
+            if (!who.length) return [];
+            const ord = cmpOrderParse(low.replace(new RegExp('\\b(' + inB.map(first).filter(Boolean).join('|') + ')\\b', 'g'), ' ')); if (!ord) return [];
+            if (/^\s*(how|what|why|when|where|who|did|do you|have you|can i)\b/.test(low.replace(new RegExp('\\b(' + inB.map(first).filter(Boolean).join('|') + ')\\b', 'g'), ' '))) return [];
+            if (!btIsHost()) { sysChat('Only the battle host can give companions orders right now.'); return []; }
+            // who is the target?
+            const t = { t: 'auto' }, mine = first({ name: me.name || '' });
+            if (/\b(me|myself)\b/.test(tail || low) || (mine && has(tail, mine))) t.t = 'me';
+            else if (/\b(yourself|himself|herself|themselves|self)\b/.test(tail)) t.t = 'self';
+            else { const other = BT.party.find((p) => p.cmpId && has(tail, first({ name: p.name || '' })) && !who.some((c) => c.id === p.cmpId)); if (other) { t.t = 'ally'; t.id = other.id; } else if (/\b(everyone|everybody|all of us|the party|us)\b/.test(tail)) t.t = 'all'; }
+            if (t.t === 'auto') { const f = BT.foes.find((x) => !x.dead && BT_FOES[x.type] && (tail || low).includes(BT_FOES[x.type].n.toLowerCase())) || BT.foes.find((x) => !x.dead && BT_FOES[x.type] && BT_FOES[x.type].n.toLowerCase().split(' ').some((w) => w.length > 3 && has(tail || low, w))); if (f) { t.t = 'foe'; t.type = f.type; } else if (/\b(biggest|strongest|largest|boss|toughest)\b/.test(low)) { t.t = 'foe'; t.pick = 'big'; } else if (/\b(weakest|smallest|weakling)\b/.test(low)) { t.t = 'foe'; t.pick = 'weak'; } }
+            const what = ord.kind === 'item' ? BT_ITEMS[ord.item].n : ord.kind === 'mag' ? BT_SPELLS[ord.spell].n : ord.kind === 'limit' ? 'limit break' : ord.kind === 'def' ? 'defend' : 'attack';
+            const acks = ['On it! ' + what + ' coming up.', 'Got it, ' + what + ' next!', 'Understood. ' + what + '!', 'Leave it to me!', 'Right, ' + what + ' when I am up.'];
+            who.forEach((c, i) => { const u = cmpUnit(c); if (!u) return; u.order = { ...ord, tgt: t, at: Date.now() }; c.lastSpoke = Date.now(); setTimeout(() => { if (u.order) cmpOrderSay(u, c, acks[(Math.random() * acks.length) | 0]); }, 300 + i * 650); });
+            return who.map((c) => c.id);
+        }
+        function cmpRunOrder(u) {
+            const o = u.order; if (!o) return false; u.order = null; if (Date.now() - o.at > 60000 || BT.phase !== 'fight') return false;
+            const c = cmpFind(u.cmpId); if (!c) return false; const say = (m) => { cmpOrderSay(u, c, m); return false; }, foes = btAlive(BT.foes), party = btAlive(BT.party), dead = BT.party.filter((p) => p.dead);
+            const sil = btHas(u, 'silence'), ratio = (p) => p.hp / Math.max(1, p.hpMax), hurtest = () => party.slice().sort((a, b) => ratio(a) - ratio(b))[0];
+            const foeBy = (t) => { let f = null; if (t.t === 'foe' && t.type) f = foes.filter((x) => x.type === t.type).sort((a, b) => a.hp - b.hp)[0]; else if (t.t === 'foe' && t.pick === 'weak') f = foes.slice().sort((a, b) => a.hp - b.hp)[0]; return f || foes.slice().sort((a, b) => b.hp - a.hp)[0]; };
+            const allyBy = (t, dflt) => t.t === 'me' ? btMine() : t.t === 'self' ? u : t.t === 'ally' ? BT.party.find((p) => p.id === t.id) : dflt;
+            const done = () => BT.turn !== u.id;   // btHandle clears the turn when the action went through
+            if (o.kind === 'def') { btHandle(u.id, { kind: 'def' }); return done(); }
+            if (o.kind === 'limit') { if (u.limit < 1) return say('My limit gauge is not full yet.'); if (!foes.length) return false; btHandle(u.id, { kind: 'limit', tgt: foeBy(o.tgt).id, lm: btBotLm() }); return done(); }
+            if (o.kind === 'atk') { if (!foes.length) return false; btHandle(u.id, { kind: 'atk', tgt: foeBy(o.tgt).id }); return done(); }
+            if (o.kind === 'item') {
+                const it = o.item, fx = BT_IFX[it]; if (!fx) return false;
+                if ((BT.inv[it] | 0) < 1) { if (fx.rev && !fx.party && !sil && u.mp >= BT_SPELLS.raise.mp) { o.kind = 'mag'; o.spell = 'raise'; u.order = o; return cmpRunOrder(u); } return say('We are out of ' + BT_ITEMS[it].n + 's!'); }
+                let tg = allyBy(o.tgt, null); const bad = fx.cure === 'all' ? BT_BAD : (fx.cure || []), sickOf = () => party.find((p) => p.st && bad.some((k) => p.st[k] > 0));
+                if (fx.rev) { if (!tg || !tg.dead) tg = dead[0]; if (!tg) return say('Nobody is down!'); }
+                else if (fx.cure) { if (!tg || tg.dead || !bad.some((k) => tg.st && tg.st[k] > 0)) tg = sickOf(); if (!tg) return say('Nobody needs that right now.'); }
+                else if (fx.mp && !fx.hp && !fx.party) { if (!tg || tg.dead) tg = party.slice().sort((a, b) => a.mp / Math.max(1, a.mpMax) - b.mp / Math.max(1, b.mpMax))[0]; }
+                else if (fx.st || fx.party) { if (!tg || tg.dead) tg = btMine() || u; }
+                else { if (!tg || tg.dead) tg = hurtest(); if (tg && fx.mp !== 'full' && !(fx.hp === 'full') && tg.hp >= tg.hpMax) return say(tg === u ? 'I am already at full health.' : tg.name + ' is already at full health.'); }
+                if (!tg) return false; btHandle(u.id, { kind: 'item', item: it, tgt: tg.id }); return done() || say('That did not work.');
+            }
+            if (o.kind === 'mag') {
+                const sp = BT_SPELLS[o.spell]; if (!sp) return false;
+                if (sil) return say('I am silenced!'); if ((BT_LV[o.spell] || 1) > btLvl()) return say('I have not learned ' + sp.n + ' yet.'); if (u.mp < sp.mp) return say('Not enough MP for ' + sp.n + '.');
+                const act = { kind: 'mag', spell: o.spell };
+                if (sp.dead) { const tg = allyBy(o.tgt, null); const dd = tg && tg.dead ? tg : dead[0]; if (!dd) return say('Nobody is down!'); act.tgt = dd.id; }
+                else if (sp.party) { /* hits everyone */ }
+                else if (sp.esuna) { const tg = allyBy(o.tgt, null) || party.find((p) => p.st && BT_BAD.some((k) => p.st[k] > 0)) || btMine() || u; act.tgt = tg.id; }
+                else if (sp.buff) { const tg = allyBy(o.tgt, null) || btMine() || u; act.tgt = tg.id; }
+                else if (sp.ally) { const tg = allyBy(o.tgt, null); act.tgt = (tg && !tg.dead ? tg : hurtest()).id; }
+                else if (sp.debuff) { if (!foes.length) return false; act.tgt = foeBy(o.tgt).id; }
+                else if (!sp.all) { if (!foes.length) return false; act.tgt = foeBy(o.tgt).id; }
+                btHandle(u.id, act); return done() || say('That did not work.');
+            }
+            return false;
+        }
         function cmpHear(text) {
             if (!CMP.active.size && !BT.party.some((u) => u.cmpId)) return; const act = CMP.list.filter((c) => CMP.active.has(c.id) || cmpUnit(c)); const low = text.toLowerCase();
+            let ordered = []; try { ordered = cmpBtOrder(text, act) || []; } catch (e) { console.warn('battle order', e); }
             if (!CMP.ai.key && !CMP.keyless) { if (Date.now() - CMP.warned > 20000) { CMP.warned = Date.now(); sysChat('Your companions need an API key to talk. Open /companions and paste one.'); } }
             let tg = act.filter((c) => low.includes(c.name.toLowerCase().split(' ')[0]));
             if (/\b(everyone|everybody|you guys|you all|guys|all of you)\b/.test(low)) tg = act.slice(0, 4);
+            if (ordered.length) { tg = tg.filter((c) => !ordered.includes(c.id)); if (!tg.length) { CMP.log.push({ who: me.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift(); return; } }
             if (!tg.length) { const ranked = act.slice().sort((x, y) => (x.lastSpoke || 0) - (y.lastSpoke || 0)); tg = [ranked[0]]; if (act.length > 1 && Math.random() < 0.3) tg.push(ranked[1]); }
             CMP.log.push({ who: me.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
             const emo = cmpEmoteFor(low);
@@ -23052,6 +23273,25 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             text = cmpClean(text, c.name).slice(0, 140); if (!text) return; const a = u.actor || (btActorOf(u.id)); try { if (a && a.showBubble) a.showBubble(text, cmpColor(c)); } catch (e) { /* no actor yet */ } try { addChat(c.name, text, cmpColor(c)); } catch (e) { /* chat */ }
             CMP.log.push({ who: c.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
         }
+        function cmpBtGear(u) {   // your level, class, equipment, bag and gil, plus what this companion wears: the same things the Equipment and Class screens show
+            try {
+                const g = gearLoad(), line = (worn) => GEAR_SL.map((s) => { const o = worn && worn[s] && g.own[worn[s]]; return o ? (o.n || s) + ' (' + s + ', Lv ' + gearProg(o.xp).lv + ')' : null; }).filter(Boolean).join(', ') || 'nothing',
+                    tot = (t) => 'ATK ' + t.atk + ', DEF ' + t.def + ', MAG ' + t.mag + ', HP +' + t.hp + ', MP +' + t.mp + (t.imm && t.imm.length ? ', immune to ' + t.imm.join('/') : '');
+                const cid = clsCur(), cdef = CLS.defs[cid] || {}, bag = btBagLoad(), bagTxt = Object.keys(BT_ITEMS).filter((k) => (bag[k] | 0) > 0).map((k) => BT_ITEMS[k].n + ' x' + bag[k]).join(', ') || 'empty', gil = window.oasisGil ? window.oasisGil.get() : 0;
+                const c = cmpFind(u.cmpId), mine = btMine();
+                return ' ' + me.name + ' (the player' + (mine ? ', ' + mine.name : '') + ') is a ' + (cdef.name || cid) + ' at class level ' + clsLv(cid) + ', wearing: ' + line(g.worn[cid]) + ' [' + tot(gearStats(cid)) + ']. ' + me.name + "'s bag outside the fight: " + bagTxt + '; ' + gil + ' Gil.' + (c ? ' You are wearing: ' + line(c.worn) + ' [' + tot(cmpGearStats(c)) + '], and you have ' + (c.gil | 0) + ' Gil of your own.' : '');
+            } catch (e) { return ''; }
+        }
+        function cmpBtState(u) {   // everything a teammate in the fight can see, handed to the companion's brain
+            try {
+                const pct = (x) => Math.round(100 * x.hp / Math.max(1, x.hpMax)), sts = (x) => { const k = x.st ? Object.keys(x.st).filter((q) => x.st[q] > 0) : []; return k.length ? ' [' + k.join(',') + ']' : ''; };
+                const turn = BT.turn ? btUnit(BT.turn) : null, inv = Object.keys(BT_ITEMS).filter((k) => (BT.inv[k] | 0) > 0).map((k) => BT_ITEMS[k].n + ' x' + BT.inv[k]).join(', ') || 'none';
+                const party = BT.party.map((p) => (p === u ? 'YOU ' : '') + p.name + (p.dead ? ' (down)' : ' HP ' + pct(p) + '% MP ' + Math.round(p.mp) + sts(p))).join('; ');
+                const foes = BT.foes.filter((f) => !f.dead).map((f) => f.name + ' ' + pct(f) + '%' + (BT_FOES[f.type] && BT_FOES[f.type].boss ? ' (BOSS)' : '') + (BT_FOES[f.type] && BT_FOES[f.type].weak ? ' weak to ' + BT_FOES[f.type].weak : '') + sts(f)).join('; ') || 'none';
+                const lvl = btLvl(), spells = Object.keys(BT_SPELLS).filter((k) => (BT_LV[k] || 1) <= lvl && BT_SPELLS[k].mp <= u.mp).map((k) => BT_SPELLS[k].n).join(', ') || 'none';
+                return 'BATTLE STATE (wave ' + BT.wave + ', ' + BT.kills + ' defeated): ' + (turn ? (turn === u ? 'it is YOUR turn' : "it is " + turn.name + "'s turn") : 'no one is acting right now') + '. Party: ' + party + '. Enemies: ' + foes + '. Shared items: ' + inv + '. Your MP ' + Math.round(u.mp) + '/' + u.mpMax + (u.limit >= 1 ? ', your LIMIT BREAK is ready' : '') + '; spells you can cast now: ' + spells + '.' + (u.order ? ' You were just ordered to do: ' + (u.order.item || u.order.spell || u.order.kind) + '.' : '') + cmpBtGear(u);
+            } catch (e) { return ''; }
+        }
         async function cmpBtSpeak(u, what, kind) {
             const c = cmpFind(u.cmpId); if (!c) return; const can = CMPB_CAN[kind];
             const slot = () => { const at = Math.max(Date.now(), CMP.nextSay); CMP.nextSay = at + 18000 + Math.random() * 2000; return at - Date.now(); };
@@ -23059,7 +23299,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             CMPB.busy = true;
             try {
                 const foes = BT.foes.filter((f) => !f.dead).map((f) => f.name + ' ' + Math.round(100 * f.hp / f.hpMax) + '%').join(', ') || 'none', ally = BT.party.map((p) => p.name + (p.dead ? ' (down)' : ' ' + Math.round(100 * p.hp / p.hpMax) + '%')).join(', ');
-                const extra = '[YOU ARE IN A BATTLE: WARRIORS OF LIGHT, wave ' + BT.wave + ']\nYour role: ' + (CMP_ROLES[c.role || 'balanced'] || '') + '. You: ' + u.name + ' HP ' + Math.round(u.hp) + '/' + u.hpMax + ', MP ' + Math.round(u.mp) + '/' + u.mpMax + '. Party: ' + ally + '. Enemies: ' + foes + '.\nRecent events:\n' + CMPB.log.slice(-6).map((l) => '- ' + l).join('\n') + '\nJust happened: ' + what + '\nReact to it out loud in ONE short sentence (under 90 characters), in character, like a teammate in the middle of a fight. Do not narrate numbers.';
+                const extra = '[YOU ARE IN A BATTLE: WARRIORS OF LIGHT, wave ' + BT.wave + ']\nYour role: ' + (CMP_ROLES[c.role || 'balanced'] || '') + '. You: ' + u.name + ' HP ' + Math.round(u.hp) + '/' + u.hpMax + ', MP ' + Math.round(u.mp) + '/' + u.mpMax + '. Party: ' + ally + '. Enemies: ' + foes + '.\n' + cmpBtState(u) + '\nRecent events:\n' + CMPB.log.slice(-6).map((l) => '- ' + l).join('\n') + '\nJust happened: ' + what + '\nReact to it out loud in ONE short sentence (under 90 characters), in character, like a teammate in the middle of a fight. Do not narrate numbers.';
                 const reply = await cmpAI(cmpSystem(c, extra), [{ role: 'user', content: '(Say something about what just happened.)' }], 120);
                 if (reply) { const w = slot(); if (w > 60) await new Promise((r) => setTimeout(r, w)); cmpBtSay(u, c, reply); c.aff = (c.aff || 0) + 1; }
             } catch (e) { /* stay quiet in a fight rather than spam errors */ }
@@ -23181,7 +23421,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const r = CMP.active.get(c.id), u = cmpUnit(c), a = (r && r.actor && r.actor.group && r.actor.group.visible !== false ? r.actor : null) || (u && u.actor); if (!a || !a.playEmote) return false;
             try { a.playEmote(key); } catch (e) { return false; } return true;
         }
-        window.__cmp = { CMP, cmpSummon, cmpDismiss, cmpHear, cmpImport, cmpOpen, cmpAI, BT, btJoin, btStart, btHostTick, cmpBtSync, cmpGearStats, cmpBotCmd, cmpUnit, CE, ceImport, cmpEmoteFor, cmpEmote, cmpBtEvent, cmpBtNote, gearLoad, CMPB, ensureBtl };
+        window.__cmp = { btVictory, btcSpawn, btcOpen, btcGrant, btcCatalog, BTC, gilTrade, BT_IFX, ensureBtl, cmpBtState, cmpBtOrder, cmpRunOrder, cmpOrderParse, CMP, cmpSummon, cmpDismiss, cmpHear, cmpImport, cmpOpen, cmpAI, BT, btJoin, btStart, btHostTick, cmpBtSync, cmpGearStats, cmpBotCmd, cmpUnit, CE, ceImport, cmpEmoteFor, cmpEmote, cmpBtEvent, cmpBtNote, gearLoad, CMPB, ensureBtl };
 
         function animate() {
             requestAnimationFrame(animate);

@@ -1060,6 +1060,18 @@ function stepRace(dt) {
     // finish handling
     if (pl.finished) { G.finishT += dt; if (G.phase !== 'finish') { G.phase = 'finish'; } const allDone = G.racers.every((r) => r.finished); if ((allDone || G.finishT > 9 || G.cfg.mode === 'tt' && G.finishT > 2.2) && !G.done) endRace(); }
 }
+/* Gil for the Oasis wallet: every finish pays (place, rivals beaten, tricks, rings, new records); standalone play just shows nothing */
+function rxPayout(res, pl) {
+    try {
+        const og = window.parent && window.parent !== window && window.parent.oasisGil; if (!og || !og.add) return 0;
+        const n = res.rows.length, place = pl.place || n, tt = res.mode === 'tt';
+        let gil = tt ? 60 + (res.newBest ? 120 : 0) : 40 + Math.max(0, n - place) * 38 + (place === 1 ? 90 : 0);
+        gil += Math.min(200, Math.round((res.tricks || 0) * 0.02)) + Math.min(120, (res.rings || 0) * 3) + (res.newLap ? 40 : 0) + (res.newBest && !tt ? 50 : 0);
+        gil = Math.max(20, Math.round(gil * (res.laps >= 3 ? 1.3 : 1) * (res.mirror ? 1.15 : 1)));
+        og.add(gil, true); try { window.parent.oasisLoot && place <= 2 && !tt && window.parent.oasisLoot('ryder x', 0.5); } catch (e) { /* no loot */ }
+        return gil;
+    } catch (e) { return 0; }
+}
 function endRace() {
     G.done = true; G.phase = 'results'; const pl = G.player; const T = G.T; const L = T.L * G.laps;
     // estimate times for unfinished
@@ -1068,7 +1080,7 @@ function endRace() {
     const res = { track: G.cfg.track, mode: G.cfg.mode, mirror: !!G.cfg.mirror, laps: G.laps, rows: ord_.map((r) => ({ id: r.id, name: r.isPlayer ? 'YOU' : r.name, time: r.finT, place: r.place, isPlayer: r.isPlayer, type: r.type })), lapTimes: G.lapTimes.slice(), tricks: pl.trickScore, rings: pl.rings };
     const key = TRACKS[G.cfg.track].id + (G.cfg.mirror ? 'm' : ''); const t = pl.finT; res.best = SAVE.best[key]; res.newBest = !SAVE.best[key] || t < SAVE.best[key]; if (res.newBest) { SAVE.best[key] = t; if (G.cfg.mode === 'tt') { SAVE.ghosts[key] = { d: G.ghostRec.d, type: pl.type, col: SAVE.board.color }; } }
     const bl = Math.min.apply(null, G.lapTimes.concat([1e9])); res.bestLap = bl < 1e9 ? bl : null; const lk = key + 'L'; res.newLap = bl < 1e9 && (!SAVE.best[lk] || bl < SAVE.best[lk]); if (res.newLap) SAVE.best[lk] = bl;
-    SAVE.stats.races = (SAVE.stats.races || 0) + 1; if (pl.place === 1) SAVE.stats.wins = (SAVE.stats.wins || 0) + 1; save(true);
+    res.gil = rxPayout(res, pl); SAVE.stats.races = (SAVE.stats.races || 0) + 1; if (pl.place === 1) SAVE.stats.wins = (SAVE.stats.wins || 0) + 1; save(true);
     AUD.ev('results'); setTimeout(() => { if (G.mode === 'race') { hudShow(false); showMsg('', 0); UI.results(res); } }, 900);
 }
 
@@ -1188,7 +1200,7 @@ const UI = {
         const s = el('div', 'scr bgd'); const you = res.rows.find((r) => r.isPlayer); s.innerHTML = '<h2>' + (you.place === 1 ? 'Victory!' : 'Finished ' + ord(you.place)) + '</h2>'; const g = this.gp;
         if (g) { res.rows.forEach((r) => { g.pts[r.id] = (g.pts[r.id] || 0) + (GP_POINTS[r.place - 1] || 0); r.pts = GP_POINTS[r.place - 1] || 0; }); }
         const tb = el('table', 'res'); let h = '<tr><th>#</th><th>RIDER</th><th>TIME</th>' + (g ? '<th>PTS</th><th>TOTAL</th>' : '') + '</tr>'; res.rows.forEach((r) => { h += '<tr class="' + (r.isPlayer ? 'me' : '') + '"><td>' + r.place + '</td><td>' + r.name + '</td><td>' + (r.place === 1 || r.time < res.rows[0].time + 90 ? fmtTime(r.time) : '--') + '</td>' + (g ? '<td>+' + r.pts + '</td><td>' + g.pts[r.id] + '</td>' : '') + '</tr>'; }); tb.innerHTML = h; s.appendChild(tb);
-        const notes = []; if (res.newBest) notes.push('NEW BEST TIME'); if (res.newLap) notes.push('NEW BEST LAP ' + fmtTime(res.bestLap)); if (res.tricks) notes.push('TRICK SCORE ' + res.tricks); if (notes.length) s.appendChild(el('div', 'hint', notes.join(' · ')));
+        const notes = []; if (res.newBest) notes.push('NEW BEST TIME'); if (res.newLap) notes.push('NEW BEST LAP ' + fmtTime(res.bestLap)); if (res.tricks) notes.push('TRICK SCORE ' + res.tricks); if (res.gil) notes.push('+' + res.gil + ' GIL'); if (notes.length) s.appendChild(el('div', 'hint', notes.join(' · ')));
         const m = el('div', 'menu'); m.style.marginTop = '2vmin';
         if (g) { const last = g.idx >= g.cup.tracks.length - 1; m.append(this.btn(last ? 'FINAL STANDINGS' : 'NEXT RACE', () => { if (last) this.cupEnd(); else { g.idx++; this.nextGP(); } })); }
         else m.append(this.btn('RACE AGAIN', () => startRace(G.cfg)));

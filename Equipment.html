@@ -533,6 +533,7 @@ for (const [name, eff] of rows(RAW.acc9)) {
   const power = (b.atk || 0) * 2 + (b.def || 0) * 2 + (b.mag || 0) * 2 + (b.mp || 0) * 0.3 + (b.spd || 0) * 3 + (b.eva || 0) * 2 + 10;
   ITEMS.push({ id: '9-a-' + slug(name), g: 9, slot: 'acc', cls: 'any', name, b, price: r10(power * power * 0.35) });
 }
+window.EQ_CATALOG = ITEMS;   // read by the game's treasure chests so they hand out real shop gear
 /* ---------- save data (shared with the game: same browser storage) ---------- */
 const KEY = 'oasis.gear';
 const P = (() => { try { return window.parent && window.parent !== window && window.parent.oasisGear ? window.parent : null; } catch (e) { return null; } })();
