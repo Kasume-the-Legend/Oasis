@@ -145,3 +145,8 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 - Loot: `EXTRA_` table (generated rooms) + shotgun in Ballroom, powders in Storage/Lounge.
 
 - Cameras: small rooms (24+ area) get a mirrored far-corner angle for the half nearest the first camera; big rooms (90+) also get a low stalker angle down the middle. Co-op: gameOver() sends {t:"over"} so the whole party gets Game Over together.
+
+## Equipment menu: imported weapon card
+Equipment.html shows a "MY" card at the top of the Weapon slot for the current class when that class has an imported weapon: editable name + power, computed stats (`cswStats`, scaled by gear level), Equip/Unequip. Uses `window.oasisGear.csw.get/set` (index.html, next to `cswGear`).
+Imported weapon: power is capped by class level (`cswCap`, 4..154 over lv 1..99) and name/power can be set ONCE (`cfg.lock`); after that the class panel inputs and the Equipment card are read-only. Gear stats still grow with gear level.
+Imported weapon build-up: after the one-time Set, each class's weapon levels with class XP like shop gear and can be upgraded +1..+9 in Equipment (cost 1500*n^2 Gil, needs gear Lv 10*n, +12% stats per tier; `cfg.up`, `oasisGear.csw.upgrade`).

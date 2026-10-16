@@ -23094,13 +23094,20 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const a = localActor; if (!a) return; if (a.hcVis) a.hcVis.at = ''; if (a.cswVis) a.cswVis.at = ''; try { hcDress(a); } catch (e) { /* not ready */ }
         }
         function cswStats(type, pow) { const a = Math.max(4, Math.min(154, Math.round(+pow) || 40)), P = Math.max(0, (a - 4) / 150 * 100); if (type === 'staff') return { atk: Math.round(a * 0.5), mag: Math.round(a * 0.75), mp: Math.round(a * 0.4) }; if (type === 'gun' || type === 'bow') return { atk: Math.round(a * 0.95), eva: Math.round(P * 0.06), crit: Math.round(P * 0.05) }; if (type === 'knuckles') return { atk: Math.round(a * 0.95), spd: Math.round(P * 0.12) }; return { atk: a, def: Math.round(P * 0.12) }; }
+        const cswBoost = (b, up) => { const m = 1 + 0.12 * (up | 0), r = {}; for (const k of Object.keys(b)) r[k] = Math.round(b[k] * m); return r; };
         function cswGear(cls, wear) {
             try { const g = gearLoad(), S = CSW.s[cls], id = 'csw-' + cls;
                 if (!S.tpl) { if (g.own[id]) { delete g.own[id]; if (g.worn[cls] && g.worn[cls].weapon === id) delete g.worn[cls].weapon; localStorage.setItem(GEAR_KEY, JSON.stringify(g)); try { window.oasisGear.changed(); } catch (e) { /* ok */ } } return; }
-                const o = g.own[id] || { xp: 0 }; o.n = (S.title || S.name || 'My weapon').slice(0, 18); o.s = 'weapon'; o.g = 0; o.b = cswStats(S.type, S.cfg.pow); o.custom = 1; g.own[id] = o;
+                const o = g.own[id] || { xp: 0 }; o.n = (S.title || S.name || 'My weapon').slice(0, 18) + (S.cfg.up ? ' +' + S.cfg.up : ''); o.s = 'weapon'; o.g = 0; o.b = cswBoost(cswStats(S.type, S.cfg.pow), S.cfg.up); o.custom = 1; g.own[id] = o;
                 if (wear) { g.worn[cls] = g.worn[cls] || {}; g.worn[cls].weapon = id; }
                 localStorage.setItem(GEAR_KEY, JSON.stringify(g)); try { window.oasisGear.changed(); } catch (e) { /* ok */ } } catch (e) { /* storage */ }
         }
+        const cswCap = (cls) => { let lv = 1; try { lv = clsLv(cls); } catch (e) { /* levels not ready */ } return Math.max(10, Math.round(4 + 150 * Math.min(99, lv) / 99)); };
+        window.oasisGear.csw = {
+            get: (cls) => { const S = CSW.s[cls]; if (!S || !S.tpl) return null; const cap = cswCap(cls), pw = S.cfg.lock ? S.cfg.pow : Math.min(S.cfg.pow, cap); return { name: S.title || S.name || 'My weapon', type: S.type, pow: pw, cap, locked: !!S.cfg.lock, up: S.cfg.up | 0, stats: cswBoost(cswStats(S.type, pw), S.cfg.up) }; },
+            upgrade: (cls) => { const S = CSW.s[cls]; if (!S || !S.tpl || !S.cfg.lock || (S.cfg.up | 0) >= 9) return false; S.cfg.up = (S.cfg.up | 0) + 1; cswSaveMeta(); cswGear(cls, false); return true; },
+            set: (cls, o) => { const S = CSW.s[cls]; if (!S || !S.tpl || S.cfg.lock) return false; S.title = String(o.name || S.name || 'My weapon').slice(0, 18); S.cfg.pow = Math.max(4, Math.min(cswCap(cls), +o.pow || 4)); S.cfg.lock = 1; cswSaveMeta(); cswGear(cls, false); try { cswSync(); } catch (e) { /* panel closed */ } return true; }
+        };
         async function cswUse(cls, buf, name, ext, persist) {
             const tpl = await cswParse(buf, ext), S = CSW.s[cls]; S.tpl = tpl; if (persist) { try { const bx = new THREE.Box3().setFromObject(tpl), z = bx.getSize(new THREE.Vector3()), m = Math.max(z.x, z.y, z.z); S.cfg.ax = m === z.x ? '+x' : m === z.z ? '+z' : '+y'; } catch (e) { /* keep the default */ } } S.name = name.replace(/\.[^.]+$/, '').slice(0, 18); if (persist) S.title = ''; CSW.rev++;
             if (persist) await cswDb((s) => s.put({ name, ext, buf }, cls));
@@ -23136,7 +23143,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const P = document.getElementById('csw-panel'); if (!P || !P.dataset.w) return; const S = CSW.s[CSW.sel], q = (id) => document.getElementById(id);
             q('csw-cls').value = CSW.sel; q('csw-type').value = S.type; q('csw-ctl').style.display = S.tpl ? 'block' : 'none'; q('csw-ax').value = S.cfg.ax;
             for (const [id, k] of Object.entries({ 'csw-size': 'size', 'csw-grip': 'grip', 'csw-hroll': 'hroll', 'csw-hry': 'hry', 'csw-hrz': 'hrz', 'csw-btilt': 'btilt', 'csw-bh': 'bh' })) q(id).value = S.cfg[k];
-            q('csw-name').value = S.title || S.name || ''; q('csw-pow').value = S.cfg.pow; { const st = cswStats(S.type, S.cfg.pow); q('csw-stats').textContent = Object.keys(st).map((k) => k.toUpperCase() + ' +' + st[k]).join(' · ') + ' (Lv 1; grows with class XP)'; }
+            q('csw-name').value = S.title || S.name || ''; q('csw-pow').max = cswCap(CSW.sel); q('csw-pow').value = S.cfg.pow; q('csw-name').disabled = q('csw-pow').disabled = !!S.cfg.lock; { const st = cswStats(S.type, S.cfg.pow); q('csw-stats').textContent = Object.keys(st).map((k) => k.toUpperCase() + ' +' + st[k]).join(' · ') + ' (Lv 1; grows with class XP)'; }
             q('csw-st').textContent = S.tpl ? '✔ ' + S.name + ' → ' + CSW.sel : 'nothing uploaded for this class';
         }
         function cswWire() {
@@ -23146,8 +23153,8 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const q = (id) => document.getElementById(id);
             q('csw-cls').addEventListener('change', () => { CSW.sel = q('csw-cls').value; cswSync(); });
             q('csw-type').addEventListener('change', () => { CSW.s[CSW.sel].type = q('csw-type').value; cswSaveMeta(); cswSync(); });
-            q('csw-name').addEventListener('input', () => { CSW.s[CSW.sel].title = q('csw-name').value.slice(0, 18); cswSaveMeta(); });
-            q('csw-pow').addEventListener('input', () => { CSW.s[CSW.sel].cfg.pow = +q('csw-pow').value; cswSaveMeta(); cswSync(); });
+            q('csw-name').addEventListener('input', () => { if (CSW.s[CSW.sel].cfg.lock) return; CSW.s[CSW.sel].title = q('csw-name').value.slice(0, 18); cswSaveMeta(); });
+            q('csw-pow').addEventListener('input', () => { if (CSW.s[CSW.sel].cfg.lock) return; CSW.s[CSW.sel].cfg.pow = Math.min(+q('csw-pow').value, cswCap(CSW.sel)); cswSaveMeta(); cswSync(); });
             q('csw-ax').addEventListener('change', () => { CSW.s[CSW.sel].cfg.ax = q('csw-ax').value; cswSaveMeta(); });
             for (const [id, k] of Object.entries({ 'csw-size': 'size', 'csw-grip': 'grip', 'csw-hroll': 'hroll', 'csw-hry': 'hry', 'csw-hrz': 'hrz', 'csw-btilt': 'btilt', 'csw-bh': 'bh' })) q(id).addEventListener('input', () => { CSW.s[CSW.sel].cfg[k] = +q(id).value; cswSaveMeta(); });
             q('csw-file').addEventListener('change', async (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const ext = (f.name.split('.').pop() || '').toLowerCase(); if (!['glb', 'gltf', 'fbx'].includes(ext)) { sysChat('Use a .glb or .fbx weapon file.'); return; }

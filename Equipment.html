@@ -567,10 +567,26 @@ function buy(it) { if (own(it)) return; if (gilGet() < it.price) { toast('Not en
 function sell(it) { const o = own(it); if (!o) return; for (const c of CLASSES) if (SAVE.worn[c[0]][it.slot] === it.id) delete SAVE.worn[c[0]][it.slot]; delete SAVE.own[it.id]; gilAdd(Math.round(it.price * 0.4)); save(); toast('Sold for ' + fmt(it.price * 0.4) + ' Gil'); render(); }
 function equip(it) { SAVE.worn[cls][it.slot] = it.id; save(); toast(it.name + ' equipped'); render(); }
 function unequip(it) { delete SAVE.worn[cls][it.slot]; save(); render(); }
+function cswCard(L) {
+  if (slot !== 'weapon' || !P || !P.oasisGear.csw) return;
+  const c = P.oasisGear.csw.get(cls), id = 'csw-' + cls; if (!c) return;
+  const o = SAVE.own[id], w = SAVE.worn[cls].weapon === id, pr = o ? prog(o.xp) : { lv: 1, pct: 0 }, tn = { sword: 'Sword', gun: 'Gun', bow: 'Bow', staff: 'Staff', knuckles: 'Knuckles' }[c.type] || c.type;
+  const d = document.createElement('div'); d.className = 'row' + (w ? ' worn' : '');
+  const ed = c.locked ? `<span class="nm">${c.name.replace(/</g, '&lt;')}</span> <small style="color:var(--dim)">imported ${tn} · power ${c.pow} (locked)</small>${up ? ` <b style="color:#ffd34d">+${up}</b>` : ''}` : `<input class="q" id="cw-n" maxlength="18" value="${c.name.replace(/"/g, '&quot;')}" style="width:130px"> <small style="color:var(--dim)">imported ${tn} · power (max ${c.cap} at your level)</small> <input id="cw-p" type="number" min="4" max="${c.cap}" value="${c.pow}" style="width:56px">`;
+  d.innerHTML = `<span class="g g9" style="background:#6a4">MY</span><div>${ed} <span class="lv">Lv ${pr.lv}</span><div class="chips">${chips(o ? o.b : c.stats, mult(pr.lv))}</div><div class="bar"><u style="width:${pr.pct}%"></u></div>${c.locked ? '' : '<small style="color:var(--dim)">Name and power can be set only once. Power is capped to your class level.</small>'}</div><div class="act"></div>`;
+  const a = d.querySelector('.act'), mk = (t, cl, fn) => { const b = document.createElement('button'); b.className = 'btn ' + cl; b.textContent = t; b.onclick = fn; a.appendChild(b); a.appendChild(document.createTextNode(' ')); };
+  const up = c.up | 0, nx = up + 1, need = nx * 10, cost = 1500 * nx * nx;
+  if (c.locked) { if (up >= 9) mk('Max +9', 'r', () => {}); else mk('Upgrade +' + nx + ' · ' + fmt(cost) + ' Gil · needs Lv ' + need, 'g2', () => { if (pr.lv < need) { toast('Needs gear Lv ' + need + ' (use this weapon to level it).'); return; } if (gilGet() < cost) { toast('Not enough Gil.'); return; } if (!P.oasisGear.csw.upgrade(cls)) return; gilAdd(-cost); load(); toast('Upgraded to +' + nx); render(); }); }
+  if (!c.locked) mk('Set (once)', 'g2', () => { if (!confirm('Lock this name and power? You can only set them once.')) return; P.oasisGear.csw.set(cls, { name: d.querySelector('#cw-n').value, pow: d.querySelector('#cw-p').value }); load(); render(); });
+  else if (w) mk('Unequip', 'r', () => { delete SAVE.worn[cls].weapon; save(); render(); });
+  else mk('Equip', 'g2', () => { if (!SAVE.own[id]) return; SAVE.worn[cls].weapon = id; save(); render(); });
+  L.appendChild(d);
+}
 function list() {
   const L = $('list'); L.innerHTML = '';
+  cswCard(L);
   const items = ITEMS.filter((it) => it.slot === slot && (!game || it.g === game) && fits(it) && (!q || it.name.toLowerCase().includes(q))).sort((a, b) => a.price - b.price);
-  if (!items.length) L.innerHTML = '<div class="note">Nothing here for this class, slot and game.</div>';
+  if (!items.length && !L.children.length) L.innerHTML = '<div class="note">Nothing here for this class, slot and game.</div>';
   for (const it of items) {
     const o = own(it), w = o && worn(it), pr = o ? prog(o.xp) : null, d = document.createElement('div'); d.className = 'row' + (w ? ' worn' : '');
     d.innerHTML = `<span class="g g${it.g}">${it.g === 7 ? 'VII' : it.g === 8 ? 'VIII' : 'IX'}</span><div><span class="nm">${it.name}</span> ${o ? `<span class="lv">Lv ${pr.lv}</span>` : ''}${it.note ? ` <small style="color:var(--dim)">${it.note}</small>` : ''}<div class="chips">${chips(it.b, o ? mult(pr.lv) : 1)}</div>${o ? `<div class="bar"><u style="width:${pr.pct}%"></u></div>` : ''}</div><div class="act"></div>`;
