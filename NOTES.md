@@ -98,3 +98,25 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 - Social > Friends (`FR` module, window.__fr). Permanent player id `PID` (localStorage oasis.pid, in CS_KEYS so it follows the login) is sent in hello. Add friend button on profile card; request/accept via net msgs frq/fra; list in oasis.friends.
 - Online/offline: save Worker `/ping` + `/seen` with a `presence` table (run the new CREATE TABLE line, re-paste worker.js). "Appear offline" toggle.
 - Tested with a fake peer + mocked server only.
+
+## Windows app
+- `desktop/` = Electron wrapper (main.js serves the game from oasis://game/, fixed origin so saves stay). Built with @electron/packager (electron 33, win32 x64) from a copy of this folder placed in app/game. Output zip: Oasis-Windows.zip. Unsigned (SmartScreen warning). Needs internet (CDN libs + multiplayer).
+
+## This session (Oct 15 night)
+- Stick click (L3) in open-world maps draws / puts away weapon (clsStowToggle; holster in oasisHolster). L1+L3 / RB still reach other pad actions.
+- Warriors of Light: no item icons in top bar; icons shown next to found items and a Bag line on the VICTORY screen.
+- Warriors of Light: wait mode (no auto-defend for humans), allies keep charging, Y / Triangle (btSwapTurn) hands the turn to a ready human ally who then goes first; you stay ready.
+- Ship step 1: Home > Your Ship (or /ship) boards a private ship interior (map ship, code prefix H); hatch (Y) returns to the dock room. Helm = world map, NEXT STEP (step 2), landing pads = step 3.
+
+## Warriors of Light jobs + own weapons (Oct 2026)
+- **Jobs** (lobby "Job" button, saved as `oasis.btjob`): Knight, Dragoon, Thief, Black Mage, White Mage, Summoner. Tables: `BT_JOBS` (stat multipliers, command name, limit, spell filter), `BT_ARTS` (job commands incl. Steal/Mug, Summons), new `BT_LIMITS` entries. Command kind `art` is handled in `btHandle`/`btArtEv`; events reuse atk/mag kinds so every client animates them with no new code. Job syncs via join msg, `job` msg and snapshot tuple idx 14. Job-specific animations still to come (default ones for now). "Classic" = the old class-based battle.
+- **Own weapons**: Settings > class card > "Your own weapons". Pick class (Hero/Gunner/Fighter) + type (sword/gun/bow/staff/knuckles), upload .glb/.fbx. Stored in IndexedDB `oasis-csw` (files) + `oasis.csw2` (type/sliders, cloud-saved). `cswDress` attaches by type (bow left hand, knuckles both, others right; put-away: back, or hip for guns). Hero uses it via sword style "My weapon" (CLS.skin 99); Fighter whenever uploaded; Gunner replaces the gun model in `hcGunDress`. Local only: others see stock looks (skin 99 is sent as 0). Auto-picks the longest model axis as the tip; sliders fix the rest.
+- Not yet verified on a real VRM avatar (headless has none): hand/put-away offsets are best guesses, tune with sliders.
+
+## Sign-in gate (Oct 2026)
+- After the splash: Log in / Sign up (`acGate`, shown while `acGateOn()`; tiny "Play without an account" link = guest for the session). Sign up -> joins your Harbor Studio, opens "Create your character". Log in -> `acLand()`: your studio, or the public open-world room you last left (`oasis.lastroom`, written in `joinRoom`, cloud-synced). Never an invite/other player's room when signed in (invite links only work for guests). `psHomeLoft` is now in the cloud save so your studio follows your account. Test bypass: localStorage `oasis.nogate`=1.
+
+## Masaki House (Tenchi Muyo) — custom room
+- Map `masaki` (room code prefix N). Built lazily by `ensureMasaki()`; `MK_OWNERS=['kasumex']` controls who sees it under Lobby → Custom Rooms (`renderCustomRooms`). Others can only enter with the code. Open to all: change `MK_OWNERS` check in `mkAcct`.
+- Two-storey house, veranda, pond, shrine hill with lantern path. Stairs ramp + upper floor in `masakiGround`; collisions in `masakiCollide`.
+- Roof + veranda skirt roofs (`MK.roofParts`) hide while you are inside the house footprint and camera max distance drops to 5 (`masakiUpdate`).
