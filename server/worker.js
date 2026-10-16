@@ -15,6 +15,20 @@ export default {
     const url = new URL(req.url);
     if (req.method !== 'POST') return json({ ok: true, name: 'oasis-save' });
     let b; try { b = await req.json(); } catch (e) { return json({ error: 'Bad request.' }, 400); }
+    // ---- friends: "last seen" presence. No login needed; it only stores a random player id and a time. ----
+    if (url.pathname === '/ping' || url.pathname === '/seen') {
+      const PID = /^[a-f0-9]{16,32}$/;
+      if (url.pathname === '/ping') {
+        const pid = String(b.pid || ''); if (!PID.test(pid)) return json({ error: 'Bad request.' }, 400);
+        await env.DB.prepare('INSERT INTO presence (pid, t) VALUES (?, ?) ON CONFLICT(pid) DO UPDATE SET t = excluded.t').bind(pid, Date.now()).run();
+        if (Math.random() < 0.01) await env.DB.prepare('DELETE FROM presence WHERE t < ?').bind(Date.now() - 30 * 86400000).run();
+        return json({ ok: true });
+      }
+      const pids = (Array.isArray(b.pids) ? b.pids : []).map(String).filter((x) => PID.test(x)).slice(0, 100);
+      if (!pids.length) return json({ t: {} });
+      const rows = await env.DB.prepare('SELECT pid, t FROM presence WHERE pid IN (' + pids.map(() => '?').join(',') + ')').bind(...pids).all();
+      const t = {}; for (const r of rows.results || []) t[r.pid] = r.t; return json({ t });
+    }
     const id = String(b.id || ''), auth = String(b.auth || '');
     if (!HEX64.test(id) || !HEX64.test(auth)) return json({ error: 'Bad request.' }, 400);
     const a = await sha256hex('oasis-auth|' + auth), now = Date.now(), DB = env.DB;

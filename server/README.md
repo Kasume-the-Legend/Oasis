@@ -7,6 +7,7 @@ Free-tier friendly. One-time setup, about 10 minutes, all in the Cloudflare dash
 
        CREATE TABLE IF NOT EXISTS saves (id TEXT PRIMARY KEY, a TEXT NOT NULL, t INTEGER NOT NULL, blob TEXT NOT NULL);
        CREATE TABLE IF NOT EXISTS fails (id TEXT PRIMARY KEY, n INTEGER NOT NULL, t INTEGER NOT NULL);
+       CREATE TABLE IF NOT EXISTS presence (pid TEXT PRIMARY KEY, t INTEGER NOT NULL);
 
 2. **Create the Worker.** Workers & Pages -> Create -> Create Worker -> name it `oasis-save` -> Deploy -> Edit code.
    Delete the sample, paste all of `worker.js`, Deploy.

@@ -93,3 +93,8 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 - Tested against a mock server only (create, sign in, duplicate, resave, fresh-device load). Not yet tested on a real Worker.
 
 - One-time welcome (`acWelcome`): after the splash, if a server address is set and no login yet, offers Create login with this save / Sign in / Not now (new players: Create / Sign in / Play as guest). Flag `oasis.acprompt`.
+
+## Friends
+- Social > Friends (`FR` module, window.__fr). Permanent player id `PID` (localStorage oasis.pid, in CS_KEYS so it follows the login) is sent in hello. Add friend button on profile card; request/accept via net msgs frq/fra; list in oasis.friends.
+- Online/offline: save Worker `/ping` + `/seen` with a `presence` table (run the new CREATE TABLE line, re-paste worker.js). "Appear offline" toggle.
+- Tested with a fake peer + mocked server only.
