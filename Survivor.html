@@ -2075,12 +2075,20 @@ function coEnsureRP() {
 const AVX = { chunk: 12000, max: 26 * 1048576 };
 const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 const COQ = { q: [], iv: 0, peer: null };
-function coQueue(k, u8, extra) { COQ.q.push({ k, u8, extra: extra || {}, n: Math.ceil(u8.length / AVX.chunk), i: 0, sent: false }); if (!COQ.iv) COQ.iv = setInterval(coPump, 14); }
+const avHash = (u8) => { let h = 0; const st = Math.max(1, Math.floor(u8.length / 97)); for (let i = 0; i < u8.length; i += st) h = (h * 31 + u8[i]) % 65521; return u8.length + ':' + h; };
+async function gz(u8) { try { if (typeof CompressionStream === 'undefined') return null; return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); } catch (e) { return null; } }
+async function gunz(u8) { return await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); }
+function coQueue(k, u8, extra) { COQ.q.push({ k, u8, extra: extra || {}, n: Math.ceil(u8.length / AVX.chunk), i: 0, ack: 0, hdr: false, go: false, t: performance.now() }); if (!COQ.iv) COQ.iv = setInterval(coPump, 20); }
 function coPump() {
-    if (!CO.on || !CO.peer || COQ.peer !== CO.peer) { COQ.q.length = 0; clearInterval(COQ.iv); COQ.iv = 0; return; }
-    for (let b = 0; b < 1 && COQ.q.length; b++) { const it = COQ.q[0]; if (!it.sent) { it.sent = true; coSend(Object.assign({ t: 'avh', k: it.k, n: it.n, size: it.u8.length }, it.extra)); continue; } coSend({ t: 'avc', k: it.k, i: it.i, d: b64(it.u8.subarray(it.i * AVX.chunk, (it.i + 1) * AVX.chunk)) }); it.i++; if (it.i >= it.n) COQ.q.shift(); }
-    if (!COQ.q.length) { clearInterval(COQ.iv); COQ.iv = 0; }
+    if (!CO.on || !CO.peer || COQ.peer !== CO.peer || !COQ.q.length) { COQ.q.length = 0; clearInterval(COQ.iv); COQ.iv = 0; return; }
+    const it = COQ.q[0], now = performance.now();
+    if (now - it.t > 20000) { COQ.q.shift(); return; }      // the other side is not answering (older version): give up quietly instead of flooding the link
+    if (!it.hdr) { it.hdr = true; coSend(Object.assign({ t: 'avh', k: it.k, n: it.n, size: it.u8.length, h: avHash(it.u8) }, it.extra)); return; }
+    if (!it.go) return;
+    while (it.i < it.n && it.i - it.ack < 5) { coSend({ t: 'avc', k: it.k, i: it.i, d: b64(it.u8.subarray(it.i * AVX.chunk, (it.i + 1) * AVX.chunk)) }); it.i++; }
+    if (it.ack >= it.n) COQ.q.shift();
 }
+function coAvAck(m) { const it = COQ.q.find((q) => q.k === m.k); if (!it) return; it.t = performance.now(); if (m.have) { COQ.q.splice(COQ.q.indexOf(it), 1); return; } if (m.i === -1) it.go = true; else it.ack = Math.max(it.ack, (m.i | 0) + 1); }
 async function avLite(buf) {   // the partner only needs the look: re-pack the GLB with 512 px textures so it travels in a few seconds
     try {
         const dv = new DataView(buf); if (dv.getUint32(0, true) !== 0x46546C67) return buf; let off = 12, json = null, bin = null;
@@ -2105,8 +2113,8 @@ async function avLite(buf) {   // the partner only needs the look: re-pack the G
     } catch (e) { console.warn('avatar repack', e); return buf; }
 }
 async function coSendAvatar() {
-    if (!CO.on || !CO.peer || !AV.raw || CO.avFor === CO.peer) return; CO.avFor = CO.peer; const to = CO.peer; const u8 = new Uint8Array(await avLite(AV.raw)); if (CO.peer !== to) return; if (u8.length > AVX.max) { CO.avFor = null; return; } COQ.peer = CO.peer;
-    coQueue('av', u8, { name: String(AV.name || 'Character').slice(0, 24), g: AV.gender === 'female' ? 'female' : 'male' });
+    if (!CO.on || !CO.peer || !AV.raw || CO.avFor === CO.peer) return; CO.avFor = CO.peer; const to = CO.peer; let u8 = new Uint8Array(await avLite(AV.raw)), z = 0; { const g = await gz(u8); if (g && g.length < u8.length) { u8 = g; z = 1; } } if (CO.peer !== to) return; if (u8.length > AVX.max) { CO.avFor = null; return; } COQ.peer = CO.peer;
+    coQueue('av', u8, { z, name: String(AV.name || 'Character').slice(0, 24), g: AV.gender === 'female' ? 'female' : 'male' });
 }
 // the host's music and menu sounds play for the guest too: YouTube links go as text, uploaded files in chunks
 async function coSendMusic() {
@@ -2114,17 +2122,25 @@ async function coSendMusic() {
     coSend({ t: 'mus', yt: MUS.yt, hu: USLOTS.map((u) => u[0]) }); let tot = 0;
     for (const [pre, list] of [['m', MSLOTS], ['u', USLOTS]]) for (const [k] of list) { try { const b = await idbGet(pre + '_' + k); if (CO.peer !== to) return; if (b && b.size <= 16 * 1048576 && tot + b.size <= 44 * 1048576) { tot += b.size; coQueue(pre + ':' + k, new Uint8Array(await b.arrayBuffer()), { type: String(b.type || 'audio/mpeg').slice(0, 40) }); } } catch (e) { /* no file */ } }
 }
-window.__svco = { CO, avLite: (b) => avLite(b), rpLoadVRM: (b, g) => rpLoadVRM(b, g), coAvIn, rpAnim: (d) => rpAnim(d) };   // (tests)
+window.__svco = { coMsg, coQueue, COQ, gz, avHash, CO, avLite: (b) => avLite(b), rpLoadVRM: (b, g) => rpLoadVRM(b, g), coAvIn, rpAnim: (d) => rpAnim(d) };   // (tests)
 function coHostMus() { MUS.cur = null; musStop(); }
-function coAvIn(m) {
+async function coAvDone(k, A, buf) {
+    if (k === 'av') {
+        try { if (CO.peerPid && A.h) idbPut('pav_' + CO.peerPid, { h: A.h, z: A.z, g: A.g, buf: buf.buffer }); } catch (e) { /* no cache */ }
+        try { await rpLoadVRM(A.z ? await gunz(buf) : buf.buffer, A.g); say('Your partner\'s character is ready.', 2200); } catch (e) { console.warn('partner avatar', e); say('Could not load your partner\'s character.', 3000); }
+    } else if (CO.role === 'guest') { CO.hm = CO.hm || { files: {}, yt: {} }; const slot = k.slice(2); if (k[0] === 'm') { CO.hm.files[slot] = { url: URL.createObjectURL(new Blob([buf], { type: A.type })) }; coHostMus(); } else if (AU.ctx) { AU.ctx.decodeAudioData(buf.buffer.slice(0)).then((d) => { CO.hu = CO.hu || {}; CO.hu[slot] = d; }).catch(() => { /* bad file */ }); } }
+}
+async function coAvIn(m) {
     const k = String(m.k || 'av'); CO.avIn = CO.avIn || {};
-    if (m.t === 'avh') { const n = +m.n | 0, size = +m.size | 0; if (n < 1 || n > 4000 || size < 1 || size > AVX.max || !/^(av|m:[a-z_]{1,12}|u:[a-z_]{1,12})$/.test(k)) { delete CO.avIn[k]; return; } if (k === 'av') say('Loading your partner\'s character...', 3500); CO.avIn[k] = { n, size, got: 0, parts: new Array(n), g: m.g === 'female' ? 'female' : 'male', type: /^audio\/[\w.+-]{1,30}$/.test(m.type || '') ? m.type : 'audio/mpeg' }; return; }
-    const A = CO.avIn[k]; if (!A) return; const i = +m.i | 0; if (i < 0 || i >= A.n || A.parts[i] || typeof m.d !== 'string' || m.d.length > 20000) return;
-    try { A.parts[i] = Uint8Array.from(atob(m.d), (c) => c.charCodeAt(0)); } catch (e) { return; } A.got++;
-    if (A.got === A.n) { const buf = new Uint8Array(A.size); let o = 0; for (const p of A.parts) { if (o + p.length > A.size) { delete CO.avIn[k]; return; } buf.set(p, o); o += p.length; } delete CO.avIn[k];
-        if (k === 'av') rpLoadVRM(buf.buffer, A.g).then(() => say('Your partner\'s character is ready.', 2200)).catch((e) => { console.warn('partner avatar', e); say('Could not load your partner\'s character.', 3000); });
-        else if (CO.role === 'guest') { CO.hm = CO.hm || { files: {}, yt: {} }; const slot = k.slice(2); if (k[0] === 'm') { CO.hm.files[slot] = { url: URL.createObjectURL(new Blob([buf], { type: A.type })) }; coHostMus(); } else if (AU.ctx) { AU.ctx.decodeAudioData(buf.buffer.slice(0)).then((d) => { CO.hu = CO.hu || {}; CO.hu[slot] = d; }).catch(() => { /* bad file */ }); } }
+    if (m.t === 'avh') {
+        const n = +m.n | 0, size = +m.size | 0; if (n < 1 || n > 4000 || size < 1 || size > AVX.max || !/^(av|m:[a-z_]{1,12}|u:[a-z_]{1,12})$/.test(k)) { delete CO.avIn[k]; return; }
+        const A = { n, size, got: 0, parts: new Array(n), g: m.g === 'female' ? 'female' : 'male', z: m.z ? 1 : 0, h: String(m.h || '').slice(0, 24), type: /^audio\/[\w.+-]{1,30}$/.test(m.type || '') ? m.type : 'audio/mpeg' };
+        if (k === 'av' && CO.peerPid && A.h) { try { const c = await idbGet('pav_' + CO.peerPid); if (c && c.h === A.h && c.buf) { coSend({ t: 'avk', k, have: 1 }); say('Your partner\'s character is ready.', 2200); rpLoadVRM(c.z ? await gunz(new Uint8Array(c.buf)) : c.buf, c.g).catch((e) => console.warn('cached avatar', e)); return; } } catch (e) { /* not cached */ } }
+        if (k === 'av') say('Loading your partner\'s character...', 3500); CO.avIn[k] = A; coSend({ t: 'avk', k, i: -1 }); return;
     }
+    const A = CO.avIn[k]; if (!A) return; const i = +m.i | 0; if (i < 0 || i >= A.n || A.parts[i] || typeof m.d !== 'string' || m.d.length > 20000) return;
+    try { A.parts[i] = Uint8Array.from(atob(m.d), (c) => c.charCodeAt(0)); } catch (e) { return; } A.got++; coSend({ t: 'avk', k, i });
+    if (A.got === A.n) { const buf = new Uint8Array(A.size); let o = 0; for (const p of A.parts) { if (o + p.length > A.size) { delete CO.avIn[k]; return; } buf.set(p, o); o += p.length; } delete CO.avIn[k]; coAvDone(k, A, buf); }
 }
 async function rpLoadVRM(buffer, gender) {
     const [{ GLTFLoader }, VM] = await Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('@pixiv/three-vrm')]);
@@ -2220,6 +2236,7 @@ function coMsg(id, m) {
     switch (m.t) {
         case 'welcome': CO.peerPid = String(m.pid || ''); coRefresh(); setTimeout(() => { coSendAvatar(); coSendMusic(); }, 600); break;
         case 'avh': case 'avc': coAvIn(m); break;
+        case 'avk': coAvAck(m); break;
         case 'mus': if (CO.role === 'guest') { const yt = {}; if (m.yt && typeof m.yt === 'object') for (const k of ['title', 'explore', 'safe', 'boss']) { const y = m.yt[k]; if (y && (/^[\w-]{11}$/.test(y.v || '') || /^[\w-]{10,60}$/.test(y.l || ''))) yt[k] = { v: /^[\w-]{11}$/.test(y.v || '') ? y.v : null, l: /^[\w-]{10,60}$/.test(y.l || '') ? y.l : null }; } CO.hm = CO.hm || { files: {}, yt: {} }; CO.hm.yt = yt; CO.hu = CO.hu || {}; coHostMus(); } break;
         case 'bagreq': coSend({ t: 'bag', bag: coBag() }); break;
         case 'bag': if (CO.role === 'host') { CO.bags = CO.bags || {}; if (CO.peerPid) CO.bags[CO.peerPid] = m.bag; if (CO.bagCb) { const cb = CO.bagCb; CO.bagCb = null; cb(m.bag); } } break;
