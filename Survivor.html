@@ -260,7 +260,7 @@ const SFX = {
     die() { voice(180, 1.6, 0.25, 600, 1300, 0, 4, 0.5); tone(140, 1.8, 'sawtooth', 0.12, 28, 0, null, 0.4); burst(1.2, 900, 0.2, '~lowpass', 0.1, 0, 120, 0.5); },
 };
 const UIKEY = { move: 'ui_move', ok: 'ui_ok', back: 'ui_ok', pickup: 'ui_pick', save: 'ui_save', type: 'ui_save' };
-function sfx(n, a, b, c) { try { if (!AU.ctx) return; const k = UIKEY[n]; if (k && AU.buf[k]) { const s = AU.ctx.createBufferSource(); s.buffer = AU.buf[k]; s.connect(AU.out); s.start(); return; } if (SFX[n]) SFX[n](a, b, c); } catch (e) { /* audio */ } }
+function sfx(n, a, b, c) { try { if (!AU.ctx) return; const k = UIKEY[n], hb = CO.role === 'guest' && CO.on && CO.peer && CO.hu, bf = hb ? hb[k] : AU.buf[k]; if (k && bf) { const s = AU.ctx.createBufferSource(); s.buffer = bf; s.connect(AU.out); s.start(); return; } if (SFX[n]) SFX[n](a, b, c); } catch (e) { /* audio */ } }
 /* custom audio kept in IndexedDB so uploads survive between sessions */
 const IDB = { db: null };
 function idb() { return IDB.p || (IDB.p = new Promise((res, rej) => { const q = indexedDB.open('oasis-sv', 1); q.onupgradeneeded = () => q.result.createObjectStore('a'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })); }
@@ -287,7 +287,7 @@ function musStop() {
 }
 function musPlay(slot) {
     if (MUS.cur === slot && (MUS.el || MUS.yf || MUS.syn)) return; musStop(); MUS.cur = slot; if (!slot) return;
-    const f = MUS.files[slot], y = MUS.yt[slot];
+    const H = CO.role === 'guest' && CO.on && CO.peer && CO.hm, f = H ? H.files[slot] : MUS.files[slot], y = H ? (H.yt && H.yt[slot]) : MUS.yt[slot];
     if (f) { try { const el = new Audio(f.url); el.loop = true; el.volume = clamp(OPT.vol, 0, 1); MUS.el = el; const p = el.play(); if (p && p.catch) p.catch(() => { /* needs a tap */ }); return; } catch (e) { /* synth */ } }
     if (y) {
         try {
@@ -1917,7 +1917,7 @@ async function avBoot() {
     try {
         if (src === 'upload') { const r = await idbGet('avatar'); if (r) { buf = await r.arrayBuffer(); name = r.name || 'Uploaded VRM'; } }
         if (!buf && src !== 'none') { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); if (pa && pa.buffer) { buf = new Uint8Array(pa.buffer).slice().buffer; name = pa.name || 'Your Oasis character'; AV.src = 'oasis'; AV.gender = pa.gender === 'female' ? 'female' : 'male'; } }
-        if (buf) { await avLoad(buf, name); AV.err = ''; } else AV.err = src === 'none' ? '' : 'No character found. Equip a VRoid in the Oasis, or upload a .vrm in Options.';
+        if (buf) { AV.raw = buf; await avLoad(buf, name); AV.err = ''; try { coSendAvatar(); coSendMusic(); } catch (e) { /* no link */ } } else AV.err = src === 'none' ? '' : 'No character found. Equip a VRoid in the Oasis, or upload a .vrm in Options.';
     } catch (e) { AV.err = 'Could not load the character: ' + (e && e.message || e); console.warn('avatar', e); AV.on = false; }
     return AV.on;
 }
@@ -2069,8 +2069,60 @@ function coEnsureRP() {
     if (CO.rp) return CO.rp; const h = makePlayer({ shirt: 0x8a2f2f, sleeve: 0x8a2f2f, pants: 0x2f3a4a, hair: 0xc8a050 }); h.root.visible = false; scene.add(h.root);
     CO.rp = { g: h.root, P: h.P, W: h.W, x: 0, z: 0, rot: 0, tx: 0, tz: 0, tr: 0, state: 'idle', aim: false, eq: 'pistol', hp: 100, speed: 0, walk: 0, cur: false }; return CO.rp;
 }
+/* ---- the partner's own VRM: sent once over the link in chunks, then shown instead of the blocky stand-in */
+const AVX = { chunk: 12000, max: 26 * 1048576 };
+const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const COQ = { q: [], iv: 0, peer: null };
+function coQueue(k, u8, extra) { COQ.q.push({ k, u8, extra: extra || {}, n: Math.ceil(u8.length / AVX.chunk), i: 0, sent: false }); if (!COQ.iv) COQ.iv = setInterval(coPump, 14); }
+function coPump() {
+    if (!CO.on || !CO.peer || COQ.peer !== CO.peer) { COQ.q.length = 0; clearInterval(COQ.iv); COQ.iv = 0; return; }
+    for (let b = 0; b < 3 && COQ.q.length; b++) { const it = COQ.q[0]; if (!it.sent) { it.sent = true; coSend(Object.assign({ t: 'avh', k: it.k, n: it.n, size: it.u8.length }, it.extra)); continue; } coSend({ t: 'avc', k: it.k, i: it.i, d: b64(it.u8.subarray(it.i * AVX.chunk, (it.i + 1) * AVX.chunk)) }); it.i++; if (it.i >= it.n) COQ.q.shift(); }
+    if (!COQ.q.length) { clearInterval(COQ.iv); COQ.iv = 0; }
+}
+function coSendAvatar() {
+    if (!CO.on || !CO.peer || !AV.raw || CO.avFor === CO.peer) return; const u8 = new Uint8Array(AV.raw); if (u8.length > AVX.max) return; CO.avFor = CO.peer; COQ.peer = CO.peer;
+    coQueue('av', u8, { name: String(AV.name || 'Character').slice(0, 24), g: AV.gender === 'female' ? 'female' : 'male' });
+}
+// the host's music and menu sounds play for the guest too: YouTube links go as text, uploaded files in chunks
+async function coSendMusic() {
+    if (!CO.on || !CO.peer || CO.role !== 'host' || CO.msFor === CO.peer) return; CO.msFor = CO.peer; COQ.peer = CO.peer; const to = CO.peer;
+    coSend({ t: 'mus', yt: MUS.yt, hu: USLOTS.map((u) => u[0]) }); let tot = 0;
+    for (const [pre, list] of [['m', MSLOTS], ['u', USLOTS]]) for (const [k] of list) { try { const b = await idbGet(pre + '_' + k); if (CO.peer !== to) return; if (b && b.size <= 16 * 1048576 && tot + b.size <= 44 * 1048576) { tot += b.size; coQueue(pre + ':' + k, new Uint8Array(await b.arrayBuffer()), { type: String(b.type || 'audio/mpeg').slice(0, 40) }); } } catch (e) { /* no file */ } }
+}
+window.__svco = { CO, rpLoadVRM: (b, g) => rpLoadVRM(b, g), coAvIn, rpAnim: (d) => rpAnim(d) };   // (tests)
+function coHostMus() { MUS.cur = null; musStop(); }
+function coAvIn(m) {
+    const k = String(m.k || 'av'); CO.avIn = CO.avIn || {};
+    if (m.t === 'avh') { const n = +m.n | 0, size = +m.size | 0; if (n < 1 || n > 4000 || size < 1 || size > AVX.max || !/^(av|m:[a-z_]{1,12}|u:[a-z_]{1,12})$/.test(k)) { delete CO.avIn[k]; return; } CO.avIn[k] = { n, size, got: 0, parts: new Array(n), g: m.g === 'female' ? 'female' : 'male', type: /^audio\/[\w.+-]{1,30}$/.test(m.type || '') ? m.type : 'audio/mpeg' }; return; }
+    const A = CO.avIn[k]; if (!A) return; const i = +m.i | 0; if (i < 0 || i >= A.n || A.parts[i] || typeof m.d !== 'string' || m.d.length > 20000) return;
+    try { A.parts[i] = Uint8Array.from(atob(m.d), (c) => c.charCodeAt(0)); } catch (e) { return; } A.got++;
+    if (A.got === A.n) { const buf = new Uint8Array(A.size); let o = 0; for (const p of A.parts) { if (o + p.length > A.size) { delete CO.avIn[k]; return; } buf.set(p, o); o += p.length; } delete CO.avIn[k];
+        if (k === 'av') rpLoadVRM(buf.buffer, A.g).catch((e) => console.warn('partner avatar', e));
+        else if (CO.role === 'guest') { CO.hm = CO.hm || { files: {}, yt: {} }; const slot = k.slice(2); if (k[0] === 'm') { CO.hm.files[slot] = { url: URL.createObjectURL(new Blob([buf], { type: A.type })) }; coHostMus(); } else if (AU.ctx) { AU.ctx.decodeAudioData(buf.buffer.slice(0)).then((d) => { CO.hu = CO.hu || {}; CO.hu[slot] = d; }).catch(() => { /* bad file */ }); } }
+    }
+}
+async function rpLoadVRM(buffer, gender) {
+    const [{ GLTFLoader }, VM] = await Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('@pixiv/three-vrm')]);
+    const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p)); ld.register((p) => { p.textureLoader = new THREE.TextureLoader(p.options.manager); return { name: 'sv-tex' }; });
+    const gl = await ld.parseAsync(buffer.slice(0), ''); const vrm = gl.userData.vrm; if (!vrm) throw new Error('not a VRM file'); try { VM.VRMUtils.rotateVRM0(vrm); } catch (e) { /* vrm1 */ }
+    vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
+    const N = {}; for (const n of ['hips', 'spine', 'chest', 'head', 'leftUpperArm', 'leftLowerArm', 'rightUpperArm', 'rightLowerArm', 'leftUpperLeg', 'leftLowerLeg', 'rightUpperLeg', 'rightLowerLeg']) N[n] = vrm.humanoid.getNormalizedBoneNode(n);
+    if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
+    vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), sc = 1.68 / h; const grp = new THREE.Group(); grp.add(vrm.scene); grp.scale.setScalar(sc); grp.position.y = -bb.min.y * sc;
+    const r = coEnsureRP(); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
+}
+function rpVrmPose(dt) {
+    const r = CO.rp, N = r.N, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, ch = new THREE.Euler(), set = (n, x, y, z) => { if (n) n.quaternion.setFromEuler(ch.set(x, y, z, 'YXZ')); };
+    set(N.leftUpperLeg, s * 0.6 * a, 0, 0); set(N.rightUpperLeg, -s * 0.6 * a, 0, 0); set(N.leftLowerLeg, Math.max(0, -s) * 0.7 * a, 0, 0); set(N.rightLowerLeg, Math.max(0, s) * 0.7 * a, 0, 0);
+    const gun = r.eq === 'pistol', aim = r.aim && r.state !== 'dead';
+    if (aim && gun) { set(N.rightUpperArm, 0, 1.45, 0); set(N.leftUpperArm, 0, -1.3, 0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0.2, 0); }
+    else if (aim) { set(N.rightUpperArm, -0.2, 1.2, 0.2); set(N.leftUpperArm, 0, -0.5, -1.0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0, 0); }
+    else { set(N.rightUpperArm, -s * 0.5 * a, 0, 1.2); set(N.leftUpperArm, s * 0.5 * a, 0, -1.2); set(N.rightLowerArm, 0, 0, 0.1); set(N.leftLowerArm, 0, 0, -0.1); }
+    r.bt -= dt; const em = r.vrm.expressionManager; if (em) { if (r.bt < 0) { r.bt = 2.2 + Math.random() * 3; r.bl = 0.14; } r.bl = Math.max(0, (r.bl || 0) - dt); em.setValue('blink', r.bl > 0 ? Math.sin(r.bl / 0.14 * Math.PI) : 0); }
+    r.vrm.update(dt);
+}
 function rpAnim(dt) {
-    const r = CO.rp, P = r.P, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, gun = r.eq === 'pistol'; P.legL.rotation.x = s * 0.6 * a; P.legR.rotation.x = -s * 0.6 * a; P.armL.rotation.set(-s * 0.5 * a, 0, 0); P.armR.rotation.set(s * 0.5 * a, 0, 0);
+    const r = CO.rp; if (r.vrm) { r.g.rotation.x = r.state === 'dead' ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' ? 0.15 : 0; rpVrmPose(dt); return; } const P = r.P, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, gun = r.eq === 'pistol'; P.legL.rotation.x = s * 0.6 * a; P.legR.rotation.x = -s * 0.6 * a; P.armL.rotation.set(-s * 0.5 * a, 0, 0); P.armR.rotation.set(s * 0.5 * a, 0, 0);
     if (gun) { if (r.aim) { P.armR.rotation.set(-1.5, 0, 0); P.armL.rotation.set(-1.4, 0, 0.28); } else P.armR.rotation.set(-0.35 + s * 0.2 * a, 0, 0); } else if (r.aim) { P.armR.rotation.set(-1.2, 0, 0); P.armL.rotation.set(-1.1, 0, 0.2); }
     for (const k in r.W) r.W[k].visible = (k === 'pistol' ? r.eq === 'pistol' : k === 'blade' ? r.eq === 'blade' : r.eq === 'gloves');
     r.g.rotation.x = r.state === 'dead' ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' ? 0.15 : 0;
@@ -2088,10 +2140,12 @@ function coTick(dt) {
 /* ---- messages */
 function coMsg(id, m) {
     if (!m || typeof m !== 'object') return; CO.lastRx = performance.now(); CO.warned = 0;
-    if (m.t === 'hello') { if (CO.peer && CO.peer !== id) { CO.tr.send(id, { t: 'full' }); return; } CO.peer = id; CO.peerPid = String(m.pid || ''); CO.on = true; coEnsureRP(); CO.state = 'connected'; CO.tr.send(id, { t: 'welcome', pid: PID }); if (G.started) { coSendStart(); say('Player 2 joined.', 2200); } coRefresh(); return; }
+    if (m.t === 'hello') { if (CO.peer && CO.peer !== id) { CO.tr.send(id, { t: 'full' }); return; } CO.peer = id; CO.peerPid = String(m.pid || ''); CO.on = true; coEnsureRP(); CO.state = 'connected'; CO.tr.send(id, { t: 'welcome', pid: PID }); setTimeout(() => { coSendAvatar(); coSendMusic(); }, 600); if (G.started) { coSendStart(); say('Player 2 joined.', 2200); } coRefresh(); return; }
     if (id !== CO.peer && m.t !== 'full') return;
     switch (m.t) {
-        case 'welcome': CO.peerPid = String(m.pid || ''); coRefresh(); break;
+        case 'welcome': CO.peerPid = String(m.pid || ''); coRefresh(); setTimeout(() => { coSendAvatar(); coSendMusic(); }, 600); break;
+        case 'avh': case 'avc': coAvIn(m); break;
+        case 'mus': if (CO.role === 'guest') { const yt = {}; if (m.yt && typeof m.yt === 'object') for (const k of ['title', 'explore', 'safe', 'boss']) { const y = m.yt[k]; if (y && (/^[\w-]{11}$/.test(y.v || '') || /^[\w-]{10,60}$/.test(y.l || ''))) yt[k] = { v: /^[\w-]{11}$/.test(y.v || '') ? y.v : null, l: /^[\w-]{10,60}$/.test(y.l || '') ? y.l : null }; } CO.hm = CO.hm || { files: {}, yt: {} }; CO.hm.yt = yt; CO.hu = CO.hu || {}; coHostMus(); } break;
         case 'bagreq': coSend({ t: 'bag', bag: coBag() }); break;
         case 'bag': if (CO.role === 'host') { CO.bags = CO.bags || {}; if (CO.peerPid) CO.bags[CO.peerPid] = m.bag; if (CO.bagCb) { const cb = CO.bagCb; CO.bagCb = null; cb(m.bag); } } break;
         case 'savereq': if (CO.role === 'host') coSave(); break;
@@ -2114,7 +2168,7 @@ function coMsg(id, m) {
     }
 }
 function coPeerGone() {
-    CO.peer = null; CO.rpRoom = null; if (CO.rp) CO.rp.g.visible = false; $('buddy').classList.add('hide'); const was = CO.role;
+    CO.avFor = null; CO.msFor = null; CO.avIn = null; CO.hm = null; CO.hu = null; if (CO.role === 'guest') coHostMus(); CO.peer = null; CO.rpRoom = null; if (CO.rp) CO.rp.g.visible = false; $('buddy').classList.add('hide'); const was = CO.role;
     if (G.started) say(was === 'host' ? 'Player 2 left the game.' : 'The host left the game.', 3000);
     if (was === 'guest') { CO.state = 'error'; CO.note = 'The host left the game.'; if (G.started) setTimeout(() => { coLeave(); toTitle(); }, 2500); } else { CO.state = 'waiting'; }
     coRefresh();

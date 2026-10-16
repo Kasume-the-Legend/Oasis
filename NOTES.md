@@ -123,3 +123,7 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 
 ## Party invites to online friends
 - Friends panel shows "Invite to party" for friends who are online in another room (same room still uses the direct peer message). Goes through the save Worker: `/pinv` (drop) and `/pinbox` (poll every 8 s, invites expire after 3 min, table `invites` auto-created). **The Worker must be redeployed** (`server/worker.js`) for this to work.
+
+## Harbor Inn co-op: partner VRM + host's music/UI
+- On connect each side sends its VRM (chunked, `avh`/`avc`, up to 26 MB) and the partner is drawn as that VRM (procedural walk/aim pose) instead of the block figure.
+- Host's music (YouTube links + uploaded files per slot) and menu-sound uploads are sent to the guest (`mus` + chunked `m:`/`u:` blobs); in co-op the guest hears the host's choices. `window.__svco` is a test hook.
