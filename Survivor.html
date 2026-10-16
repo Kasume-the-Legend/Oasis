@@ -2078,11 +2078,34 @@ const COQ = { q: [], iv: 0, peer: null };
 function coQueue(k, u8, extra) { COQ.q.push({ k, u8, extra: extra || {}, n: Math.ceil(u8.length / AVX.chunk), i: 0, sent: false }); if (!COQ.iv) COQ.iv = setInterval(coPump, 14); }
 function coPump() {
     if (!CO.on || !CO.peer || COQ.peer !== CO.peer) { COQ.q.length = 0; clearInterval(COQ.iv); COQ.iv = 0; return; }
-    for (let b = 0; b < 3 && COQ.q.length; b++) { const it = COQ.q[0]; if (!it.sent) { it.sent = true; coSend(Object.assign({ t: 'avh', k: it.k, n: it.n, size: it.u8.length }, it.extra)); continue; } coSend({ t: 'avc', k: it.k, i: it.i, d: b64(it.u8.subarray(it.i * AVX.chunk, (it.i + 1) * AVX.chunk)) }); it.i++; if (it.i >= it.n) COQ.q.shift(); }
+    for (let b = 0; b < 1 && COQ.q.length; b++) { const it = COQ.q[0]; if (!it.sent) { it.sent = true; coSend(Object.assign({ t: 'avh', k: it.k, n: it.n, size: it.u8.length }, it.extra)); continue; } coSend({ t: 'avc', k: it.k, i: it.i, d: b64(it.u8.subarray(it.i * AVX.chunk, (it.i + 1) * AVX.chunk)) }); it.i++; if (it.i >= it.n) COQ.q.shift(); }
     if (!COQ.q.length) { clearInterval(COQ.iv); COQ.iv = 0; }
 }
-function coSendAvatar() {
-    if (!CO.on || !CO.peer || !AV.raw || CO.avFor === CO.peer) return; const u8 = new Uint8Array(AV.raw); if (u8.length > AVX.max) return; CO.avFor = CO.peer; COQ.peer = CO.peer;
+async function avLite(buf) {   // the partner only needs the look: re-pack the GLB with 512 px textures so it travels in a few seconds
+    try {
+        const dv = new DataView(buf); if (dv.getUint32(0, true) !== 0x46546C67) return buf; let off = 12, json = null, bin = null;
+        while (off + 8 <= buf.byteLength) { const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true), d = buf.slice(off + 8, off + 8 + len); if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(d)); else if (type === 0x004E4942) bin = new Uint8Array(d); off += 8 + len; }
+        if (!json || !bin || !json.images || !json.bufferViews) return buf;
+        const views = json.bufferViews, repl = {};
+        for (const im of json.images) {
+            if (im.bufferView === undefined || repl[im.bufferView]) continue; const v = views[im.bufferView], src = bin.subarray(v.byteOffset || 0, (v.byteOffset || 0) + v.byteLength);
+            try { const bmp = await createImageBitmap(new Blob([src], { type: im.mimeType || 'image/png' })), k = Math.min(1, 512 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k)); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+                const out = await new Promise((ok) => c.toBlob(ok, 'image/webp', 0.82)); if (out && out.type === 'image/webp' && out.size < src.length) { repl[im.bufferView] = { u8: new Uint8Array(await out.arrayBuffer()), mime: 'image/webp' }; } } catch (e) { /* keep this one */ }
+        }
+        if (!Object.keys(repl).length) return buf;
+        for (const im of json.images) if (im.bufferView !== undefined && repl[im.bufferView]) im.mimeType = 'image/webp';
+        const parts = []; let pos = 0;
+        views.forEach((v, i) => { const u8 = repl[i] ? repl[i].u8 : bin.subarray(v.byteOffset || 0, (v.byteOffset || 0) + v.byteLength); const pad = (4 - pos % 4) % 4; if (pad) { parts.push(new Uint8Array(pad)); pos += pad; } v.byteOffset = pos; v.byteLength = u8.length; parts.push(u8); pos += u8.length; });
+        const padEnd = (4 - pos % 4) % 4; if (padEnd) { parts.push(new Uint8Array(padEnd)); pos += padEnd; }
+        json.buffers[0].byteLength = pos; delete json.buffers[0].uri;
+        let jb = new TextEncoder().encode(JSON.stringify(json)); const jp = (4 - jb.length % 4) % 4; if (jp) { const t = new Uint8Array(jb.length + jp).fill(0x20); t.set(jb); jb = t; }
+        const total = 12 + 8 + jb.length + 8 + pos, o = new Uint8Array(total), dv2 = new DataView(o.buffer); dv2.setUint32(0, 0x46546C67, true); dv2.setUint32(4, 2, true); dv2.setUint32(8, total, true);
+        dv2.setUint32(12, jb.length, true); dv2.setUint32(16, 0x4E4F534A, true); o.set(jb, 20); let q = 20 + jb.length; dv2.setUint32(q, pos, true); dv2.setUint32(q + 4, 0x004E4942, true); q += 8; for (const p of parts) { o.set(p, q); q += p.length; }
+        return o.buffer;
+    } catch (e) { console.warn('avatar repack', e); return buf; }
+}
+async function coSendAvatar() {
+    if (!CO.on || !CO.peer || !AV.raw || CO.avFor === CO.peer) return; CO.avFor = CO.peer; const to = CO.peer; const u8 = new Uint8Array(await avLite(AV.raw)); if (CO.peer !== to) return; if (u8.length > AVX.max) { CO.avFor = null; return; } COQ.peer = CO.peer;
     coQueue('av', u8, { name: String(AV.name || 'Character').slice(0, 24), g: AV.gender === 'female' ? 'female' : 'male' });
 }
 // the host's music and menu sounds play for the guest too: YouTube links go as text, uploaded files in chunks
@@ -2091,15 +2114,15 @@ async function coSendMusic() {
     coSend({ t: 'mus', yt: MUS.yt, hu: USLOTS.map((u) => u[0]) }); let tot = 0;
     for (const [pre, list] of [['m', MSLOTS], ['u', USLOTS]]) for (const [k] of list) { try { const b = await idbGet(pre + '_' + k); if (CO.peer !== to) return; if (b && b.size <= 16 * 1048576 && tot + b.size <= 44 * 1048576) { tot += b.size; coQueue(pre + ':' + k, new Uint8Array(await b.arrayBuffer()), { type: String(b.type || 'audio/mpeg').slice(0, 40) }); } } catch (e) { /* no file */ } }
 }
-window.__svco = { CO, rpLoadVRM: (b, g) => rpLoadVRM(b, g), coAvIn, rpAnim: (d) => rpAnim(d) };   // (tests)
+window.__svco = { CO, avLite: (b) => avLite(b), rpLoadVRM: (b, g) => rpLoadVRM(b, g), coAvIn, rpAnim: (d) => rpAnim(d) };   // (tests)
 function coHostMus() { MUS.cur = null; musStop(); }
 function coAvIn(m) {
     const k = String(m.k || 'av'); CO.avIn = CO.avIn || {};
-    if (m.t === 'avh') { const n = +m.n | 0, size = +m.size | 0; if (n < 1 || n > 4000 || size < 1 || size > AVX.max || !/^(av|m:[a-z_]{1,12}|u:[a-z_]{1,12})$/.test(k)) { delete CO.avIn[k]; return; } CO.avIn[k] = { n, size, got: 0, parts: new Array(n), g: m.g === 'female' ? 'female' : 'male', type: /^audio\/[\w.+-]{1,30}$/.test(m.type || '') ? m.type : 'audio/mpeg' }; return; }
+    if (m.t === 'avh') { const n = +m.n | 0, size = +m.size | 0; if (n < 1 || n > 4000 || size < 1 || size > AVX.max || !/^(av|m:[a-z_]{1,12}|u:[a-z_]{1,12})$/.test(k)) { delete CO.avIn[k]; return; } if (k === 'av') say('Loading your partner\'s character...', 3500); CO.avIn[k] = { n, size, got: 0, parts: new Array(n), g: m.g === 'female' ? 'female' : 'male', type: /^audio\/[\w.+-]{1,30}$/.test(m.type || '') ? m.type : 'audio/mpeg' }; return; }
     const A = CO.avIn[k]; if (!A) return; const i = +m.i | 0; if (i < 0 || i >= A.n || A.parts[i] || typeof m.d !== 'string' || m.d.length > 20000) return;
     try { A.parts[i] = Uint8Array.from(atob(m.d), (c) => c.charCodeAt(0)); } catch (e) { return; } A.got++;
     if (A.got === A.n) { const buf = new Uint8Array(A.size); let o = 0; for (const p of A.parts) { if (o + p.length > A.size) { delete CO.avIn[k]; return; } buf.set(p, o); o += p.length; } delete CO.avIn[k];
-        if (k === 'av') rpLoadVRM(buf.buffer, A.g).catch((e) => console.warn('partner avatar', e));
+        if (k === 'av') rpLoadVRM(buf.buffer, A.g).then(() => say('Your partner\'s character is ready.', 2200)).catch((e) => { console.warn('partner avatar', e); say('Could not load your partner\'s character.', 3000); });
         else if (CO.role === 'guest') { CO.hm = CO.hm || { files: {}, yt: {} }; const slot = k.slice(2); if (k[0] === 'm') { CO.hm.files[slot] = { url: URL.createObjectURL(new Blob([buf], { type: A.type })) }; coHostMus(); } else if (AU.ctx) { AU.ctx.decodeAudioData(buf.buffer.slice(0)).then((d) => { CO.hu = CO.hu || {}; CO.hu[slot] = d; }).catch(() => { /* bad file */ }); } }
     }
 }
@@ -2108,10 +2131,12 @@ async function rpLoadVRM(buffer, gender) {
     const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p)); ld.register((p) => { p.textureLoader = new THREE.TextureLoader(p.options.manager); return { name: 'sv-tex' }; });
     const gl = await ld.parseAsync(buffer.slice(0), ''); const vrm = gl.userData.vrm; if (!vrm) throw new Error('not a VRM file'); try { VM.VRMUtils.rotateVRM0(vrm); } catch (e) { /* vrm1 */ }
     vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
-    const N = {}; for (const n of ['hips', 'spine', 'chest', 'head', 'leftUpperArm', 'leftLowerArm', 'rightUpperArm', 'rightLowerArm', 'leftUpperLeg', 'leftLowerLeg', 'rightUpperLeg', 'rightLowerLeg']) N[n] = vrm.humanoid.getNormalizedBoneNode(n);
+    const N = {}; for (const n of ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'leftLowerLeg', 'rightUpperLeg', 'rightLowerLeg']) N[n] = vrm.humanoid.getNormalizedBoneNode(n);
+    for (const side of ['left', 'right']) for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (const j of ['Proximal', 'Intermediate', 'Distal']) N[side + f + j] = vrm.humanoid.getNormalizedBoneNode(side + f + j);
     if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
-    vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), sc = 1.68 / h; const grp = new THREE.Group(); grp.add(vrm.scene); grp.scale.setScalar(sc); grp.position.y = -bb.min.y * sc;
-    const r = coEnsureRP(); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
+    vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), sc = 1.68 / h; const PW = (n) => n.getWorldPosition(new THREE.Vector3()), ua = PW(N.rightUpperArm).distanceTo(PW(N.rightLowerArm)), la = N.rightHand ? PW(N.rightLowerArm).distanceTo(PW(N.rightHand)) : ua; const grp = new THREE.Group(); grp.add(vrm.scene); grp.scale.setScalar(sc); grp.position.y = -bb.min.y * sc;
+    const boneFor = (n) => vrm.humanoid.getNormalizedBoneNode(n) || vrm.humanoid.getNormalizedBoneNode(n.replace('Pinky', 'Little')), D = acData(); let names = []; if (D) { const ref = (D.male && D.male.idle) || D.gp.gp_idle; names = Object.keys(ref.b).filter((n) => boneFor(n)); }
+    const r = coEnsureRP(); Object.assign(r, { names, nodes: names.map(boneFor), qs: names.map(() => new THREE.Quaternion()), qa: names.map(() => new THREE.Quaternion()), cache: {}, cc: null, cp: null, cf: 1, act: null, actW: 0, ua, la, sc, hips0: N.hips.position.y, hy: { v: 1 }, ow: { R: 0, L: 0 }, off: { R: new THREE.Vector3(-0.2, -0.5, 0.2), L: new THREE.Vector3(0.2, -0.5, 0.2) }, pose: { sp: 0, hd: 0 }, gender: gender === 'female' ? 'female' : 'male', lastSt: 'idle' }); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
     { const inv = 1 / sc, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0 }), B = (w, h2, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h2 * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
         const pist = new THREE.Group(); pist.add(B(0.19, 0.04, 0.03, 0x1a1c20, -0.15, 0.015, 0), B(0.03, 0.095, 0.032, 0x14110e, -0.08, -0.05, 0), B(0.05, 0.03, 0.024, 0x2a2d33, -0.1, -0.012, 0));
         const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06 * inv, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.9 })); fl.position.set(-0.27 * inv, 0.015 * inv, 0); fl.visible = false; pist.add(fl); pist.userData.fl = fl;
@@ -2119,7 +2144,7 @@ async function rpLoadVRM(buffer, gender) {
         const gl = new THREE.Group(); gl.add(B(0.09, 0.075, 0.085, 0x8a1c1c, 0, 0, 0)); const gr = gl.clone(); gr.scale.x = -1;
         const hr = vrm.humanoid.getNormalizedBoneNode('rightHand'), hl = vrm.humanoid.getNormalizedBoneNode('leftHand'); if (hr) hr.add(pist, blade, gl); if (hl) hl.add(gr); r.vw = { pistol: pist, blade, gl, gr }; }
 }
-function rpVrmPose(dt) {
+function rpVrmProc(dt) {
     const r = CO.rp, N = r.N, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, ch = new THREE.Euler(), set = (n, x, y, z) => { if (n) n.quaternion.setFromEuler(ch.set(x, y, z, 'YXZ')); };
     set(N.leftUpperLeg, s * 0.6 * a, 0, 0); set(N.rightUpperLeg, -s * 0.6 * a, 0, 0); set(N.leftLowerLeg, Math.max(0, -s) * 0.7 * a, 0, 0); set(N.rightLowerLeg, Math.max(0, s) * 0.7 * a, 0, 0);
     const gun = r.eq === 'pistol', aim = r.aim && r.state !== 'dead', kick = Math.max(0, r.kick || 0);
@@ -2132,8 +2157,47 @@ function rpVrmPose(dt) {
     r.bt -= dt; const em = r.vrm.expressionManager; if (em) { if (r.bt < 0) { r.bt = 2.2 + Math.random() * 3; r.bl = 0.14; } r.bl = Math.max(0, (r.bl || 0) - dt); em.setValue('blink', r.bl > 0 ? Math.sin(r.bl / 0.14 * Math.PI) : 0); }
     r.vrm.update(dt);
 }
+function withPuppet(r, fn) { const sv = { N: AV.N, ua: AV.ua, la: AV.la, s: AV.s }, pg = PL.g; AV.N = r.N; AV.ua = r.ua; AV.la = r.la; AV.s = r.sc; PL.g = r.g; try { fn(); } finally { Object.assign(AV, sv); PL.g = pg; } }
+function rpClip(r, set, key) {
+    const ck = set + '/' + key; if (r.cache[ck] !== undefined) return r.cache[ck]; const D = acData(), d = D && D[set] && D[set][key]; if (!d) return (r.cache[ck] = null);
+    const flip = r.vrm.meta && r.vrm.meta.metaVersion === '0' ? -1 : 1;
+    const bones = r.names.map((n) => { const a = Float32Array.from(d.b[n] || d.b[n.replace('Little', 'Pinky')] || [0, 0, 0, 1]); if (flip < 0) for (let i = 0; i < a.length; i++) if (i % 4 === 0 || i % 4 === 2) a[i] = -a[i]; return a; });
+    return (r.cache[ck] = { key, loop: d.loop, frames: d.frames, duration: d.duration, hy: Float32Array.from(d.hy), bones });
+}
+function rpVrmPose(dt) {   // the partner moves with the same animation clips and arm aiming as you do
+    const r = CO.rp, N = r.N; if (!r.names || !r.names.length || !acData()) { rpVrmProc(dt); return; }
+    if (r.vw) { const gun = r.eq === 'pistol'; r.vw.pistol.visible = gun; r.vw.blade.visible = r.eq === 'blade'; r.vw.gl.visible = r.vw.gr.visible = r.eq !== 'pistol' && r.eq !== 'blade'; r.vw.pistol.userData.fl.visible = r.flash > 0; }
+    const set = r.eq === 'pistol' ? 'gp' : r.eq === 'blade' ? 'hr' : 'hf', spd = r.speed, low = r.hp < 35, g = r.gender, dead = r.state === 'dead', k = 1 - Math.exp(-dt * 14);
+    let want; if (spd < 0.2) want = { set, key: set + '_idle', rate: 1 }; else if (low) want = { set: g, key: 'walkF', rate: spd / 2.4 }; else if (spd > 3.4) want = { set: g, key: 'jogF', rate: spd / 4.2 }; else want = { set, key: set + '_walkF', rate: spd / 2.9 };
+    const cur = r.cc;
+    if (!cur || cur.set !== want.set || cur.key !== want.key) { r.cp = cur ? { ...cur } : null; r.cc = { set: want.set, key: want.key, t: 0, c: rpClip(r, want.set, want.key), rate: want.rate }; r.cf = 0; }
+    r.cc.rate = want.rate; r.cc.t += dt * r.cc.rate; if (r.cp) r.cp.t += dt * (r.cp.rate || 1); r.cf = Math.min(1, r.cf + dt / 0.2);
+    const hyo = { v: 1 };
+    if (r.cp && r.cp.c && r.cf < 1) { acSample(r.cp.c, r.cp.t, r.qs, hyo, 1, true); acSample(r.cc.c, r.cc.t, r.qs, hyo, r.cf, false); } else acSample(r.cc.c, r.cc.t, r.qs, hyo, 1, true);
+    // reload / death clips fade in over the base layer
+    if (r.state !== r.lastSt) { r.lastSt = r.state; r.act = null; r.actW = 0; if (r.state === 'reload' && r.eq === 'pistol') { const c = rpClip(r, 'gp', 'gpreload'); if (c) r.act = { c, t: 0, rate: 2.0 / 1.3, upper: true }; } else if (dead) { const c = rpClip(r, set, set === 'gp' ? 'gdie1' : set === 'hr' ? 'hdie1' : 'f_hdie1'); if (c) r.act = { c, t: 0, rate: 1, hold: true }; } }
+    const A = r.act; if (A) { A.t += dt * A.rate; const dur = A.c.duration, rem = dur - A.t; r.actW = Math.min(1, r.actW + dt / 0.07); const aw = Math.min(r.actW, A.hold ? 1 : (rem < 0.15 ? Math.max(0, rem / 0.15) : 1)); if (A.t >= dur && !A.hold) { r.act = null; r.actW = 0; } else { r.qa.forEach((q) => q.identity()); const h2 = { v: 1 }; acSample(A.c, Math.min(A.t, dur), r.qa, h2, 1, true); for (let b = 0; b < r.names.length; b++) { if (A.upper && !UPPER.test(r.names[b])) continue; r.qs[b].slerp(r.qa[b], aw); } if (!A.upper) hyo.v += (h2.v - hyo.v) * aw; } }
+    for (let b = 0; b < r.names.length; b++) r.nodes[b].quaternion.copy(r.qs[b]);
+    N.hips.position.y = r.hips0 * hyo.v;
+    const P = r.pose; let sp = 0, hd = 0; if (low) { sp += 0.24; hd += 0.14; } else if (r.hp < 65) sp += 0.06; if (r.state === 'reload') hd += 0.2; P.sp += (sp - P.sp) * k; P.hd += (hd - P.hd) * k;
+    const ar = (n, x, y, z) => { _e.set(x, y, z); _q.tmp.setFromEuler(_e); n.quaternion.premultiply(_q.tmp); };
+    ar(N.spine, P.sp * 0.55, 0, 0); ar(N.chest, P.sp * 0.45, 0, 0); ar(N.neck, P.hd * 0.4, 0, 0); ar(N.head, P.hd * 0.6, 0, 0);
+    const blade = r.eq === 'blade', kt = r.swT > 0 ? 1 - r.swT / 0.35 : -1; if (blade && kt >= 0) ar(N.spine, 0, kt < 0.3 ? -0.5 * kt / 0.3 : -0.5 + 1.1 * Math.min(1, (kt - 0.3) / 0.4), 0);
+    N.hips.updateMatrixWorld(true);
+    const gunOut = r.eq === 'pistol', aimOn = r.aim && !dead; let oR = null, oL = null, wR = 0, wL = 0, hL = HINT.L; const kick = Math.max(0, r.kick || 0);
+    if (gunOut && aimOn && r.state !== 'reload') { const sy = new THREE.Vector3(), cy = new THREE.Vector3(); N.rightUpperArm.getWorldPosition(sy); (N.upperChest || N.chest).getWorldPosition(cy); const lift = Math.max(0, sy.y - cy.y); oR = V3(-0.1, lift - 0.01, 0.5 - kick * 0.07); oL = V3(-0.04, lift - 0.06, 0.45 - kick * 0.06); hL = V3(0.6, -1, -0.1); wR = wL = 1; }
+    else if (blade && kt >= 0) { const u = Math.min(1, (kt - 0.3) / 0.35); oR = kt < 0.3 ? V3(sm1(-0.2, -0.38, kt / 0.3), sm1(-0.1, 0.32, kt / 0.3), sm1(0.3, -0.08, kt / 0.3)) : V3(sm1(-0.38, 0.24, u), sm1(0.32, -0.28, u), sm1(-0.08, 0.5, u)); wR = 1; }
+    else if (blade && aimOn) { oR = V3(-0.14, -0.06, 0.42); oL = V3(0.1, -0.22, 0.3); wR = wL = 1; }
+    const kw = 1 - Math.exp(-dt * 18); r.ow.R += (wR - r.ow.R) * kw; r.ow.L += (wL - r.ow.L) * kw; if (oR) r.off.R.lerp(oR, wR > 0 ? 1 - Math.exp(-dt * 22) : 1); if (oL) r.off.L.lerp(oL, wL > 0 ? 1 - Math.exp(-dt * 22) : 1);
+    withPuppet(r, () => {
+        for (const sd of ['R', 'L']) { const ow = r.ow[sd]; if (ow < 0.01) continue; const nm = sd === 'R' ? 'right' : 'left', U = N[nm + 'UpperArm'], Lw = N[nm + 'LowerArm'], qu = U.quaternion.clone(), ql = Lw.quaternion.clone(); ikArm(sd, r.off[sd], sd === 'R' ? HINT.R : hL, 0); const iu = U.quaternion.clone(), il = Lw.quaternion.clone(); U.quaternion.copy(qu).slerp(iu, ow); Lw.quaternion.copy(ql).slerp(il, ow); }
+        if (gunOut || blade || r.eq === 'fists') { avCurl('R', gunOut ? 0.85 : blade ? 0.95 : 1.0); if (r.eq === 'fists' || (gunOut && aimOn) || r.ow.L > 0.5) avCurl('L', r.eq === 'fists' ? 1.0 : 0.85); }
+    });
+    r.bt -= dt; const em = r.vrm.expressionManager; if (em) { if (r.bt < 0) { r.bt = 2.2 + Math.random() * 3; r.bl = 0.14; } r.bl = Math.max(0, (r.bl || 0) - dt); em.setValue('blink', r.bl > 0 ? Math.sin(r.bl / 0.14 * Math.PI) : 0); }
+    r.vrm.update(dt);
+}
 function rpAnim(dt) {
-    const r = CO.rp; r.kick = Math.max(0, (r.kick || 0) - dt * 7); r.swT = Math.max(0, (r.swT || 0) - dt); r.flash = Math.max(0, (r.flash || 0) - dt); if (r.light) r.light.intensity = r.flash > 0 ? 3 : 0; if (r.vrm) { r.g.rotation.x = r.state === 'dead' ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' ? 0.15 : 0; rpVrmPose(dt); return; } const P = r.P, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, gun = r.eq === 'pistol'; P.legL.rotation.x = s * 0.6 * a; P.legR.rotation.x = -s * 0.6 * a; P.armL.rotation.set(-s * 0.5 * a, 0, 0); P.armR.rotation.set(s * 0.5 * a, 0, 0);
+    const r = CO.rp; r.kick = Math.max(0, (r.kick || 0) - dt * 7); r.swT = Math.max(0, (r.swT || 0) - dt); r.flash = Math.max(0, (r.flash || 0) - dt); if (r.light) r.light.intensity = r.flash > 0 ? 3 : 0; if (r.vrm) { const clipDead = r.names && r.names.length && r.act && r.act.hold; r.g.rotation.x = r.state === 'dead' && !clipDead ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' && !clipDead ? 0.15 : 0; rpVrmPose(dt); return; } const P = r.P, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, gun = r.eq === 'pistol'; P.legL.rotation.x = s * 0.6 * a; P.legR.rotation.x = -s * 0.6 * a; P.armL.rotation.set(-s * 0.5 * a, 0, 0); P.armR.rotation.set(s * 0.5 * a, 0, 0);
     if (gun) { if (r.aim) { P.armR.rotation.set(-1.5, 0, 0); P.armL.rotation.set(-1.4, 0, 0.28); } else P.armR.rotation.set(-0.35 + s * 0.2 * a, 0, 0); } else if (r.aim) { P.armR.rotation.set(-1.2, 0, 0); P.armL.rotation.set(-1.1, 0, 0.2); }
     for (const k in r.W) r.W[k].visible = (k === 'pistol' ? r.eq === 'pistol' : k === 'blade' ? r.eq === 'blade' : r.eq === 'gloves');
     r.g.rotation.x = r.state === 'dead' ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' ? 0.15 : 0;
