@@ -131,3 +131,17 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 - Co-op enemy sync: zombie look is seeded from the enemy's key (same for host and guest); enemies the guest is missing (risen zombies, boss adds) are spawned from the room's real spec, and a risen zombie clears the guest's "dead" mark.
 - Partner avatar is re-packed before sending (`avLite`: 512 px webp textures, ~60% smaller) and paced at one 12 KB chunk / 14 ms so it doesn't starve position updates. The partner VRM is animated with the same clip packs and arm-aim IK as the local player (`rpVrmPose`, `withPuppet` swaps AV/PL for `ikArm`).
 - Avatar transfer is now acknowledged and windowed (5 chunks in flight, receiver acks each: `avk`), gzip-compressed (7.6 MB → ~1.4 MB for the sample), and cached per partner on the receiving device (`pav_<pid>`, matched by a size+checksum hash) so a repeat session shows the partner instantly. An old-version peer that never acks is dropped after 20 s instead of being flooded.
+- Harbor Inn co-op menu (Tab / Y / triangle): a **Partner** tab appears while connected: their condition, health, weapon, room, their item list, and "Give 1 / Give all" for your own items. Messages: `iq`/`ir` (item list), `gv`/`gva` (give + ack; a full bag or no answer in 12 s returns the item to the sender).
+
+### Door cutscene
+- Partner walks through the door beside you (DC.rp); new SFX: layered door creak (wood/metal), latch click, room swell.
+
+- Boiler Room boss is now "The Stoker": big skeleton-zombie brute model, 150hp, faster, 3 phases with zombie adds, slimmer collision + anti-stuck sidestep, shorter charge cycle.
+
+### Harbor Inn: Gunner arsenal + gunpowder
+- Guns: rifle (auto, hold fire), shotgun (8 pellets), sniper (pierce), rocket + grenade launcher (splash). `WPN`/`ITEMS`, per-gun mags in `G.mags`, `equipW(id)` swaps guns.
+- Ammo types: ammo (9mm), ammoR, ammoS, ammoH, ammoX, ammoG. Powders gpf/gpr/gps/gph/gpx/gpg: item menu "Load rounds" (`POW` table) turns 2-3 powder into rounds.
+- Models + sounds come from the parent Oasis `weapons-pack`/`sfx-pack` (same-origin iframe); standalone uses box guns + synth. Partner puppet shows the same guns (`rpWeaponVis`).
+- Loot: `EXTRA_` table (generated rooms) + shotgun in Ballroom, powders in Storage/Lounge.
+
+- Cameras: small rooms (24+ area) get a mirrored far-corner angle for the half nearest the first camera; big rooms (90+) also get a low stalker angle down the middle. Co-op: gameOver() sends {t:"over"} so the whole party gets Game Over together.
