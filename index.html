@@ -14537,6 +14537,7 @@ function btMusicStop() {
                 const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k, v = b.dataset.v;
                 if (k === 'close') { GFX.bench = null; gfxToggle(false); return; }
                 if (k && k.startsWith('cs-')) { csClick(k); return; }
+                if (k && k.startsWith('ac-')) { acClick(k); return; }
                 if (GFX.bench && k !== 'fps') return;
                 if (k === 'fps') GFX.fps = !GFX.fps;
                 else if (k === 'preset') { gfxSetPreset(v); }
@@ -14564,7 +14565,7 @@ function btMusicStop() {
 <div class="row"><b>While a game is running</b><div class="opts">${o('emu', GFX.emu, [['first', 'Game first'], ['balanced', 'Balanced'], ['full', 'Full world']])}</div><p>How much the 3D world draws while an emulator game is on.</p></div>
 <hr><div class="row"><b>Screen shape</b><div class="opts">${o('fit', fit, [['fill', 'Fill screen'], ['wide', 'Wide picture'], ['169', 'Framed']])}</div><p>Fill uses the whole screen. Framed keeps the chosen shape with black bars. Wide keeps the menus in the shape and lets the picture fill the screen.</p></div>
 <div class="row"><b>Aspect ratio</b><div class="opts">${o('ar', Math.round(ar * 1000), [[1778, '16:9'], [1600, '16:10'], [1500, '3:2'], [1333, '4:3'], [2370, '21:9']])}</div><p>Used by Framed and Wide.</p></div>
-<hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>` + csHtml();
+<hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>` + csHtml() + acHtml();
         }
         function gfxToggle(on) { gfxBuild(); const open = on === undefined ? GFX.panel.classList.contains('hidden') : !!on; GFX.panel.classList.toggle('hidden', !open); if (open) { try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (e) { /* none */ } gfxRender(); } }
         setTimeout(() => { const b = document.getElementById('btn-settings'); if (b) b.addEventListener('click', () => gfxToggle(true)); }, 0);
@@ -14624,7 +14625,94 @@ function btMusicStop() {
         setInterval(() => { try { if (csGet('oasis.gemail', '') && CS.tok && Date.now() < CS.exp - 120000 && !CS.busy && csHash(csSnap()) !== (csGet('oasis.gsync', '').split('|')[0])) csSync(false); } catch (e) { /* retry later */ } }, 120000);
         document.addEventListener('visibilitychange', () => { try { if (document.hidden && csGet('oasis.gemail', '') && CS.tok && Date.now() < CS.exp - 60000 && !CS.busy && csHash(csSnap()) !== (csGet('oasis.gsync', '').split('|')[0])) csSync(false); } catch (e) { /* ignore */ } });
         window.addEventListener('click', () => { try { if (csGet('oasis.gemail', '') && csId() && !CS.tok) csSync(false); } catch (e) { /* ignore */ } }, { capture: true, once: true });
-        window.__gfx = { cs: { CS, csSnap, csApply, csHash, csHtml, csFresh, csSync }, GFX, toggle: gfxToggle, preset: gfxSetPreset, bench: gfxBench, sweep: gfxShadowSweep };
+
+        /* ---------- Account save (username + password, Cloudflare Worker) ---------- */
+        const AC_API = 'https://oasis-save.acoffey412.workers.dev';   // your Worker address, e.g. https://oasis-save.yourname.workers.dev (or paste it in Settings)
+        const AC = { busy: false, msg: '' };
+        const acApi = () => (csGet('oasis.acapi', '') || AC_API || '').trim().replace(/\/+$/, '');
+        const acB64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+        const acUnb = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+        const acHex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
+        async function acDerive(user, pw) {
+            const enc = new TextEncoder(), base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+            return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', iterations: 250000, salt: enc.encode('oasis-v1|' + user.trim().toLowerCase()) }, base, 768));
+        }
+        const acSess = () => { try { const j = JSON.parse(csGet('oasis.acsess', 'null')); return j && j.u && j.m ? j : null; } catch (e) { return null; } };
+        const acParts = (m) => { const u = acUnb(m); return { key: u.slice(0, 32), id: acHex(u.slice(32, 64)), auth: acHex(u.slice(64, 96)) }; };
+        async function acEnc(m, obj) {
+            const k = await crypto.subtle.importKey('raw', acParts(m).key, 'AES-GCM', false, ['encrypt']), iv = crypto.getRandomValues(new Uint8Array(12));
+            const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, new TextEncoder().encode(JSON.stringify(obj))));
+            return 'v1:' + acB64(iv) + ':' + acB64(ct);
+        }
+        async function acDec(m, blob) {
+            const p = String(blob).split(':'), k = await crypto.subtle.importKey('raw', acParts(m).key, 'AES-GCM', false, ['decrypt']);
+            return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: acUnb(p[1]) }, k, acUnb(p[2]))));
+        }
+        async function acCall(path, m, extra) {
+            const base = acApi(); if (!base) throw new Error('Paste your save server address first.');
+            const pr = acParts(m); let r;
+            try { r = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ id: pr.id, auth: pr.auth }, extra || {})) }); } catch (e) { throw new Error('Could not reach the save server.'); }
+            const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Save server error ' + r.status); return j;
+        }
+        function acMsg(t) { AC.msg = t; try { if (GFX.panel && !GFX.panel.classList.contains('hidden')) gfxRender(); } catch (e) { /* ignore */ } }
+        // mode: 'in' (sign in), 'new' (create), 'sync' (background / sync now)
+        async function acSync(mode, user, pw) {
+            if (AC.busy) return; AC.busy = true; acMsg(mode === 'sync' ? 'Syncing…' : 'Working… (the first step takes a few seconds)');
+            try {
+                let s = acSess();
+                if (mode !== 'sync') { if (!user || !pw) throw new Error('Enter a username and password.'); if (pw.length < 8) throw new Error('Use a password of at least 8 characters.'); s = { u: user.trim(), m: acB64(await acDerive(user, pw)) }; }
+                if (!s) throw new Error('Not signed in.');
+                const m = s.m, snap = csSnap(), h = csHash(snap), empty = csFresh(snap), last = csGet('oasis.acsync', ''), lh = last.split('|')[0], lt = +last.split('|')[1] || 0;
+                const r = await acCall('/load', m);
+                const put = async () => { const j = await acCall('/save', m, { blob: await acEnc(m, { v: 1, t: Date.now(), keys: snap }) }); csSet('oasis.acsync', h + '|' + j.t); csSet('oasis.acsess', JSON.stringify(s)); acMsg('Saved (' + new Date().toLocaleTimeString() + ').'); };
+                const take = async () => { let o; try { o = await acDec(m, r.blob); } catch (e) { throw new Error('Could not open that save. Wrong password for this username?'); } window.__csNoXp = true; try { clearTimeout(_cmpSaveT); } catch (e) { /* none */ } const n = csApply(o); csSet('oasis.acsync', csHash(csSnap()) + '|' + r.t); csSet('oasis.acsess', JSON.stringify(s)); acMsg('Loaded ' + n + ' items. Reloading…'); setTimeout(() => location.reload(), 300); };
+                if (!r.found) { if (mode === 'in') throw new Error('No account with that username and password. Check the spelling, or press Create account.'); await put(); }
+                else if (mode === 'new') throw new Error('That username is taken (or you already have it: use Sign in).');
+                else { const cloudNew = r.t !== lt, dirty = !empty && h !== lh;
+                    if (!cloudNew && !dirty) { csSet('oasis.acsess', JSON.stringify(s)); acMsg('Up to date.'); }
+                    else if (!cloudNew) await put();
+                    else if (empty || !dirty || mode === 'in' && empty) await take();
+                    else if (mode === 'sync' && !window.__acAsk) acMsg('Your account save and this device differ. Open Settings and press Sync now to choose.');
+                    else if (window.confirm('Your account has a save from ' + new Date(r.t).toLocaleString() + ' and this device has different progress.\n\nOK = load the account save (replaces this device).\nCancel = keep this device and overwrite the account save.')) await take();
+                    else await put(); }
+            } catch (e) { acMsg(e.message || String(e)); } finally { AC.busy = false; }
+        }
+        function acOut() { csSet('oasis.acsess', ''); csSet('oasis.acsync', ''); acMsg('Signed out. Your save stays on this device and in your account.'); }
+        function acClick(k) {
+            const v = (id) => ((document.getElementById(id) || {}).value || '');
+            if (k === 'ac-in' || k === 'ac-new') acSync(k === 'ac-in' ? 'in' : 'new', v('ac-u'), v('ac-p'));
+            else if (k === 'ac-now') { window.__acAsk = true; acSync('sync').finally(() => { window.__acAsk = false; }); }
+            else if (k === 'ac-out') acOut();
+            else if (k === 'ac-apisave') { const u = v('ac-api').trim(); if (/^https:\/\/[\w.-]+/.test(u)) { csSet('oasis.acapi', u); acMsg('Server address saved.'); } else acMsg('That does not look like a web address (it starts with https://).'); }
+        }
+        function acHtml() {
+            const api = acApi(), s = acSess(), inp = 'width:100%;margin:3px 0;padding:6px;border-radius:6px;border:1px solid #475569;background:#0f172a;color:#e5e7eb;box-sizing:border-box';
+            return '<hr><div class="row"><b>Account save (username + password)</b>' + (s ? '<div class="opts"><button data-k="ac-now">☁ Sync now</button><button data-k="ac-out">Sign out</button></div>' : api ? '<div style="margin:4px 0"><input id="ac-u" type="text" autocomplete="username" placeholder="Username" style="' + inp + '"><input id="ac-p" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" style="' + inp + '"></div><div class="opts"><button data-k="ac-in">Sign in</button><button data-k="ac-new">Create account</button></div>' : '')
+                + '<p>' + (AC.msg ? AC.msg + '<br>' : '') + (s ? 'Signed in as ' + s.u.replace(/[<>&"]/g, '') + '. Your progress follows you to any device where you sign in.' : api ? 'Your save is locked with your password before it leaves this device. <b>There is no password reset</b>: if you forget it, the save cannot be opened.' : 'Paste your save server address below first.') + '</p><details' + (api ? '' : ' open') + '><summary>Save server address</summary><input id="ac-api" type="text" value="' + api.replace(/[<>&"]/g, '') + '" placeholder="https://oasis-save.yourname.workers.dev" style="' + inp + '"><div class="opts"><button data-k="ac-apisave">Save address</button></div></details></div>';
+        }
+        setInterval(() => { try { if (acSess() && !AC.busy && csHash(csSnap()) !== csGet('oasis.acsync', '').split('|')[0]) acSync('sync'); } catch (e) { /* retry later */ } }, 120000);
+        document.addEventListener('visibilitychange', () => { try { if (document.hidden && acSess() && !AC.busy && csHash(csSnap()) !== csGet('oasis.acsync', '').split('|')[0]) acSync('sync'); } catch (e) { /* ignore */ } });
+        window.addEventListener('click', () => { try { if (acSess()) acSync('sync'); } catch (e) { /* ignore */ } }, { capture: true, once: true });
+
+        // One-time welcome: people with progress on this device are offered a login that keeps it; new players get a sign-in / create page after the splash.
+        function acWelcome() {
+            if (document.getElementById('ac-wel')) return;
+            const have = !csFresh(csSnap()), d = document.createElement('div'); d.id = 'ac-wel';
+            const inp = 'width:100%;margin:4px 0;padding:9px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e5e7eb;box-sizing:border-box;font-size:15px', bt = 'padding:9px 14px;margin:4px 4px 0 0;border-radius:8px;border:0;cursor:pointer;font-weight:700;font-size:14px';
+            d.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(2,6,23,.82);display:flex;align-items:center;justify-content:center;font-family:Nunito,sans-serif';
+            d.innerHTML = '<div style="width:min(420px,92vw);max-height:92vh;overflow:auto;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:14px;padding:20px"><h2 style="margin:0 0 6px;font-size:20px">' + (have ? 'Keep your progress safe' : 'Save your progress') + '</h2><p style="margin:0 0 8px;font-size:14px;line-height:1.45;color:#cbd5e1">'
+                + (have ? 'We found progress on this device (gear, Gil, levels, companions). Create a login now and it is saved to the cloud, so nothing is lost and you can play on any device.' : 'Create a login to keep your gear, Gil and levels on any device, or sign in to one you already made.')
+                + '</p><input id="acw-u" type="text" autocomplete="username" placeholder="Username" style="' + inp + '"><input id="acw-p" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" style="' + inp + '"><div id="acw-m" style="min-height:18px;font-size:13px;color:#fbbf24;margin:2px 0"></div><button id="acw-new" style="' + bt + 'background:#38bdf8;color:#082f49">' + (have ? 'Create login with this save' : 'Create login') + '</button><button id="acw-in" style="' + bt + 'background:#334155;color:#e5e7eb">Sign in</button><button id="acw-no" style="' + bt + 'background:transparent;color:#94a3b8">' + (have ? 'Not now' : 'Play as guest') + '</button><p style="margin:10px 0 0;font-size:12px;color:#94a3b8">There is no password reset. Your save is locked with your password before it leaves this device.</p></div>';
+            document.body.appendChild(d); d.addEventListener('pointerdown', (e) => e.stopPropagation()); d.addEventListener('keydown', (e) => e.stopPropagation()); d.addEventListener('keyup', (e) => e.stopPropagation());
+            const v = (id) => d.querySelector(id).value, close = () => { csSet('oasis.acprompt', '1'); d.remove(); };
+            const go = async (mode) => { const m = d.querySelector('#acw-m'); m.textContent = 'Working… (a few seconds)'; await acSync(mode, v('#acw-u'), v('#acw-p')); if (acSess()) close(); else m.textContent = AC.msg; };
+            d.querySelector('#acw-new').onclick = () => go('new'); d.querySelector('#acw-in').onclick = () => go('in'); d.querySelector('#acw-no').onclick = close;
+        }
+        const acWelT = setInterval(() => { try {
+            if (csGet('oasis.acprompt', '') || acSess() || !acApi()) { if (csGet('oasis.acprompt', '') || acSess()) clearInterval(acWelT); return; }
+            const sp = document.getElementById('splash'); if (window.__homeReady && (!sp || sp.classList.contains('out') || !sp.isConnected)) { clearInterval(acWelT); setTimeout(acWelcome, 800); }
+        } catch (e) { /* ignore */ } }, 1000);
+        window.__gfx = { ac: { AC, acWelcome, acSync, acHtml, acDerive, acEnc, acDec, acParts, acSess, acClick }, cs: { CS, csSnap, csApply, csHash, csHtml, csFresh, csSync }, GFX, toggle: gfxToggle, preset: gfxSetPreset, bench: gfxBench, sweep: gfxShadowSweep };
 
         /* ---- THE FOREST EDGE behind the Harbor Studio: a hillside of pines and leafy trees, a valley and layered mountains (replaces the old bay and city) ---- */
         LOFT.forestU = { value: 0 }; LOFT.forestS = { value: null };   // seasons: x leaf cover, y autumn colour, z blossom, w snow depth
