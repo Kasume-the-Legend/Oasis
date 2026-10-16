@@ -120,3 +120,6 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 - Map `masaki` (room code prefix N). Built lazily by `ensureMasaki()`; `MK_OWNERS=['kasumex']` controls who sees it under Lobby → Custom Rooms (`renderCustomRooms`). Others can only enter with the code. Open to all: change `MK_OWNERS` check in `mkAcct`.
 - Two-storey house, veranda, pond, shrine hill with lantern path. Stairs ramp + upper floor in `masakiGround`; collisions in `masakiCollide`.
 - Roof + veranda skirt roofs (`MK.roofParts`) hide while you are inside the house footprint and camera max distance drops to 5 (`masakiUpdate`).
+
+## Party invites to online friends
+- Friends panel shows "Invite to party" for friends who are online in another room (same room still uses the direct peer message). Goes through the save Worker: `/pinv` (drop) and `/pinbox` (poll every 8 s, invites expire after 3 min, table `invites` auto-created). **The Worker must be redeployed** (`server/worker.js`) for this to work.

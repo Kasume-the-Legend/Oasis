@@ -14917,11 +14917,25 @@ function btMusicStop() {
             for (const { f, s } of rows) {
                 const r = el('div', 'fr-row ' + (f.pending ? '' : s.k)), w = el('div', 'fr-who'); w.append(el('b', '', f.n), el('small', '', f.pending ? 'Request sent, waiting for them' : s.txt)); const a = el('div', 'fr-act');
                 if (!f.pending && s.pe) a.append(btn('Invite to party', () => partyInvite(s.pe.id, s.pe.name)));
+                else if (!f.pending && s.k === 'on') a.append(btn('Invite to party', () => partyInviteFriend(f)));
                 a.append(btn(f.pending ? 'Cancel' : 'Remove', () => { if (f.pending || window.confirm('Remove ' + f.n + ' from your friends?')) frRemove(f.p); })); r.append(el('span', 'fr-dot'), w, a); b.append(r);
             }
             const hid = btn(FR.hide ? 'Appear online again' : 'Appear offline', () => { FR.hide = !FR.hide; try { localStorage.setItem('oasis.friends.hide', FR.hide ? '1' : '0'); } catch (e) { /* ignore */ } if (!FR.hide) frPing(); frRender(); });
             b.append(el('p', 'fr-note', acApi() ? (FR.hide ? 'You are hidden: friends see you as offline.' : 'Friends can see when you are online. Hide it if you want some peace.') : 'Online status needs the save server address (Settings).'), hid);
         }
+        // a friend who is online but in another room: the invite goes through the save server and pops up on their screen within a few seconds
+        async function partyInviteFriend(f) {
+            if (!PARTY.net) partyJoin(makeCode('party'), true); if (!PARTY.net) { frSys('Could not start a party.'); return; }
+            if (PARTY.members.size >= PARTY_MAX) { frSys('The party is full (8).'); return; }
+            const j = await frPost('/pinv', { to: f.p, from: PID, code: PARTY.code, by: me.name });
+            if (j && j.ok) { sysParty('Invited ' + f.n + ' to the party.'); frSys('Party invite sent to ' + f.n + '.'); } else frSys('Could not reach the save server to invite ' + f.n + '.');
+        }
+        async function frInbox() {
+            if (document.hidden || !acApi() || !FR.list.length) return; const j = await frPost('/pinbox', { pid: PID }); if (!j || !Array.isArray(j.inv)) return;
+            for (const v of j.inv) { const fr = frGet(v.f); if (!fr || fr.pending) continue; const code = normCode(v.c); if (!validParty(code) || PARTY.code === code) continue;
+                partyToast({ title: fr.n + ' invited you to a party', sub: PARTY.code ? 'Joining leaves your current party.' : 'Join up to see each other wherever you go.', ms: 60000, btns: [{ label: 'Join', cls: 'go', fn: () => partyJoin(code, false) }, { label: 'No thanks', fn: null }] }); }
+        }
+        setInterval(frInbox, 8000);
         frLoad();
         document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('#btn-friends'); if (t) { e.preventDefault(); frToggle(true); } else if (e.target && e.target.closest && e.target.closest('#pc-friend')) { const p = pcardPeer; if (p) { frRequest(p); closeProfile(); } } });
         setInterval(frPing, 90000); setInterval(() => { if (!document.hidden && (FR.open || FR.list.length)) frSeenNow(); }, 45000); setTimeout(() => { frPing(); frSeenNow(); }, 4000);
@@ -23060,20 +23074,29 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         var CSW = { rev: 0, sel: 'hero', s: { hero: { tpl: null, name: '', type: 'sword', cfg: null }, gunner: { tpl: null, name: '', type: 'gun', cfg: null }, fighter: { tpl: null, name: '', type: 'knuckles', cfg: null } } };
         const CSW_AX = { '+y': [0, 1, 0], '-y': [0, -1, 0], '+x': [1, 0, 0], '-x': [-1, 0, 0], '+z': [0, 0, 1], '-z': [0, 0, -1] };
         const CSW_TYPE = { sword: { n: 'Sword', len: 1.1, gf: 0.11 }, gun: { n: 'Gun', len: 0.32, gf: 0.3 }, bow: { n: 'Bow', len: 1.2, gf: 0.5 }, staff: { n: 'Staff', len: 1.6, gf: 0.4 }, knuckles: { n: 'Knuckles', len: 0.2, gf: 0.5 } };
-        const cswCfg0 = () => ({ ax: '+y', size: 1, grip: 0, hroll: 0, hry: 0, hrz: 0, btilt: 0, bh: 0 });
+        const cswCfg0 = () => ({ pow: 40, ax: '+y', size: 1, grip: 0, hroll: 0, hry: 0, hrz: 0, btilt: 0, bh: 0 });
         for (const k of Object.keys(CSW.s)) CSW.s[k].cfg = cswCfg0();
-        try { const j = JSON.parse(localStorage.getItem('oasis.csw2') || '{}'); for (const k of Object.keys(CSW.s)) if (j[k]) { if (CSW_TYPE[j[k].type]) CSW.s[k].type = j[k].type; Object.assign(CSW.s[k].cfg, j[k].cfg || {}); } } catch (e) { /* storage */ }
+        try { const j = JSON.parse(localStorage.getItem('oasis.csw2') || '{}'); for (const k of Object.keys(CSW.s)) if (j[k]) { if (CSW_TYPE[j[k].type]) CSW.s[k].type = j[k].type; if (typeof j[k].title === 'string') CSW.s[k].title = j[k].title; Object.assign(CSW.s[k].cfg, j[k].cfg || {}); } } catch (e) { /* storage */ }
         function cswDb(fn) { return new Promise((res) => { try { const rq = indexedDB.open('oasis-csw', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('f'); rq.onerror = () => res(null); rq.onsuccess = () => { const db = rq.result; try { const tx = db.transaction('f', 'readwrite'), r = fn(tx.objectStore('f')); tx.oncomplete = () => res(r && r.result !== undefined ? r.result : true); tx.onerror = () => res(null); } catch (e) { res(null); } }; } catch (e) { res(null); } }); }
         function cswParse(buf, ext) {
             if (ext === 'fbx') return Promise.resolve(withDataUrlBlobs(() => new FBXLoader().parse(buf, '')));
             return new Promise((ok, no) => new GLTFLoader().parse(buf, '', (g) => ok(g.scene), no));
         }
-        function cswSaveMeta() { const o = {}; for (const k of Object.keys(CSW.s)) o[k] = { type: CSW.s[k].type, cfg: CSW.s[k].cfg }; try { localStorage.setItem('oasis.csw2', JSON.stringify(o)); } catch (e) { /* storage */ } CSW.rev++; }
+        function cswSaveMeta() { const o = {}; for (const k of Object.keys(CSW.s)) o[k] = { type: CSW.s[k].type, title: CSW.s[k].title || '', cfg: CSW.s[k].cfg }; try { localStorage.setItem('oasis.csw2', JSON.stringify(o)); } catch (e) { /* storage */ } CSW.rev++; for (const k of Object.keys(CSW.s)) cswGear(k, k === CSW.sel); }
+        // your own weapon is a piece of gear like the adventure-mode ones: a name, base stats by weapon type, it levels with the class XP, and it is worn by its class
+        function cswStats(type, pow) { const a = Math.max(4, Math.min(154, Math.round(+pow) || 40)), P = Math.max(0, (a - 4) / 150 * 100); if (type === 'staff') return { atk: Math.round(a * 0.5), mag: Math.round(a * 0.75), mp: Math.round(a * 0.4) }; if (type === 'gun' || type === 'bow') return { atk: Math.round(a * 0.95), eva: Math.round(P * 0.06), crit: Math.round(P * 0.05) }; if (type === 'knuckles') return { atk: Math.round(a * 0.95), spd: Math.round(P * 0.12) }; return { atk: a, def: Math.round(P * 0.12) }; }
+        function cswGear(cls, wear) {
+            try { const g = gearLoad(), S = CSW.s[cls], id = 'csw-' + cls;
+                if (!S.tpl) { if (g.own[id]) { delete g.own[id]; if (g.worn[cls] && g.worn[cls].weapon === id) delete g.worn[cls].weapon; localStorage.setItem(GEAR_KEY, JSON.stringify(g)); try { window.oasisGear.changed(); } catch (e) { /* ok */ } } return; }
+                const o = g.own[id] || { xp: 0 }; o.n = (S.title || S.name || 'My weapon').slice(0, 18); o.s = 'weapon'; o.g = 0; o.b = cswStats(S.type, S.cfg.pow); o.custom = 1; g.own[id] = o;
+                if (wear) { g.worn[cls] = g.worn[cls] || {}; g.worn[cls].weapon = id; }
+                localStorage.setItem(GEAR_KEY, JSON.stringify(g)); try { window.oasisGear.changed(); } catch (e) { /* ok */ } } catch (e) { /* storage */ }
+        }
         async function cswUse(cls, buf, name, ext, persist) {
-            const tpl = await cswParse(buf, ext), S = CSW.s[cls]; S.tpl = tpl; if (persist) { try { const bx = new THREE.Box3().setFromObject(tpl), z = bx.getSize(new THREE.Vector3()), m = Math.max(z.x, z.y, z.z); S.cfg.ax = m === z.x ? '+x' : m === z.z ? '+z' : '+y'; } catch (e) { /* keep the default */ } } S.name = name.replace(/\.[^.]+$/, '').slice(0, 18); CSW.rev++;
+            const tpl = await cswParse(buf, ext), S = CSW.s[cls]; S.tpl = tpl; if (persist) { try { const bx = new THREE.Box3().setFromObject(tpl), z = bx.getSize(new THREE.Vector3()), m = Math.max(z.x, z.y, z.z); S.cfg.ax = m === z.x ? '+x' : m === z.z ? '+z' : '+y'; } catch (e) { /* keep the default */ } } S.name = name.replace(/\.[^.]+$/, '').slice(0, 18); if (persist) S.title = ''; CSW.rev++;
             if (persist) await cswDb((s) => s.put({ name, ext, buf }, cls));
         }
-        async function cswLoadSaved() { for (const cls of Object.keys(CSW.s)) { const r = await cswDb((s) => s.get(cls)); if (r && r.buf) { try { await cswUse(cls, r.buf, r.name, r.ext, false); } catch (e) { console.warn('saved weapon', cls, e); } } } try { clsRender(); } catch (e) { /* ui */ } }
+        async function cswLoadSaved() { for (const cls of Object.keys(CSW.s)) { const r = await cswDb((s) => s.get(cls)); if (r && r.buf) { try { await cswUse(cls, r.buf, r.name, r.ext, false); } catch (e) { console.warn('saved weapon', cls, e); } } } for (const k of Object.keys(CSW.s)) cswGear(k, false); try { clsRender(); } catch (e) { /* ui */ } }
         function cswBuild(cls) {
             const S = CSW.s[cls], c = S.cfg, T = CSW_TYPE[S.type] || CSW_TYPE.sword, m = S.tpl.clone(true), holder = new THREE.Group(); holder.add(m);
             holder.quaternion.setFromUnitVectors(new THREE.Vector3(...(CSW_AX[c.ax] || CSW_AX['+y'])), new THREE.Vector3(0, 1, 0)); holder.updateMatrixWorld(true);
@@ -23092,6 +23115,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             v.objs.forEach((o, i) => {
                 const left = T === 'bow' || (T === 'knuckles' && i === 1), g = left ? -f : f; o.removeFromParent();
                 if (want === 'stow' && T === 'knuckles') { o.visible = false; return; } o.visible = true;
+                if (T === 'sword') { if (!o.userData.saya) { const L = CSW_TYPE.sword.len * c.size, sy = new THREE.Mesh(new THREE.BoxGeometry(0.045, L * 0.82, 0.07), tgMat(0x0d1014, { roughness: 0.4 })); sy.position.y = L * 0.52; sy.userData.noOutline = true; o.userData.saya = sy; o.add(sy); } o.userData.saya.visible = want === 'stow'; }
                 const parent = want === 'hand' ? H.getNormalizedBoneNode(left ? 'leftHand' : 'rightHand') : (T === 'gun' ? H.getNormalizedBoneNode('hips') : (H.getNormalizedBoneNode('upperChest') || H.getNormalizedBoneNode('chest')));
                 if (!parent) return; parent.add(o); o.scale.setScalar(1 / ws(parent));
                 if (want === 'hand') { o.position.set(-0.04 * g, 0, 0.01); o.rotation.set(c.hroll, c.hry, HC_GRIP.z * g + c.hrz * g); }
@@ -23103,20 +23127,23 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const P = document.getElementById('csw-panel'); if (!P || !P.dataset.w) return; const S = CSW.s[CSW.sel], q = (id) => document.getElementById(id);
             q('csw-cls').value = CSW.sel; q('csw-type').value = S.type; q('csw-ctl').style.display = S.tpl ? 'block' : 'none'; q('csw-ax').value = S.cfg.ax;
             for (const [id, k] of Object.entries({ 'csw-size': 'size', 'csw-grip': 'grip', 'csw-hroll': 'hroll', 'csw-hry': 'hry', 'csw-hrz': 'hrz', 'csw-btilt': 'btilt', 'csw-bh': 'bh' })) q(id).value = S.cfg[k];
+            q('csw-name').value = S.title || S.name || ''; q('csw-pow').value = S.cfg.pow; { const st = cswStats(S.type, S.cfg.pow); q('csw-stats').textContent = Object.keys(st).map((k) => k.toUpperCase() + ' +' + st[k]).join(' · ') + ' (Lv 1; grows with class XP)'; }
             q('csw-st').textContent = S.tpl ? '✔ ' + S.name + ' → ' + CSW.sel : 'nothing uploaded for this class';
         }
         function cswWire() {
             const P = document.getElementById('csw-panel'); if (!P || P.dataset.w) return; P.dataset.w = 1;
             const rg = (id, lb, lo, hi, st) => `<label class="block">${lb} <input id="${id}" type="range" min="${lo}" max="${hi}" step="${st}" style="width:100%"></label>`, sel = 'style="background:#222;color:#fff"';
-            P.innerHTML = `<div class="text-[11px] text-gray-400 mt-2">Your own weapons <span class="text-gray-500">(stay on this device; others see the stock look)</span></div><div class="text-[11px]" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><select id="csw-cls" ${sel}><option value="hero">Hero</option><option value="gunner">Gunner</option><option value="fighter">Fighter</option></select><select id="csw-type" ${sel}>${Object.keys(CSW_TYPE).map((k) => `<option value="${k}">${CSW_TYPE[k].n}</option>`).join('')}</select><span id="csw-st" class="text-gray-400"></span></div><label class="block text-[11px]"><input id="csw-file" type="file" accept=".glb,.gltf,.fbx"></label><div id="csw-ctl" style="display:none;font-size:11px;color:#ccc"><label class="block">Tip points <select id="csw-ax" ${sel}>${Object.keys(CSW_AX).map((k) => `<option value="${k}">${k.toUpperCase()}</option>`).join('')}</select> <span class="text-gray-500">(which way your file's tip faces)</span></label>${rg('csw-size', 'Size', 0.4, 2.5, 0.05)}${rg('csw-grip', 'Grip position', -0.4, 0.4, 0.01)}${rg('csw-hroll', 'Hand roll', -3.14, 3.14, 0.05)}${rg('csw-hry', 'Hand turn', -3.14, 3.14, 0.05)}${rg('csw-hrz', 'Hand tilt', -3.14, 3.14, 0.05)}${rg('csw-btilt', 'Put-away angle', -1.5, 1.5, 0.05)}${rg('csw-bh', 'Put-away height', -0.3, 0.3, 0.01)}<button id="csw-del" type="button" class="py-1 px-2 rounded-lg bg-white/10 mt-1">Remove this weapon</button></div>`;
+            P.innerHTML = `<div class="text-[11px] text-gray-400 mt-2">Your own weapons <span class="text-gray-500">(stay on this device; others see the stock look)</span></div><div class="text-[11px]" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><select id="csw-cls" ${sel}><option value="hero">Hero</option><option value="gunner">Gunner</option><option value="fighter">Fighter</option></select><select id="csw-type" ${sel}>${Object.keys(CSW_TYPE).map((k) => `<option value="${k}">${CSW_TYPE[k].n}</option>`).join('')}</select><span id="csw-st" class="text-gray-400"></span></div><label class="block text-[11px]"><input id="csw-file" type="file" accept=".glb,.gltf,.fbx"></label><div id="csw-ctl" style="display:none;font-size:11px;color:#ccc"><label class="block">Name <input id="csw-name" maxlength="18" style="background:#222;color:#fff;border-radius:6px;padding:2px 6px"></label>${rg('csw-pow', 'Base power', 4, 154, 1)}<div id="csw-stats" class="text-gray-300"></div><label class="block">Tip points <select id="csw-ax" ${sel}>${Object.keys(CSW_AX).map((k) => `<option value="${k}">${k.toUpperCase()}</option>`).join('')}</select> <span class="text-gray-500">(which way your file's tip faces)</span></label>${rg('csw-size', 'Size', 0.4, 2.5, 0.05)}${rg('csw-grip', 'Grip position', -0.4, 0.4, 0.01)}${rg('csw-hroll', 'Hand roll', -3.14, 3.14, 0.05)}${rg('csw-hry', 'Hand turn', -3.14, 3.14, 0.05)}${rg('csw-hrz', 'Hand tilt', -3.14, 3.14, 0.05)}${rg('csw-btilt', 'Put-away angle', -1.5, 1.5, 0.05)}${rg('csw-bh', 'Put-away height', -0.3, 0.3, 0.01)}<button id="csw-del" type="button" class="py-1 px-2 rounded-lg bg-white/10 mt-1">Remove this weapon</button></div>`;
             const q = (id) => document.getElementById(id);
             q('csw-cls').addEventListener('change', () => { CSW.sel = q('csw-cls').value; cswSync(); });
-            q('csw-type').addEventListener('change', () => { CSW.s[CSW.sel].type = q('csw-type').value; cswSaveMeta(); });
+            q('csw-type').addEventListener('change', () => { CSW.s[CSW.sel].type = q('csw-type').value; cswSaveMeta(); cswSync(); });
+            q('csw-name').addEventListener('input', () => { CSW.s[CSW.sel].title = q('csw-name').value.slice(0, 18); cswSaveMeta(); });
+            q('csw-pow').addEventListener('input', () => { CSW.s[CSW.sel].cfg.pow = +q('csw-pow').value; cswSaveMeta(); cswSync(); });
             q('csw-ax').addEventListener('change', () => { CSW.s[CSW.sel].cfg.ax = q('csw-ax').value; cswSaveMeta(); });
             for (const [id, k] of Object.entries({ 'csw-size': 'size', 'csw-grip': 'grip', 'csw-hroll': 'hroll', 'csw-hry': 'hry', 'csw-hrz': 'hrz', 'csw-btilt': 'btilt', 'csw-bh': 'bh' })) q(id).addEventListener('input', () => { CSW.s[CSW.sel].cfg[k] = +q(id).value; cswSaveMeta(); });
             q('csw-file').addEventListener('change', async (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const ext = (f.name.split('.').pop() || '').toLowerCase(); if (!['glb', 'gltf', 'fbx'].includes(ext)) { sysChat('Use a .glb or .fbx weapon file.'); return; }
                 const cls = CSW.sel; CSW.s[cls].type = q('csw-type').value; try { await cswUse(cls, await f.arrayBuffer(), f.name, ext, true); cswSaveMeta(); cswSync(); if (cls === 'hero') clsSkin(99); else clsRender(); sysChat('Your ' + CSW_TYPE[CSW.s[cls].type].n.toLowerCase() + ' "' + CSW.s[cls].name + '" is set for the ' + cls + ' class. Adjust it with the sliders if it sits wrong.'); } catch (er) { console.warn(er); sysChat('That file could not be read as a weapon. Try a .glb, or an .fbx with embedded textures.'); } e.target.value = ''; });
-            q('csw-del').addEventListener('click', async () => { const cls = CSW.sel; await cswDb((s) => s.delete(cls)); CSW.s[cls].tpl = null; CSW.s[cls].name = ''; CSW.rev++; if (cls === 'hero' && CLS.skin === 99) clsSkin(0); cswSync(); clsRender(); });
+            q('csw-del').addEventListener('click', async () => { const cls = CSW.sel; await cswDb((s) => s.delete(cls)); CSW.s[cls].tpl = null; CSW.s[cls].name = ''; CSW.s[cls].title = ''; CSW.rev++; cswGear(cls, false); if (cls === 'hero' && CLS.skin === 99) clsSkin(0); cswSync(); clsRender(); });
             cswSync();
         }
         function hcSwordModel(skin) {
@@ -23129,7 +23156,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             return g;
         }
         function hcDress(actor) {
-            if (actor === localActor) { actor.heroSkin = CLS.skin; actor.heroFt = CLS.wpn === 'fighter'; const cl = CLS.wpn === 'fighter' ? 'fighter' : CLS.skin === 99 ? 'hero' : null; if (cl && CSW.s[cl].tpl) { if (actor.hcVis) { for (const o of actor.hcVis.objs) o.removeFromParent(); actor.hcVis = null; } cswDress(actor, cl, cl === 'hero' && actor.heroSheath); return; } else if (actor.cswVis) cswClear(actor); }
+            if (actor === localActor) { actor.heroSkin = CLS.skin; actor.heroFt = CLS.wpn === 'fighter'; const cl = CLS.wpn === 'fighter' ? 'fighter' : (CLS.skin === 99 || CSW.s.hero.tpl) ? 'hero' : null; if (cl && CSW.s[cl].tpl) { if (actor.hcVis) { for (const o of actor.hcVis.objs) o.removeFromParent(); actor.hcVis = null; } cswDress(actor, cl, cl === 'hero' && actor.heroSheath); return; } else if (actor.cswVis) cswClear(actor); }
             if (actor.heroFt) { if (actor.hcVis) { for (const o of actor.hcVis.objs) o.removeFromParent(); actor.hcVis = null; } return; }
             const H = actor.vrm && actor.vrm.humanoid; if (!H) return;
             let v = actor.hcVis; if (v && (v.bonesRef !== actor.bones || v.skin !== (actor.heroSkin | 0))) { for (const o of v.objs) o.removeFromParent(); v = actor.hcVis = null; }
@@ -23347,7 +23374,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         function hcPadAct(b, hit, mag) {
             if (gnMode()) { HC.fireP = !!b[7]; GN.adsP = !!b[6]; if (hit(2)) gnReload(); if (hit(0)) hcJump(); if (hit(1)) gnRoll(); if (hit(10)) gnCrouchSet(!GN.crouch); if (b[4]) { if (!GN.wheel) gnWheelOpen(true); gnWheelAim(PAD.rx, PAD.ry, 0.45); PAD.rx = PAD.ry = 0; } else if (GN.wheel && PAD.prev[4]) gnWheelCommit(); if (hit(11)) hcLockCycle(); if (!GN.wheel) { if (hit(14)) gnCycle(-1); if (hit(15)) gnCycle(1); } return; }
             HC.fireP = activeMap === 'construct' && !!b[3] && !b[4];
-            if (hit(2)) { if (b[4]) hcSkill('hsk3'); else hcSword(); }
+            if (hit(2)) { if (b[4]) { if (HC.lock) hcSkill('hsk3'); else hcDraw(); } else hcSword(); }   // L1 + Square/X: skill when locked on a target, otherwise draw / sheathe
             if (hit(3) && b[4]) hcSkill('hsk4');
             if (hit(14)) hcSkill('hsk1'); if (hit(15)) hcSkill('hsk2');
             if (hit(0)) hcJump();

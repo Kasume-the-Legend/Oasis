@@ -29,6 +29,23 @@ export default {
       const rows = await env.DB.prepare('SELECT pid, t FROM presence WHERE pid IN (' + pids.map(() => '?').join(',') + ')').bind(...pids).all();
       const t = {}; for (const r of rows.results || []) t[r.pid] = r.t; return json({ t });
     }
+    // ---- party invites to friends who are online in another room: dropped here, picked up within seconds, expire after 3 minutes ----
+    if (url.pathname === '/pinv' || url.pathname === '/pinbox') {
+      const PID = /^[a-f0-9]{16,32}$/;
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS invites (to_pid TEXT, from_pid TEXT, code TEXT, by TEXT, t INTEGER)').run();
+      if (url.pathname === '/pinv') {
+        const to = String(b.to || ''), from = String(b.from || ''), code = String(b.code || '').toUpperCase(), by = String(b.by || '').replace(/[\u0000-\u001f<>]/g, '').slice(0, 16);
+        if (!PID.test(to) || !PID.test(from) || !/^[A-Z0-9-]{8,24}$/.test(code)) return json({ error: 'Bad request.' }, 400);
+        const n = await env.DB.prepare('SELECT COUNT(*) AS c FROM invites WHERE from_pid = ? AND t > ?').bind(from, Date.now() - 60000).first();
+        if (n && n.c >= 10) return json({ error: 'Slow down.' }, 429);
+        await env.DB.prepare('INSERT INTO invites (to_pid, from_pid, code, by, t) VALUES (?, ?, ?, ?, ?)').bind(to, from, code, by, Date.now()).run();
+        return json({ ok: true });
+      }
+      const pid = String(b.pid || ''); if (!PID.test(pid)) return json({ error: 'Bad request.' }, 400);
+      const rows = await env.DB.prepare('SELECT from_pid, code, by, t FROM invites WHERE to_pid = ? AND t > ? ORDER BY t DESC LIMIT 5').bind(pid, Date.now() - 180000).all();
+      await env.DB.prepare('DELETE FROM invites WHERE to_pid = ? OR t < ?').bind(pid, Date.now() - 180000).run();
+      return json({ inv: (rows.results || []).map((r) => ({ f: r.from_pid, c: r.code, by: r.by })) });
+    }
     const id = String(b.id || ''), auth = String(b.auth || '');
     if (!HEX64.test(id) || !HEX64.test(auth)) return json({ error: 'Bad request.' }, 400);
     const a = await sha256hex('oasis-auth|' + auth), now = Date.now(), DB = env.DB;
