@@ -150,3 +150,57 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 Equipment.html shows a "MY" card at the top of the Weapon slot for the current class when that class has an imported weapon: editable name + power, computed stats (`cswStats`, scaled by gear level), Equip/Unequip. Uses `window.oasisGear.csw.get/set` (index.html, next to `cswGear`).
 Imported weapon: power is capped by class level (`cswCap`, 4..154 over lv 1..99) and name/power can be set ONCE (`cfg.lock`); after that the class panel inputs and the Equipment card are read-only. Gear stats still grow with gear level.
 Imported weapon build-up: after the one-time Set, each class's weapon levels with class XP like shop gear and can be upgraded +1..+9 in Equipment (cost 1500*n^2 Gil, needs gear Lv 10*n, +12% stats per tier; `cfg.up`, `oasisGear.csw.upgrade`).
+
+## Graphics pass 1 (Warriors of Light) + the build method
+Method from now on: kit pieces -> clusters -> districts -> city (see the lead-dev plan in chat).
+Levels.js: `paintTex(v)` gives every scenery material (kit `M()`) a baked gradient + brush strokes + edge shade (flat shading off); grass/jungle floors got tonal blotches, tufts and flowers; cobble stones got per-stone shading. Backup of the pre-pass file: none in repo (was /tmp/Levels.pre-gfx.js).
+Masaki house: rebuilt from the floor plan in index.html (exterior verified, interiors NOT yet checked) - paused by request.
+
+## Graphics pass 2: geometry kit (Levels.js `btGeoKit`)
+Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/autumn trees (flared bent trunk, roots, branches, clustered lumpy canopies), ragged-tier pines (+snow), displaced faceted rocks (stone/mossy/snow/sand/dark), bushes, grass tufts (green/dry/snow/jungle), 5 flower colours, segmented palms with drooping fronds, cypress/topiary/hedge, crystal clusters, and 5 town-house variants (plinth, string courses, pilasters, framed windows with sills/shutters/flower boxes, awning door, ridged or hip roof, chimney; glass is a separate geometry so it glows at night). Wired into forest, pines, plaza, plains, garden, jungle, shore, cavern, volcano, cliffs. Method: build kit pieces -> clusters -> districts -> city. Still to do: desert, hall details, Harbor City, Harbor Inn.
+
+## Graphics pass 3 — FF10-style paths (Levels.js)
+- `btPathTex(kind)`, `BT_PATHS` (per-biome trail + end landmark: forest ruin, pines cabin, plains windmill+fence, garden gate, jungle ruin, desert colonnade, volcano torii, shore lighthouse/plank), `btPathBuild(id,K)`; wrapper loop before final `return` wraps `BT_DETAIL`.
+- Ribbon material must be DoubleSide + polygonOffset (else culled/z-fights).
+- TODO: exclude tree scatter near trail; add paths to plaza/hall/cavern/cliffs; tune cavern crystals.
+
+## Adventure Mode (new)
+Files: `Adventure.js` (loaded on demand like Levels.js), `adventure/zones.json` (data), glue block in index.html after `MAP_DEFS.btl` (search "Adventure Mode"), `Levels.js` now also exports `gk` + `pathTex`.
+- Lobby entry "Adventure Mode" (map `adv`, solo room `adv-<random>`). Title menu: Continue / New Game. Save key `oasisAdv.v1` (zone, flags, spheres, visited, kills).
+- zones.json: per zone `path` (spline points x,z), `width`, `biome`, `weather`, `ground`, `sky/fog/light`, `ambient` + `music {root,scale}` (generative; or `music.src` file), `scatter` (GK models along road), `landmarks`, `saves` (Save Spheres at path t), `encounters {volumes[{t0,t1,rate}|box], groups[{w,foes[]}], lvl[a,b], grace, stepDist}`, `events` (flags), `exits {prev,next}` (+`requires` flag).
+- Road clamp + locked road-following camera (`A.clamp`, `A.cam`). Zone ends fade and load the next zone; walking back past t=0 returns.
+- Encounter -> `advBattle`: saves snapshot, flash, `setMap('btl')` (no network), `BT.bgForce` = zone biome, `BT.advEnc` makes `btNextWave` use the zone's foes and level; `btVictory/btOver` call `advBattleDone` -> back to road at the same spot (loss = wake at last sphere). HP/MP carry over fights; Save Spheres heal + unlock fast travel (Map button).
+- `update` in MAP_DEFS gets the actor group: pass `g.position` (bug fixed).
+- TODO: GLB zones from Unreal (`model` field + helper objects), more zones, boss encounters/story gates, tune zone `lvl` (Macalania 8-14 is hard at Lv1).
+- Tests: headless runs in scratchpad dx `adv2.mjs` (flow) / `adv3.mjs` (screens).
+
+## College Raimon (school map)
+- Lobby "College Raimon" (room `school-01`, map `raimon`) replaces the old Oasis High School entry; the old `school` map code is still in index.html (private-room option still uses it).
+- Source: user's CollegeRaimon.glb (430 MB, 4.8M tris instanced). Optimized with gltf-transform + meshopt (scripts were in /tmp/gt: opt3.mjs, nav.mjs): decimated by kind (trees 5%, buildings 30%), 1024px WebP textures, 80 m chunks, far sky shells removed, quantized -> `school/raimon.glb` 42 MB / 1.57M tris.
+- `school/raimon.nav`: baked walk map (1 m ground heights as Int16 cm; 0.5 m blocked bit grid from walls/steep steps). Index.html block "College Raimon": `rmH` ground, `rmCollide` (slide along walls), `rmSpawn` (south gate, 0,182 facing north), chunk culling (r+240 m), own sky/lights, loading overlay.
+- Heavy for phones (~1.3M tris at spawn). Next: more decimation / LOD, interiors, time of day, classroom/NPC spots, trees collision.
+
+## Blade Forge (Oasis Industries)
+- `Forge.js` (on demand) + glue in index.html before `industriesOpen` ("Blade Forge") + `window.oasisGear.csw.{forge,design,cap,lv}`. Opened from the "Blade Forge" button in the Oasis Industries top bar (`window.__forgeOpen()` for tests).
+- Player picks blade shape, material (Gil tiers x power), guard/grip/pommel/colors, enchant glow, and 6 attributes (Keen, Swift, Vital, Arcane, Bulwark, Fury; levels 0-5, slots = 3 + classLv/10). Cost = 500 fee + parts + material + glow + attribute levels. Pay with `oasisGil`.
+- Forging replaces the hero custom weapon: `cfg {lock:1, dyn:1, fx:{bonus stats}, forge:design, size, grip}`. `dyn` = power is min(forged power, class-level cap) and refreshes on class level-up (`clsAdd`). Worn immediately via `cswGear('hero', true)`; the Equipment card / Upgrade +1..+9 work on it as before. Blade is built +Y with the grip height computed so the existing equipment placement (hand/sheath) lines it up; no model file: it is rebuilt from `cfg.forge` at startup (`forgeRestore`). Importing a model clears the forge data.
+- Infinity Blade zip the user sent is Unreal .uasset (unreadable here); would need GLB/FBX export.
+
+## Weather + day/night on big GLB maps (Raimon, Nuu)
+- Both maps build their own sky with `cySkyBuild(root, true)` and call `cySkyUpdate(dt, pos, ctx)` from their `update`; night lamps use `CYT.nightF`.
+- Map ids `raimon`, `nuu` are in every outdoor list (`wxGrp`, `wxMapChanged`, `outdoor`, fog density, audio, weather chip) and in `fsSurface`.
+
+## College Raimon, split + streamed
+- Raimon is 8 streamed pieces `school/raimon{S0,S1,N2,N3,F6,F7,T}.glb` (S/N/F = inner/stadium/front, 0/2/6 west half x<0, 1/3/7 east half; T = town), 3-7MB each, one shared nav. Rules in `RM_REGS` (near/far by player x,z). Rebuild: split.mjs (reg codes 0-7) then `opt4.mjs <region[,region]> out.glb`.
+- `RM_REGS` in index.html: each region loads when the player gets near (`near`) and is disposed when far (`far`); fetched buffers are cached. Spawn loads S + T.
+- Rebuild: `/tmp/gt/split.mjs` (3 regions via node extras `reg`) then `opt4.mjs <region> out.glb`.
+
+## Forest of Nuu (map id `nuu`, lobby channel `nuu-01`)
+- Data in `nuu/`: `nuu_land.glb` (terrain, positions only), `nuu_props.glb` + `nuu_inst.json` (trees/rocks/shrubs: LOD0 + `@1` low LOD for trees; instance = [type,x,y,z,qx,qy,qz,qw,scale]), `nuu_town.glb` (Village Kit pieces, FBX converted through a browser FBXLoader + GLTFExporter), `nuu.nav` (1 m heights + 0.5 m blocked bits, same format as Raimon).
+- Built by `/tmp/gt/nuu.mjs` (Forest_of_Nuu.glb -> nuu/), `/tmp/gt/town.mjs` (kit -> nuu_town.glb).
+- Town: clearing at `NU.TC` (8, 4); terrain is flattened in JS (`nuFlatW`) for vertices and nav; trees within 37 m removed; houses/stalls/props are placed in `nuBuildTown` and block the walk grid with oriented boxes.
+- Safe zone: radius `NU.SAFE_R` (40 m) around the town; no encounter rolls inside it (toast on enter/leave).
+- Encounters: every `NU_STEP` (4 m) walked outside the zone, after `NU_GRACE` (24 m) since the last fight, chance `NU_RATE` (0.15). Table `NU_TABLE` by distance ring (<100, <175, beyond) picks foes + level. `nuBattle` saves your spot, fades, `advSwitch('btl')` with `BT.advEnc` / `BT.bgForce` (forest biome, weather from WX/night); `advBattleDone` forwards to `nuBattleDone` which returns you to the exact spot (or the village after a defeat).
+- Quirk: quantized GLB attributes are int16; when baking node transforms into geometry use `nuF32()` first.
+- Tests: `window.__nu`, `window.__nuBattle(foes, lv)`, `window.__nuDone(won)`.
+- Music: `nuu/nuu_bgm.mp3` (Berglund's Forest) loops at 75% while on the `nuu` map (`nuBgm`); paused in the battle arena and on other maps, resumes on return.
