@@ -127,3 +127,5 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 ## Harbor Inn co-op: partner VRM + host's music/UI
 - On connect each side sends its VRM (chunked, `avh`/`avc`, up to 26 MB) and the partner is drawn as that VRM (procedural walk/aim pose) instead of the block figure.
 - Host's music (YouTube links + uploaded files per slot) and menu-sound uploads are sent to the guest (`mus` + chunked `m:`/`u:` blobs); in co-op the guest hears the host's choices. `window.__svco` is a test hook.
+- Partner shots: the `p` message carries a shot/swing counter (`f`); the receiver shows muzzle flash + light, recoil, sword swing and plays the shot/swing sound. The partner VRM holds pistol / blade / gloves in its hands.
+- Co-op enemy sync: zombie look is seeded from the enemy's key (same for host and guest); enemies the guest is missing (risen zombies, boss adds) are spawned from the room's real spec, and a risen zombie clears the guest's "dead" mark.

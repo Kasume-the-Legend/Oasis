@@ -793,18 +793,19 @@ function keysBox() {
     const t = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.27), lm); t.rotation.x = -Math.PI / 2; t.position.y = 0.113; gp.add(t); gp.rotation.y = 0.5; return gp;
 }
 /* ---------- monsters ---------- */
+const keySeed = (key, dflt) => (typeof key === 'string' && key ? hashS(key) % 997 : dflt);   // the look of a zombie comes from its own id, so host and guest build the same one
 function spawnEnemy(e, key, chase) {
     let mdl, E;
     if (e.bs) {   // a boss: a baked zombie model (or a hound) scaled up, with its own stats, phases and drop
         const b = e.bs; if (b.kind === 'hound') { mdl = makeHound(); mdl.root.scale.setScalar(b.sc || 2.4); } else mdl = makeZombie(0, b.v, b.sc);
         E = { hp: b.hp, spd: b.spd, rad: b.rad || 0.9, dmg: b.dmg, cd: b.cd || 1.5, wind: b.wind || 0.8, reach: b.reach || 2.3, boss: 1, phases: b.phases || 2, drop: e.drop, bname: b.name }; e.t = b.kind === 'hound' ? 'h' : 'z';
     }
-    else if (e.t === 'z' && e.br) { mdl = makeZombie(RM.enemies.length + String(G.room || '').length * 5 + 2, null, [1.14, 1.16]); E = { hp: 26, spd: 1.55, rad: 0.55, dmg: 22, cd: 1.2, wind: 0.5, reach: 1.45, tyrant: 1 }; }
+    else if (e.t === 'z' && e.br) { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 5 + 2), null, [1.14, 1.16]); E = { hp: 26, spd: 1.55, rad: 0.55, dmg: 22, cd: 1.2, wind: 0.5, reach: 1.45, tyrant: 1 }; }
     else if (e.t === 'z' && e.ty) {   // tyrants: a huge brute and a tall relentless stalker
         const big = e.ty === 'skeletonzombie'; mdl = makeZombie(0, e.ty, big ? [1.5, 1.28] : [1.0, 1.34]);
         E = big ? { hp: 70, spd: 1.05, rad: 0.8, dmg: 30, cd: 1.7, wind: 0.85, reach: 2.0, tyrant: 1 } : { hp: 55, spd: 2.0, rad: 0.5, dmg: 22, cd: 1.1, wind: 0.5, reach: 1.7, tyrant: 1 };
     }
-    else if (e.t === 'z') { mdl = makeZombie(RM.enemies.length + String(G.room || '').length * 3 + (e.cr ? 1 : 0)); E = { hp: e.cr ? 7 : 11, spd: e.cr ? 0.9 : 1.35, rad: 0.42, dmg: 14, cd: 1.3, wind: 0.55, reach: 1.15 }; }
+    else if (e.t === 'z') { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 3 + (e.cr ? 1 : 0))); E = { hp: e.cr ? 7 : 11, spd: e.cr ? 0.9 : 1.35, rad: 0.42, dmg: 14, cd: 1.3, wind: 0.55, reach: 1.15 }; }
     else if (e.t === 'h') { mdl = makeHound(); E = { hp: 6, spd: 5.2, rad: 0.4, dmg: 9, cd: 0.9, wind: 0.3, reach: 1.1 }; }
     else { mdl = makeBoss(); E = { hp: 80, spd: 1.2, rad: 0.95, dmg: 30, cd: 1.6, wind: 0.85, reach: 2.5, boss: 1 }; }
     Object.assign(E, { t: e.t, key, x: e.x, z: e.z, rot: e.rot || 0, mdl, st: e.dorm ? 'dorm' : chase ? 'chase' : 'idle', stT: 0, stun: 0, atkT: 0, hurt: 0, ph: Math.random() * 6, hp0: E.hp, cr: e.cr ? 1 : 0, charge: 0, chT: 3 + Math.random() * 3, wake: 0 });
@@ -921,13 +922,13 @@ function reload() {
 }
 function fire() {
     if (PL.cd > 0 || PL.state !== 'idle') return; if (G.mag <= 0) { if (!reload()) { PL.cd = 0.3; } return; }
-    G.mag--; PL.cd = curW().rate; sfx('shot'); RM.flash = 0.07;
+    G.mag--; PL.cd = curW().rate; sfx('shot'); RM.flash = 0.07; PL.shots = (PL.shots | 0) + 1;
     const fx = Math.sin(PL.rot), fz = Math.cos(PL.rot); let hit = null, ht = 99;
     for (const E of RM.enemies) { if (E.st === 'dead') continue; const dx = E.x - PL.x, dz = E.z - PL.z, t = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx); if (t > 0 && t < curW().range && lat < E.rad + 0.15 && t < ht) { ht = t; hit = E; } }
     if (hit) { const leg = !!PL.low; dealHit(hit, curW().dmg * gearMult('pistol') * (leg ? 0.6 : 1), leg ? false : Math.random() < 0.14, leg); }
 }
 function swing() {
-    if (PL.cd > 0 || PL.state !== 'idle') return; const w = curW(); PL.cd = w.rate; PL.state = 'swing'; PL.st = 0; sfx('swing');
+    if (PL.cd > 0 || PL.state !== 'idle') return; const w = curW(); PL.cd = w.rate; PL.state = 'swing'; PL.st = 0; sfx('swing'); PL.shots = (PL.shots | 0) + 1;
     setTimeout(() => { if (PL.state === 'dead') return; const fx = Math.sin(PL.rot), fz = Math.cos(PL.rot); for (const E of RM.enemies) { if (E.st === 'dead') continue; const dx = E.x - PL.x, dz = E.z - PL.z, t = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx); if (t > -0.2 && t < w.reach + E.rad && lat < 0.9 + E.rad * 0.6) dealHit(E, w.dmg * gearMult(G.eq), Math.random() < 0.1); } }, w.rate * 300);
 }
 function nearestInter() {
@@ -2067,7 +2068,8 @@ function guestEnemy(E, dt) {
 /* ---- the partner */
 function coEnsureRP() {
     if (CO.rp) return CO.rp; const h = makePlayer({ shirt: 0x8a2f2f, sleeve: 0x8a2f2f, pants: 0x2f3a4a, hair: 0xc8a050 }); h.root.visible = false; scene.add(h.root);
-    CO.rp = { g: h.root, P: h.P, W: h.W, x: 0, z: 0, rot: 0, tx: 0, tz: 0, tr: 0, state: 'idle', aim: false, eq: 'pistol', hp: 100, speed: 0, walk: 0, cur: false }; return CO.rp;
+    const lt = new THREE.PointLight(0xffc880, 0, 7); lt.position.set(0, 1.3, 0.6); h.root.add(lt);
+    CO.rp = { light: lt, g: h.root, P: h.P, W: h.W, x: 0, z: 0, rot: 0, tx: 0, tz: 0, tr: 0, state: 'idle', aim: false, eq: 'pistol', hp: 100, speed: 0, walk: 0, cur: false }; return CO.rp;
 }
 /* ---- the partner's own VRM: sent once over the link in chunks, then shown instead of the blocky stand-in */
 const AVX = { chunk: 12000, max: 26 * 1048576 };
@@ -2109,20 +2111,29 @@ async function rpLoadVRM(buffer, gender) {
     const N = {}; for (const n of ['hips', 'spine', 'chest', 'head', 'leftUpperArm', 'leftLowerArm', 'rightUpperArm', 'rightLowerArm', 'leftUpperLeg', 'leftLowerLeg', 'rightUpperLeg', 'rightLowerLeg']) N[n] = vrm.humanoid.getNormalizedBoneNode(n);
     if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
     vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), sc = 1.68 / h; const grp = new THREE.Group(); grp.add(vrm.scene); grp.scale.setScalar(sc); grp.position.y = -bb.min.y * sc;
-    const r = coEnsureRP(); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
+    const r = coEnsureRP(); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
+    { const inv = 1 / sc, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0 }), B = (w, h2, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h2 * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
+        const pist = new THREE.Group(); pist.add(B(0.19, 0.04, 0.03, 0x1a1c20, -0.15, 0.015, 0), B(0.03, 0.095, 0.032, 0x14110e, -0.08, -0.05, 0), B(0.05, 0.03, 0.024, 0x2a2d33, -0.1, -0.012, 0));
+        const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06 * inv, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.9 })); fl.position.set(-0.27 * inv, 0.015 * inv, 0); fl.visible = false; pist.add(fl); pist.userData.fl = fl;
+        const blade = new THREE.Group(); blade.add(B(0.11, 0.032, 0.032, 0x1a1410, -0.05, 0, 0), B(0.02, 0.05, 0.075, 0x3a3228, -0.11, 0, 0), B(0.42, 0.018, 0.045, 0xcfd6e0, -0.34, 0, 0, 0x1a2430));
+        const gl = new THREE.Group(); gl.add(B(0.09, 0.075, 0.085, 0x8a1c1c, 0, 0, 0)); const gr = gl.clone(); gr.scale.x = -1;
+        const hr = vrm.humanoid.getNormalizedBoneNode('rightHand'), hl = vrm.humanoid.getNormalizedBoneNode('leftHand'); if (hr) hr.add(pist, blade, gl); if (hl) hl.add(gr); r.vw = { pistol: pist, blade, gl, gr }; }
 }
 function rpVrmPose(dt) {
     const r = CO.rp, N = r.N, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, ch = new THREE.Euler(), set = (n, x, y, z) => { if (n) n.quaternion.setFromEuler(ch.set(x, y, z, 'YXZ')); };
     set(N.leftUpperLeg, s * 0.6 * a, 0, 0); set(N.rightUpperLeg, -s * 0.6 * a, 0, 0); set(N.leftLowerLeg, Math.max(0, -s) * 0.7 * a, 0, 0); set(N.rightLowerLeg, Math.max(0, s) * 0.7 * a, 0, 0);
-    const gun = r.eq === 'pistol', aim = r.aim && r.state !== 'dead';
-    if (aim && gun) { set(N.rightUpperArm, 0, 1.45, 0); set(N.leftUpperArm, 0, -1.3, 0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0.2, 0); }
+    const gun = r.eq === 'pistol', aim = r.aim && r.state !== 'dead', kick = Math.max(0, r.kick || 0);
+    if (r.vw) { r.vw.pistol.visible = gun; r.vw.blade.visible = r.eq === 'blade'; r.vw.gl.visible = r.vw.gr.visible = r.eq === 'fists' || (r.eq !== 'pistol' && r.eq !== 'blade'); r.vw.pistol.userData.fl.visible = r.flash > 0; }
+    set(N.spine, 0, 0, 0);
+    if (r.swT > 0 && r.eq === 'blade') { const u = 1 - r.swT / 0.35; set(N.rightUpperArm, -0.4 - 1.5 * Math.sin(u * Math.PI), 1.35 - 1.6 * u, 0.2); set(N.leftUpperArm, 0, -0.6, -1.0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0, 0); set(N.spine, 0, 0.5 - 1.1 * u, 0); }
+    else if (aim && gun) { set(N.rightUpperArm, -0.25 * kick, 1.45, 0); set(N.leftUpperArm, 0, -1.3, 0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0.2, 0); }
     else if (aim) { set(N.rightUpperArm, -0.2, 1.2, 0.2); set(N.leftUpperArm, 0, -0.5, -1.0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0, 0); }
     else { set(N.rightUpperArm, -s * 0.5 * a, 0, 1.2); set(N.leftUpperArm, s * 0.5 * a, 0, -1.2); set(N.rightLowerArm, 0, 0, 0.1); set(N.leftLowerArm, 0, 0, -0.1); }
     r.bt -= dt; const em = r.vrm.expressionManager; if (em) { if (r.bt < 0) { r.bt = 2.2 + Math.random() * 3; r.bl = 0.14; } r.bl = Math.max(0, (r.bl || 0) - dt); em.setValue('blink', r.bl > 0 ? Math.sin(r.bl / 0.14 * Math.PI) : 0); }
     r.vrm.update(dt);
 }
 function rpAnim(dt) {
-    const r = CO.rp; if (r.vrm) { r.g.rotation.x = r.state === 'dead' ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' ? 0.15 : 0; rpVrmPose(dt); return; } const P = r.P, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, gun = r.eq === 'pistol'; P.legL.rotation.x = s * 0.6 * a; P.legR.rotation.x = -s * 0.6 * a; P.armL.rotation.set(-s * 0.5 * a, 0, 0); P.armR.rotation.set(s * 0.5 * a, 0, 0);
+    const r = CO.rp; r.kick = Math.max(0, (r.kick || 0) - dt * 7); r.swT = Math.max(0, (r.swT || 0) - dt); r.flash = Math.max(0, (r.flash || 0) - dt); if (r.light) r.light.intensity = r.flash > 0 ? 3 : 0; if (r.vrm) { r.g.rotation.x = r.state === 'dead' ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' ? 0.15 : 0; rpVrmPose(dt); return; } const P = r.P, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, gun = r.eq === 'pistol'; P.legL.rotation.x = s * 0.6 * a; P.legR.rotation.x = -s * 0.6 * a; P.armL.rotation.set(-s * 0.5 * a, 0, 0); P.armR.rotation.set(s * 0.5 * a, 0, 0);
     if (gun) { if (r.aim) { P.armR.rotation.set(-1.5, 0, 0); P.armL.rotation.set(-1.4, 0, 0.28); } else P.armR.rotation.set(-0.35 + s * 0.2 * a, 0, 0); } else if (r.aim) { P.armR.rotation.set(-1.2, 0, 0); P.armL.rotation.set(-1.1, 0, 0.2); }
     for (const k in r.W) r.W[k].visible = (k === 'pistol' ? r.eq === 'pistol' : k === 'blade' ? r.eq === 'blade' : r.eq === 'gloves');
     r.g.rotation.x = r.state === 'dead' ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' ? 0.15 : 0;
@@ -2130,7 +2141,7 @@ function rpAnim(dt) {
 function coRoomLoaded() { if (!CO.on) return; CO.pT = 1; if (CO.rp) CO.rp.g.visible = CO.rpRoom === RM.id; }
 function coTick(dt) {
     if (!CO.on || !CO.peer) return; const r = CO.rp;
-    CO.pT += dt; if (CO.pT > 0.083) { CO.pT = 0; coSend({ t: 'p', x: r2(PL.x), z: r2(PL.z), r: r2(PL.rot), s: PL.state, a: PL.aim ? 1 : 0, e: G.eq, h: G.hp, w: r2(PL.speed), m: RM.id }); }
+    CO.pT += dt; if (CO.pT > 0.083) { CO.pT = 0; coSend({ t: 'p', x: r2(PL.x), z: r2(PL.z), r: r2(PL.rot), s: PL.state, a: PL.aim ? 1 : 0, e: G.eq, h: G.hp, w: r2(PL.speed), m: RM.id, f: PL.shots | 0 }); }
     if (CO.role === 'host') { CO.sT += dt; if (CO.sT > 0.1) { CO.sT = 0; if (RM.enemies.length) coSend({ t: 'en', room: RM.id, l: RM.enemies.map((E) => [E.key, E.t, r2(E.x), r2(E.z), r2(E.rot), E.st, r2(E.stT || 0), r2(E.atkT || 0), Math.round(E.hp * 10) / 10, E.stun > 0 ? 1 : 0, E.cr ? 1 : 0]) }); } }
     if (r) { const vis = CO.rpRoom === RM.id; r.g.visible = vis; if (vis) { const k = 1 - Math.exp(-dt * 12), ox = r.x, oz = r.z; r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.rot += wrapA(r.tr - r.rot) * Math.min(1, dt * 12); r.walk += r.speed * dt * 0.75; r.g.position.x = r.x; r.g.position.z = r.z; r.g.rotation.y = r.rot; rpAnim(dt); }
         const b = $('buddy'), f = r.hp / 100, txt = r.state === 'dead' ? 'DEAD' : f > 0.65 ? 'FINE' : f > 0.35 ? 'CAUTION' : 'DANGER', col = r.state === 'dead' ? '#777' : f > 0.65 ? '#3f3' : f > 0.35 ? '#fc3' : '#f33'; b.classList.remove('hide'); b.innerHTML = 'P' + (CO.role === 'host' ? '2' : '1') + ' <b style="color:' + col + '">' + txt + '</b>'; }
@@ -2152,8 +2163,8 @@ function coMsg(id, m) {
         case 'savecopy': coStoreSave(m.blob); say('Game saved for both players.', 2400); break;
         case 'full': CO.state = 'error'; CO.note = 'That game already has two players.'; coRefresh(); break;
         case 'start': if (CO.role !== 'guest') break; closePanel(); G = Object.assign(newG(), m.bag || {}); G.flags = m.world.flags || {}; G.taken = m.world.taken || {}; G.dead = m.world.dead || {}; G.seen = m.world.seen || G.seen || {}; G.saves = m.world.saves || 0; G.kills = m.world.kills || 0; G.room = m.room; G.time = m.time || 0; beginCo({ x: m.x, z: m.z, rot: m.rot }); break;
-        case 'p': { const r = coEnsureRP(); r.tx = m.x; r.tz = m.z; r.tr = m.r; r.state = m.s; r.aim = !!m.a; r.eq = m.e; r.hp = m.h; r.speed = m.w; CO.rpRoom = m.m; if (!r.cur) { r.x = m.x; r.z = m.z; r.rot = m.r; r.cur = true; } if (m.m !== RM.id) r.cur = false; break; }
-        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead' || G.dead[a[0]]) continue; E = spawnEnemy({ t: a[1], x: a[2], z: a[3], rot: a[4] }, a[0], false); } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10] }; } break; }
+        case 'p': { const r = coEnsureRP(); r.tx = m.x; r.tz = m.z; r.tr = m.r; r.state = m.s; r.aim = !!m.a; r.eq = m.e; r.hp = m.h; r.speed = m.w; CO.rpRoom = m.m; if (r.f !== undefined && m.f !== r.f && m.m === RM.id) { r.kick = 1; if (m.e === 'pistol') { r.flash = 0.07; sfx('shot'); } else { r.swT = 0.35; sfx('swing'); } } r.f = m.f | 0; if (!r.cur) { r.x = m.x; r.z = m.z; r.rot = m.r; r.cur = true; } if (m.m !== RM.id) r.cur = false; break; }
+        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10] }; } break; }
         case 'hit': { if (CO.role !== 'host') break; const E = RM.enemies.find((q) => q.key === m.key); if (E && CO.rp) hitEnemy(E, Math.min(60, +m.dmg || 0), !!m.crit, CO.rp, !!m.leg); break; }
         case 'hurt': hurtPlayer(+m.dmg || 0, +m.fx || 0, +m.fz || 0); break;
         case 'flag': G.flags[String(m.k)] = 1; break;
