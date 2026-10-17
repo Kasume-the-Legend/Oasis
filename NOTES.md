@@ -213,3 +213,11 @@ Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/a
 
 ## Harbor Inn Item screen: you + partner stacked
 - Item tab in co-op shows two stacked cards (photo + ECG + condition) for you and your partner; click a card to view that player's 8 slots (partner's come from the `iq`/`ir` inventory sync; read-only with Check). Your own items get "Give <name>" / "Give all" in the action list (same `tradeGive` as the Partner tab, which stays). Photos: `svPhoto` renders the head of the character in the scene into a small target (falls back to the pixel face). `reCard`, `M.who`.
+
+## Harbor Inn 2: NX (Resident Evil NX fan book)
+- `HarborInn2.html` is generated: `python3 tools/build_hi2.py` copies Survivor.html and injects `hi2/nx_campaign.js` (rooms, notes, bosses, locks). Edit the campaign file, not the HTML.
+- Chapter 1 (13 rooms, Landing Ridge -> Spire Lift) is in. Add chapters by appending `R_`/`lnk` blocks + `FILES`/`LOCKS` and a map-position entry in `MP`.
+- Library entry `surv-02` (`map:'survivor2'`) opens it via `svOpen('HarborInn2.html')`. Campaign must end up longer than Harbor Inn 1.
+
+## Imported humanoid pivot fix
+- Non-VRM imports (`vrm.auto`) are now centred on the hips (x/z) and grounded at the feet in `Actor.setModel` (index.html), and in Survivor/HarborInn2 `avLoad` + `rpLoadVRM`, so models whose skeleton origin is off the feet turn in place instead of swinging wide.
