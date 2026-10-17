@@ -204,3 +204,6 @@ Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/a
 - Zip/FBX character import fixes (tested with Leon S. Kennedy RE4 FBX + loose PNG textures): `unifySkeleton` merges duplicated per-mesh skeleton copies (so retargeting moves every part); `autoTextures` matches pictures to materials by name when the FBX has no texture links (ignores _diff/_NM/_SP, plurals, .tga.png; normal maps picked up; hair/lashes alpha-cut); `autoHumanoid` now skips fix/unused/holster helper bones, ignores face bones when finding the head, picks the top of `head_neck_*` chains as the head, and lifts the hips above a separate pelvis bone.
 - Cel-shaded switch for imported characters: checkbox in the 3D import dialog (`z3-toon`) and Character Setup (`char-toon`, shown for non-VRM characters). Stored per character (`myAvatar.toon`, library entry `toon`), restored on reload, broadcast in hello as `tn` so other players see the same look (re-applied live when it changes). Backup /tmp/index.pre-leon.html.
 
+
+## Sheva GLB arms fix
+- `autoHumanoid`: arm and leg chains now drop bones with no readable name (garbled-Japanese MMD twist helpers like `??????.R_059`) via `named()`, so the elbow/upper arm map to the real bones instead of twist bones (arms were stuck bent forward). Tested with RE5 Sheva GLB + female base. Backup /tmp/index.pre-sheva.html.

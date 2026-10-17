@@ -5537,11 +5537,13 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             while (hips && !ancestorsOf(head).includes(hips)) hips = hips.parent;               // a pelvis bone under a separate root_hips: the true hips is the one above both the legs and the spine
             if (!hips || !hips.isBone) return null;
             const upTo = (n, stop) => { const out = []; for (let p = n.parent; p && p !== stop; p = p.parent) out.push(p); return out; };
-            const legs = [lFoot, rFoot].map((f) => clean(upTo(f, legRoot)));
+            // bones with no readable name (a garbled Japanese "twist" helper: "??????.R_059") sit between the real ones and would be taken for the elbow / knee
+            const named = (list) => { const f = list.filter((n) => boneTokens(n.name).some((w) => /^[a-z]{3,}$/.test(w))); return f.length >= 2 ? f : list; };
+            const legs = [lFoot, rFoot].map((f) => named(clean(upTo(f, legRoot))));
             if (legs.some((c) => c.length < 2)) return null;
             const armTop = commonAncestor(lHand, rHand);
             if (!armTop || !armTop.isBone) return null;
-            const arms = [lHand, rHand].map((h) => clean(upTo(h, armTop)));
+            const arms = [lHand, rHand].map((h) => named(clean(upTo(h, armTop))));
             if (arms.some((c) => c.length < 2)) return null;
             // the spine: the bones between the hips and the head; the lowest bone named "neck" is the neck, everything below it is spine
             const nk = clean(upTo(head, hips)).filter((n) => boneTokens(n.name).includes('neck'));
