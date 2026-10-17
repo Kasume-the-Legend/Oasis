@@ -944,6 +944,7 @@
                     <button id="gender-female" class="py-3 rounded-xl text-sm font-semibold transition"><i class="fa-solid fa-venus mr-1"></i> Female</button>
                 </div>
                 <p id="gender-note" class="text-[11px] text-gray-300 leading-relaxed bg-black/30 border border-white/5 rounded-lg p-3 mb-4"></p>
+                <label id="char-toon-row" class="hidden flex items-center gap-2 text-xs text-gray-200 mb-4 cursor-pointer"><input id="char-toon" type="checkbox" checked> Cel-shaded (cartoon outline) look <span class="text-gray-400">(untick for the model's own materials)</span></label>
             </div>
 
             <div id="cls-panel" class="mb-4">
@@ -1077,6 +1078,7 @@
                         <label class="block"><span class="text-gray-400">Which way is up?</span>
                             <select id="z3-up" class="w-full mt-1 bg-white/10 border border-white/10 rounded-lg px-2 py-1.5 text-white"><option value="auto" style="color:#000">Work it out</option><option value="y" style="color:#000">Y is up</option><option value="z" style="color:#000">Z is up (lying down)</option></select></label>
                         <label class="flex items-center gap-2 mt-5 cursor-pointer"><input id="z3-flip" type="checkbox"> Turn it around</label>
+                        <label class="flex items-center gap-2 mt-2 cursor-pointer"><input id="z3-toon" type="checkbox" checked> Cel-shaded (cartoon outline) look</label>
                     </div>
                     <p id="z3-info" class="text-[11px] text-gray-300 leading-relaxed whitespace-pre-line"></p>
                 </div>
@@ -2039,7 +2041,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
 
         // kind: 'gltf' (glb/gltf/vrm) or 'obj'
-        async function buildModel(buffer, kind, { asAvatar }) {
+        async function buildModel(buffer, kind, { asAvatar, toon = true }) {
             if (kind === 'obj') {
                 const text = new TextDecoder().decode(buffer);
                 return { root: new OBJLoader().parse(text), vrm: null };
@@ -2054,7 +2056,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             }
             if (asAvatar) {                                    // not a VRM: if it has a humanoid skeleton it can still walk, run and emote like one
                 const found = autoHumanoid(gltf.scene); if (found) { try { tposeFix(found, gltf.scene); } catch (e) { console.warn('t-pose fix', e); } } const pseudo = found ? makePseudoVrm(gltf.scene, found) : null;
-                toonify(gltf.scene); outlineAll(gltf.scene, { any: true, min: 0.05, thick: 0.01, color: 0x2a2530 });   // cel shaded like the world
+                if (toon) { toonify(gltf.scene); outlineAll(gltf.scene, { any: true, min: 0.05, thick: 0.01, color: 0x2a2530 }); }   // cel shaded like the world (unless the player chose the model's own look)
                 return { root: gltf.scene, vrm: pseudo };
             }
             return { root: gltf.scene, vrm: null };
@@ -3602,7 +3604,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
 
         const tgCrouchWire = () => { try { return activeMap === 'tag' && TG.crouch && TG.myTeam >= 0; } catch (e) { return false; } };
-        const helloMsg = (reply = false) => ({ t: 'hello', ob: (() => { try { return OB.open ? OB.color : null; } catch (e) { return null; } })(), pid: PID, name: me.name, avatarId: myAvatar ? myAvatar.id : null, gender: myAvatar && myAvatar.gender ? myAvatar.gender : 'male', animVer: myAnimVer, eq: eqWire(), scr: screenState.shared ? wireOf(screenState.shared) : null, lk: localActor && localActor.lookId || null, dc: dcHello() || null, ra: me.ra || null, lv: LV.level, sk: (typeof CLS !== 'undefined') ? (CLS.skin >= 98 ? 0 : CLS.skin) : 0, hw: (typeof CLS !== 'undefined' && CLS.wpn === 'fighter') ? 3 : (typeof CLS !== 'undefined' && CLS.wpn === 'sword') ? (HC.sheathed ? 2 : 1) : 0, bm: (typeof CLS !== 'undefined') ? (CLS.wpn === 'pistol' ? 2 : BASEMV.v === 'starter' ? 1 : 0) : 0, cl: (typeof CLS !== 'undefined') ? clsLv() : 1, gw: (typeof GN !== 'undefined') ? GN.cur : 'pistol', gc: ((typeof GN !== 'undefined' && GN.crouch) || tgCrouchWire()) ? 1 : 0, hbd: (typeof hbWireDesign === 'function' ? hbWireDesign() : null), reply });
+        const helloMsg = (reply = false) => ({ t: 'hello', ob: (() => { try { return OB.open ? OB.color : null; } catch (e) { return null; } })(), pid: PID, name: me.name, avatarId: myAvatar ? myAvatar.id : null, tn: myAvatar && myAvatar.toon === false ? 0 : 1, gender: myAvatar && myAvatar.gender ? myAvatar.gender : 'male', animVer: myAnimVer, eq: eqWire(), scr: screenState.shared ? wireOf(screenState.shared) : null, lk: localActor && localActor.lookId || null, dc: dcHello() || null, ra: me.ra || null, lv: LV.level, sk: (typeof CLS !== 'undefined') ? (CLS.skin >= 98 ? 0 : CLS.skin) : 0, hw: (typeof CLS !== 'undefined' && CLS.wpn === 'fighter') ? 3 : (typeof CLS !== 'undefined' && CLS.wpn === 'sword') ? (HC.sheathed ? 2 : 1) : 0, bm: (typeof CLS !== 'undefined') ? (CLS.wpn === 'pistol' ? 2 : BASEMV.v === 'starter' ? 1 : 0) : 0, cl: (typeof CLS !== 'undefined') ? clsLv() : 1, gw: (typeof GN !== 'undefined') ? GN.cur : 'pistol', gc: ((typeof GN !== 'undefined' && GN.crouch) || tgCrouchWire()) ? 1 : 0, hbd: (typeof hbWireDesign === 'function' ? hbWireDesign() : null), reply });
 
         function addPeer(id, name) {
             const actor = new Actor(id, name);
@@ -3657,7 +3659,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const id = p.avatarId, still = () => peers.get(p.id) === p && p.avatarId === id;
             try {
                 if (rec.kind === 'sprite') { const tex = await spriteTexture(rec.atlas, rec.meta); if (!still()) return; p.actor.setSprite(tex, rec.meta); }
-                else { const { root, vrm } = await buildModel(rec.buffer, rec.kind === 'obj' ? 'obj' : 'gltf', { asAvatar: true }); if (!still()) return; p.actor.setModel(root, vrm); }
+                else { const { root, vrm } = await buildModel(rec.buffer, rec.kind === 'obj' ? 'obj' : 'gltf', { asAvatar: true, toon: p.toon !== 0 }); if (!still()) return; p.actor.setModel(root, vrm); }
                 avDone(p, 'ready');
             } catch (err) {
                 console.warn('Remote avatar failed', err);
@@ -4072,6 +4074,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                       if (shared && !screenState.shared && room && SCREEN_SITES[room.map]) showSource(shared, { from: p.name, quiet: true }); }
                     if (typeof m.animVer === 'string' && m.animVer && p.animVer !== m.animVer) { p.animVer = m.animVer; net.send({ t: 'wantAnims', to: from, ver: m.animVer }); }
                     else if (!m.animVer && p.animVer) { p.animVer = null; p.actor.setCustomAnims(null); }
+                    { const pt = m.tn === 0 ? 0 : 1, had = p.toon !== undefined, ch = p.toon !== pt; p.toon = pt; if (had && ch && p.av && p.av.state === 'ready') { const rc = avCache.get(p.id + '|' + p.avatarId); if (rc && rc.kind !== 'sprite') avApply(p, rc); } }   // the look (cel-shaded or the model's own) follows what its owner chose
                     if (m.avatarId && p.avatarId !== m.avatarId) {
                         p.avatarId = m.avatarId;
                         const baseKey = m.avatarId.startsWith('base:') ? m.avatarId.slice(5) : null;
@@ -4468,17 +4471,17 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             return baseBuffers[key];
         }
 
-        async function equipAvatar(buffer, kind, name, { id = uid(), save = true, gender = 'male', base = null, lib = false, addLib = false } = {}) {
-            const { root, vrm } = await buildModel(buffer, kind, { asAvatar: true });
+        async function equipAvatar(buffer, kind, name, { id = uid(), save = true, gender = 'male', base = null, lib = false, addLib = false, toon = true } = {}) {
+            const { root, vrm } = await buildModel(buffer, kind, { asAvatar: true, toon });
             localActor.gender = gender === 'female' ? 'female' : 'male';   // set before the model so the right base animation loads
             localActor.customAnims = null;                                  // the previous character's animation choices must not leak over
             localActor.setModel(root, vrm);
             localActor.resetSprings();
             if (addLib) {                                          // new upload: keep it in My Characters
-                const entry = await addToLibrary(id, name, kind, buffer, localActor.gender);
+                const entry = await addToLibrary(id, name, kind, buffer, localActor.gender, toon);
                 if (entry) { id = entry.id; lib = true; if (BASE_PIN_NEXT.on) { BASE_PIN_NEXT.on = false; pins.male = entry.id; savePins(); try { renderBaseButtons(); } catch (e) { /* dialog closed */ } } }
             }
-            myAvatar = { id, kind, buffer, name, gender: localActor.gender, base, lib };
+            myAvatar = { id, kind, buffer, name, gender: localActor.gender, base, lib, toon };
             await eqLoadFor(id);                                            // the gear this character was wearing
             if (buffer && buffer.byteLength > NET.maxBinary) sysChat(`Heads up: "${name}" is ${(buffer.byteLength / 1e6).toFixed(0)} MB, over the ${(NET.maxBinary / 1e6).toFixed(0)} MB limit for sharing, so other players will see a robot. Shrinking its textures in VRoid Studio fixes that.`);
             await loadMyAnims();                                            // this character's own animation slots, if it has any
@@ -4490,7 +4493,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         // Stock characters are saved by reference (no copy of the model); uploads are saved with their file.
         function persistAvatar() {
             if (!myAvatar) return;
-            const rec = myAvatar.lib ? { id: myAvatar.id, name: myAvatar.name, gender: myAvatar.gender, lib: true }
+            const rec = myAvatar.lib ? { id: myAvatar.id, name: myAvatar.name, gender: myAvatar.gender, lib: true, toon: myAvatar.toon !== false }
                 : myAvatar.base ? { id: myAvatar.id, name: myAvatar.name, gender: myAvatar.gender, base: myAvatar.base } : myAvatar;
             store.put('avatar', rec).catch(() => {});
         }
@@ -4521,12 +4524,12 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             autoPinMale();
         }
 
-        async function addToLibrary(id, name, kind, buffer, gender) {
+        async function addToLibrary(id, name, kind, buffer, gender, toon = true) {
             const fp = name + ':' + buffer.byteLength;
             let entry = library.find((c) => c.fp === fp);   // the same file uploaded again reuses its entry
             const isNew = !entry;
-            if (entry) entry.gender = gender;
-            else { entry = { id, name, gender, kind, size: buffer.byteLength, fp, added: Date.now() }; library.push(entry); }
+            if (entry) { entry.gender = gender; entry.toon = toon; }
+            else { entry = { id, name, gender, kind, size: buffer.byteLength, fp, added: Date.now(), toon }; library.push(entry); }
             try {
                 await store.put('char:' + entry.id, { id: entry.id, name, kind, buffer });
             } catch (e) {
@@ -4571,7 +4574,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 sysChat(`"${entry.name}" is no longer in browser storage, so it was removed from My Characters.`);
                 return;
             }
-            await equipAvatar(rec.buffer, rec.kind, rec.name, { id: entry.id, gender: entry.gender, lib: true, save });
+            await equipAvatar(rec.buffer, rec.kind, rec.name, { id: entry.id, gender: entry.gender, lib: true, save, toon: entry.toon !== false });
         }
 
         async function equipBase(key, { save = true, gender = null } = {}) {
@@ -4592,10 +4595,14 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             $('gender-note').textContent = GENDER_NOTES[chosenGender];
         }
 
+        // the cel-shaded switch only matters for characters that are not VRMs (a VRM keeps its own MToon look)
+        function charToonable(pending) { if (pending) return !/\.vrm$/i.test(pending.name || ''); return !!myAvatar && !myAvatar.base && !!localActor.model && (localActor.kind === 'model' || !!(localActor.vrm && localActor.vrm.auto)); }
         function openCharacterSetup(pending, { welcome = false } = {}) {
             pendingChar = pending || null;
             const hasVrm = !!myAvatar && localActor.kind === 'vrm';
-            const editable = !!pending || hasVrm;
+            const toonable = charToonable(pending);
+            const editable = !!pending || hasVrm || toonable;
+            $('char-toon-row').classList.toggle('hidden', !toonable); $('char-toon').checked = pending ? pending.toon !== false : !(myAvatar && myAvatar.toon === false);
             chosenGender = pending ? 'male' : (myAvatar && myAvatar.gender) || 'male';
             $('char-title').innerHTML = '<i class="fa-solid fa-user"></i> ' + (welcome ? 'Create your character' : 'Character Setup');
             $('char-name').textContent = pending ? pending.name : (myAvatar ? myAvatar.name : 'Default avatar');
@@ -4679,16 +4686,20 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         async function confirmCharacter() {
             const pending = pendingChar;
             const gender = chosenGender;
-            const editable = !!pending || (!!myAvatar && localActor.kind === 'vrm');
+            const toonable = charToonable(pending), toon = $('char-toon').checked;
+            const editable = !!pending || (!!myAvatar && localActor.kind === 'vrm') || toonable;
             closeCharacterSetup();
             if (pending) {
                 try {
-                    await equipAvatar(pending.buffer, pending.kind, pending.name, { gender, addLib: true });
+                    await equipAvatar(pending.buffer, pending.kind, pending.name, { gender, addLib: true, toon });
                 } catch (err) {
                     console.error(err);
                     sysChat(`Failed to load "${pending.name}". It may be corrupt or use an unsupported extension.`);
                 }
             } else if (editable) {
+                if (toonable && toon !== (myAvatar.toon !== false)) {           // the look was switched: rebuild the model with or without the cartoon shading
+                    try { await equipAvatar(myAvatar.buffer, myAvatar.kind, myAvatar.name, { id: myAvatar.id, gender, lib: myAvatar.lib, base: myAvatar.base, toon }); if (myAvatar.lib) { const e = library.find((c) => c.id === myAvatar.id); if (e) { e.toon = toon; saveIndex(); } } sysChat(toon ? 'Cel-shaded look on.' : 'Cel-shading off: the model keeps its own materials.'); return; } catch (err) { console.error(err); }
+                }
                 myAvatar.gender = gender;
                 localActor.setGender(gender);
                 if (myAvatar.lib) setLibraryGender(myAvatar.id, gender);
@@ -5472,7 +5483,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
          *  3D characters from any source (Mixamo, Blender, Unreal, DAZ, game rips...): a humanoid skeleton is recognised from its bone
          *  names and hierarchy, then driven like a VRM, so the character gets the same walking, running, jumping and emote animations.
          * ------------------------------------------------------------------ */
-        const SKIP_WORDS = new Set(['ik', 'fk', 'pole', 'target', 'helper', 'twist', 'roll', 'corrective', 'ctrl', 'control', 'cntrl', 'mch', 'org', 'tweak', 'nub', 'end', 'tip', 'eff', 'effector', 'socket', 'weapon', 'prop', 'top', 'jiggle']);
+        const SKIP_WORDS = new Set(['ik', 'fk', 'pole', 'target', 'helper', 'twist', 'roll', 'corrective', 'ctrl', 'control', 'cntrl', 'mch', 'org', 'tweak', 'nub', 'end', 'tip', 'eff', 'effector', 'socket', 'weapon', 'prop', 'top', 'jiggle', 'fix', 'unused', 'holster', 'corr', 'sleeve']);
         const FINGER_WORDS = new Set(['thumb', 'index', 'middle', 'mid', 'ring', 'pinky', 'pinkie', 'little', 'finger', 'fingers', 'f']);
         function boneTokens(name) {
             let s = String(name).replace(/^.*[:|]/, '');                                  // "mixamorig:Hips", "Armature|Hips" -> "Hips"
@@ -5506,10 +5517,13 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const [lFoot, rFoot] = landmark((i) => (i.t.includes('foot') || i.t.includes('ankle')) && !i.t.includes('toe') && !i.t.includes('ball'), (i) => i.t.includes('foot'));
             if (!lHand || !rHand || !lFoot || !rFoot) return null;
             const clean = (list) => list.filter((n) => n.isBone && !boneTokens(n.name).some((w) => SKIP_WORDS.has(w)));
-            const hips = commonAncestor(lFoot, rFoot);
-            if (!hips || !hips.isBone) return null;
-            const headC = info.filter((i) => !i.skip && i.t.includes('head')).sort(rank);
+            const legRoot = commonAncestor(lFoot, rFoot);
+            if (!legRoot || !legRoot.isBone) return null;
+            let hips = legRoot;
+            const FACE = new Set(['jaw', 'eye', 'eyes', 'eyeball', 'eyebrow', 'eyelid', 'eyelids', 'eyelash', 'lip', 'lips', 'hair', 'tongue', 'teeth', 'tooth', 'nose', 'ear', 'brow', 'cheek', 'mouth', 'face']);
+            const headC = info.filter((i) => !i.skip && i.t.includes('head') && !i.t.some((w) => FACE.has(w))).sort(rank);
             let head = headC.length ? headC[0].node : null;
+            if (headC.length > 1 && headC.every((c) => c.t.includes('neck'))) head = headC.slice().sort((a, b) => boneDepth(b.node) - boneDepth(a.node))[0].node;   // "head_neck_lower", "head_neck_upper": the top one is the head
             if (!head) {                                                                  // the head is not called "head" (Rigify's "DEF-spine.006"): the highest bone of the upper body
                 const limbs = [lHand, rHand, lFoot, rFoot], hy = hips.getWorldPosition(new THREE.Vector3()).y, fy = Math.min(...[lFoot, rFoot].map((f) => f.getWorldPosition(new THREE.Vector3()).y));
                 let best = null, by = -Infinity;
@@ -5519,9 +5533,11 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 }
                 if (best && by > hy + 0.15 * (hy - fy)) head = best;
             }
-            if (!head || !ancestorsOf(head).includes(hips)) return null;
+            if (!head) return null;
+            while (hips && !ancestorsOf(head).includes(hips)) hips = hips.parent;               // a pelvis bone under a separate root_hips: the true hips is the one above both the legs and the spine
+            if (!hips || !hips.isBone) return null;
             const upTo = (n, stop) => { const out = []; for (let p = n.parent; p && p !== stop; p = p.parent) out.push(p); return out; };
-            const legs = [lFoot, rFoot].map((f) => clean(upTo(f, hips)));
+            const legs = [lFoot, rFoot].map((f) => clean(upTo(f, legRoot)));
             if (legs.some((c) => c.length < 2)) return null;
             const armTop = commonAncestor(lHand, rHand);
             if (!armTop || !armTop.isBone) return null;
@@ -5886,6 +5902,50 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             return out.buffer;
         }
 
+
+        // Game rips often carry several copies of the same skeleton (one per mesh part, nested in each other), so animating "the" skeleton moves
+        // only one part. Every skinned mesh is re-bound to a single set of bones (the first of each name) and the copies are dropped.
+        function unifySkeleton(root) {
+            const first = new Map(), all = []; root.updateMatrixWorld(true);
+            root.traverse((o) => { if (o.isBone) { all.push(o); if (!first.has(o.name)) first.set(o.name, o); } });
+            if (all.length === first.size) return 0;
+            root.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) { const nb = o.skeleton.bones.map((b) => first.get(b.name) || b); o.bind(new THREE.Skeleton(nb, o.skeleton.boneInverses), o.bindMatrix); } });
+            const keep = new Set(first.values());
+            for (const b of keep) { const par = b.parent; if (par && par.isBone && !keep.has(par)) { const cp = first.get(par.name); if (cp && cp !== b) cp.add(b); } }
+            for (const b of all) if (!keep.has(b) && b.parent) b.parent.remove(b);
+            root.updateMatrixWorld(true);
+            return all.length - first.size;
+        }
+        // FBX files often come with no texture links at all, only a folder of pictures (Leon_Shirt.png, "Shirt.tga.png", Acc_diff / Acc_NM / Acc_SP ...).
+        // Each material gets the picture whose name matches it (ignoring _diff / _NM / _SP suffixes, plurals and double extensions).
+        async function autoTextures(root, files, used) {
+            const keyOf = (n) => { let t = String(n).toLowerCase().replace(/\.(png|jpe?g|webp|tga|tif|tiff|bmp|dds)/g, ''); for (let i = 0; i < 3; i++) t = t.replace(/_(diff|diffuse|d|albedo|color|colour|basecolor|base|nm|n|normal|nrm|sp|spec|specular|s|r|rough|roughness|m|metal|metallic|mask|ao|em|emissive|opacity|alpha)$/, ''); t = t.replace(/[^a-z0-9]/g, ''); return t.length > 3 ? t.replace(/s$/, '') : t; };
+            const roleOf = (n) => { const t = String(n).toLowerCase().replace(/\.(png|jpe?g|webp|tga|tif|tiff|bmp|dds)/g, ''); return /_(nm|n|normal|nrm)$/.test(t) ? 'normal' : /_(sp|spec|specular|s|r|rough|roughness|m|metal|metallic|mask|ao|em|emissive|opacity|alpha)$/.test(t) ? 'other' : 'diffuse'; };
+            const tex = [...files.entries()].filter(([, f]) => ['png', 'jpg', 'jpeg', 'webp', 'tga'].includes(f.ext)).map(([n, f]) => ({ n, f, k: keyOf(n), role: roleOf(n) }));
+            if (!tex.length) return 0;
+            const pick = (mk, role) => { const c = tex.filter((t) => t.role === role); let b = c.find((t) => t.k === mk); if (b) return b; let best = null; for (const t of c) { const a = t.k, z = mk; if (!a || !z) continue; const [lo, hi] = a.length <= z.length ? [a, z] : [z, a]; if (hi.startsWith(lo) && /^\d*$/.test(hi.slice(lo.length)) && lo.length >= 3 && (!best || lo.length > best.len)) best = { t, len: lo.length }; } return best ? best.t : null; };
+            const loadTex = async (t, srgb) => { try { let tx; if (t.f.url) tx = await new THREE.TextureLoader().loadAsync(t.f.url); else tx = tgaHandler(files, used, new Set()).load(t.n); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; if (srgb) tx.colorSpace = THREE.SRGBColorSpace; tx.needsUpdate = true; used.add(t.n); return tx; } catch (e) { return null; } };
+            let n = 0; const done = new Map(); const jobs = [];
+            root.traverse((o) => {
+                if (!o.isMesh) return;
+                const mats = Array.isArray(o.material) ? o.material : [o.material];
+                for (const m of mats) {
+                    if (!m || m.map || done.has(m)) continue; done.set(m, 1);
+                    const names = [m.name, String(m.name).split('.').pop(), String(o.name).replace(/^[0-9a-z]{2,3}_/i, '')].filter(Boolean).map(keyOf);
+                    let d = null, nm = null; for (const k of names) { d = d || pick(k, 'diffuse'); nm = nm || pick(k, 'normal'); }
+                    if (!d) continue;
+                    jobs.push((async () => {
+                        const t = await loadTex(d, true); if (!t) return; m.map = t; if (m.color) m.color.setRGB(1, 1, 1); if (m.specular) m.specular.setRGB(0.12, 0.12, 0.12); if ('shininess' in m) m.shininess = 18;
+                        if (/hair|lash|brow|fur|feather|leaf|cloth_alpha/i.test(m.name + ' ' + o.name)) { m.transparent = false; m.alphaTest = 0.4; m.side = THREE.DoubleSide; }
+                        if (nm) { const nt = await loadTex(nm, false); if (nt) m.normalMap = nt; }
+                        m.needsUpdate = true; n++;
+                    })());
+                }
+            });
+            await Promise.all(jobs);
+            return n;
+        }
+
         // Loads one model from the zip with its textures. Returns { root, tris, bones, used: [names], missing: [names] }.
         async function loadZipModel(info, model) {
             const files = await zipSideFiles(info), used = new Set(), missing = new Set();
@@ -5921,13 +5981,14 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 root = loader.parse(src);
             }
             await tracker.wait();
+            let dups = 0, auto = 0; try { dups = unifySkeleton(root); auto = await autoTextures(root, files, used); } catch (e) { console.warn('zip model fix-ups', e); }
             const junk = []; root.traverse((o) => { if (o.isLight || o.isCamera) junk.push(o); });
             junk.forEach((o) => o.parent && o.parent.remove(o));
             const tris = countTris(root);
             if (!tris) throw new Error('that file has no 3D mesh in it (an animation-only file, perhaps)');
             if (tris > Z3_LIMITS.tris) throw new Error(`that model has ${(tris / 1e6).toFixed(1)} million triangles (the limit is 1.5 million); use a lower-detail version`);
             let bones = 0; root.traverse((o) => { if (o.isBone) bones++; });
-            return { root, tris, bones, used: [...used], missing: [...missing].filter((m) => !/^(data|blob)/.test(m)) };
+            return { root, tris, bones, dups, auto, used: [...used], missing: [...missing].filter((m) => !/^(data|blob)/.test(m)) };
         }
 
         // ---- standing it upright, sizing it, and writing the GLB ----
@@ -6083,7 +6144,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 if (z3.vrm) { const b = await z3.info.zip.read(model.entry); buffer = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); }
                 else buffer = await bakeToGlb(z3.wrap);
                 closeZip3d();
-                openCharacterSetup({ buffer, kind: 'gltf', name });                        // the same last step as a VRoid upload: pick the animation set, equip, keep in My Characters
+                openCharacterSetup({ buffer, kind: 'gltf', name, toon: $('z3-toon').checked });                        // the same last step as a VRoid upload: pick the animation set, equip, keep in My Characters
             } catch (e) { console.error(e); z3Status(e.message || 'Import failed.'); }
             finally { z3.busy = false; if (z3Open()) $('z3-import').disabled = false; }
         }
@@ -24680,7 +24741,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                 if (libId && library.some((c) => c.id === libId)) { await equipFromLibrary(libId, { save: false }); restored = true; }
                 else if (saved && saved.base && BASE_CHARACTERS[saved.base]) { await equipBase(saved.base, { save: false, gender: saved.gender }); restored = true; }
                 else if (saved && saved.buffer) {   // an earlier upload from before My Characters existed: adopt it into the list
-                    await equipAvatar(saved.buffer, saved.kind, saved.name, { id: saved.id, save: false, gender: saved.gender || 'male', addLib: true });
+                    await equipAvatar(saved.buffer, saved.kind, saved.name, { id: saved.id, save: false, gender: saved.gender || 'male', addLib: true, toon: saved.toon !== false });
                     restored = true;
                 }
             } catch (err) { console.warn('Could not restore saved avatar', err); }
