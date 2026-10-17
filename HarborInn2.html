@@ -2144,7 +2144,21 @@ const sm1 = (a, b, k) => a + (b - a) * k;
             root.add(humanoid.normalizedHumanBonesRoot);
             return { scene: root, humanoid, meta: { metaVersion: '1', name: 'recognised humanoid' }, expressionManager: null, springBoneManager: null, lookAt: null, auto: true, update() { humanoid.update(); } };
         }
+function repairFbx(bytes) {   // some Mixamo FBX files end with footer padding that FBXLoader mis-measures: trim to the real end of the node records
+    if (bytes.length < 40) return bytes; const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); if (dv.getUint32(23, true) < 7500) return bytes; let off = 27;
+    for (let g = 0; g < 1000 && off + 25 <= bytes.length; g++) { const end = Number(dv.getBigUint64(off, true)); if (end === 0) { let size = off + 25 + 100; if (size % 16 === 0) size += 1; return bytes.subarray(0, Math.min(size, bytes.length)); } if (end > bytes.length || end <= off) return bytes; off = end; }
+    return bytes;
+}
+const avIsFbx = (buffer) => { try { return String.fromCharCode(...new Uint8Array(buffer, 0, 18)) === 'Kaydara FBX Binary'; } catch (e) { return false; } };
 async function avParse(buffer) {
+    if (avIsFbx(buffer)) {   // an FBX character (Mixamo and the like): rig it automatically like a GLB
+        const [{ FBXLoader }, VM] = await Promise.all([import('three/addons/loaders/FBXLoader.js'), import('@pixiv/three-vrm')]);
+        const u8 = repairFbx(new Uint8Array(buffer.slice(0))), root = new FBXLoader().parse(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength), '');
+        const junk = []; root.traverse((o) => { if (o.isLight || o.isCamera) junk.push(o); }); junk.forEach((o) => o.parent && o.parent.remove(o)); root.updateMatrixWorld(true);
+        const found = autoHumanoid(root); if (!found) throw new Error('no humanoid skeleton found in that FBX');
+        try { tposeFix(found, root); } catch (e) { console.warn('t-pose fix', e); }
+        return { vrm: makePseudoVrm(root, found, VM), VM };
+    }
     const [{ GLTFLoader }, VM] = await Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('@pixiv/three-vrm')]);
     const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p)); ld.register((p) => { p.textureLoader = new THREE.TextureLoader(p.options.manager); return { name: 'sv-tex' }; });
     const gl = await ld.parseAsync(buffer.slice(0), ''); const vrm = gl.userData.vrm;
@@ -2275,8 +2289,9 @@ async function avBoot() {
     try {
         if (src === 'upload') { const r = await idbGet('avatar'); if (r) { buf = await r.arrayBuffer(); name = r.name || 'Uploaded VRM'; } }
         if (!buf && src !== 'none') { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); if (pa && pa.buffer) { buf = new Uint8Array(pa.buffer).slice().buffer; name = pa.name || 'Your Oasis character'; AV.src = 'oasis'; AV.gender = pa.gender === 'female' ? 'female' : 'male'; } }
+        if (buf && avIsFbx(buf)) { buf = await avLite(buf); }   // FBX: use the small GLB re-pack for everything (own model, and the copy sent to your partner)
         if (buf) { AV.raw = buf; await avLoad(buf, name); AV.err = ''; try { coSendAvatar(); coSendMusic(); } catch (e) { /* no link */ } } else AV.err = src === 'none' ? '' : 'No character found. Equip a VRoid in the Oasis, or upload a .vrm in Options.';
-    } catch (e) { AV.err = 'Could not load the character: ' + (e && e.message || e); console.warn('avatar', e); AV.on = false; }
+    } catch (e) { AV.err = 'Could not load the character: ' + (e && e.message || e); console.warn('avatar', e); AV.on = false; try { avClear(); } catch (e2) { /* default soldier stays */ } try { say(AV.err.slice(0, 90), 6000); } catch (e3) { /* not in a room yet */ } }
     return AV.on;
 }
 /* ---------- door cutscene: you walk up, push the door open, creak, walk through (RE style) ---------- */
@@ -2450,7 +2465,22 @@ function coPump() {
     if (it.ack >= it.n) COQ.q.shift();
 }
 function coAvAck(m) { const it = COQ.q.find((q) => q.k === m.k); if (!it) return; it.t = performance.now(); if (m.have) { COQ.q.splice(COQ.q.indexOf(it), 1); return; } if (m.i === -1) it.go = true; else it.ack = Math.max(it.ack, (m.i | 0) + 1); }
-async function avLite(buf) {   // the partner only needs the look: re-pack the GLB with 512 px textures so it travels in a few seconds
+async function fbxToLiteGlb(buf) {   // an FBX character is re-packed as a small GLB (512 px textures, no animations): it travels to your partner and loads fast
+    const [{ FBXLoader }, { GLTFExporter }] = await Promise.all([import('three/addons/loaders/FBXLoader.js'), import('three/addons/exporters/GLTFExporter.js')]);
+    const u8 = repairFbx(new Uint8Array(buf.slice(0))), root = new FBXLoader().parse(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength), '');
+    const junk = []; root.traverse((o) => { if (o.isLight || o.isCamera) junk.push(o); }); junk.forEach((o) => o.parent && o.parent.remove(o)); root.animations = [];
+    const tex = new Map(), small = (t) => {
+        if (!t || !t.image) return null; if (tex.has(t)) return tex.get(t); let out = null;
+        try { const im = t.image, w = im.width || im.videoWidth || 0, h = im.height || im.videoHeight || 0; if (w && h) { const k = Math.min(1, 512 / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); out = new THREE.CanvasTexture(c); out.colorSpace = t.colorSpace; out.flipY = t.flipY; out.wrapS = t.wrapS; out.wrapT = t.wrapT; } } catch (e) { out = null; }
+        tex.set(t, out); return out;
+    };
+    const mats = new Map(), lite = (m) => { if (!m) return new THREE.MeshStandardMaterial({ color: 0xcccccc }); if (mats.has(m)) return mats.get(m); const n = new THREE.MeshStandardMaterial({ color: m.color ? m.color.clone() : 0xffffff, roughness: 0.9, metalness: 0, map: small(m.map), side: m.side === THREE.BackSide ? THREE.FrontSide : m.side, transparent: !!m.transparent, opacity: m.opacity === undefined ? 1 : m.opacity, alphaTest: m.alphaTest || 0 }); n.name = m.name; mats.set(m, n); return n; };
+    root.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(lite) : lite(o.material); });
+    root.updateMatrixWorld(true);
+    return await new Promise((ok, no) => new GLTFExporter().parse(root, ok, no, { binary: true, onlyVisible: false }));
+}
+async function avLite(buf) {
+    if (avIsFbx(buf)) { try { return await fbxToLiteGlb(buf); } catch (e) { console.warn('fbx repack', e); return buf; } }   // the partner only needs the look: re-pack the GLB with 512 px textures so it travels in a few seconds
     try {
         const dv = new DataView(buf); if (dv.getUint32(0, true) !== 0x46546C67) return buf; let off = 12, json = null, bin = null;
         while (off + 8 <= buf.byteLength) { const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true), d = buf.slice(off + 8, off + 8 + len); if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(d)); else if (type === 0x004E4942) bin = new Uint8Array(d); off += 8 + len; }
@@ -2555,7 +2585,7 @@ function rpVrmPose(dt) {   // the partner moves with the same animation clips an
     for (let b = 0; b < r.names.length; b++) r.nodes[b].quaternion.copy(r.qs[b]);
     N.hips.position.y = r.hips0 * hyo.v;
     const P = r.pose; let sp = 0, hd = 0; if (low) { sp += 0.24; hd += 0.14; } else if (r.hp < 65) sp += 0.06; if (r.state === 'reload') hd += 0.2; P.sp += (sp - P.sp) * k; P.hd += (hd - P.hd) * k;
-    const ar = (n, x, y, z) => { _e.set(x, y, z); _q.tmp.setFromEuler(_e); n.quaternion.premultiply(_q.tmp); };
+    const ar = (n, x, y, z) => { if (!n) return; _e.set(x, y, z); _q.tmp.setFromEuler(_e); n.quaternion.premultiply(_q.tmp); };
     ar(N.spine, P.sp * 0.55, 0, 0); ar(N.chest, P.sp * 0.45, 0, 0); ar(N.neck, P.hd * 0.4, 0, 0); ar(N.head, P.hd * 0.6, 0, 0);
     const blade = r.eq === 'blade', kt = r.swT > 0 ? 1 - r.swT / 0.35 : -1; if (blade && kt >= 0) ar(N.spine, 0, kt < 0.3 ? -0.5 * kt / 0.3 : -0.5 + 1.1 * Math.min(1, (kt - 0.3) / 0.4), 0);
     N.hips.updateMatrixWorld(true);
@@ -2571,7 +2601,8 @@ function rpVrmPose(dt) {   // the partner moves with the same animation clips an
     r.bt -= dt; const em = r.vrm.expressionManager; if (em) { if (r.bt < 0) { r.bt = 2.2 + Math.random() * 3; r.bl = 0.14; } r.bl = Math.max(0, (r.bl || 0) - dt); em.setValue('blink', r.bl > 0 ? Math.sin(r.bl / 0.14 * Math.PI) : 0); }
     r.vrm.update(dt);
 }
-function rpAnim(dt) {
+function rpAnim(dt) { try { rpAnim0(dt); } catch (e) { if (!rpAnim.w) { rpAnim.w = 1; console.warn('partner animation', e); } } }   // a bad partner model must never stop the screen from drawing
+function rpAnim0(dt) {
     const r = CO.rp; r.kick = Math.max(0, (r.kick || 0) - dt * 7); r.swT = Math.max(0, (r.swT || 0) - dt); r.flash = Math.max(0, (r.flash || 0) - dt); if (r.light) r.light.intensity = r.flash > 0 ? 3 : 0; if (r.vrm) { const clipDead = r.names && r.names.length && r.act && r.act.hold; r.g.rotation.x = r.state === 'dead' && !clipDead ? -Math.PI / 2 : 0; r.g.position.y = r.state === 'dead' && !clipDead ? 0.15 : 0; rpVrmPose(dt); return; } const P = r.P, s = Math.sin(r.walk * 3), a = r.speed > 0.1 ? 1 : 0, gun = r.eq === 'pistol'; P.legL.rotation.x = s * 0.6 * a; P.legR.rotation.x = -s * 0.6 * a; P.armL.rotation.set(-s * 0.5 * a, 0, 0); P.armR.rotation.set(s * 0.5 * a, 0, 0);
     if (gun) { if (r.aim) { P.armR.rotation.set(-1.5, 0, 0); P.armL.rotation.set(-1.4, 0, 0.28); } else P.armR.rotation.set(-0.35 + s * 0.2 * a, 0, 0); } else if (r.aim) { P.armR.rotation.set(-1.2, 0, 0); P.armL.rotation.set(-1.1, 0, 0.2); }
     for (const k in r.W) r.W[k].visible = (k === 'pistol' ? isGun(r.eq) : k === 'blade' ? r.eq === 'blade' : r.eq === 'gloves');

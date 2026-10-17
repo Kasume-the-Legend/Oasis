@@ -221,3 +221,9 @@ Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/a
 
 ## Imported humanoid pivot fix
 - Non-VRM imports (`vrm.auto`) are now centred on the hips (x/z) and grounded at the feet in `Actor.setModel` (index.html), and in Survivor/HarborInn2 `avLoad` + `rpLoadVRM`, so models whose skeleton origin is off the feet turn in place instead of swinging wide.
+
+## Harbor Inn: FBX characters, partner-animation crash
+- `avParse` now accepts binary FBX (autoHumanoid -> tposeFix -> pseudo VRM); `avBoot` re-packs an FBX with `fbxToLiteGlb` (512 px textures, GLTFExporter) so it is small enough to send to the partner (limit 26 MB).
+- Fixed per-frame crash when a partner model lacked chest/neck/spine (`ar()` null guard, `rpAnim` wrapped in try/catch): it froze the picture while sound/movement continued.
+- A failed own-avatar load now restores the default soldier and shows the reason on screen.
+- Not verified: 115 MB sample FBX crashes the headless test browser (memory); needs a real-device check.
