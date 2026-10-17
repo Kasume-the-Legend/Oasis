@@ -3094,6 +3094,115 @@ lnk('c17_dock', 'E', 0, 'c18_bridge', 'W', 0);
     }, 200);
 }
 
+// ---- Camera director for Harbor Inn 2. Each room gets a set of fixed camera spots (corners, wall mid-points, the original authored cameras); every frame it keeps the one that
+// actually SEES you: nothing tall in the line of sight, a sensible distance and angle. A bad view cuts to a better spot (classic fixed-camera cut); the camera never glides.
+// The lens does pan a little and zooms so you stay a readable size, instead of shrinking to a speck across a big room.
+{
+    const CAM = { def: null, cur: -1, since: 0, last: 0, tx: 0, ty: 0, tz: 0, fov: 50, blockedT: 0 };
+    const now = () => performance.now() / 1000;
+    // everything that can sit between a camera and you: tall props and the solid shape fills (chamfers, notches, stubs)
+    const occluders = (def) => {
+        if (def._nxOcc) return def._nxOcc;
+        const o = [], w = def.w, d = def.d, H = def.h || 4;
+        for (const p of def.props || []) { if (p.nc || p.h < 1.0 || p.shape) continue; o.push({ x0: p.x - p.w / 2, x1: p.x + p.w / 2, z0: p.z - p.d / 2, z1: p.z + p.d / 2, h: p.h }); }
+        const sh = def.nxShape;
+        if (sh && !def.sky) {   // (open-air rooms have no walls to fill: the shape is only a collision boundary there)
+            for (const r of sh.rects) o.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, h: H });
+            for (const q of sh.stubs) o.push({ x0: q.x - 0.2, x1: q.x + 0.2, z0: q.z0, z1: q.z1, h: H });
+            for (const t of sh.tris) o.push({ tri: t, h: H });
+        }
+        def._nxOcc = o; void w; void d; return o;
+    };
+    const hitOcc = (def, x, y, z, pad) => {
+        for (const c of occluders(def)) {
+            if (y > c.h) continue;
+            if (c.tri) { const t = c.tri, w = def.w, d = def.d; if (x * t.sx > 0 && z * t.sz > 0 && Math.abs(x - t.sx * w / 2) + Math.abs(z - t.sz * d / 2) < t.c + pad) return true; }
+            else if (x > c.x0 - pad && x < c.x1 + pad && z > c.z0 - pad && z < c.z1 + pad) return true;
+        }
+        return false;
+    };
+    const inShape = (def, x, z) => hitOcc(def, x, 0.2, z, 0.35);
+    // a clear line from the camera to your chest and your head
+    const los = (def, p, px, pz) => {
+        for (const yy of [0.9, 1.55]) {
+            const dx = px - p[0], dy = yy - p[1], dz = pz - p[2], L = Math.hypot(dx, dy, dz), n = Math.max(4, Math.ceil(L / 0.35));
+            for (let i = 1; i < n; i++) { const k = i / n; if (hitOcc(def, p[0] + dx * k, p[1] + dy * k, p[2] + dz * k, 0.12)) return false; }
+        }
+        return true;
+    };
+    const build = (def) => {
+        if (def._nxCams) return def._nxCams;
+        const w = def.w, d = def.d, hw = w / 2, hd = d / 2, m = 0.35, sky = !!def.sky, H = Math.max(2.4, def.h || 4);
+        const yC = sky ? 3.8 : Math.min(H - 0.3, 3.5), yM = sky ? 3.2 : Math.min(H - 0.35, 2.7), out = [];
+        const doors = def.doors || [];
+        const nearDoor = (x, z) => !sky && doors.some((q) => { const px = q.side === 'E' ? hw : q.side === 'W' ? -hw : q.at, pz = q.side === 'N' ? -hd : q.side === 'S' ? hd : q.at; return Math.hypot(px - x, pz - z) < 1.9; });
+        const spot = (x, z, y, fov, auth) => {
+            if (!sky && (Math.abs(x) > hw - 0.2 || Math.abs(z) > hd - 0.2)) return;
+            if (nearDoor(x, z) || hitOcc(def, x, 0.2, z, 0.1)) return;
+            for (const p of def.props || []) { if (p.nc || p.shape || p.h < y - 0.6) continue; if (Math.abs(x - p.x) < p.w / 2 + 0.12 && Math.abs(z - p.z) < p.d / 2 + 0.12) return; }
+            for (const c of out) if (Math.hypot(c.p[0] - x, c.p[2] - z) < 1.2) return;
+            out.push({ p: [x, y, z], t: [0, 0.9, 0], fov: fov || 50, auth: !!auth });
+        };
+        for (const c of (def._camsOrig || def.cams || [])) { const k = (c.p || [0, 0, 0]); spot(k[0], k[2], Math.min(k[1], yC), c.fov, 1); }
+        if (sky) {   // no walls to hide behind: stand just outside the playfield and look in from above
+            const ox = hw + 0.9, oz = hd + 0.9; for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) spot(sx * ox, sz * oz, 4.4, 52);
+            for (const f of [-0.5, 0, 0.5]) { spot(f * w, oz, 4.0, 52); spot(f * w, -oz, 4.0, 52); spot(ox, f * d, 4.0, 52); spot(-ox, f * d, 4.0, 52); }
+        }
+        for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) spot(sx * (hw - m), sz * (hd - m), yC);
+        for (const sx of [-1, 1]) for (const f of [0, -0.5, 0.5, -0.25, 0.25]) spot(sx * (hw - m), f * d * 0.9, f === 0 ? yM : (f % 0.5 ? yC : yM));
+        for (const sz of [-1, 1]) for (const f of [0, -0.5, 0.5, -0.25, 0.25]) spot(f * w * 0.9, sz * (hd - m), f === 0 ? yM : (f % 0.5 ? yC : yM));
+        if (!out.length) out.push({ p: [-(hw - m), yC, hd - m], t: [0, 0.9, 0], fov: 52 });
+        def._camsOrig = def._camsOrig || def.cams; def._nxCams = out; return out;
+    };
+    const score = (def, c, px, pz, hd, hw) => {
+        const dx = px - c.p[0], dz = pz - c.p[2], dd = Math.hypot(dx, dz, c.p[1] - 1.1);
+        let s = 0;
+        if (dd < 3.2) s -= (3.2 - dd) * 3; else if (dd > 11) s -= (dd - 11) * 0.7; else s -= Math.abs(dd - 6.5) * 0.35;
+        const pitch = Math.atan2(c.p[1] - 1.1, Math.hypot(dx, dz)) * 57.3; s -= Math.abs(pitch - 20) * 0.04;
+        // keep the player away from the edge of the frame: prefer when they are in front of the camera and not hugging a wall behind them
+        const wallBehind = Math.min(hw - Math.abs(px), hd - Math.abs(pz)); if (wallBehind < 0.8) s -= 0.3;
+        if (c.auth) s += 0.25;
+        return s;
+    };
+    const apply = (def, c, snap, dt) => {
+        const dx = PL.x - c.p[0], dz = PL.z - c.p[2], dd = Math.hypot(dx, dz, c.p[1] - 1.1);
+        const gx = PL.x * 0.93, gz = PL.z * 0.93, wantFov = Math.max(36, Math.min(62, 2 * Math.atan(2.5 / Math.max(2, dd)) * 57.3));
+        const k = snap ? 1 : 1 - Math.exp(-dt * 8);
+        CAM.tx += (gx - CAM.tx) * k; CAM.ty += (0.95 - CAM.ty) * k; CAM.tz += (gz - CAM.tz) * k; CAM.fov += (wantFov - CAM.fov) * k;
+        c.t[0] = CAM.tx; c.t[1] = CAM.ty; c.t[2] = CAM.tz;
+        if (Math.abs(camera.fov - CAM.fov) > 0.15) { camera.fov = CAM.fov; camera.updateProjectionMatrix(); }
+    };
+    camPick = function (force) {
+        const def = RM && RM.def; if (!def || def.id === undefined && !def.w) return;
+        const cs = build(def); if (def.cams !== cs) def.cams = cs;
+        const t = now(), dt = Math.min(0.1, t - CAM.last || 0.016); CAM.last = t;
+        const reset = force || CAM.def !== def || CAM.cur < 0 || CAM.cur >= cs.length;
+        let best = -1, bs = -1e9, curOk = false, curS = -1e9;
+        for (let i = 0; i < cs.length; i++) {
+            const ok = los(def, cs[i].p, PL.x, PL.z), sc = ok ? score(def, cs[i], PL.x, PL.z, def.d / 2, def.w / 2) : -1e6;
+            if (i === CAM.cur) { curOk = ok; curS = sc; }
+            if (sc > bs) { bs = sc; best = i; }
+        }
+        if (best < 0) best = 0;
+        let pick = CAM.cur;
+        if (reset) { pick = best; CAM.blockedT = 0; }
+        else {
+            if (!curOk) CAM.blockedT += dt; else CAM.blockedT = 0;
+            const dwell = t - CAM.since;
+            if ((!curOk && CAM.blockedT > 0.18 && best !== CAM.cur) || (curOk && dwell > 1.4 && bs > curS + 1.6)) pick = best;
+        }
+        const cut = pick !== CAM.cur || reset;
+        if (cut) { CAM.cur = pick; CAM.since = t; CAM.def = def; RM.cam = pick; }
+        RM.cam = CAM.cur;
+        const c = cs[CAM.cur]; if (cut) { camera.position.set(...c.p); }
+        apply(def, c, cut && (reset || true), dt);
+        if (cut) camera.lookAt(...c.t);
+        CAM.dbg = true;
+    };
+    window.__nxNdc = () => { camera.updateMatrixWorld(true); const v = new THREE.Vector3(PL.x, 1.1, PL.z).project(camera); return [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; };
+    window.__nxCam = CAM; window.__nxCamPick = camPick;
+}
+
 // ---- Oymyakon-13 set dressing: every room gets a kit (lab, server, cells, containers, machinery, cave, hive, ruin, outdoor ...) built from real multi-part props,
 // wall bands + signage, ceiling lights, floor markings and cold accent lighting. Props are placed only where they cannot block doors, items, enemies or puzzles.
 {
@@ -3518,7 +3627,7 @@ lnk('c17_dock', 'E', 0, 'c18_bridge', 'W', 0);
             const L = side === 'N' || side === 'S' ? w : d;
             for (let t = -L / 2 + 1; t < L / 2; t += 2.2 + rr() * 1.4) {
                 if (nearDoor(side, t)) continue;
-                const off = 0.6 + rr() * 2.6, sc = 1.2 + rr() * 2.0, hh = 0.8 + rr() * 2.4, px = side === 'N' || side === 'S' ? t : (side === 'W' ? -w / 2 - off : w / 2 + off), pz = side === 'N' ? -d / 2 - off : side === 'S' ? d / 2 + off : t;
+                const sc = 1.0 + rr() * 1.6, hh = 0.8 + rr() * 2.2, off = sc * 1.7 + 0.45 + rr() * 1.2, px = side === 'N' || side === 'S' ? t : (side === 'W' ? -w / 2 - off : w / 2 + off), pz = side === 'N' ? -d / 2 - off : side === 'S' ? d / 2 + off : t;
                 if (rr() < 0.55) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 9, 6), snowM); m.scale.set(sc * 1.6, hh * 0.7, sc * 1.3); add(m, px, 0, pz); }
                 else { const m = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), rockM); m.scale.set(sc, hh, sc * 0.9); m.rotation.y = rr() * 6; add(m, px, hh * 0.35, pz); const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 5), snowM); cap.scale.set(sc * 0.9, hh * 0.28, sc * 0.8); add(cap, px, hh * 0.85, pz); }
                 if (rr() < 0.22 && !/beach/.test(id)) { const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 3.4, 5), mat(0x2a2018)); add(tr, px, 1.7, pz); for (let b = 0; b < 3; b++) { const br = boxM(0.04, 0.04, 0.9, mat(0x2a2018)); br.position.set(px, 1.5 + b * 0.5, pz); br.rotation.set(-0.4, rr() * 6, 0); g.add(br); } }
