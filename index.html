@@ -4281,7 +4281,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             localActor.group.position.set(sp.x, sp.y, sp.z);
             localActor.group.rotation.y = sp.ry;
             playerVelocity.set(0, 0, 0); isGrounded = true; moveSpeed = WALK_SPEED;
-            localActor.emote = null;                                  // changing rooms gets you up from sitting
+            localActor.emote = null; if (typeof SIT !== 'undefined' && SIT) SIT.seat = null;   // changing rooms gets you up from sitting
             if (controls) { controls.target.set(sp.x, sp.y + 1.2, sp.z); camera.position.set(sp.x - Math.sin(sp.ry) * 6, sp.y + 3.2, sp.z - Math.cos(sp.ry) * 6); }
             localActor.firstFrame = true;
             localActor.resetSprings();
@@ -16024,10 +16024,11 @@ window.__ts = TSK;
                 const q = bpSnap(it, it.x, it.z); it.x = q[0]; it.z = q[1]; it.y = pbBaseY(it.k, clamp(Math.round((it.y - (PB_KINDS[it.k][3] === 'wall' ? PB_SLAB : 0)) / PB_LV), 0, 10));
             }
             else { if (!dcOkId(r.a)) return null; it.a = r.a; }
+            if (t === 'm') it.sit = r.sit ? 1 : 0;
             if (t === 'p') { it.ar = dcNum(r.ar, 0.2, 5, 1); it.f = Object.prototype.hasOwnProperty.call(DC_FRAMES, r.f) ? r.f : 'black'; }
             return it;
         }
-        const dcWireItem = (it) => { const o = { id: it.id, t: it.t, n: it.n, x: +it.x.toFixed(3), y: +it.y.toFixed(3), z: +it.z.toFixed(3), r: +it.r.toFixed(1), s: +it.s.toFixed(3), c: it.c || '', sol: it.sol ? 1 : 0, lock: it.lock ? 1 : 0 }; if (it.d) o.d = it.d; if (it.k) o.k = it.k; if (it.a) o.a = it.a; if (it.m) o.m = it.m; if (it.t === 'p') { o.ar = it.ar; o.f = it.f; } return o; };
+        const dcWireItem = (it) => { const o = { id: it.id, t: it.t, n: it.n, x: +it.x.toFixed(3), y: +it.y.toFixed(3), z: +it.z.toFixed(3), r: +it.r.toFixed(1), s: +it.s.toFixed(3), c: it.c || '', sol: it.sol ? 1 : 0, lock: it.lock ? 1 : 0 }; if (it.d) o.d = it.d; if (it.k) o.k = it.k; if (it.a) o.a = it.a; if (it.m) o.m = it.m; if (it.t === 'p') { o.ar = it.ar; o.f = it.f; } if (it.t === 'm' && it.sit) o.sit = 1; return o; };
         const dcWire = () => ({ items: [...DC.items.values()].map(dcWireItem), style: DC.style });
         // undo / redo: snapshots of the whole layout (cheap: a layout is a few kilobytes of JSON)
         DC.hist = { s: [], i: -1, t: 0, busy: false };
@@ -16048,7 +16049,7 @@ window.__ts = TSK;
                     seen.add(n.id); const old = DC.items.get(n.id);
                     if (!old) { DC.items.set(n.id, n); dcInstantiate(n); continue; }
                     const same = old.a === n.a && old.k === n.k && old.t === n.t && old.c === n.c && old.f === n.f && old.m === n.m;
-                    Object.assign(old, { x: n.x, y: n.y, z: n.z, r: n.r, s: n.s, sol: n.sol, c: n.c, f: n.f, n: n.n, m: n.m, lock: n.lock, d: n.d });
+                    Object.assign(old, { sit: n.sit, x: n.x, y: n.y, z: n.z, r: n.r, s: n.s, sol: n.sol, c: n.c, f: n.f, n: n.n, m: n.m, lock: n.lock, d: n.d });
                     if (!same) { old.a = n.a; old.k = n.k; old.ar = n.ar; dcInstantiate(old); } else dcPlace(old);
                 }
                 for (const [id, it] of [...DC.items]) if (!seen.has(id)) { dcRemoveGroup(it); DC.items.delete(id); }
@@ -16170,7 +16171,7 @@ window.__ts = TSK;
                 seen.add(n.id); const old = DC.items.get(n.id);
                 if (!old) { DC.items.set(n.id, n); dcInstantiate(n); continue; }
                 const same = old.a === n.a && old.k === n.k && old.t === n.t && old.c === n.c && old.f === n.f && old.m === n.m;
-                Object.assign(old, { x: n.x, y: n.y, z: n.z, r: n.r, s: n.s, sol: n.sol, c: n.c, f: n.f, n: n.n, m: n.m });
+                Object.assign(old, { sit: n.sit, x: n.x, y: n.y, z: n.z, r: n.r, s: n.s, sol: n.sol, c: n.c, f: n.f, n: n.n, m: n.m });
                 if (!same) { old.a = n.a; old.k = n.k; old.ar = n.ar; dcInstantiate(old); } else dcPlace(old);
             }
             for (const [id, it] of [...DC.items]) if (!seen.has(id)) { dcRemoveGroup(it); DC.items.delete(id); }
@@ -16482,6 +16483,7 @@ window.__ts = TSK;
                 ta.addEventListener('change', () => { it.d = ta.value.replace(/\s+/g, ' ').trim().slice(0, 240); const le = DC.lib.find((x) => x.id === it.a); if (le) { le.d = it.d; dcLibSave(); } dcChanged(); });
                 bar.appendChild(dl);
             }
+            if (it.t === 'm') { const sr = dcEl('div', 'dc-brow'); sr.append(dcBtn(it.sit ? '\uD83E\uDE91 Sittable: on' : '\uD83E\uDE91 Make sittable', () => { it.sit = it.sit ? 0 : 1; dcChanged(); dcRenderBar(); }, it.sit ? '' : 'dim')); bar.appendChild(sr); }
             const lk = dcEl('div', 'dc-brow'); lk.append(dcBtn(it.lock ? '🔓 Unlock' : '🔒 Lock in place', () => { it.lock = !it.lock; dcChanged(); dcRenderBar(); }, it.lock ? '' : 'dim')); bar.appendChild(lk);
             if (it.lock) { const act0 = dcEl('div', 'dc-brow'); act0.append(dcBtn('Delete', () => dcDelete(it.id), 'red'), dcBtn('Done', () => dcSelect(null), 'dim')); bar.appendChild(act0); return; }
             if (it.t === 's') {
@@ -17198,6 +17200,7 @@ window.__ts = TSK;
             if (keys.left) _mv.x -= 1;
             if (keys.right) _mv.x += 1;
             if (_mv.lengthSq() === 0 && (padMove.x || padMove.z)) _mv.set(padMove.x, 0, padMove.z);   // controller left stick
+            sitHint(dt); if (SIT.seat && sitTick(dt, g)) return;
             if (TG.lockMove() || (hcMine() && HC.act) || gnRolling() || bwLockMove() || btLockMove()) _mv.set(0, 0, 0);   // laser tag: knocked out / countdown
 
             if (_mv.lengthSq() > 0) {
@@ -18126,8 +18129,97 @@ window.__ts = TSK;
                 return { id: me.id, me: { lookId: localActor.lookId, y: +localActor.lk.y.toFixed(3), p: +localActor.lk.p.toFixed(3), ang: ang(localActor), ey: +localActor.lk.ey.toFixed(3) }, peers: [...peers.values()].map((p) => ({ id: p.id, lookId: p.actor.lookId, y: +p.actor.lk.y.toFixed(3), ang: ang(p.actor), rot: +p.actor.group.rotation.y.toFixed(2) })) };
             } };
 
+        /* ------------------------------------------------------------------ *
+         *  Sit on furniture (FFXIV style): press Sit (2) near a seat, or tap the prompt. You glide to the seat, face the way it faces and
+         *  sit; moving, jumping or pressing Sit again gets you up. Seats: sofas, armchairs, stools, ottomans, benches, and any imported
+         *  model flagged "sittable". Others see the normal sit emote at the seat's height.
+         * ------------------------------------------------------------------ */
+        var SIT = { seat: null, phase: 0, hint: null, t: 0, chk: 0 };
+        const SIT_DROP = 0.3;
+        const SIT_DEFS = {   // [x, z, yaw offset, seat height] in the piece's own units (it faces +z, backs are on -z)
+            sofa3: [[-0.75, 0.1], [0, 0.1], [0.75, 0.1]], sofa2: [[-0.45, 0.1], [0.45, 0.1]], armchair: [[0, 0.08]], module: [[0, 0.08]], corner: [[-0.05, 0.05]],
+            sectional: [[0.45, 0.1], [1.25, 0.1], [1.95, 0.1], [2.775, 0.1], [2.775, 1.3, -Math.PI / 2]], stool: [[0, 0, 0, 0.71]], ottoman: [[0, 0, 0, 0.5]]
+        };
+        function sitModelDef(it) {
+            const key = it.group.uuid + '|' + it.r + '|' + it.s;
+            if (it._sk !== key) {
+                it._sk = key; it._sd = null;
+                try {
+                    it.group.updateMatrixWorld(true);
+                    const b = new THREE.Box3().setFromObject(it.group); if (!b.isEmpty()) {
+                        const th = it.r * Math.PI / 180, c = Math.cos(th), s = Math.sin(th), dx = (b.min.x + b.max.x) / 2 - it.x, dz = (b.min.z + b.max.z) / 2 - it.z;
+                        const lx = (dx * c - dz * s) / it.s, lz = (dx * s + dz * c) / it.s, h = (b.max.y - it.y) / it.s;
+                        it._sd = [[lx, lz, 0, clamp(h * 0.45, 0.25, 0.75)]];
+                    }
+                } catch (e) { it._sd = null; }
+            }
+            return it._sd;
+        }
+        function sitSeats() {
+            const out = [];
+            try {
+                if (dcMapOn()) for (const it of DC.items.values()) {
+                    if (!it.group) continue;
+                    const defs = it.t === 'b' ? SIT_DEFS[it.k] : (it.t === 'm' && it.sit) ? sitModelDef(it) : null; if (!defs) continue;
+                    const th = it.r * Math.PI / 180, c = Math.cos(th), s = Math.sin(th);
+                    defs.forEach((d, i) => { const lx = d[0] * it.s, lz = d[1] * it.s; out.push({ key: it.id + ':' + i, x: it.x + lx * c + lz * s, z: it.z - lx * s + lz * c, y: it.y + (d[3] || 0.5) * it.s, yaw: th + (d[2] || 0) }); });
+                }
+                if (activeMap === 'mall') BENCHES.forEach((b, i) => { for (const dx of [-0.8, 0.8]) out.push({ key: 'b' + i + ':' + dx, x: b.x + dx, z: b.z, y: b.top, yaw: b.z > 0 ? Math.PI : 0 }); });
+            } catch (e) { /* no seats */ }
+            return out;
+        }
+        function sitTaken(s) { for (const p of peers.values()) { const a = p.actor; if (a && a.emote === 'sit' && Math.hypot(a.group.position.x - s.x, a.group.position.z - s.z) < 0.4) return true; } return false; }
+        function sitFind(maxD = 2.4) {
+            if (!localActor || DC.edit) return null;
+            const g = localActor.group.position; let best = null, bd = maxD;
+            for (const s of sitSeats()) { if (Math.abs(s.y - g.y) > 1.6) continue; const d = Math.hypot(s.x - g.x, s.z - g.z); if (d < bd && !sitTaken(s)) { bd = d; best = s; } }
+            return best;
+        }
+        function sitStart(s) { SIT.seat = s; SIT.phase = 0; SIT.chk = 0; if (localActor.emote) localActor.playEmote('stand'); }
+        function sitRelease() {
+            const s = SIT.seat; SIT.seat = null; if (!s || !localActor) return;
+            const g = localActor.group;
+            if (localActor.emote === 'sit') { localActor.playEmote('stand'); net && net.send({ t: 'emote', name: 'stand' }); }
+            g.position.x = s.x + Math.sin(s.yaw) * 0.8; g.position.z = s.z + Math.cos(s.yaw) * 0.8;
+            try { g.position.y = MAP_DEFS[activeMap].ground(g.position.x, g.position.z, s.y + 0.3); } catch (e) { g.position.y = s.y - SIT_DROP; }
+            playerVelocity.set(0, 0, 0); isGrounded = true;
+        }
+        function sitTick(dt, g) {
+            const s = SIT.seat; if (!s) return false;
+            if (keys.forward || keys.backward || keys.left || keys.right || padMove.x || padMove.z) { sitRelease(); return false; }
+            const ty = s.y - SIT_DROP, dx = s.x - g.position.x, dz = s.z - g.position.z, dist = Math.hypot(dx, dz);
+            playerVelocity.set(0, 0, 0); isGrounded = true;
+            if (SIT.phase === 0) {
+                const step = clamp(dist * 5, 0.7, 2.4) * dt;
+                if (dist <= step + 0.02) {
+                    g.position.set(s.x, ty, s.z); g.rotation.y = s.yaw; SIT.phase = 1;
+                    localActor.playEmote('sit'); net && net.send({ t: 'emote', name: 'sit' }); try { lvAward('emote', 3, 6); } catch (e) { /* level */ }
+                } else {
+                    g.position.x += dx / dist * step; g.position.z += dz / dist * step; g.position.y += (ty - g.position.y) * Math.min(1, dt * 8);
+                    g.rotation.y = lerpAngle(g.rotation.y, dist > 0.3 ? Math.atan2(dx, dz) : s.yaw, 1 - Math.exp(-dt * 12));
+                }
+                return true;
+            }
+            g.position.set(s.x, ty, s.z); g.rotation.y = lerpAngle(g.rotation.y, s.yaw, 1 - Math.exp(-dt * 10));
+            SIT.chk += dt;
+            if (localActor.emote !== 'sit') { sitRelease(); return false; }
+            if (SIT.chk > 0.5) { SIT.chk = 0; if (!sitSeats().some((k) => k.key === s.key)) { sitRelease(); return false; } }
+            return true;
+        }
+        function sitHint(dt) {
+            SIT.t -= dt; if (SIT.t > 0) return; SIT.t = 0.2;
+            let h = SIT.hint;
+            if (!h) {
+                h = SIT.hint = document.createElement('div');
+                h.style.cssText = 'position:fixed;left:50%;bottom:132px;transform:translateX(-50%);z-index:40;padding:7px 16px;border-radius:999px;background:rgba(10,14,28,.78);border:1px solid rgba(255,255,255,.22);color:#fff;font:600 13px Inter,sans-serif;cursor:pointer;display:none;backdrop-filter:blur(6px)';
+                h.textContent = '🪑 Sit  [2]'; h.addEventListener('click', () => performEmote('sit')); document.body.appendChild(h);
+            }
+            h.style.display = (!SIT.seat && !DC.edit && !localActor.emote && !!sitFind(1.8)) ? 'block' : 'none';
+        }
+
         function performEmote(name) {
             if (name === 'hug') { hugAsk(); return; }
+            if (name === 'sit') { if (SIT.seat) { sitRelease(); return; } const st = sitFind(); if (st) { sitStart(st); return; } }
             if (!EMOTES[name]) return;
             if (EMOTES[name].hold && localActor.emote === name) name = 'stand';   // using Sit again gets you up
             localActor.playEmote(name); lvAward('emote', 3, 6);
@@ -23628,6 +23720,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                     case 'KeyD': case 'ArrowRight': keys.right = true; dtKey(e); e.preventDefault(); break;
                     case 'Space':
                         e.preventDefault();
+                        if (SIT.seat) { sitRelease(); break; }
                         if (isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }
                         break;
                     case 'ShiftLeft': case 'ShiftRight': if (!e.repeat) tapSprint(); keys.run = true; break;
