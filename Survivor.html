@@ -38,6 +38,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#d9cfb4;fon
 .re-left{flex:1.6;display:flex;flex-direction:column;gap:.6em;min-width:0}
 .re-right{flex:1;display:flex;flex-direction:column;gap:.5em;min-width:0}
 .re-top{display:flex;gap:.6em}
+.re-top.sm .re-por{width:4.6em}.re-top.sm .re-cond{min-height:4.6em}.re-top.sm .re-condl{font-size:.9em}.re-top.pick{cursor:pointer}.re-top.sel .re-por,.re-top.sel .re-cond{border-color:#ff4a3a;box-shadow:0 0 0 2px #ff4a3a}
 .re-por{width:6.4em;border:3px solid #8a8d98;background:#0a1450;position:relative;flex:none}
 .re-por canvas{width:100%;display:block;image-rendering:pixelated}
 .re-name{position:absolute;left:0;right:0;bottom:0;background:#000a;font-size:.65em;text-align:center;letter-spacing:.1em;color:#d8e0ff}
@@ -1916,19 +1917,153 @@ const _q = {}; for (const k of ['CQ', 'PQ', 'PQ2', 'Qu', 'Qd', 'GQ', 'tmp']) _q[
 const _e = new THREE.Euler();
 const REST = { R: new THREE.Vector3(-1, 0, 0), L: new THREE.Vector3(1, 0, 0), D: new THREE.Vector3(0, -1, 0) };
 const sm1 = (a, b, k) => a + (b - a) * k;
+/* ---------- characters that are not VRM (GLB models): the skeleton is recognised from its bone names, like in the Oasis ---------- */
+        const SKIP_WORDS = new Set(['ik', 'fk', 'pole', 'target', 'helper', 'twist', 'roll', 'corrective', 'ctrl', 'control', 'cntrl', 'mch', 'org', 'tweak', 'nub', 'end', 'tip', 'eff', 'effector', 'socket', 'weapon', 'prop', 'top', 'jiggle', 'fix', 'unused', 'holster', 'corr', 'sleeve']);
+        const FINGER_WORDS = new Set(['thumb', 'index', 'middle', 'mid', 'ring', 'pinky', 'pinkie', 'little', 'finger', 'fingers', 'f']);
+        function boneTokens(name) {
+            let s = String(name).replace(/^.*[:|]/, '');                                  // "mixamorig:Hips", "Armature|Hips" -> "Hips"
+            s = s.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Za-z])(\d)/g, '$1 $2').replace(/(\d)([A-Za-z])/g, '$1 $2');
+            return s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+        }
+        function boneDepth(n) { let d = 0; for (let p = n.parent; p; p = p.parent) d++; return d; }
+        function ancestorsOf(n) { const a = []; for (let p = n.parent; p; p = p.parent) a.push(p); return a; }
+        function commonAncestor(a, b) { const set = new Set([a, ...ancestorsOf(a)]); for (let p = b; p; p = p.parent) if (set.has(p)) return p; return null; }
+
+        // Finds the human bones of a rigged character. Returns { map: { hips: Bone, spine: Bone, ... }, matched, total } or null when this is not a humanoid.
+        function autoHumanoid(root) {
+            const bones = []; root.traverse((o) => { if (o.isBone) bones.push(o); });
+            if (bones.length < 12) return null;
+            root.updateMatrixWorld(true);
+            const info = bones.map((node) => { const t = boneTokens(node.name); return { node, t, side: t.includes('left') || t.includes('l') ? 'left' : (t.includes('right') || t.includes('r') ? 'right' : null), skip: t.some((w) => SKIP_WORDS.has(w)), finger: t.some((w) => FINGER_WORDS.has(w)) }; });
+            const rank = (a, b) => a.t.length - b.t.length || boneDepth(a.node) - boneDepth(b.node);
+            const wx = (n) => n.getWorldPosition(new THREE.Vector3()).x;
+            // a landmark (hand, foot) on each side: by name, falling back to left/right position when the names carry no side
+            const landmark = (test, prefer) => {
+                const c = info.filter((i) => !i.skip && test(i));
+                const pick = (side) => { const list = c.filter((i) => i.side === side).sort(rank); const pr = prefer ? list.filter(prefer) : []; return (pr[0] || list[0] || {}).node || null; };
+                let l = pick('left'), r = pick('right');
+                if (!l || !r) {
+                    const none = c.filter((i) => !i.side).sort(rank);
+                    if (none.length === 2) { const [a, b] = wx(none[0].node) > wx(none[1].node) ? [none[0], none[1]] : [none[1], none[0]]; l = l || a.node; r = r || b.node; }   // facing +Z, the left side is +X
+                }
+                return [l, r];
+            };
+            const [lHand, rHand] = landmark((i) => (i.t.includes('hand') || i.t.includes('wrist')) && !i.finger, (i) => i.t.includes('hand'));
+            const [lFoot, rFoot] = landmark((i) => (i.t.includes('foot') || i.t.includes('ankle')) && !i.t.includes('toe') && !i.t.includes('ball'), (i) => i.t.includes('foot'));
+            if (!lHand || !rHand || !lFoot || !rFoot) return null;
+            const clean = (list) => list.filter((n) => n.isBone && !boneTokens(n.name).some((w) => SKIP_WORDS.has(w)));
+            const legRoot = commonAncestor(lFoot, rFoot);
+            if (!legRoot || !legRoot.isBone) return null;
+            let hips = legRoot;
+            const FACE = new Set(['jaw', 'eye', 'eyes', 'eyeball', 'eyebrow', 'eyelid', 'eyelids', 'eyelash', 'lip', 'lips', 'hair', 'tongue', 'teeth', 'tooth', 'nose', 'ear', 'brow', 'cheek', 'mouth', 'face']);
+            const headC = info.filter((i) => !i.skip && i.t.includes('head') && !i.t.some((w) => FACE.has(w))).sort(rank);
+            let head = headC.length ? headC[0].node : null;
+            if (headC.length > 1 && headC.every((c) => c.t.includes('neck'))) head = headC.slice().sort((a, b) => boneDepth(b.node) - boneDepth(a.node))[0].node;   // "head_neck_lower", "head_neck_upper": the top one is the head
+            if (!head) {                                                                  // the head is not called "head" (Rigify's "DEF-spine.006"): the highest bone of the upper body
+                const limbs = [lHand, rHand, lFoot, rFoot], hy = hips.getWorldPosition(new THREE.Vector3()).y, fy = Math.min(...[lFoot, rFoot].map((f) => f.getWorldPosition(new THREE.Vector3()).y));
+                let best = null, by = -Infinity;
+                for (const i of info) {
+                    if (i.skip || i.finger || i.t.includes('toe') || !ancestorsOf(i.node).includes(hips) || limbs.some((l) => l === i.node || ancestorsOf(i.node).includes(l))) continue;
+                    const y = i.node.getWorldPosition(new THREE.Vector3()).y; if (y > by) { by = y; best = i.node; }
+                }
+                if (best && by > hy + 0.15 * (hy - fy)) head = best;
+            }
+            if (!head) return null;
+            while (hips && !ancestorsOf(head).includes(hips)) hips = hips.parent;               // a pelvis bone under a separate root_hips: the true hips is the one above both the legs and the spine
+            if (!hips || !hips.isBone) return null;
+            const upTo = (n, stop) => { const out = []; for (let p = n.parent; p && p !== stop; p = p.parent) out.push(p); return out; };
+            // bones with no readable name (a garbled Japanese "twist" helper: "??????.R_059") sit between the real ones and would be taken for the elbow / knee
+            const named = (list) => { const f = list.filter((n) => boneTokens(n.name).some((w) => /^[a-z]{3,}$/.test(w))); return f.length >= 2 ? f : list; };
+            const legs = [lFoot, rFoot].map((f) => named(clean(upTo(f, legRoot))));
+            if (legs.some((c) => c.length < 2)) return null;
+            const armTop = commonAncestor(lHand, rHand);
+            if (!armTop || !armTop.isBone) return null;
+            const arms = [lHand, rHand].map((h) => named(clean(upTo(h, armTop))));
+            if (arms.some((c) => c.length < 2)) return null;
+            // the spine: the bones between the hips and the head; the lowest bone named "neck" is the neck, everything below it is spine
+            const nk = clean(upTo(head, hips)).filter((n) => boneTokens(n.name).includes('neck'));
+            const neck = nk.length ? nk[nk.length - 1] : null;
+            const below = neck ? clean(upTo(neck, hips)) : clean(upTo(head, hips));
+            const sp = below.slice().reverse();                                          // bottom (hips side) first
+            if (sp.length < 1) return null;
+            const map = { hips, spine: sp[0], head };
+            if (sp.length >= 2) map.chest = sp[1];
+            if (sp.length >= 3) map.upperChest = sp[sp.length - 1];
+            if (neck) map.neck = neck;
+            const side = (s, hand, foot, arm, leg) => {
+                map[s + 'Hand'] = hand; map[s + 'LowerArm'] = arm[0]; map[s + 'UpperArm'] = arm[1]; if (arm.length >= 3) map[s + 'Shoulder'] = arm[2];
+                map[s + 'Foot'] = foot; map[s + 'LowerLeg'] = leg[0]; map[s + 'UpperLeg'] = leg[leg.length - 1];
+                const toe = foot.children.find((c) => c.isBone && boneTokens(c.name).some((w) => w === 'toe' || w === 'toes' || w === 'ball'));
+                if (toe) map[s + 'Toes'] = toe;
+            };
+            side('left', lHand, lFoot, arms[0], legs[0]); side('right', rHand, rFoot, arms[1], legs[1]);
+            // fingers: each finger is a short chain of bones hanging off the hand, named thumb / index / middle / ring / pinky (or Finger0..4)
+            const KIND = [['Thumb', ['thumb', 'pollex']], ['Index', ['index', 'pointer']], ['Middle', ['middle', 'mid']], ['Ring', ['ring']], ['Little', ['pinky', 'pinkie', 'little', 'small', 'baby']]];
+            const fingerChain = (n) => { const c = [n]; for (let i = 0; i < 2; i++) { const nx = c[c.length - 1].children.find((k) => k.isBone && !boneTokens(k.name).some((w) => SKIP_WORDS.has(w))); if (!nx) break; c.push(nx); } return c; };
+            for (const [sd, hand] of [['left', lHand], ['right', rHand]]) {
+                const roots = hand.children.filter((k) => k.isBone && !boneTokens(k.name).some((w) => SKIP_WORDS.has(w)));
+                const fingerNo = (k) => { const t = boneTokens(k.name), i = t.lastIndexOf('finger'); return i < 0 ? NaN : +(t.slice(i + 1).find((w) => /^\d+$/.test(w))); };   // "Bip01 L Finger2": the 2, not the 01 of Bip01
+                const numbered = roots.filter((k) => Number.isFinite(fingerNo(k)));
+                const base = numbered.length ? Math.min(...numbered.map(fingerNo)) : 0;
+                for (const k of roots) {
+                    const t = boneTokens(k.name); let kind = (KIND.find(([, words]) => t.some((w) => words.includes(w))) || [])[0];
+                    if (!kind && numbered.includes(k)) kind = ['Thumb', 'Index', 'Middle', 'Ring', 'Little'][fingerNo(k) - base];
+                    if (!kind || map[sd + kind + 'Proximal']) continue;
+                    const ch = fingerChain(k), names = kind === 'Thumb' ? (ch.length >= 3 ? ['Metacarpal', 'Proximal', 'Distal'] : ['Proximal', 'Distal']) : (ch.length >= 3 ? ['Proximal', 'Intermediate', 'Distal'] : ['Proximal', 'Distal']);
+                    ch.slice(0, names.length).forEach((b, i) => { map[sd + kind + names[i]] = b; });
+                }
+            }
+            if (new Set(Object.values(map)).size !== Object.keys(map).length) return null;   // one bone cannot be two body parts
+            return { map, matched: Object.keys(map).length, total: bones.length };
+        }
+
+        // Re-poses a recognised skeleton into the T-pose the animations were made for (arms straight out, legs straight down), the same
+        // correction the Mixamo-to-Unreal retarget tools make for A-pose and slightly-off rest poses. Rest of the rig is read AFTER this.
+        function tposeFix(found, root) {
+            root.updateMatrixWorld(true);
+            const m = found.map, V = (x, y, z) => new THREE.Vector3(x, y, z), wp = (n) => n.getWorldPosition(new THREE.Vector3()), wq = (n) => n.getWorldQuaternion(new THREE.Quaternion());
+            if (!m.hips || !m.head || !m.leftUpperLeg || !m.rightUpperLeg) return;
+            if (wp(m.head).sub(wp(m.hips)).normalize().y < 0.9 || wp(m.leftUpperLeg).sub(wp(m.rightUpperLeg)).normalize().x < 0.9) return;   // only when it stands upright with its left on +X (the frame the animations use)
+            const fix = (bone, child, target) => {
+                if (!bone || !child || !bone.parent) return;
+                const d = wp(child).sub(wp(bone)); if (d.lengthSq() < 1e-12) return; d.normalize();
+                const ang = d.angleTo(target); if (ang < 0.02 || d.dot(target) < -0.2) return;       // already straight, or not a believable rest pose to correct
+                const dq = new THREE.Quaternion().setFromUnitVectors(d, target);
+                bone.quaternion.copy(wq(bone.parent).invert().multiply(dq.multiply(wq(bone)))); bone.updateMatrixWorld(true);
+            };
+            for (const [s, sx] of [['left', 1], ['right', -1]]) {
+                fix(m[s + 'UpperArm'], m[s + 'LowerArm'], V(sx, 0, 0)); fix(m[s + 'LowerArm'], m[s + 'Hand'], V(sx, 0, 0));
+                fix(m[s + 'UpperLeg'], m[s + 'LowerLeg'], V(0, -1, 0)); fix(m[s + 'LowerLeg'], m[s + 'Foot'], V(0, -1, 0));
+            }
+        }
+        // A VRM stand-in for a recognised skeleton: the same humanoid object a VRM has, so the Actor needs no special case.
+        function makePseudoVrm(root, found, VM) {
+            const humanBones = {};
+            for (const [k, node] of Object.entries(found.map)) humanBones[k] = { node };
+            const humanoid = new VM.VRMHumanoid(humanBones);
+            root.add(humanoid.normalizedHumanBonesRoot);
+            return { scene: root, humanoid, meta: { metaVersion: '1', name: 'recognised humanoid' }, expressionManager: null, springBoneManager: null, lookAt: null, auto: true, update() { humanoid.update(); } };
+        }
+async function avParse(buffer) {
+    const [{ GLTFLoader }, VM] = await Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('@pixiv/three-vrm')]);
+    const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p)); ld.register((p) => { p.textureLoader = new THREE.TextureLoader(p.options.manager); return { name: 'sv-tex' }; });
+    const gl = await ld.parseAsync(buffer.slice(0), ''); const vrm = gl.userData.vrm;
+    if (vrm) { try { VM.VRMUtils.rotateVRM0(vrm); } catch (e) { /* vrm1 */ } return { vrm, VM }; }
+    const found = autoHumanoid(gl.scene); if (!found) throw new Error('not a VRM, and no humanoid skeleton found in it');
+    try { tposeFix(found, gl.scene); } catch (e) { console.warn('t-pose fix', e); }
+    return { vrm: makePseudoVrm(gl.scene, found, VM), VM };
+}
 function avMat(m) {
     if (!m) return m; const n = new THREE.MeshLambertMaterial({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, side: m.side === THREE.BackSide ? THREE.FrontSide : m.side, alphaTest: m.alphaTest || (m.transparent ? 0.45 : 0) });
     if (m.isOutline || m.side === THREE.BackSide || /outline/i.test(m.name || '')) n.visible = false; if (n.map) { n.map.anisotropy = 1; n.map.needsUpdate = true; } n.emissive = new THREE.Color(0x0a0806); return n;
 }
 async function avLoad(buffer, name) {
-    const [{ GLTFLoader }, VM] = await Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('@pixiv/three-vrm')]);
-    const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p)); ld.register((p) => { p.textureLoader = new THREE.TextureLoader(p.options.manager); return { name: 'sv-tex' }; });
-    const gl = await ld.parseAsync(buffer.slice(0), ''); const vrm = gl.userData.vrm; if (!vrm) throw new Error('not a VRM file');
-    try { VM.VRMUtils.rotateVRM0(vrm); } catch (e) { /* vrm1 */ }
+    const { vrm, VM } = await avParse(buffer);
     vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
     const N = {}; for (const n of ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'leftLowerLeg', 'leftFoot', 'rightUpperLeg', 'rightLowerLeg', 'rightFoot', 'leftShoulder', 'rightShoulder']) N[n] = vrm.humanoid.getNormalizedBoneNode(n);
     for (const side of ['left', 'right']) for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (const j of ['Proximal', 'Intermediate', 'Distal']) N[side + f + j] = vrm.humanoid.getNormalizedBoneNode(side + f + j); for (const side of ['left', 'right']) for (const j of ['Metacarpal', 'Proximal', 'Distal']) N[side + 'Thumb' + j] = vrm.humanoid.getNormalizedBoneNode(side + 'Thumb' + j);
     if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
+    if (!N.spine) N.spine = N.hips; if (!N.chest) N.chest = N.spine; if (!N.neck) N.neck = N.head || N.chest;   // (a model without those bones: the next one up does their job)
     vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), s = 1.68 / h;
     const P = (n) => n.getWorldPosition(new THREE.Vector3()); AV.ua = P(N.rightUpperArm).distanceTo(P(N.rightLowerArm)); AV.la = P(N.rightLowerArm).distanceTo(P(N.rightHand));
     const grp = new THREE.Group(); grp.add(vrm.scene); vrm.scene.position.y = -bb.min.y * 0; grp.scale.setScalar(s); grp.position.y = -bb.min.y * s;
@@ -2269,9 +2404,7 @@ async function coAvIn(m) {
     if (A.got === A.n) { const buf = new Uint8Array(A.size); let o = 0; for (const p of A.parts) { if (o + p.length > A.size) { delete CO.avIn[k]; return; } buf.set(p, o); o += p.length; } delete CO.avIn[k]; coAvDone(k, A, buf); }
 }
 async function rpLoadVRM(buffer, gender) {
-    const [{ GLTFLoader }, VM] = await Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('@pixiv/three-vrm')]);
-    const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p)); ld.register((p) => { p.textureLoader = new THREE.TextureLoader(p.options.manager); return { name: 'sv-tex' }; });
-    const gl = await ld.parseAsync(buffer.slice(0), ''); const vrm = gl.userData.vrm; if (!vrm) throw new Error('not a VRM file'); try { VM.VRMUtils.rotateVRM0(vrm); } catch (e) { /* vrm1 */ }
+    const { vrm, VM } = await avParse(buffer);
     vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
     const N = {}; for (const n of ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'leftLowerLeg', 'rightUpperLeg', 'rightLowerLeg']) N[n] = vrm.humanoid.getNormalizedBoneNode(n);
     for (const side of ['left', 'right']) for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (const j of ['Proximal', 'Intermediate', 'Distal']) N[side + f + j] = vrm.humanoid.getNormalizedBoneNode(side + f + j);
@@ -2511,7 +2644,7 @@ function tradeGive(i, n) {
 }
 function coTradeMsg(m) {
     if (m.t === 'iq') { coSend({ t: 'ir', inv: G.inv.filter(Boolean).map((x) => [x.id, x.n]).slice(0, 24) }); return; }
-    if (m.t === 'ir') { CO.pinv = (Array.isArray(m.inv) ? m.inv : []).filter((x) => Array.isArray(x) && ITEMS[x[0]] && Number.isFinite(+x[1])).map((x) => [x[0], Math.min(999, Math.max(1, x[1] | 0))]).slice(0, 24); if (UI.mode === 'menu' && M.tab === 'partner') renderMenu(); return; }
+    if (m.t === 'ir') { CO.pinv = (Array.isArray(m.inv) ? m.inv : []).filter((x) => Array.isArray(x) && ITEMS[x[0]] && Number.isFinite(+x[1])).map((x) => [x[0], Math.min(999, Math.max(1, x[1] | 0))]).slice(0, 24); if (UI.mode === 'menu' && (M.tab === 'partner' || (M.tab === 'items' && M.who === 'p' && !M.sub))) renderMenu(); return; }
     if (m.t === 'gv') { const id = String(m.id || ''), n = Math.max(1, Math.min(99, m.n | 0)); if (!ITEMS[id]) return; const left = invGive(id, n); coSend({ t: 'gva', tid: m.tid, left }); if (n - left > 0) { sfx('pickup'); say(partnerName() + ' gave you ' + ITEMS[id].n + (n - left > 1 ? ' x' + (n - left) : '') + '.', 3000); } else say('Your bag is full: ' + partnerName() + ' could not give you ' + ITEMS[id].n + '.', 3000); if (UI.mode === 'menu') renderMenu(); return; }
     if (m.t === 'gva') { const pd = tradePend[m.tid]; if (!pd) return; delete tradePend[m.tid]; const left = Math.max(0, Math.min(pd.n, m.left | 0)); if (left > 0) { invGive(pd.id, left); say(partnerName() + '\'s bag is full: ' + ITEMS[pd.id].n + ' came back.', 2600); if (UI.mode === 'menu') renderMenu(); } }
 }
@@ -2689,8 +2822,8 @@ function reIcon(id, big) {
     RE_ICONS[key] = c; return cloneCanvas(c);
 }
 function cloneCanvas(c) { const n = document.createElement('canvas'); n.width = c.width; n.height = c.height; n.getContext('2d').drawImage(c, 0, 0); n.className = 'reic'; return n; }
-function reEcg(canvas) {
-    const g = canvas.getContext('2d'), W = canvas.width, H = canvas.height, f = G.hp / 100, col = f > 0.65 ? '#2cff5a' : f > 0.35 ? '#ffd23a' : '#ff3a2a'; g.fillStyle = '#031208'; g.fillRect(0, 0, W, H);
+function reEcg(canvas, hpv) {
+    const g = canvas.getContext('2d'), W = canvas.width, H = canvas.height, f = (hpv === undefined ? G.hp : hpv) / 100, col = f > 0.65 ? '#2cff5a' : f > 0.35 ? '#ffd23a' : '#ff3a2a'; g.fillStyle = '#031208'; g.fillRect(0, 0, W, H);
     g.strokeStyle = 'rgba(40,160,70,.35)'; g.lineWidth = 1; for (let x = 0; x < W; x += 12) { g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); } for (let y = 0; y < H; y += 10) { g.beginPath(); g.moveTo(0, y + .5); g.lineTo(W, y + .5); g.stroke(); }
     g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); const cyc = f > 0.65 ? 150 : f > 0.35 ? 110 : 80, mid = H * 0.55; for (let x = 0; x <= W; x += 2) { const ph = (x % cyc) / cyc; let y = mid; if (ph > 0.1 && ph < 0.16) y = mid - (ph - 0.1) / 0.06 * 8; else if (ph >= 0.16 && ph < 0.2) y = mid - 8 + (ph - 0.16) / 0.04 * 8; else if (ph >= 0.28 && ph < 0.32) y = mid + (ph - 0.28) / 0.04 * 12; else if (ph >= 0.32 && ph < 0.38) y = mid + 12 - (ph - 0.32) / 0.06 * (12 + H * 0.5); else if (ph >= 0.38 && ph < 0.44) y = mid - H * 0.5 + (ph - 0.38) / 0.06 * (H * 0.5 + 6); else if (ph >= 0.44 && ph < 0.48) y = mid + 6 - (ph - 0.44) / 0.04 * 6; g.lineTo(x, f < 0.2 ? mid + Math.sin(x * 0.4) * 2 : y); } g.stroke();
 }
@@ -2700,18 +2833,54 @@ function rePortrait(canvas) {
     R('#2a3a5a', 6, 30, 28, 10); R('#e0b48e', 16, 26, 8, 6); R('#d8a67e', 10, 8, 20, 22); R('#2b1a10', 8, 5, 24, 8); R('#2b1a10', 8, 10, 4, 14); R('#2b1a10', 28, 10, 4, 14); R('#fff', 13, 16, 5, 3); R('#fff', 22, 16, 5, 3); R('#2a4a2a', 15, 16, 3, 3); R('#2a4a2a', 24, 16, 3, 3); R('#a05a4a', 16, 24, 8, 2); R('#c89472', 19, 18, 2, 5);
     g.fillStyle = 'rgba(0,0,0,.25)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1);
 }
+
+/* ---------- character photos for the Item screen: a small render of the head of the character you (or your partner) are playing ---------- */
+const PH = { rt: null, cache: {} };
+function svPhoto(g, head, key) {
+    const hit = PH.cache[key]; if (hit && performance.now() - hit.t < 5000) return hit.c;
+    if (!g || !head || g.parent !== scene) return hit ? hit.c : null;
+    const saved = scene.children.map((c) => [c, c.visible]), bg = scene.background, fog = scene.fog, gv = g.visible, lights = [], prev = R.getRenderTarget(); let out = null;
+    try {
+        if (!PH.rt) PH.rt = new THREE.WebGLRenderTarget(128, 128);
+        const hp = head.getWorldPosition(new THREE.Vector3()), fw = new THREE.Vector3(0, 0, 1).applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion())); fw.y = 0; fw.normalize();
+        const cam = new THREE.PerspectiveCamera(26, 1, 0.05, 10); cam.position.set(hp.x + fw.x * 0.85, hp.y + 0.1, hp.z + fw.z * 0.85); cam.lookAt(hp.x, hp.y + 0.09, hp.z);
+        for (const c of scene.children) c.visible = false; g.visible = true;
+        scene.background = new THREE.Color(0x10205f); scene.fog = null;
+        const A = new THREE.AmbientLight(0xffffff, 1.3), D = new THREE.DirectionalLight(0xffffff, 2.2); D.position.copy(cam.position).add(new THREE.Vector3(0.4, 0.5, 0)); scene.add(A, D); lights.push(A, D);
+        R.setRenderTarget(PH.rt); R.render(scene, cam);
+        const buf = new Uint8Array(128 * 128 * 4); R.readRenderTargetPixels(PH.rt, 0, 0, 128, 128, buf);
+        const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), im = x.createImageData(128, 128);
+        for (let y = 0; y < 128; y++) for (let xx = 0; xx < 128; xx++) { const a = ((127 - y) * 128 + xx) * 4, b = (y * 128 + xx) * 4; for (let k = 0; k < 3; k++) im.data[b + k] = Math.round(255 * Math.pow(buf[a + k] / 255, 1 / 2.2)); im.data[b + 3] = 255; }
+        x.putImageData(im, 0, 0); out = c; PH.cache[key] = { c, t: performance.now() };
+    } catch (e) { console.warn('photo', e); }
+    finally { R.setRenderTarget(prev); for (const [c, v] of saved) c.visible = v; g.visible = gv; scene.background = bg; scene.fog = fog; for (const l of lights) scene.remove(l); }
+    return out || (hit && hit.c);
+}
+function reCard(who) {   // one player's portrait + condition, for the Item screen
+    const me = who === 'me', r = CO.rp, hp = me ? G.hp : Math.max(0, Math.round(r ? r.hp : 0)), f = hp / 100, dead = !me && r && r.state === 'dead';
+    const ct = dead ? 'DEAD' : f > 0.65 ? 'FINE' : f > 0.35 ? 'CAUTION' : 'DANGER', cc = dead ? '#888' : f > 0.65 ? '#3f3' : f > 0.35 ? '#fc3' : '#f33';
+    const top = el('div', 're-top sm'), por = el('div', 're-por'), pc = document.createElement('canvas'); pc.width = 120; pc.height = 120; por.appendChild(pc);
+    const ph = me ? (AV.on ? svPhoto(PL.g, AV.N && AV.N.head, 'me') : null) : (r && r.N ? svPhoto(r.g, r.N.head, 'p') : null);
+    if (ph) { const g = pc.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(ph, 0, 0, 120, 120); } else rePortrait(pc);
+    por.appendChild(el('div', 're-name', String(me ? (AV.on && AV.name ? AV.name : 'Survivor') : partnerName()).slice(0, 14)));
+    const cond = el('div', 're-cond'), ec = document.createElement('canvas'); ec.width = 300; ec.height = 110; cond.appendChild(ec); reEcg(ec, hp); const cl = el('div', 're-condl', ct); cl.style.color = cc; cond.appendChild(cl); cond.appendChild(el('div', 're-condk', 'CONDITION'));
+    top.append(por, cond); return top;
+}
 function reItems(body) {
     const w = WPN[G.eq] || {}, [ct, cc] = condText(), re = el('div', 're-items'); body.appendChild(re);
     const L = el('div', 're-left'), Rt = el('div', 're-right'); re.append(L, Rt);
-    const top = el('div', 're-top'); const por = el('div', 're-por'), pc = document.createElement('canvas'); pc.width = 120; pc.height = 120; por.appendChild(pc); rePortrait(pc); const nm = el('div', 're-name', AV.on && AV.name ? String(AV.name).slice(0, 14) : 'Survivor'); por.appendChild(nm);
-    const cond = el('div', 're-cond'), ec = document.createElement('canvas'); ec.width = 300; ec.height = 110; cond.appendChild(ec); reEcg(ec); const cl = el('div', 're-condl', ct); cl.style.color = cc; cond.appendChild(cl); cond.appendChild(el('div', 're-condk', 'CONDITION'));
-    top.append(por, cond); L.appendChild(top);
+    const co = !!(CO.on && CO.peer); if (!co) M.who = 'me'; const viewP = co && M.who === 'p';
+    if (co && (CO.pinvT === undefined || performance.now() - CO.pinvT > 1500)) { CO.pinvT = performance.now(); coSend({ t: 'iq' }); }
+    if (co) {   // you and your partner stacked: click one to see that player's bag
+        for (const who of ['me', 'p']) { const c = reCard(who); c.classList.add('pick'); if ((who === 'p') === viewP) c.classList.add('sel'); c.onclick = () => { if ((who === 'p') === viewP) return; M.who = who; M.sel = 0; M.sub = null; sfx('ok'); renderMenu(); }; L.appendChild(c); }
+    } else L.appendChild(reCard('me'));
+    const INV = viewP ? Array.from({ length: G.inv.length }, (_, i) => { const x = (CO.pinv || [])[i]; return x ? { id: x[0], n: x[1] } : null; }) : G.inv, peq = viewP && CO.rp ? CO.rp.eq : G.eq;
     const mid = el('div', 're-mid'); L.appendChild(mid);
     const desc = el('div', 're-desc'); L.appendChild(desc);
-    const eq = el('div', 're-eq'); eq.appendChild(el('div', 're-eql', 'EQUIP')); const eqi = el('div', 're-eqi'); eqi.appendChild(reIcon(G.eq, 1)); if (w.gun) { const n = el('div', 're-cnt', String(G.mag)); eqi.appendChild(n); const sp = el('div', 're-cnt re-cnt2', '/' + invCount('ammo')); eqi.appendChild(sp); } eq.appendChild(eqi); Rt.appendChild(eq);
+    const eq = el('div', 're-eq'); eq.appendChild(el('div', 're-eql', 'EQUIP')); const eqi = el('div', 're-eqi'); eqi.appendChild(reIcon(peq, 1)); if (w.gun && !viewP) { const n = el('div', 're-cnt', String(G.mag)); eqi.appendChild(n); const sp = el('div', 're-cnt re-cnt2', '/' + invCount('ammo')); eqi.appendChild(sp); } eq.appendChild(eqi); Rt.appendChild(eq);
     const grid = el('div', 're-grid'), els = []; Rt.appendChild(grid);
-    G.inv.forEach((s, i) => { const b = el('div', 're-slot'); if (s) { const it = ITEMS[s.id]; b.appendChild(reIcon(s.id)); if (s.n > 1 || (it.max || 1) > 1) b.appendChild(el('div', 're-cnt', String(s.n))); if (s.id === G.eq) b.appendChild(el('div', 're-eqtag', 'E')); } b.onclick = () => { sfx('ok'); slotClick(i); }; grid.appendChild(b); els.push(b); });
-    const sel = G.inv[M.sel], acts = el('div', 're-acts'), ael = [];
+    INV.forEach((s, i) => { const b = el('div', 're-slot'); if (s) { const it = ITEMS[s.id]; b.appendChild(reIcon(s.id)); if (s.n > 1 || (it.max || 1) > 1) b.appendChild(el('div', 're-cnt', String(s.n))); if (s.id === peq) b.appendChild(el('div', 're-eqtag', 'E')); } b.onclick = () => { sfx('ok'); slotClick(i); }; grid.appendChild(b); els.push(b); });
+    const sel = INV[M.sel], acts = el('div', 're-acts'), ael = [];
     const showDesc = (s) => { desc.innerHTML = ''; if (M.sub === 'combine') { desc.appendChild(el('div', 're-dn', 'Combine')); desc.appendChild(el('div', 're-dt', 'Choose the item to combine it with.')); return; } if (!s) { desc.appendChild(el('div', 're-dt', '')); return; } const it = ITEMS[s.id]; desc.appendChild(el('div', 're-dn', it.n)); desc.appendChild(el('div', 're-dt', it.d)); };
     showDesc(sel);
     if (M.sub === 'act' && sel) {
@@ -2721,6 +2890,7 @@ function reItems(body) {
         if (it.type === 'weapon') add('Equip', () => { equipW(sel.id); M.sub = null; renderMenu(); });
         if (it.type === 'heal' || it.type === 'mix' || sel.id === 'gherb') add('Combine', () => { M.sub = 'combine'; M.from = M.sel; renderMenu(); });
         add('Check', () => { M.sub = 'check'; renderMenu(); });
+        if (co) { const eqLast = sel.id === G.eq && invCount(sel.id) <= 1; if (!eqLast) { add('Give ' + partnerName().slice(0, 10), () => tradeGive(M.sel, 1)); if (sel.n > 1) add('Give all', () => tradeGive(M.sel, sel.n)); } }
         if (it.type !== 'key') add('Discard', () => { ask('Discard ' + it.n + '?', ['Yes', 'No']).then((a) => { if (a === 0) { G.inv[M.sel] = null; } M.sub = null; renderMenu(); }); });
         add('Back', () => { M.sub = null; renderMenu(); }); mid.appendChild(acts);
     }
@@ -2728,11 +2898,11 @@ function reItems(body) {
         const v = el('div', 're-check'); const ic = reIcon(sel.id, 1); ic.style.cssText = 'width:60%;image-rendering:auto'; v.appendChild(ic); if (ic.tagName === 'IMG') reSpin(ic); v.appendChild(el('div', 're-checkn', ITEMS[sel.id].n)); const b = el('button', 're-act', 'Back'); b.type = 'button'; b.onclick = () => { sfx('back'); M.sub = null; renderMenu(); }; v.appendChild(b); mid.appendChild(v); ael.push(b);
     }
     const nav = M.sub === 'act' || M.sub === 'check' ? ael : els; setNav(nav, M.sub === 'act' || M.sub === 'check' ? 1 : 2); if (nav === els && els[M.sel]) { UI.nav.idx = M.sel; hiNav(); }
-    if (nav === els) els.forEach((e, i) => e.addEventListener('pointerenter', () => { showDesc(G.inv[i]); }));
-    if (nav === els) { const orig = hiNav; /* keep the description in step with the cursor */ const sync = () => { const n = UI.nav; if (n && n.els === els) showDesc(G.inv[n.idx]); }; UI.sync = sync; sync(); } else UI.sync = null;
+    if (nav === els) els.forEach((e, i) => e.addEventListener('pointerenter', () => { showDesc(INV[i]); }));
+    if (nav === els) { const orig = hiNav; /* keep the description in step with the cursor */ const sync = () => { const n = UI.nav; if (n && n.els === els) showDesc(INV[n.idx]); }; UI.sync = sync; sync(); } else UI.sync = null;
     function slotClick(i) {
         if (M.sub === 'combine') { const a = G.inv[M.from], b = G.inv[i]; if (a && b && i !== M.from) { const r = COMBO[[a.id, b.id].sort().join('+')]; if (r) { invTake(a.id, 1); invTake(b.id, 1); invGive(r, 1); sfx('pickup'); say('Combined into ' + ITEMS[r].n + '.', 2000); } else { sfx('click'); say('They do not go together.', 1600); } } M.sub = null; renderMenu(); return; }
-        M.sel = i; M.sub = G.inv[i] ? 'act' : null; renderMenu();
+        M.sel = i; M.sub = INV[i] ? (viewP ? 'check' : 'act') : null; renderMenu();
     }
 }
 function reMap(body) {

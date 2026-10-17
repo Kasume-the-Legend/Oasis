@@ -207,3 +207,9 @@ Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/a
 
 ## Sheva GLB arms fix
 - `autoHumanoid`: arm and leg chains now drop bones with no readable name (garbled-Japanese MMD twist helpers like `??????.R_059`) via `named()`, so the elbow/upper arm map to the real bones instead of twist bones (arms were stuck bent forward). Tested with RE5 Sheva GLB + female base. Backup /tmp/index.pre-sheva.html.
+
+## Harbor Inn (Survivor.html) with GLB characters
+- `avParse(buffer)` (before `avMat`): VRM as before, otherwise GLB goes through a copy of the Oasis `autoHumanoid` / `tposeFix` / `makePseudoVrm` (so Sheva etc. work). Used by `avLoad` (you) and `rpLoadVRM` (co-op partner). `avLoad` aliases missing spine/chest/neck. Tested: Sheva GLB aiming the Gunner Pistol in the lobby. FBX/zip characters are not supported there yet. Backup /tmp/Survivor.pre-glb.html.
+
+## Harbor Inn Item screen: you + partner stacked
+- Item tab in co-op shows two stacked cards (photo + ECG + condition) for you and your partner; click a card to view that player's 8 slots (partner's come from the `iq`/`ir` inventory sync; read-only with Check). Your own items get "Give <name>" / "Give all" in the action list (same `tradeGive` as the Partner tab, which stays). Photos: `svPhoto` renders the head of the character in the scene into a small target (falls back to the pixel face). `reCard`, `M.who`.
