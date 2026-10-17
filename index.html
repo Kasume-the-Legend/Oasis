@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="alternate" type="application/rss+xml" title="The Oasis" href="feed.xml">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="theme-color" content="#030712">
@@ -325,6 +326,7 @@
         <div class="hm-top-r pointer-events-auto">
             <button id="hud-oboy" type="button" class="hm-pill glass-panel" title="O-Boy portable screen (O)" aria-label="O-Boy" style="margin-right:8px;padding:0 13px"><i class="fa-solid fa-gamepad"></i></button>
             <button id="hud-board" type="button" class="hm-pill glass-panel" title="Hoverboard (X). Shift+X changes colour" aria-label="Hoverboard" style="margin-right:8px;padding:0 13px"><i class="fa-solid fa-wind"></i></button>
+            <button id="hud-bike" type="button" class="hm-pill glass-panel" title="Motorbike (B). Garage: /garage" aria-label="Motorbike" style="margin-right:8px;padding:0 13px"><i class="fa-solid fa-motorcycle"></i></button>
             <button id="hud-fs" type="button" class="hm-pill glass-panel" title="Fullscreen" aria-label="Fullscreen" style="display:none;margin-right:8px;padding:0 13px"><i class="fa-solid fa-expand"></i></button>
             <div id="hud-gil" class="hm-pill glass-panel" title="Your Gil - click for your bag and the moogle shop" style="margin-right:8px;padding:0 14px;gap:7px;cursor:pointer"><span style="color:#ffd24a;font-weight:700">Gil</span><span id="hud-gil-n">0</span></div>
             <div id="hud-lv" class="hm-pill glass-panel" title="Your level" style="margin-right:8px;padding:0 14px;gap:9px;cursor:default"><span id="hud-lv-n">Lv 1</span><i class="lv-bar"><b id="hud-lv-b"></b></i></div>
@@ -500,14 +502,14 @@
             <button id="pc-close" type="button" class="pc-x" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
             <div class="pc-head"><div id="pc-av" class="pc-av"></div><div class="min-w-0"><div id="pc-name" class="pc-name"></div><div id="pc-sub" class="pc-sub">Player profile</div></div></div>
             <div class="pc-sec"><div class="pc-h"><i class="fa-solid fa-trophy"></i> RetroAchievements</div><div id="pc-ra" class="pc-body"></div></div>
-            <div class="pc-foot"><button id="pc-look" type="button" class="pc-btn"><i class="fa-solid fa-eye"></i> Look at</button><button id="pc-friend" type="button" class="pc-btn"><i class="fa-solid fa-user-plus"></i> Add friend</button><button id="pc-trade" type="button" class="pc-btn"><i class="fa-solid fa-handshake"></i> Trade</button><button id="pc-duel" type="button" class="pc-btn"><i class="fa-solid fa-khanda"></i> Duel</button><button id="pc-done" type="button" class="pc-btn pc-pri">Close</button></div>
+            <div class="pc-foot"><button id="pc-kick" type="button" class="pc-btn hidden"><i class="fa-solid fa-door-open"></i> Kick</button><button id="pc-ban" type="button" class="pc-btn hidden"><i class="fa-solid fa-ban"></i> Ban</button><button id="pc-look" type="button" class="pc-btn"><i class="fa-solid fa-eye"></i> Look at</button><button id="pc-friend" type="button" class="pc-btn"><i class="fa-solid fa-user-plus"></i> Add friend</button><button id="pc-trade" type="button" class="pc-btn"><i class="fa-solid fa-handshake"></i> Trade</button><button id="pc-duel" type="button" class="pc-btn"><i class="fa-solid fa-khanda"></i> Duel</button><button id="pc-done" type="button" class="pc-btn pc-pri">Close</button></div>
         </div>
     </div>
 
     <div id="start-menu" class="hidden fixed inset-0 z-[45] flex items-center justify-center p-4 bg-black/45">
         <div class="sm-panel">
             <div class="sm-head"><img data-oasis alt="" style="height:30px;width:auto"><div class="font-orbitron font-bold tracking-wider text-white">START MENU</div><button id="sm-close" type="button" class="ml-auto text-gray-400 hover:text-white text-lg px-2" aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
-            <div class="sm-tabs"><button type="button" class="sm-tab on" data-tab="emotes">Emotes</button><button type="button" class="sm-tab" data-tab="color">Bubble colour</button><button type="button" class="sm-tab" data-tab="profile">Profile</button><button type="button" class="sm-tab" data-tab="more">More</button></div>
+            <div class="sm-tabs"><button type="button" class="sm-tab on" data-tab="emotes">Emotes</button><button type="button" class="sm-tab" data-tab="color">Bubble colour</button><button type="button" class="sm-tab" data-tab="profile">Profile</button><button type="button" class="sm-tab" data-tab="sounds">Sounds</button><button type="button" class="sm-tab" data-tab="more">More</button></div>
             <div class="sm-body">
                 <div data-panel="emotes" id="emote-panel"></div>
                 <div data-panel="color" class="hidden">
@@ -521,8 +523,11 @@
                     <label for="pf-ra" class="text-[11px] text-gray-400 block mb-1">RetroAchievements profile link</label>
                     <input id="pf-ra" type="text" maxlength="120" autocomplete="off" spellcheck="false" placeholder="https://retroachievements.org/user/YourName" class="w-full mb-3 bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-psGlow">
                     <div class="flex items-center gap-3"><button id="pf-save" type="button" class="px-4 py-1.5 rounded-lg text-xs bg-psGlow hover:bg-blue-600 transition">Save</button><span id="pf-msg" class="text-[11px] text-gray-400"></span></div>
+                    <div class="mt-5 pt-3 border-t border-white/10"><div class="text-[11px] text-gray-400 mb-1">Banned players. As the owner of a room, click a player and choose Kick or Ban. A banned player can never enter any of your rooms, even if someone else invites them.</div><div id="pf-bans" class="text-xs"></div></div>
                 </div>
-                <div data-panel="more" class="hidden"><div class="sm-grid"><button type="button" class="sm-tile sm-go" data-go="btn-lobbies"><span class="sm-ico"><i class="fa-solid fa-door-open"></i></span><span class="sm-lab">Lobby</span></button><button type="button" class="sm-tile sm-go" data-go="btn-character"><span class="sm-ico"><i class="fa-solid fa-user"></i></span><span class="sm-lab">Character</span></button><button type="button" class="sm-tile sm-go" data-go="btn-equip"><span class="sm-ico">🛡️</span><span class="sm-lab">Equipment</span><kbd>G</kbd></button><button type="button" class="sm-tile sm-go" data-go="btn-decorate"><span class="sm-ico">🛋️</span><span class="sm-lab">Decorate</span><kbd>B</kbd></button><button type="button" class="sm-tile sm-go" data-go="btn-animations"><span class="sm-ico"><i class="fa-solid fa-person-running"></i></span><span class="sm-lab">Animations</span></button><button type="button" class="sm-tile sm-go" data-go="btn-upload"><span class="sm-ico"><i class="fa-solid fa-cloud-arrow-up"></i></span><span class="sm-lab">Upload</span></button><button type="button" class="sm-tile sm-go" data-go="btn-companions"><span class="sm-ico">👥</span><span class="sm-lab">Companions</span></button><button type="button" class="sm-tile sm-go" data-go="btn-space"><span class="sm-ico"><i class="fa-solid fa-circle-info"></i></span><span class="sm-lab">Space info</span></button><button type="button" class="sm-tile sm-go" data-go="games"><span class="sm-ico">🎴</span><span class="sm-lab">Games</span></button><button type="button" class="sm-tile sm-go" data-go="tv"><span class="sm-ico"><i class="fa-solid fa-tv"></i></span><span class="sm-lab">TV</span><kbd>F</kbd></button></div></div>
+                <div data-panel="sounds" class="hidden"><div class="text-[11px] text-gray-400 mb-3">Chat alert sounds.</div><div id="chs-body"></div></div>
+                <div data-panel="more" class="hidden">
+                    <div class="mb-3 p-2 rounded bg-white/5"><div class="text-xs text-gray-200 mb-1">RSS feed</div><div class="text-[10px] text-gray-500 mb-2">Subscribe in any feed reader; each item opens the game with one click.</div><div class="flex gap-2"><button type="button" id="rss-copy" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs">Copy feed address</button><a id="rss-open" target="_blank" rel="noopener" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs">Open feed</a></div></div><div class="sm-grid"><button type="button" class="sm-tile sm-go" data-go="btn-lobbies"><span class="sm-ico"><i class="fa-solid fa-door-open"></i></span><span class="sm-lab">Lobby</span></button><button type="button" class="sm-tile sm-go" data-go="btn-character"><span class="sm-ico"><i class="fa-solid fa-user"></i></span><span class="sm-lab">Character</span></button><button type="button" class="sm-tile sm-go" data-go="btn-equip"><span class="sm-ico">🛡️</span><span class="sm-lab">Equipment</span><kbd>G</kbd></button><button type="button" class="sm-tile sm-go" data-go="btn-decorate"><span class="sm-ico">🛋️</span><span class="sm-lab">Decorate</span><kbd>B</kbd></button><button type="button" class="sm-tile sm-go" data-go="btn-animations"><span class="sm-ico"><i class="fa-solid fa-person-running"></i></span><span class="sm-lab">Animations</span></button><button type="button" class="sm-tile sm-go" data-go="btn-upload"><span class="sm-ico"><i class="fa-solid fa-cloud-arrow-up"></i></span><span class="sm-lab">Upload</span></button><button type="button" class="sm-tile sm-go" data-go="btn-companions"><span class="sm-ico">👥</span><span class="sm-lab">Companions</span></button><button type="button" class="sm-tile sm-go" data-go="btn-space"><span class="sm-ico"><i class="fa-solid fa-circle-info"></i></span><span class="sm-lab">Space info</span></button><button type="button" class="sm-tile sm-go" data-go="games"><span class="sm-ico">🎴</span><span class="sm-lab">Games</span></button><button type="button" class="sm-tile sm-go" data-go="tv"><span class="sm-ico"><i class="fa-solid fa-tv"></i></span><span class="sm-lab">TV</span><kbd>F</kbd></button></div></div>
             </div>
             <div class="sm-foot"><span>Start / M: close &nbsp;·&nbsp; LB / RB: switch tab &nbsp;·&nbsp; A: select &nbsp;·&nbsp; B: back</span><span id="sm-name"></span></div>
         </div>
@@ -956,6 +961,7 @@
                     <button id="wpn-fighter" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🥋 Fighter <span class="block text-[10px] font-normal text-gray-300">Martial arts · bare hands</span></button>
                     <button id="wpn-pistol" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🔫 Gunner <span class="block text-[10px] font-normal text-gray-300">Military weapons below</span></button>
                     <div id="gw-grid" class="col-span-2 grid grid-cols-4 gap-1.5"></div>
+                    <div id="gcus-panel" class="col-span-2"></div>
                     <div class="col-span-2 text-[11px] text-gray-400 mt-1">Sword style <span class="text-gray-500">(Hero)</span></div>
                     <div id="sk-grid" class="col-span-2 grid grid-cols-3 gap-1.5"></div><div id="csw-panel" class="col-span-2"></div>
                 </div>
@@ -3075,6 +3081,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 }
 
                 if (this.gnGun) { try { gnRigApply(this, dt); } catch (e) { if (!window.__gnErr) { window.__gnErr = e; console.error('gun rig', e); } } }
+                if (this.bikeObj && this.vrm && this.vrm.humanoid) { try { rideIK(this.vrm, this.bikeObj, this.bikeObj.userData.rig); } catch (e) { if (!window.__bkErr) { window.__bkErr = e; console.error('bike rig', e); } } }
 
                 const em = this.vrm.expressionManager;
                 if (em) {
@@ -3129,8 +3136,63 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             feed.appendChild(row);
             feed.scrollTop = feed.scrollHeight;
             while (feed.children.length > 120) feed.removeChild(feed.firstChild);
+            try { chsOnChat(user, text); } catch (e) { /* sound unavailable */ }
         }
         const sysChat = (t) => addChat('System', t, '#fbbf24');
+        (function rssInit() {
+            const u = new URL('feed.xml', location.href).href, o = document.getElementById('rss-open'), c = document.getElementById('rss-copy'); if (o) o.href = u;
+            if (c) c.addEventListener('click', async () => { try { await navigator.clipboard.writeText(u); sysChat('Feed address copied: ' + u); } catch (e) { sysChat('Feed address: ' + u); } });
+        })();
+        /* ---- chat sounds: soft bubble pops while you type, when you send and when answers come in; each can be swapped for your own sound ---- */
+        const CHS_K = 'oasis.chatsnd.v1', CHS_SLOTS = [['recv', 'Message received'], ['send', 'Message sent'], ['mention', 'Someone says your name']];
+        const CHS = { on: 1, typing: 1, vol: 0.6, names: {}, ac: null, buf: {}, lastType: 0 };
+        try { Object.assign(CHS, JSON.parse(localStorage.getItem(CHS_K) || '{}')); } catch (e) { /* defaults */ }
+        const chsSave = () => { try { localStorage.setItem(CHS_K, JSON.stringify({ on: CHS.on, typing: CHS.typing, vol: CHS.vol, names: CHS.names })); } catch (e) { /* storage */ } };
+        function chsCtx() { if (!CHS.ac) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { CHS.ac = new C(); } catch (e) { return null; } } if (CHS.ac.state === 'suspended') CHS.ac.resume().catch(() => {}); return CHS.ac; }
+        function chsPop(f0, dur, gain, when = 0) {   // one bubble: a sine that chirps upward and dies away
+            const ac = chsCtx(); if (!ac) return; const t = ac.currentTime + when, o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 3200; o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 2.3, t + dur * 0.55);
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * CHS.vol), t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            o.connect(lp); lp.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+        }
+        async function chsBuf(slot) {
+            if (CHS.buf[slot] !== undefined) return CHS.buf[slot]; CHS.buf[slot] = null;
+            try { const rec = await store.get('csnd:' + slot); const ac = chsCtx(); if (rec && rec.buffer && ac) CHS.buf[slot] = await ac.decodeAudioData(rec.buffer.slice(0)); } catch (e) { CHS.buf[slot] = null; }
+            return CHS.buf[slot];
+        }
+        function chsPlay(slot) {   // your own sound if you chose one, else the bubble
+            if (!CHS.on && slot !== 'test') return; const b = CHS.buf[slot], ac = chsCtx();
+            if (b && ac) { const src = ac.createBufferSource(), g = ac.createGain(); src.buffer = b; g.gain.value = CHS.vol; src.connect(g); g.connect(ac.destination); src.start(); try { src.stop(ac.currentTime + 3.5); } catch (e) { /* ended */ } return; }
+            if (slot === 'send') { chsPop(420, 0.14, 0.22); chsPop(640, 0.09, 0.14, 0.05); }
+            else if (slot === 'mention') { chsPop(620, 0.13, 0.26); chsPop(930, 0.13, 0.22, 0.11); chsPop(1240, 0.16, 0.2, 0.22); }
+            else { chsPop(760, 0.12, 0.24); chsPop(1010, 0.1, 0.16, 0.08); }
+        }
+        function chsType() { if (!CHS.on || !CHS.typing) return; const t = performance.now(); if (t - CHS.lastType < 55) return; CHS.lastType = t; chsPop(900 + Math.random() * 500, 0.05, 0.12); }
+        function chsOnChat(user, text) {
+            if (user === 'System' || !text) return; const mine = user === me.name;
+            if (mine) { chsPlay('send'); return; }
+            const nm = String(me.name || '').toLowerCase(); chsPlay(nm.length > 2 && String(text).toLowerCase().includes(nm) ? 'mention' : 'recv');
+        }
+        function chsRender() {
+            const box = document.getElementById('chs-body'); if (!box) return;
+            let h = '<label class="flex items-center gap-2 text-xs text-gray-200 mb-1"><input type="checkbox" id="chs-on" ' + (CHS.on ? 'checked' : '') + '> Pop sounds for chat messages (sent and received)</label><label class="flex items-center gap-2 text-xs text-gray-200 mb-2"><input type="checkbox" id="chs-type" ' + (CHS.typing ? 'checked' : '') + '> Soft pops while I type</label><label class="flex items-center gap-2 text-xs text-gray-200 mb-3">Volume <input type="range" id="chs-vol" min="0" max="1" step="0.05" value="' + CHS.vol + '" class="flex-1"></label>';
+            for (const [k, label] of CHS_SLOTS) h += '<div class="flex items-center gap-2 py-1 text-xs"><div class="flex-1 min-w-0"><div class="text-gray-200">' + label + '</div><div class="text-[10px] text-gray-500 truncate">' + (CHS.names[k] ? esc(CHS.names[k]) : 'Bubble pop (default)') + '</div></div><button type="button" data-chs="play" data-k="' + k + '" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20">Play</button><button type="button" data-chs="pick" data-k="' + k + '" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20">Choose sound…</button>' + (CHS.names[k] ? '<button type="button" data-chs="reset" data-k="' + k + '" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20">Reset</button>' : '') + '</div>';
+            h += '<input type="file" id="chs-file" accept="audio/*" class="hidden"><p class="text-[10px] text-gray-500 mt-2">Your own sounds (mp3, wav, ogg; under 2 MB, the first 3 seconds play) stay on this device. They are only heard by you.</p>'; box.innerHTML = h;
+        }
+        (function chsInit() {
+            const panel = document.getElementById('chs-body'); if (!panel) return; chsRender();
+            (async () => { for (const [k] of CHS_SLOTS) if (CHS.names[k]) await chsBuf(k); })();
+            panel.addEventListener('click', (e) => { const t = e.target.closest('[data-chs]'); if (!t) return; const k = t.dataset.k, a = t.dataset.chs; if (a === 'play') { chsBuf(k).then(() => chsPlay(k === 'mention' || k === 'send' || k === 'recv' ? k : 'recv')); CHS.on || (CHS.on = 1, 0); } else if (a === 'pick') { CHS.pick = k; document.getElementById('chs-file').click(); } else if (a === 'reset') { store.del('csnd:' + k).catch(() => {}); delete CHS.names[k]; CHS.buf[k] = null; chsSave(); chsRender(); } });
+            panel.addEventListener('change', async (e) => {
+                const t = e.target;
+                if (t.id === 'chs-on') { CHS.on = t.checked ? 1 : 0; chsSave(); return; } if (t.id === 'chs-type') { CHS.typing = t.checked ? 1 : 0; chsSave(); return; }
+                if (t.id === 'chs-file') { const f = t.files[0], k = CHS.pick; t.value = ''; if (!f || !k) return; if (f.size > 2e6) { sysChat('That sound is over 2 MB. Pick a shorter one.'); return; }
+                    try { const buf = await f.arrayBuffer(), ac = chsCtx(); await ac.decodeAudioData(buf.slice(0)); await store.put('csnd:' + k, { buffer: buf, name: f.name.slice(0, 40) }); CHS.names[k] = f.name.slice(0, 40); CHS.buf[k] = undefined; await chsBuf(k); chsSave(); chsRender(); chsPlay(k); } catch (err) { sysChat('Could not use that sound: it is not an audio file this browser can play.'); } }
+            });
+            panel.addEventListener('input', (e) => { if (e.target.id === 'chs-vol') { CHS.vol = +e.target.value; chsSave(); } });
+            for (const id of ['chat-input', 'chatbar-input']) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { if (e.inputType && /^insert/.test(e.inputType)) chsType(); }); }
+        })();
+
 
         /* ------------------------------------------------------------------ *
          *  Networking. A room is joined two ways at once: tabs of this browser talk through a BroadcastChannel, and other devices connect
@@ -3608,7 +3670,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
 
         const tgCrouchWire = () => { try { return activeMap === 'tag' && TG.crouch && TG.myTeam >= 0; } catch (e) { return false; } };
-        const helloMsg = (reply = false) => ({ t: 'hello', ob: (() => { try { return OB.open ? OB.color : null; } catch (e) { return null; } })(), pid: PID, name: me.name, avatarId: myAvatar ? myAvatar.id : null, tn: myAvatar && myAvatar.toon === false ? 0 : 1, gender: myAvatar && myAvatar.gender ? myAvatar.gender : 'male', animVer: myAnimVer, eq: eqWire(), scr: screenState.shared ? wireOf(screenState.shared) : null, lk: localActor && localActor.lookId || null, dc: dcHello() || null, ra: me.ra || null, lv: LV.level, sk: (typeof CLS !== 'undefined') ? (CLS.skin >= 98 ? 0 : CLS.skin) : 0, hw: (typeof CLS !== 'undefined' && CLS.wpn === 'fighter') ? 3 : (typeof CLS !== 'undefined' && CLS.wpn === 'sword') ? (HC.sheathed ? 2 : 1) : 0, bm: (typeof CLS !== 'undefined') ? (CLS.wpn === 'pistol' ? 2 : BASEMV.v === 'starter' ? 1 : 0) : 0, cl: (typeof CLS !== 'undefined') ? clsLv() : 1, gw: (typeof GN !== 'undefined') ? GN.cur : 'pistol', gc: ((typeof GN !== 'undefined' && GN.crouch) || tgCrouchWire()) ? 1 : 0, hbd: (typeof hbWireDesign === 'function' ? hbWireDesign() : null), reply });
+        const helloMsg = (reply = false) => ({ t: 'hello', ob: (() => { try { return OB.open ? OB.color : null; } catch (e) { return null; } })(), pid: PID, name: me.name, avatarId: myAvatar ? myAvatar.id : null, tn: myAvatar && myAvatar.toon === false ? 0 : 1, gender: myAvatar && myAvatar.gender ? myAvatar.gender : 'male', animVer: myAnimVer, eq: eqWire(), scr: screenState.shared ? wireOf(screenState.shared) : null, lk: localActor && localActor.lookId || null, dc: dcHello() || null, ra: me.ra || null, own: banOwner() ? 1 : 0, ah: accHash(), lv: LV.level, sk: (typeof CLS !== 'undefined') ? (CLS.skin >= 98 ? 0 : CLS.skin) : 0, hw: (typeof CLS !== 'undefined' && CLS.wpn === 'fighter') ? 3 : (typeof CLS !== 'undefined' && CLS.wpn === 'sword') ? (HC.sheathed ? 2 : 1) : 0, bm: (typeof CLS !== 'undefined') ? (CLS.wpn === 'pistol' ? 2 : BASEMV.v === 'starter' ? 1 : 0) : 0, cl: (typeof CLS !== 'undefined') ? clsLv() : 1, gw: (typeof GN !== 'undefined') ? GN.cur : 'pistol', gc: ((typeof GN !== 'undefined' && GN.crouch) || tgCrouchWire()) ? 1 : 0, hbd: (typeof hbWireDesign === 'function' ? hbWireDesign() : null), reply });
 
         function addPeer(id, name) {
             const actor = new Actor(id, name);
@@ -3619,6 +3681,37 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             return p;
         }
 
+
+        /* ---- room owner tools: kick and ban (the owner's list follows their account), and the room you land in at login ---- */
+        const BAN_K = 'oasis.bans.v1', OWN_K = 'oasis.owned', DEF_K = 'oasis.defroom', BANNED_K = 'oasis.bannedfrom';
+        function banList() { try { const o = JSON.parse(csGet(BAN_K, '{}')); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+        function banSave(o) { csSet(BAN_K, JSON.stringify(o)); try { banRender(); } catch (e) { /* menu not built yet */ } }
+        function accHash() { const s2 = acSess(); if (!s2 || !s2.u) return ''; let h = 2166136261; const t = 'oasis:' + String(s2.u).toLowerCase(); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); }
+        function ownedCodes() { try { const a = JSON.parse(csGet(OWN_K, '[]')); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+        function ownedAdd(code) { const a = ownedCodes(); if (code && !a.includes(code)) { a.push(code); csSet(OWN_K, JSON.stringify(a.slice(-20))); } }
+        function banOwner() { try { return !!(room && room.isPrivate && room.code && (room.code === myLoftCode() || ownedCodes().includes(room.code) || myPlots().some((q) => q.code === room.code))); } catch (e) { return false; } }
+        function banHit(pid, ah) { const b = banList(); for (const k of Object.keys(b)) { if ((pid && k === pid) || (ah && b[k] && b[k].ah === ah)) return true; } return false; }
+        function selfBanned(code) { try { const o = JSON.parse(csGet(BANNED_K, '{}')); return !!(o && o[code]); } catch (e) { return false; } }
+        function banDrop(id) { const p = peers.get(id); if (room) { room.dropped = room.dropped || new Set(); room.dropped.add(id); } if (p) removePeer(id, false); }
+        function kickPeer(id, ban) {
+            const p = peers.get(id); if (!p || !banOwner()) return; const name = p.name;
+            if (ban) { const b = banList(); b[p.pid || ('s' + id)] = { n: name, t: Date.now(), ah: p.ah || '' }; banSave(b); }
+            try { net.send({ t: 'kick', to: id, ban: ban ? 1 : 0 }); net.send({ t: 'drop', id }); } catch (e) { /* offline */ }
+            banDrop(id); sysChat(ban ? name + ' is banned from your rooms. They cannot come back, and nobody can invite them in.' : name + ' was removed from the room.');
+        }
+        function banRender() {
+            const box = document.getElementById('pf-bans'); if (!box) return; const b = banList(), ks = Object.keys(b);
+            box.innerHTML = ks.length ? ks.map((k) => '<div class="flex items-center gap-2 py-0.5"><span class="flex-1 truncate">' + esc(b[k].n || 'Player') + '</span><button type="button" data-unban="' + esc(k) + '" class="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20">Unban</button></div>').join('') : '<span class="text-gray-500">No one is banned.</span>';
+        }
+        function defRoomGet() { try { const d = JSON.parse(csGet(DEF_K, 'null')); return d && typeof d.code === 'string' ? d : null; } catch (e) { return null; } }
+        function defRoomRender() {
+            const b = document.getElementById('dc-def'); if (!b) return; const own = banOwner(), isHome = room && room.code === myLoftCode(), d = defRoomGet();
+            b.style.display = own ? '' : 'none'; if (!own) return;
+            if (isHome) { b.textContent = d ? '☆ Make Harbor Studio my login room' : '⭐ Login room: Harbor Studio'; b.dataset.mode = 'home'; }
+            else if (d && room && d.code === room.code) { b.textContent = '⭐ Login room (click to undo)'; b.dataset.mode = 'undo'; }
+            else { b.textContent = '☆ Make this my login room'; b.dataset.mode = 'set'; }
+        }
+        window.__ban = { onMsg: (m) => onNetMessage(m), peers: () => [...peers.keys()], kick: (id, b) => kickPeer(id, b), list: () => banList(), owner: () => banOwner(), room: () => room && { code: room.code, map: room.map, dropped: room.dropped ? [...room.dropped] : [] }, def: () => defRoomGet(), land: () => acLand(), setDef: (o) => csSet(DEF_K, JSON.stringify(o)), owned: () => ownedCodes(), self: (c) => selfBanned(c) };
         function removePeer(id, announce = true) {
             const p = peers.get(id);
             if (!p) return;
@@ -4062,8 +4155,18 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             if (!m || typeof m !== 'object' || m.from === me.id) return;
             if (m.to && m.to !== me.id) return;
             const from = String(m.from);
+            if (room && room.dropped && room.dropped.has(from)) return;
 
             switch (m.t) {
+                case 'bk': case 'wantbk': case 'bkdata': { try { bkOnMsg(from, m); } catch (e) { console.warn('bike message', e); } break; }
+                case 'kick': {
+                    const q = peers.get(from); if (!(q && q.own) && !(room && room.ownerId === from)) break;
+                    if (m.ban && room && room.code) { try { const o = JSON.parse(csGet(BANNED_K, '{}')) || {}; o[room.code] = 1; csSet(BANNED_K, JSON.stringify(o)); } catch (e) { /* storage */ } }
+                    sysChat(m.ban ? 'The owner of that room banned you from it.' : 'The owner removed you from that room.'); setTimeout(() => { try { acHome(); } catch (e) { /* ignore */ } }, 60); break;
+                }
+                case 'drop': {
+                    const q = peers.get(from); if (!(q && q.own) && !(room && room.ownerId === from)) break; const id = String(m.id || '').slice(0, 64); if (id && id !== me.id) banDrop(id); break;
+                }
                 case 'hello': {
                     let p = peers.get(from);
                     const name = String(m.name || 'Guest').slice(0, 16);
@@ -4071,6 +4174,9 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     else if (p.name !== name) { p.name = name; p.actor.setName(name); renderPlayers(); }
                     p.last = Date.now();
                     p.ra = cleanRA(m.ra); if (/^[a-f0-9]{16,32}$/.test(String(m.pid || ''))) { p.pid = m.pid; try { frOnHello(p); } catch (e) { /* friends */ } }
+                    p.own = m.own === 1; p.ah = /^[a-f0-9]{1,8}$/.test(String(m.ah || '')) ? m.ah : '';
+                    if (banOwner() && banHit(p.pid, p.ah)) { try { net.send({ t: 'kick', to: from, ban: 1 }); net.send({ t: 'drop', id: from }); } catch (e) { /* offline */ } banDrop(from); break; }
+                    if (p.own && room && !room.ownerId && !banOwner()) room.ownerId = from;
                     pendingHello.delete(from);
                     const peerGender = m.gender === 'female' ? 'female' : 'male';
                     if (p.gender !== peerGender) { p.gender = peerGender; p.actor.setGender(peerGender); }
@@ -4103,6 +4209,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     if (m.ob !== undefined) { const on = typeof m.ob === 'string'; p.actor.setOboy(on, m.ob); if (on) p.actor.playEmote('oboy'); else if (p.actor.emote === 'oboy') p.actor.playEmote('stand'); }
                     if (m.hbd !== undefined) { p.hbd = hbdClean(m.hbd); p.hbdJ = p.hbd ? JSON.stringify(p.hbd) : ''; }
                     if (!m.reply) net.send({ ...helloMsg(true), to: from });
+                    try { bkBroadcast(from); } catch (e) { /* no bike */ }
                     break;
                 }
                 case 'kc': { try { kcOnMsg(from, m); } catch (e) { console.warn('kitchen message', e); } break; }
@@ -4126,7 +4233,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     }
                     if (![m.x, m.y, m.z, m.ry, m.sc].every(Number.isFinite)) return;
                     p.last = Date.now();
-                    p.hb = Number.isFinite(m.hb) ? clamp(m.hb | 0, 0, 9) : 0;
+                    p.hb = Number.isFinite(m.hb) ? clamp(m.hb | 0, 0, 10) : 0;
                     p.target = { x: m.x, y: m.y, z: m.z, ry: m.ry };
                     p.actor.tweak.scale = clamp(m.sc, 0.2, 4);
                     if (!p.placed) {
@@ -4258,13 +4365,14 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
 
         function joinRoom(id, { label, isPrivate = false, code = null, map = 'mall' }) {
+            if (isPrivate && code && selfBanned(code)) { sysChat('You cannot join that room: its owner banned you.'); if (!room) { try { acHome(); } catch (e) { /* ignore */ } } return; }
             leaveRoom();
             me.name = ($('name-input').value.trim() || me.name).slice(0, 16);
             localStorage.setItem('psHomeName', me.name);
             localActor.setName(me.name);
 
             if (!MAP_DEFS[map]) map = 'mall';
-            room = { id, label, isPrivate, code, map, joinedAt: Date.now() };
+            room = { id, label, isPrivate, code, map, joinedAt: Date.now() }; setTimeout(() => { try { defRoomRender(); } catch (e) { /* menu */ } }, 0);
             try { localStorage.setItem('oasis.lastroom', !isPrivate && ['mall', 'city', 'galleria', 'school', 'raimon'].includes(map) ? JSON.stringify({ id, label, map }) : ''); } catch (e) { /* storage */ }      // where you logged out: only public open-world rooms are remembered
             setMap(map);
             dcEnter();
@@ -4273,7 +4381,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const mine = net = new Net(id, onNetMessage, {
                 maxPeers: NET.roomCap,
                 password: isPrivate ? code : null,                                             // the room code doubles as the encryption password
-                onPeer: (pid) => { if (net === mine) { net.send({ ...helloMsg(false), to: pid }); emuOnPeer(pid); } },
+                onPeer: (pid) => { if (net === mine) { net.send({ ...helloMsg(false), to: pid }); emuOnPeer(pid); try { bkBroadcast(pid); } catch (e) { /* no bike */ } } },
                 onStream: (stream, pid) => { if (net === mine) emuOnStream(stream, pid); },     // someone's connection just came up: introduce ourselves
                 onProgress: (pid, pct) => { const q = peers.get(pid); if (q) { q.last = Date.now(); if (q.av) { q.av.pct = pct; q.av.progress = Date.now(); renderPlayersSoon(); } } },     // a big avatar is arriving: that player is alive, and we can show how far it is
                 onStatus: showNetStatus
@@ -10368,11 +10476,24 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const b = dcGenCache.get(key), m = b.tex.clone(); m.wrapS = m.wrapT = THREE.RepeatWrapping; m.colorSpace = THREE.SRGBColorSpace; m.anisotropy = 8; m.needsUpdate = true;
             return { map: m, aspect: b.aspect };
         }
+        async function dcAnimTexture(a) {   // decode every frame of a GIF once (kept small), then dcFrame steps through them
+            const dec = new ImageDecoder({ data: a.buffer.slice(0), type: 'image/gif' }); await dec.tracks.ready; const total = dec.tracks.selectedTrack.frameCount; if (total < 2) { dec.close(); return null; }
+            const f0 = await dec.decode({ frameIndex: 0 }), W = f0.image.displayWidth, H = f0.image.displayHeight; f0.image.close();
+            let sc = Math.min(1, 512 / Math.max(W, H)); const budget = 80e6; while (Math.min(total, 240) * Math.round(W * sc) * Math.round(H * sc) * 4 > budget && sc > 0.2) sc *= 0.85;
+            const cw = Math.max(1, Math.round(W * sc)), ch = Math.max(1, Math.round(H * sc)), n = Math.min(total, 240, Math.max(2, Math.floor(budget / (cw * ch * 4))));
+            const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const ctx = cv.getContext('2d'), frames = [], dur = [];
+            for (let i = 0; i < n; i++) { const f = await dec.decode({ frameIndex: i }); frames.push(await createImageBitmap(f.image, { resizeWidth: cw, resizeHeight: ch })); dur.push(Math.max(40, (f.image.duration || 100000) / 1000)); f.image.close(); }
+            dec.close(); ctx.drawImage(frames[0], 0, 0);
+            const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            (DC.anim = DC.anim || []).push({ cv, ctx, frames, dur, i: 0, t: performance.now(), tex }); if (DC.anim.length > 24) DC.anim.shift();
+            return { tex, aspect: H / Math.max(1, W), ar: W / Math.max(1, H) };
+        }
         async function dcImageTexture(id) {
             if (!dcOkId(id)) return null;
             if (DC.imgTex.has(id)) return DC.imgTex.get(id);
             const p = (async () => {
                 const a = await dcAsset(id); if (!a || a.type === 'model') return null;
+                if (/gif/i.test(a.mime || '') && typeof ImageDecoder !== 'undefined') { try { const r = await dcAnimTexture(a); if (r) return r; } catch (e) { console.warn('animated picture', e); } }   // a GIF that moves
                 const url = URL.createObjectURL(new Blob([a.buffer], { type: a.mime || 'image/jpeg' }));
                 try {
                     const img = new Image(); img.src = url; await img.decode();
@@ -14855,7 +14976,7 @@ function btMusicStop() {
            Needs a Google OAuth "Web" client ID: paste it into CS_CLIENT_ID below, or into Settings on a device to try it. The ID is public, not a secret.
            Never synced: companion AI keys (oasis.cmp.ai), graphics settings, uploaded avatar files. ---- */
         const CS_CLIENT_ID = '';
-        const CS_KEYS = ['oasis.csw2', 'oasis.sheath', 'oasis.btjob', 'oasis.gear', 'oasis.bag', 'oasis.gil', 'oasisXP', 'oasisClass', 'oasisBtlBest', 'oasisGmRec', 'oasis.cmp.v1', 'oasis.diner', 'oasisTTDecks', 'oasisTTDeck2', 'oasis.hbDesigns', 'oasis.hbVariant', 'oasis.recentColors', 'psHomeName', 'oasisBlitzCls', 'oasisGun', 'oasis.pid', 'oasisHolster', 'oasis.ship', 'oasis.shipcode', 'oasis.friends', 'oasis.friends.hide', 'oasis.lastroom', 'psHomeLoft', 'oasis.masakicode'], CS_PRE = ['oasis.chest.'];
+        const CS_KEYS = ['oasis.csw2', 'oasis.sheath', 'oasis.btjob', 'oasis.gear', 'oasis.bag', 'oasis.gil', 'oasisXP', 'oasisClass', 'oasisBtlBest', 'oasisGmRec', 'oasis.cmp.v1', 'oasis.diner', 'oasisTTDecks', 'oasisTTDeck2', 'oasis.hbDesigns', 'oasis.hbVariant', 'oasis.recentColors', 'psHomeName', 'oasisBlitzCls', 'oasisGun', 'oasis.pid', 'oasisHolster', 'oasis.ship', 'oasis.shipcode', 'oasis.friends', 'oasis.friends.hide', 'oasis.lastroom', 'psHomeLoft', 'oasis.masakicode', 'oasis.bans.v1', 'oasis.owned', 'oasis.defroom'], CS_PRE = ['oasis.chest.'];
         const CS = { tok: null, exp: 0, busy: false, msg: '', auto: 0 };
         const csGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
         const csSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage */ } };
@@ -14981,8 +15102,8 @@ function btMusicStop() {
         const acGateOn = () => !acSess() && !!acApi() && !csGet('oasis.nogate', '') && !sessionStorage.getItem('oasis.guest');
         function acHome() { const code = myLoftCode(); joinRoom('private-' + code, { label: 'My Harbor Studio', isPrivate: true, code, map: 'loft' }); }
         function acLand() {
-            let l = null; try { l = JSON.parse(csGet('oasis.lastroom', 'null')); } catch (e) { /* none */ }
-            if (l && typeof l.id === 'string' && !/^private-/.test(l.id) && AC_OW.includes(l.map) && MAP_DEFS[l.map]) joinRoom(l.id, { label: String(l.label || '').slice(0, 40), map: l.map }); else acHome();
+            const d = defRoomGet();   // logging in always lands in your Harbor Studio, unless you chose another space of yours as the login room in the decorate panel
+            if (d && validCode(d.code) && d.map && MAP_DEFS[d.map] && (myPlots().some((q) => q.code === d.code) || ownedCodes().includes(d.code))) joinRoom('private-' + d.code, { label: String(d.label || 'My space').slice(0, 40), isPrivate: true, code: d.code, map: d.map }); else acHome();
         }
         function acGate() {
             if (document.getElementById('ac-gate') || !acGateOn()) return;
@@ -14992,7 +15113,7 @@ function btMusicStop() {
             document.body.appendChild(d); for (const ev of ['pointerdown', 'keydown', 'keyup']) d.addEventListener(ev, (e) => e.stopPropagation());
             let mode = 'in'; const q = (s) => d.querySelector(s);
             const paint = () => { q('#acg-t-in').style.background = mode === 'in' ? '#2563eb' : '#1f2937'; q('#acg-t-in').style.color = '#fff'; q('#acg-t-new').style.background = mode === 'new' ? '#2563eb' : '#1f2937'; q('#acg-t-new').style.color = '#fff';
-                q('#acg-go').textContent = mode === 'in' ? 'Log in' : 'Create account'; q('#acg-h').textContent = mode === 'in' ? 'Welcome back. You will arrive at your Harbor Studio, or where you last left the open world.' : 'Pick a username and password. Next you make your character, then you arrive at your own Harbor Studio.'; q('#acg-p').autocomplete = mode === 'in' ? 'current-password' : 'new-password'; q('#acg-m').textContent = ''; };
+                q('#acg-go').textContent = mode === 'in' ? 'Log in' : 'Create account'; q('#acg-h').textContent = mode === 'in' ? 'Welcome back. You will arrive at your Harbor Studio (or the room you set as your login room).' : 'Pick a username and password. Next you make your character, then you arrive at your own Harbor Studio.'; q('#acg-p').autocomplete = mode === 'in' ? 'current-password' : 'new-password'; q('#acg-m').textContent = ''; };
             q('#acg-t-in').onclick = () => { mode = 'in'; paint(); }; q('#acg-t-new').onclick = () => { mode = 'new'; paint(); }; paint();
             const go = async () => {
                 const m = q('#acg-m'); m.textContent = 'Working… (a few seconds)'; q('#acg-go').disabled = true; await acSync(mode, q('#acg-u').value, q('#acg-p').value); q('#acg-go').disabled = false;
@@ -16223,7 +16344,8 @@ window.__ts = TSK;
                 const img = new Image(); img.src = url; await img.decode();
                 const sc = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
                 const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
-                const keepPng = /png|gif|webp/i.test(file.type) && file.size < 700e3 && sc === 1;
+                const gifKeep = /gif/i.test(file.type) && file.size <= DC_LIMITS.img, keepPng = gifKeep || (/png|webp/i.test(file.type) && file.size < 700e3 && sc === 1);
+                if (/gif/i.test(file.type) && !gifKeep) sysChat('That GIF is over 6 MB, so it was kept as a still picture. A smaller or shorter GIF will move.');
                 const blob = keepPng ? file : await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
                 const buffer = await blob.arrayBuffer(); if (buffer.byteLength > DC_LIMITS.img) throw new Error('that image is too large after compressing');
                 const id = dcId(), mime = keepPng ? (file.type || 'image/png') : 'image/jpeg';
@@ -16295,6 +16417,7 @@ window.__ts = TSK;
         }
         function dcFrame() {
             if (DC.selBox && DC.sel) DC.selBox.update();
+            if (DC.anim && DC.anim.length) { const now = performance.now(); for (const an of DC.anim) { if (now - an.t >= an.dur[an.i]) { an.t = now; an.i = (an.i + 1) % an.frames.length; an.ctx.clearRect(0, 0, an.cv.width, an.cv.height); an.ctx.drawImage(an.frames[an.i], 0, 0); an.tex.needsUpdate = true; } } }
         }
         function dcCollide(pos) {
             for (const it of DC.items.values()) {
@@ -16547,7 +16670,7 @@ window.__ts = TSK;
             input[type=color]{width:34px;height:22px;padding:0;border:0;background:none;cursor:pointer}`;
             document.head.appendChild(css);
             const panel = dcEl('div', 'dc hidden'); panel.id = 'dc-panel';
-            const head = dcEl('div', 'dc-head', '<b>🛋️ Decorate</b><span class="dc-sp"></span><label><input type="checkbox" id="dc-snap" checked> Grid snap</label><select id="dc-grid"><option value="0.1">10 cm</option><option value="0.2" selected>20 cm</option><option value="0.5">50 cm</option><option value="1">1 m</option></select>');
+            const head = dcEl('div', 'dc-head', '<b>🛋️ Decorate</b><span class="dc-sp"></span><button type="button" id="dc-def" style="display:none;margin-right:8px;padding:2px 8px;border-radius:7px;background:rgba(255,255,255,.12);font-size:11px"></button><label><input type="checkbox" id="dc-snap" checked> Grid snap</label><select id="dc-grid"><option value="0.1">10 cm</option><option value="0.2" selected>20 cm</option><option value="0.5">50 cm</option><option value="1">1 m</option></select>');
             head.appendChild(dcBtn('Done', () => dcSetEdit(false), 'gold'));
             const tabs = dcEl('div', 'dc-tabs'), tabBtns = [];
             for (const [k, l] of [['furn', 'Furniture'], ['build', 'Build'], ['photo', 'Photos'], ['model', 'My models'], ['room', 'Room'], ['list', 'Placed']]) { const b = dcEl('button', 'dc-tab', l); b.type = 'button'; b.dataset.tab = k; b.addEventListener('click', () => { DC.tab = k; dcRenderPanel(); }); tabs.appendChild(b); tabBtns.push(b); }
@@ -16555,6 +16678,8 @@ window.__ts = TSK;
             const bar = dcEl('div', 'dc hidden'); bar.id = 'dc-bar';
             document.body.append(panel, bar);
             DC.ui = { panel, bar, body, tabs: tabBtns, tools };
+            head.querySelector('#dc-def').addEventListener('click', (e) => { const b = e.currentTarget, m = b.dataset.mode; if (m === 'set' && room) csSet(DEF_K, JSON.stringify({ code: room.code, map: room.map, label: room.label })); else csSet(DEF_K, 'null'); defRoomRender(); sysChat(csGet(DEF_K, 'null') !== 'null' ? 'You will log in to this room from now on.' : 'You will log in to your Harbor Studio.'); b.blur(); });
+            defRoomRender();
             head.querySelector('#dc-snap').addEventListener('change', (e) => { DC.snap = e.target.checked; dcGrid(); dcRenderBar(); e.target.blur(); });
             head.querySelector('#dc-grid').addEventListener('change', (e) => { DC.grid = +e.target.value; dcGrid(); e.target.blur(); });
             [panel, bar].forEach((el) => { el.addEventListener('pointerdown', (e) => e.stopPropagation()); el.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true }); });
@@ -16621,6 +16746,7 @@ window.__ts = TSK;
             if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'construct' ? 15 : id === 'ship' ? 9 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
             if (typeof fpOn !== 'undefined' && fpOn && controls) { if (fpSaved) fpSaved.polar = controls.maxPolarAngle; controls.maxPolarAngle = Math.PI - 0.05; controls.minPolarAngle = 0.05; }
             if ((id === 'loft' || id === 'diner' || id === 'tag' || id === 'construct' || id === 'bowl' || id === 'btl' || id === 'ship') && typeof hbSet === 'function' && hbOn) hbSet(false, true);
+            if (typeof BK !== 'undefined' && BK.on && !BK_OUT.includes(id)) bkSet(false, true);
             try { kcMapChanged(id); } catch (e) { /* kitchen not loaded yet */ }
             try { tgMapChanged(id); } catch (e) { console.error('laser tag map', e); }
             try { bwMapChanged(id); } catch (e) { console.error('bowling map', e); }
@@ -16987,7 +17113,7 @@ window.__ts = TSK;
         const hbName = (vi) => (hbIsCustom(vi) ? hbDesigns[vi - HB_VARIANTS.length].n : (HB_VARIANTS[vi] || HB_VARIANTS[0]).name);
         const hbKey = (vi) => (hbIsCustom(vi) ? 'c' + JSON.stringify(hbDesigns[vi - HB_VARIANTS.length]) : vi);
         const hbBuild = (vi) => (hbIsCustom(vi) ? hbMakeD(hbDesigns[vi - HB_VARIANTS.length]) : hbMake(vi));
-        const hbWire = () => (hbOn ? (hbIsCustom(hbVariant) ? 9 : Math.min(hbVariant, HB_VARIANTS.length - 1) + 1) : 0);
+        const hbWire = () => (hbOn ? (BK.on ? 10 : hbIsCustom(hbVariant) ? 9 : Math.min(hbVariant, HB_VARIANTS.length - 1) + 1) : 0);
         const hbWireDesign = () => (hbIsCustom(hbVariant) ? hbDesigns[hbVariant - HB_VARIANTS.length] : null);
         const hbdBroadcast = () => { try { net && net.send({ t: 'hbd', d: hbWireDesign() }); } catch (e) { /* not connected */ } };
         const _hbDecalCache = new Map();
@@ -17075,7 +17201,7 @@ window.__ts = TSK;
             if (on && activeMap === 'loft') { if (!quiet) sysChat('No mounts in the studio.'); return; }
             if (on === hbOn) return;
             hbOn = on; hbSpeed = 0; hbLastDir = null;
-            if (!on) { if (hbMine) { scene.remove(hbMine); hbMine = null; hbMineV = -1; } localActor.boardOn = false; }
+            if (!on) { if (hbMine) { scene.remove(hbMine); hbMine = null; hbMineV = -1; } localActor.boardOn = false; if (BK.on) { bkOff(); const bb = document.getElementById('hud-bike'); if (bb) bb.classList.remove('hb-on'); } }
             else localActor.boardOn = true;
             const b = document.getElementById('hud-board'); if (b) b.classList.toggle('hb-on', on);
             if (!quiet) sysChat(on ? `Hoverboard on: ${hbName(hbVariant)}. X to step off, Shift+X to change colour.` : 'Hoverboard off.');
@@ -17086,28 +17212,209 @@ window.__ts = TSK;
         }
         function hbToggle() { hbSet(!hbOn); }
         function hbShowButton() { const b = document.getElementById('hud-board'); if (b) b.style.display = activeMap === 'loft' ? 'none' : ''; }
+        /* ------------------------------------------------------------------ *
+         *  Garage: your own motorbike models as mounts (B, or /bike; /garage opens the garage).
+         *  Up to 6 bikes, each fitted to a 2 m bike with the seat under the rider; Ryder X can race on them too (oasisBikes).
+         *  You ride them with the hoverboard's movement (faster); other players see a plain stand-in bike under you.
+         * ------------------------------------------------------------------ */
+/* ---- riding pose: the hips sit on the bike's seat point, the torso leans toward the grips, hands reach the grip points and feet the peg points (two-bone IK) ---- */
+const _rk = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), d: new THREE.Vector3(), e: new THREE.Vector3(), f: new THREE.Vector3(), q: new THREE.Quaternion(), r: new THREE.Vector3(0, 1, 0) };
+function rkAim(node, rest, wdir) { const pq = node.parent.getWorldQuaternion(_rk.q).invert(); const ld = _rk.c.copy(wdir).applyQuaternion(pq).normalize(); node.quaternion.setFromUnitVectors(_rk.d.copy(rest).normalize(), ld); node.updateMatrixWorld(true); }
+function rkBone(up, low, end, T, pole) {
+    const S = up.getWorldPosition(new THREE.Vector3()), K0 = low.getWorldPosition(new THREE.Vector3()), E0 = end.getWorldPosition(new THREE.Vector3()), a = S.distanceTo(K0), b = K0.distanceTo(E0);
+    const D = Math.min(a + b - 1e-3, Math.max(Math.abs(a - b) + 1e-3, S.distanceTo(T))), u = new THREE.Vector3().subVectors(T, S).normalize(), p = pole.clone().addScaledVector(u, -pole.dot(u)); if (p.lengthSq() < 1e-6) p.set(0, 0, 1).addScaledVector(u, -u.z); p.normalize();
+    const ca = (a * a + D * D - b * b) / (2 * a * D), sa = Math.sqrt(Math.max(0, 1 - ca * ca)), d1 = u.clone().multiplyScalar(ca).addScaledVector(p, sa), K = S.clone().addScaledVector(d1, a), Ee = S.clone().addScaledVector(u, D), d2 = Ee.sub(K).normalize();
+    rkAim(up, low.position, d1); rkAim(low, end.position, d2);
+}
+function rideIK(vrm, bike, rig, extra) {   // rig: {seat:[y,z], hands:[y,z,w], feet:[y,z,w], lean}
+    const H = vrm.humanoid, N = (n) => H.getNormalizedBoneNode(n), hips = N('hips'), spine = N('spine'), chest = N('chest'), uc = N('upperChest'), neck = N('neck'), head = N('head'); if (!hips || !spine || !chest || !bike || !rig) return;
+    bike.updateWorldMatrix(true, false); vrm.scene.updateWorldMatrix(true, false);
+    const bq = bike.getWorldQuaternion(new THREE.Quaternion()), fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(bq), up = new THREE.Vector3(0, 1, 0).applyQuaternion(bq), right = new THREE.Vector3(1, 0, 0).applyQuaternion(bq);
+    const P = (y, z, x) => new THREE.Vector3(x || 0, y, z).applyMatrix4(bike.matrixWorld);
+    const seat = P(rig.seat[0], rig.seat[1]); hips.position.copy(hips.parent.worldToLocal(seat.clone())); hips.updateMatrixWorld(true);
+    const LU = N('leftUpperArm'), RU = N('rightUpperArm'), LL = N('leftLowerArm'), RL = N('rightLowerArm'), LH = N('leftHand'), RH = N('rightHand');
+    // lean the torso just far enough that both hands can reach the grips
+    const sh = LU && RU ? LU.getWorldPosition(new THREE.Vector3()).add(RU.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5) : seat.clone().addScaledVector(up, 0.5), tl = Math.max(0.2, sh.distanceTo(hips.getWorldPosition(new THREE.Vector3())));
+    const al = LU && LL && LH ? LU.getWorldPosition(new THREE.Vector3()).distanceTo(LL.getWorldPosition(new THREE.Vector3())) + LL.getWorldPosition(new THREE.Vector3()).distanceTo(LH.getWorldPosition(new THREE.Vector3())) : 0.6, gm = P(rig.hands[0], rig.hands[1]);
+    let th = 0.05; for (; th < 1.25; th += 0.05) { const s = seat.clone().addScaledVector(up, tl * Math.cos(th)).addScaledVector(fwd, tl * Math.sin(th)); if (s.distanceTo(gm) <= al * 0.88) break; }
+    th = Math.min(1.35, th + (rig.lean || 0) * 0.5 + ((extra && extra.lean) || 0));
+    const dir = (k) => new THREE.Vector3().addScaledVector(up, Math.cos(th * k)).addScaledVector(fwd, Math.sin(th * k)).normalize();
+    rkAim(hips, spine.position, dir(0.3)); rkAim(spine, chest.position, dir(0.6)); const top = uc || neck; if (top) rkAim(chest, top.position, dir(0.85)); if (uc && neck) rkAim(uc, neck.position, dir(0.9)); if (neck && head) rkAim(neck, head.position, dir(0.45));
+    if (head) { const pq = head.parent.getWorldQuaternion(_rk.q).invert(); head.quaternion.setFromUnitVectors(_rk.r, _rk.c.copy(up).addScaledVector(fwd, 0.12).normalize().applyQuaternion(pq)); head.updateMatrixWorld(true); }
+    const hs = hips.getWorldPosition(new THREE.Vector3());
+    for (const [U, Lw, Hd, n] of [[LU, LL, LH, 'left'], [RU, RL, RH, 'right']]) if (U && Lw && Hd) { const sd = right.dot(U.getWorldPosition(new THREE.Vector3()).sub(hs)) >= 0 ? 1 : -1; rkBone(U, Lw, Hd, P(rig.hands[0], rig.hands[1], sd * rig.hands[2]), right.clone().multiplyScalar(sd * 0.6).addScaledVector(up, -0.8).addScaledVector(fwd, -0.2)); }
+    for (const [U, Lw, Ft, n] of [[N('leftUpperLeg'), N('leftLowerLeg'), N('leftFoot'), 'left'], [N('rightUpperLeg'), N('rightLowerLeg'), N('rightFoot'), 'right']]) if (U && Lw && Ft) { const sd = right.dot(U.getWorldPosition(new THREE.Vector3()).sub(hs)) >= 0 ? 1 : -1; rkBone(U, Lw, Ft, P(rig.feet[0], rig.feet[1], sd * rig.feet[2]), fwd.clone().addScaledVector(right, sd * 0.35).addScaledVector(up, 0.1)); }
+}
+function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved settings or sensible defaults for a bike Hh metres tall
+    c = c || {}; const f = (v, d) => (Number.isFinite(+v) && v !== null && v !== undefined ? +v : d);
+    return { seat: [f(c.seatY, 0.62 * Hh + 0.1), f(c.seatZ, -0.05)], hands: [f(c.handY, 0.88 * Hh), f(c.handZ, 0.6), f(c.handW, 0.3)], feet: [f(c.footY, 0.3 * Hh), f(c.footZ, -0.1), f(c.footW, 0.24)], lean: f(c.lean, 0) };
+}
+        const BK_LS = 'oasis.bikes.v1', BK_N = 6;
+        var BK = { cfg: [], raw: [], on: false, sel: 0, mine: null, open: false, H: [], bid: [], share: [] };
+        const BK_OUT = ['city', 'plot', 'school', 'raimon'];   // bikes only outside
+        const BKC = new Map(), bkReq = new Map(), bkOut = new Map();   // bikes of other players: id -> scene; pending requests; recent sends
+        try { const a = JSON.parse(localStorage.getItem(BK_LS) || '[]'); if (Array.isArray(a)) BK.cfg = a.slice(0, BK_N).map((c) => (c && typeof c === 'object' ? c : null)); } catch (e) { BK.cfg = []; }
+        try { BK.sel = Math.max(0, Math.min(BK_N - 1, +localStorage.getItem('oasis.bikeSel') || 0)); } catch (e) { BK.sel = 0; }
+        const bkSave = () => { try { localStorage.setItem(BK_LS, JSON.stringify(BK.cfg)); localStorage.setItem('oasis.bikeSel', String(BK.sel)); } catch (e) { /* storage */ } };
+        const BK_MUL = 1.4;
+        EMOTES.ride = { dur: Infinity, hold: true, move: true, as: 'sit' };
+        function bikeClean(sc) {   // drop ground planes / shadow plates that come baked into some bike files (they would shrink the bike to fit)
+            sc.updateMatrixWorld(true); const items = []; sc.traverse((o) => { if (o.isMesh && o.geometry) { o.geometry.computeBoundingBox(); items.push({ o, bb: o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld) }); } });
+            if (items.length < 2) return; const all = new THREE.Box3(); items.forEach((i) => all.union(i.bb)); const mx = Math.max(all.max.x - all.min.x, all.max.z - all.min.z);
+            for (const { o, bb } of items) { const sx = bb.max.x - bb.min.x, sy = bb.max.y - bb.min.y, sz = bb.max.z - bb.min.z, flat = sy < 0.03 * Math.max(sx, sz), big = Math.max(sx, sz) > 0.6 * mx, nm = /floor|ground|shadow|platform/i.test((o.name || '') + ((o.material && o.material.name) || '')); if ((flat && big) || (nm && flat)) o.removeFromParent(); }
+        }
+                async function bkLoad(i) {
+            const rec = await store.get('bike:' + i); if (!rec || !rec.buffer) { BK.raw[i] = null; return; }
+            BK.bid[i] = bkIdOf(rec.buffer);
+            const gltf = await new Promise((res, rej) => gltfLoader.parse(rec.buffer.slice(0), '', res, rej));
+            bikeClean(gltf.scene); gltf.scene.traverse((o) => { if (o.isMesh) { o.userData.noOutline = true; o.frustumCulled = false; [].concat(o.material || []).forEach((m) => { m.side = THREE.DoubleSide; }); } }); BK.raw[i] = gltf.scene;
+        }
+        // rotate the chosen front axis to +Z (the way a character faces), scale to a 2 m bike, stand it on the ground with the seat under the rider
+        function bkFit(i, scene, cfg) {   // i = my slot, or null with a scene+cfg from another player
+            const c = cfg || BK.cfg[i], inner = (scene || BK.raw[i]).clone(true), holder = new THREE.Group(); holder.add(inner);
+            const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(...(GC_AX[c.ax] || GC_AX['+z'])), new THREE.Vector3(0, 0, 1)), rl = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), (c.roll || 0) * Math.PI / 2);
+            holder.quaternion.copy(rl.multiply(q)); holder.updateMatrixWorld(true);
+            const bb = new THREE.Box3().setFromObject(holder), len = Math.max(1e-4, bb.max.z - bb.min.z); holder.scale.setScalar(2.0 * (c.sc || 1) / len); holder.updateMatrixWorld(true); bb.setFromObject(holder);
+            holder.position.set(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + (bb.max.z - bb.min.z) * 0.42) + (c.sz || 0));
+            const g = new THREE.Group(); g.add(holder); const Hh = Math.max(0.3, bb.max.y - bb.min.y); if (i != null) BK.H[i] = Hh; g.userData = { bike: true, rig: rigOf(c, Hh) }; return g;
+        }
+        function bkGeneric() {
+            const g = new THREE.Group(), mk = (geo, col, em) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: col, roughness: 0.5, metalness: 0.4, emissive: em || 0x000000 })); m.userData.noOutline = true; return m; };
+            const add = (m, x, y, z, rx, ry, rz) => { m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); g.add(m); return m; };
+            add(mk(new THREE.BoxGeometry(0.26, 0.26, 0.95), 0x2b3a55), 0, 0.5, -0.05); add(mk(new THREE.CapsuleGeometry(0.15, 0.32, 4, 8), 0xe23d4b), 0, 0.72, 0.22, Math.PI / 2);
+            add(mk(new THREE.BoxGeometry(0.24, 0.07, 0.55), 0x16161c), 0, 0.72, -0.3); add(mk(new THREE.BoxGeometry(0.1, 0.1, 0.5), 0x15151a), 0, 0.46, -0.72);
+            for (const z of [0.78, -0.66]) add(mk(new THREE.TorusGeometry(0.3, 0.09, 8, 20), 0x15151a), 0, 0.39, z, 0, Math.PI / 2, 0);
+            add(mk(new THREE.BoxGeometry(0.06, 0.62, 0.06), 0x8a93a6), 0, 0.62, 0.7, 0.3); add(mk(new THREE.CylinderGeometry(0.025, 0.025, 0.62, 8), 0x8a93a6), 0, 0.93, 0.62, 0, 0, Math.PI / 2);
+            add(mk(new THREE.SphereGeometry(0.08, 10, 8), 0xfff2c0, 0xffe49a), 0, 0.84, 0.82); g.userData = { bike: true, rig: { seat: [0.8, -0.25], hands: [0.97, 0.6, 0.3], feet: [0.36, -0.25, 0.22], lean: 0 } }; return g;
+        }
+        const bkKey = () => 'bk' + BK.sel + (BK.open ? 'o' : '') + JSON.stringify(BK.cfg[BK.sel] || 0);
+        function bkMarkers(g) { const r = g.userData.rig, add = (y, z, x, col) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshBasicMaterial({ color: col, depthTest: false, transparent: true, opacity: 0.9 })); m.renderOrder = 999; m.userData.noOutline = true; m.position.set(x, y, z); g.add(m); }; add(r.seat[0], r.seat[1], 0, 0x38ff7a); for (const sd of [-1, 1]) { add(r.hands[0], r.hands[1], sd * r.hands[2], 0x4aa8ff); add(r.feet[0], r.feet[1], sd * r.feet[2], 0xffa233); } }
+        const bkMake = () => { let g; try { g = BK.raw[BK.sel] && BK.cfg[BK.sel] ? bkFit(BK.sel) : bkGeneric(); } catch (e) { console.warn('bike', e); g = bkGeneric(); } if (BK.open) bkMarkers(g); return g; };
+        function bkSeat(a) {   // the rider sits (the sit clip stands in for the riding pose)
+            const pk = a.pack; if (pk && pk.emotes && pk.emotes.sit && !pk.emotes.ride) pk.emotes.ride = pk.emotes.sit;
+            if (a.emote !== 'ride') { try { a.playEmote('ride'); a.emoteDur = 0; } catch (e) { /* not ready */ } }
+        }
+        function bkPlace(grp, g, a, speed, roll, t) {
+            const s = a.tweak.scale || 1, sp = Math.min(1, speed / (HB_RUN * BK_MUL));
+            grp.scale.setScalar(s); grp.position.copy(g.position); grp.rotation.order = 'YXZ'; grp.rotation.set(-0.015 * sp, g.rotation.y, roll); return Math.max(0, (grp.userData.rig ? grp.userData.rig.seat[0] : 0.8) - 0.5) * s;
+        }
+        function bkOff() { if (!BK.on) return; BK.on = false; const a = localActor; if (a.emote === 'ride') { try { a.playEmote('stand'); } catch (e) { a.emote = null; } } }
+        function bkSet(on, quiet) {
+            if (on) {
+                if (!BK_OUT.includes(activeMap)) { if (!quiet) sysChat('Bikes can only be ridden outside: Destiny City, your plots, the school grounds and College Raimon.'); return; }
+                if (hbOn && !BK.on) hbSet(false, true);
+                if (!hbOn) hbSet(true, true);
+                BK.on = true; localActor.boardOn = false; hbMineV = -1; bkSave(); bkSync(); const b = document.getElementById('hud-bike'); if (b) b.classList.add('hb-on');
+                if (!quiet) sysChat('Bike on: ' + ((BK.cfg[BK.sel] && BK.cfg[BK.sel].name) || 'stock bike') + '. B to get off, /garage for your bikes.');
+            } else { const was = BK.on; bkOff(); if (hbOn && was) hbSet(false, true); const b = document.getElementById('hud-bike'); if (b) b.classList.remove('hb-on'); if (was && !quiet) sysChat('Bike off.'); }
+        }
+        const bkToggle = () => bkSet(!BK.on);
+        async function bkUse(i, file) {
+            sysChat('Preparing ' + file.name + '...');
+            const glb = await gcBake(file); if (!glb || !glb.byteLength) throw new Error('the model came out empty');
+            await store.put('bike:' + i, { buffer: glb, name: file.name.slice(0, 60) });
+            BK.cfg[i] = { name: file.name.replace(/\.[^.]+$/, '').slice(0, 24), ax: '+z', roll: 0, sc: 1, sz: 0 }; await bkLoad(i);
+            const bb = new THREE.Box3().setFromObject(BK.raw[i]), sz = bb.getSize(new THREE.Vector3()); BK.cfg[i].ax = sz.x >= sz.y && sz.x >= sz.z ? '+x' : sz.y >= sz.z ? '+y' : '+z';   // the longest side is the length of the bike
+            BK.sel = i; bkSave(); bkRender(); sysChat(BK.cfg[i].name + ' is in the garage. If it faces backwards, set Front to the opposite direction.');
+        }
+        async function bkRemove(i) { try { await store.del('bike:' + i); } catch (e) { /* none */ } BK.cfg[i] = null; BK.raw[i] = null; bkSave(); bkRender(); }
+
+        function bkIdOf(buf) { const u = new Uint8Array(buf), n = u.length, st = Math.max(1, Math.floor(n / 4096)); let h = 2166136261 ^ n; for (let k = 0; k < n; k += st) { h ^= u[k]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(16).padStart(8, '0') + n.toString(16); }
+        const bkClamp = (v, lo, hi, d) => (Number.isFinite(+v) && v !== null ? Math.max(lo, Math.min(hi, +v)) : d);
+        function bkCleanCfg(c) {   // settings from another player: numbers only, within sane ranges
+            c = c && typeof c === 'object' ? c : {}; const o = { ax: GC_AX[c.ax] ? c.ax : '+z', roll: bkClamp(c.roll, 0, 3, 0) | 0, sc: bkClamp(c.sc, 0.4, 3, 1), sz: bkClamp(c.sz, -1, 1, 0), lean: bkClamp(c.lean, 0, 1, 0) };
+            for (const [k, lo, hi] of [['seatY', 0, 3], ['seatZ', -2, 2], ['handY', 0, 3], ['handZ', -2, 2], ['handW', 0, 1], ['footY', 0, 2], ['footZ', -2, 2], ['footW', 0, 1]]) if (c[k] !== null && c[k] !== undefined && Number.isFinite(+c[k])) o[k] = bkClamp(c[k], lo, hi, 0);
+            return o;
+        }
+        function bkWire() { const c = BK.cfg[BK.sel]; return BK.raw[BK.sel] && c ? { id: BK.bid[BK.sel] || '', c: bkCleanCfg(c), n: String(c.name || 'bike').slice(0, 24) } : { id: '', c: null, n: 'bike' }; }
+        let bkSyncT = 0;
+        function bkBroadcast(to) { if (!net || !BK.on) return; try { net.send({ t: 'bk', ...bkWire(), ...(to ? { to } : {}) }); } catch (e) { /* offline */ } }
+        function bkSync() { clearTimeout(bkSyncT); bkSyncT = setTimeout(() => bkBroadcast(), 350); }
+        // a lighter copy of my bike to send: textures shrunk to 1024 px (JPEG where there is no transparency)
+        async function bkShareGet(i) {
+            if (BK.share[i] && BK.share[i].id === BK.bid[i]) return BK.share[i].buffer;
+            const rec = await store.get('bike:' + i); if (!rec || !rec.buffer) return null;
+            const gltf = await new Promise((res, rej) => gltfLoader.parse(rec.buffer.slice(0), '', res, rej)); bikeClean(gltf.scene); const seen = new Set();
+            gltf.scene.traverse((o) => { if (!o.isMesh) return; for (const m of [].concat(o.material || [])) { const alpha = m.transparent || m.alphaMap || m.alphaTest > 0; for (const k of ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap']) { const t = m[k]; if (!t || seen.has(t)) continue; seen.add(t); const im = t.image; if (!im || !im.width) continue; const sc = Math.min(1, 1024 / Math.max(im.width, im.height)), cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(im.width * sc)); cv.height = Math.max(1, Math.round(im.height * sc)); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); t.image = cv; t.needsUpdate = true; t.userData = t.userData || {}; t.userData.mimeType = alpha ? 'image/png' : 'image/jpeg'; } } });
+            const glb = await new Promise((res, rej) => new GLTFExporter().parse(gltf.scene, res, rej, { binary: true, maxTextureSize: 1024, onlyVisible: false }));
+            const buf = glb instanceof ArrayBuffer && glb.byteLength <= 24e6 ? glb : null; BK.share[i] = { id: BK.bid[i], buffer: buf }; return buf;
+        }
+        function bkPeerWant(p) {
+            const id = p.bk && p.bk.id; if (!id || BKC.has(id) || !net) return; const t = bkReq.get(id) || 0; if (Date.now() - t < 30000) return;
+            bkReq.set(id, Date.now()); net.send({ t: 'wantbk', to: p.id, id });
+        }
+        const bkPeerKey = (p) => 'bk' + (p.bk && BKC.has(p.bk.id) ? p.bk.id + JSON.stringify(p.bk.c) : '');
+        function bkPeerMake(p) {
+            let g; try { g = p.bk && BKC.has(p.bk.id) ? bkFit(null, BKC.get(p.bk.id), p.bk.c) : bkGeneric(); } catch (e) { console.warn('peer bike', e); g = bkGeneric(); } return g;
+        }
+        function bkOnMsg(from, m) {
+            const p = peers.get(from);
+            if (m.t === 'bk') { if (!p) return; const id = /^[a-f0-9]{8,24}$/.test(String(m.id || '')) ? m.id : ''; p.bk = { id, c: bkCleanCfg(m.c), n: String(m.n || '').slice(0, 24) }; if (id) bkPeerWant(p); }
+            else if (m.t === 'wantbk') {
+                const id = String(m.id || ''), i = BK.bid.indexOf(id); if (i < 0 || !BK.raw[i]) return; const k = from + '|' + id; if (bkOut.has(k) && Date.now() - bkOut.get(k) < 60000) return; bkOut.set(k, Date.now());
+                bkShareGet(i).then((buf) => { if (buf && net) return net.send({ t: 'bkdata', to: from, id, buffer: buf }); }).catch((e) => console.warn('bike share', e)).then(() => setTimeout(() => bkOut.delete(k), 2000));
+            } else if (m.t === 'bkdata') {
+                const id = String(m.id || ''); if (!bkReq.has(id) || BKC.has(id) || !(m.buffer instanceof ArrayBuffer) || m.buffer.byteLength > 26e6) return;
+                gltfLoader.parse(m.buffer.slice(0), '', (gltf) => { bikeClean(gltf.scene); gltf.scene.traverse((o) => { if (o.isMesh) { o.userData.noOutline = true; o.frustumCulled = false; [].concat(o.material || []).forEach((q) => { q.side = THREE.DoubleSide; }); } }); BKC.set(id, gltf.scene); if (BKC.size > 6) BKC.delete(BKC.keys().next().value); }, (e) => console.warn('peer bike model', e));
+            }
+        }
+        function bkRender() {
+            let box = document.getElementById('garage-panel'); if (!box) {
+                box = document.createElement('div'); box.id = 'garage-panel'; box.className = 'glass-panel'; box.style.cssText = 'position:fixed;left:12px;bottom:76px;width:min(360px,calc(100vw - 24px));max-height:68vh;overflow:auto;z-index:60;padding:12px;border-radius:14px;font-size:12px;color:#e6edf7;display:none';
+                document.body.appendChild(box); box.addEventListener('keydown', (e) => e.stopPropagation()); box.addEventListener('keyup', (e) => e.stopPropagation());
+                box.addEventListener('click', (e) => { const t = e.target.closest('[data-bk]'); if (!t) return; const i = +t.dataset.i, a = t.dataset.bk; if (a === 'x') bkShow(false); else if (a === 'up') { BK.upFor = i; document.getElementById('garage-file').click(); } else if (a === 'rm') bkRemove(i); else if (a === 'ride') { BK.sel = i; bkSave(); bkSet(true); bkSync(); bkRender(); } else if (a === 'off') { bkSet(false); bkRender(); } else if (a === 'flip') { const c = BK.cfg[i]; if (c) { c.ax = c.ax[0] === '+' ? '-' + c.ax[1] : '+' + c.ax[1]; bkSave(); bkSync(); } } else if (a === 'sel') { BK.sel = i; bkSave(); bkSync(); bkRender(); } });
+                box.addEventListener('change', async (e) => { const t = e.target; if (t.id === 'garage-file') { const f = t.files[0], i = BK.upFor; t.value = ''; if (f != null && i != null) { try { await bkUse(i, f); } catch (err) { console.error(err); sysChat('Could not use that model: ' + (err && err.message || err)); } } return; } if (t.dataset.bk === 'sel2') { const c = BK.cfg[+t.dataset.i]; if (c) { c[t.dataset.f] = t.dataset.f === 'roll' ? +t.value : t.value; bkSave(); bkSync(); } } });
+                box.addEventListener('input', (e) => { const t = e.target; if (t.dataset && t.dataset.bk === 'sl') { const c = BK.cfg[+t.dataset.i]; if (c) { c[t.dataset.f] = +t.value; bkSave(); bkSync(); if (t.dataset.f === 'sc') { const l = document.getElementById('bk-len-' + t.dataset.i); if (l) l.textContent = (2 * +t.value).toFixed(1) + ' m long'; } } } });
+            }
+            let h = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b style="font-size:14px;flex:1">🏍 Garage</b><button data-bk="x" data-i="0" style="padding:2px 10px;border-radius:8px;background:rgba(255,255,255,.12)">Close</button></div>';
+            for (let i = 0; i < BK_N; i++) {
+                const c = BK.cfg[i], has = !!(c && BK.raw[i]), cur = BK.sel === i, B = 'padding:2px 9px;border-radius:7px;background:rgba(255,255,255,.12);';
+                h += '<div style="border-radius:10px;padding:7px;margin-bottom:6px;background:rgba(255,255,255,' + (cur ? '.13' : '.06') + ')"><div style="display:flex;align-items:center;gap:6px"><span data-bk="sel" data-i="' + i + '" style="cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (cur ? '▶ ' : '') + (has ? esc(c.name) : 'Empty slot ' + (i + 1)) + '</span>';
+                h += '<button data-bk="up" data-i="' + i + '" style="' + B + '">' + (has ? 'Replace' : 'Add bike') + '</button>';
+                if (has) h += '<button data-bk="' + (BK.on && cur ? 'off' : 'ride') + '" data-i="' + i + '" style="' + B + 'background:rgba(80,160,255,.35)">' + (BK.on && cur ? 'Get off' : 'Ride') + '</button><button data-bk="rm" data-i="' + i + '" style="' + B + '">✕</button>';
+                h += '</div>';
+                if (has && cur) {
+                    const sl = (lbl, f, mn, mx, st, v) => '<label style="display:flex;align-items:center;gap:6px;color:#9fb0c8">' + lbl + '<input type="range" data-bk="sl" data-i="' + i + '" data-f="' + f + '" min="' + mn + '" max="' + mx + '" step="' + st + '" value="' + v + '" style="flex:1"></label>';
+                    h += '<div style="display:grid;gap:3px;margin-top:6px"><div style="display:flex;gap:10px;align-items:center;color:#9fb0c8">Front <select data-bk="sel2" data-i="' + i + '" data-f="ax" style="background:#0008;border-radius:5px">' + Object.keys(GC_AX).map((a) => '<option' + (c.ax === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select>Roll <select data-bk="sel2" data-i="' + i + '" data-f="roll" style="background:#0008;border-radius:5px">' + [0, 1, 2, 3].map((r) => '<option value="' + r + '"' + ((c.roll || 0) === r ? ' selected' : '') + '>' + r * 90 + '°</option>').join('') + '</select><button data-bk="flip" data-i="' + i + '" style="' + B + '">Turn around</button></div>' + sl('Size <b id="bk-len-' + i + '" style="color:#e6edf7">' + (2 * (c.sc || 1)).toFixed(1) + ' m long</b>', 'sc', 0.4, 3, 0.05, c.sc || 1) + sl('Bike fore/aft', 'sz', -0.7, 0.7, 0.02, c.sz || 0) + '</div><div style="margin-top:6px;color:#9fb0c8">Rider pose: <span style="color:#38ff7a">● seat</span> <span style="color:#4aa8ff">● hands</span> <span style="color:#ffa233">● feet</span> (dots show while the garage is open)</div><div style="display:grid;gap:3px">' + (() => { const rg = rigOf(c, BK.H[i] || 1); return sl('Seat height', 'seatY', 0.1, 1.8, 0.02, rg.seat[0]) + sl('Seat fore/aft', 'seatZ', -1, 1, 0.02, rg.seat[1]) + sl('Hands height', 'handY', 0.2, 1.8, 0.02, rg.hands[0]) + sl('Hands fore/aft', 'handZ', -0.5, 1.2, 0.02, rg.hands[1]) + sl('Hands width', 'handW', 0, 0.7, 0.02, rg.hands[2]) + sl('Feet height', 'footY', 0, 1.2, 0.02, rg.feet[0]) + sl('Feet fore/aft', 'footZ', -1, 1, 0.02, rg.feet[1]) + sl('Feet width', 'footW', 0, 0.6, 0.02, rg.feet[2]) + sl('Lean', 'lean', 0, 1, 0.05, rg.lean); })() + '</div>';
+                }
+                h += '</div>';
+            }
+            h += '<input type="file" id="garage-file" accept=".glb,.fbx,.zip,.obj" style="display:none"><div style="font-size:10px;color:#7f90a8">Add a .glb, .fbx, .zip or .obj motorbike. Pick the slot, press Ride, then adjust until it sits right. Bikes stay on this device and show up in Ryder X. Other players see a stand-in bike under you.</div>';
+            if (box.dataset.h !== h) { const keep = box.scrollTop; box.innerHTML = h; box.dataset.h = h; box.scrollTop = keep; }
+            box.style.display = BK.open ? 'block' : 'none';
+        }
+        function bkShow(on) { BK.open = on == null ? !BK.open : on; bkRender(); }
+        window.__bkIK = { rideIK, rigOf };
+        window.oasisBikes = async () => {   // for Ryder X: the saved bikes as GLB bytes plus their fitting
+            const out = []; for (let i = 0; i < BK_N; i++) { const c = BK.cfg[i]; if (!c) continue; try { const rec = await store.get('bike:' + i); if (rec && rec.buffer) out.push({ i, name: c.name, cfg: JSON.parse(JSON.stringify(c)), buffer: rec.buffer.slice(0) }); } catch (e) { /* skip */ } } return out;
+        };
+        setInterval(() => { try { if (BK.on) bkBroadcast(); } catch (e) { /* offline */ } }, 8000);   // late joiners and lost messages
+        window.__dcimg = { imp: (f) => dcImportImage(f), tex: (id) => dcImageTexture(id), anim: () => (DC.anim || []).map((x) => ({ n: x.frames.length, i: x.i, w: x.cv.width, h: x.cv.height })) };
+        window.__bk = { BK, BKC, set: bkSet, show: bkShow, peerBk: () => [...peers.values()].map((q) => ({ n: q.name, hb: q.hb, bk: q.bk, has: !!(q.bk && BKC.has(q.bk.id)) })), share: (i) => bkShareGet(i).then((b) => b && b.byteLength) };
+        (async () => { for (let i = 0; i < BK_N; i++) if (BK.cfg[i]) { try { await bkLoad(i); } catch (e) { console.warn('bike', i, e); BK.raw[i] = null; } } bkRender(); })();
+
         function hbFrame(dt) {
             hbT += dt;
             if (hbOn && activeMap === 'loft') hbSet(false, true);
             const a = localActor, g = a.group;
             if (hbOn) {
-                if (!hbMine || hbMineV !== hbKey(hbVariant)) { if (hbMine) scene.remove(hbMine); hbMine = hbBuild(hbVariant); hbMineV = hbKey(hbVariant); scene.add(hbMine); }
+                const wk = BK.on ? bkKey() : hbKey(hbVariant); if (!hbMine || hbMineV !== wk) { if (hbMine) scene.remove(hbMine); hbMine = BK.on ? bkMake() : hbBuild(hbVariant); hbMineV = wk; scene.add(hbMine); } if (BK.on) bkSeat(a);
                 let dy = g.rotation.y - hbPrevYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); const tr = clamp(-dy / Math.max(dt, 1e-3) * 0.07 * Math.min(1, hbSpeed / 6), -0.5, 0.5);
                 hbRoll += (tr - hbRoll) * (1 - Math.exp(-dt * 7));
-                const lift = hbPlace(hbMine, g, hbSpeed, hbRoll, dt, hbT); a.boardLift = lift; a.boardRoll = hbRoll;
-            } else { a.boardLift = 0; a.boardRoll = 0; hbRoll = 0; }
+                const lift = BK.on ? bkPlace(hbMine, g, a, hbSpeed, hbRoll, hbT) : hbPlace(hbMine, g, hbSpeed, hbRoll, dt, hbT); a.boardLift = lift; a.boardRoll = hbRoll; a.bikeObj = BK.on ? hbMine : null;
+            } else { a.boardLift = 0; a.boardRoll = 0; hbRoll = 0; a.bikeObj = null; }
             hbPrevYaw = g.rotation.y;
             // everyone else's boards
             peers.forEach((p, id) => {
                 const want = p.hb | 0, a2 = p.actor, g2 = a2.group;
                 let e = hbPeerBoards.get(id);
-                const key = want === 9 ? 'c' + (p.hbdJ || '') : want - 1;
-                if (want && (!e || e.v !== key)) { if (e) scene.remove(e.m); e = { m: want === 9 ? (p.hbd ? hbMakeD(p.hbd) : hbMake(0)) : hbMake(want - 1), v: key, px: g2.position.x, pz: g2.position.z, py: g2.rotation.y, sp: 0, roll: 0 }; hbPeerBoards.set(id, e); scene.add(e.m); }
-                if (!want) { if (e) { scene.remove(e.m); hbPeerBoards.delete(id); } a2.boardOn = false; a2.boardLift = 0; a2.boardRoll = 0; return; }
+                const key = want === 10 ? bkPeerKey(p) : want === 9 ? 'c' + (p.hbdJ || '') : want - 1;
+                if (want && (!e || e.v !== key)) { if (e) scene.remove(e.m); e = { m: want === 10 ? bkPeerMake(p) : want === 9 ? (p.hbd ? hbMakeD(p.hbd) : hbMake(0)) : hbMake(want - 1), v: key, px: g2.position.x, pz: g2.position.z, py: g2.rotation.y, sp: 0, roll: 0 }; hbPeerBoards.set(id, e); scene.add(e.m); }
+                if (!want) { if (e) { scene.remove(e.m); hbPeerBoards.delete(id); } a2.bikeObj = null; if (a2.emote === 'ride') { try { a2.playEmote('stand'); } catch (er) { a2.emote = null; } } a2.boardOn = false; a2.boardLift = 0; a2.boardRoll = 0; return; }
                 const sp = Math.hypot(g2.position.x - e.px, g2.position.z - e.pz) / Math.max(dt, 1e-3); e.sp += (sp - e.sp) * (1 - Math.exp(-dt * 6));
                 let dy = g2.rotation.y - e.py; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.roll += (clamp(-dy / Math.max(dt, 1e-3) * 0.07 * Math.min(1, e.sp / 6), -0.5, 0.5) - e.roll) * (1 - Math.exp(-dt * 7));
                 e.px = g2.position.x; e.pz = g2.position.z; e.py = g2.rotation.y;
-                a2.boardOn = true; a2.boardLift = hbPlace(e.m, g2, e.sp, e.roll, dt, hbT); a2.boardRoll = e.roll;
+                if (want === 10) { a2.boardOn = false; a2.boardLift = bkPlace(e.m, g2, a2, e.sp, e.roll, hbT); bkSeat(a2); a2.bikeObj = e.m; bkPeerWant(p); } else { a2.boardOn = true; a2.boardLift = hbPlace(e.m, g2, e.sp, e.roll, dt, hbT); } a2.boardRoll = e.roll;
             });
             for (const [id, e] of hbPeerBoards) if (!peers.has(id)) { scene.remove(e.m); hbPeerBoards.delete(id); }
         }
@@ -17215,7 +17522,7 @@ window.__ts = TSK;
                 moveIdle = 0;
                 sprintTap = Math.max(0, sprintTap - dt);
                 const wantRun = keys.run || padMove.run || dblRun || (sprintTap > 0 && !hbOn);
-                const topSpeed = Math.min(hbOn ? (wantRun ? HB_RUN : HB_TOP) : wantRun ? RUN_SPEED : JOG_SPEED, gnCap());
+                const topSpeed = Math.min(hbOn ? (wantRun ? HB_RUN : HB_TOP) * (BK.on ? BK_MUL : 1) : wantRun ? RUN_SPEED : JOG_SPEED, gnCap());
                 if (moveSpeed < topSpeed) moveSpeed = Math.min(topSpeed, moveSpeed + (hbOn ? 9 : wantRun ? RUN_ACCEL : JOG_ACCEL) * dt);
                 else moveSpeed = Math.max(topSpeed, moveSpeed - (hbOn ? 6 : 5) * dt);
                 if (hbOn) { if (!hbLastDir) hbLastDir = new THREE.Vector3(); hbLastDir.copy(_mv); hbSpeed = moveSpeed; }
@@ -17229,7 +17536,7 @@ window.__ts = TSK;
             } else {
                 moveIdle += dt;
                 if (hbOn && hbLastDir && hbSpeed > 0.3) {                      // glide to a stop
-                    hbSpeed = Math.max(0, hbSpeed - 7 * dt); moveSpeed = hbSpeed; g.position.x += hbLastDir.x * hbSpeed * dt; g.position.z += hbLastDir.z * hbSpeed * dt;
+                    hbSpeed = Math.max(0, hbSpeed - (BK.on ? 5 : 7) * dt); moveSpeed = hbSpeed; g.position.x += hbLastDir.x * hbSpeed * dt; g.position.z += hbLastDir.z * hbSpeed * dt;
                 } else if (hbOn) hbSpeed = 0;
                 if ((fpOn && !localActor.emote) || TG.facing() || gnRigOn()) g.rotation.y = lerpAngle(g.rotation.y, TG.rigOn ? TG.yaw : gnRigOn() ? GN.yaw : Math.atan2(controls.target.x - camera.position.x, controls.target.z - camera.position.z), 1 - Math.exp(-dt * (gnRigOn() ? 18 : 10)));   // first person: the body turns to where you look
                 if (moveIdle > 0.25 && !(hbOn && hbSpeed > 0.3)) moveSpeed = WALK_SPEED;   // a real stop restarts the ramp; a quick tap-turn keeps it
@@ -17377,6 +17684,8 @@ window.__ts = TSK;
             if (/^\/(settings|graphics|fps|cloud)$/i.test(text)) { gfxToggle(true); return true; }
             if (/^\/(tag|lasertag)$/i.test(text)) { tgOpen(); return true; }
             if (/^\/(construct|hero|training)$/i.test(text)) { constructOpen(); return true; }
+            if (/^\/garage$/i.test(text)) { bkShow(true); return true; }
+            if (/^\/(bike|motorbike|motorcycle)$/i.test(text)) { if (!BK.raw.some(Boolean)) bkShow(true); bkToggle(); return true; }
             if (/^\/(industries|hoverboard)$/i.test(text)) { if (typeof industriesOpen === 'function') industriesOpen(); return true; }
             { const pm = /^\/(?:p|party)(?:\s+(.*))?$/i.exec(text); if (pm) { if (pm[1]) return partyChat(pm[1]); partyToggle(true); return true; } }
             { const fm = /^\/fx(?:\s+(.*))?$/i.exec(text); if (fm) return fxCommand(fm[1]); }
@@ -17902,12 +18211,17 @@ window.__ts = TSK;
             pcSection($('pc-ra'), p.ra, 'Open RetroAchievements profile', seq, (im) => { av.textContent = ''; av.append(im); });
             $('pc-look').lastChild.textContent = localActor.lookId === p.id ? ' Stop looking' : ' Look at';
             try { const fb = $('pc-friend'), fo = p.pid && frGet(p.pid); fb.lastChild.textContent = !p.pid ? ' Add friend' : fo ? (fo.pending ? ' Request sent' : ' Friends ✓') : ' Add friend'; fb.disabled = !!fo; } catch (e) { /* friends */ }
+            { const own = banOwner() && p.id !== me.id; $('pc-kick').classList.toggle('hidden', !own); $('pc-ban').classList.toggle('hidden', !own); }
             $('pcard').classList.remove('hidden');
         }
         function closeProfile() { pcardSeq++; pcardPeer = null; $('pcard').classList.add('hidden'); }
         function setupProfileUI() {
             $('pc-close').addEventListener('click', closeProfile); $('pc-done').addEventListener('click', closeProfile);
             $('pcard').addEventListener('pointerdown', (e) => { if (e.target === $('pcard')) closeProfile(); });
+            $('pc-kick').addEventListener('click', () => { const p = pcardPeer; if (p) kickPeer(p.id, false); closeProfile(); });
+            $('pc-ban').addEventListener('click', () => { const p = pcardPeer; if (!p) return; if (!confirm('Ban ' + p.name + ' from all your rooms? They will not be able to come back, and nobody can invite them in.')) return; kickPeer(p.id, true); closeProfile(); });
+            $('pf-bans').addEventListener('click', (e) => { const k = e.target && e.target.dataset && e.target.dataset.unban; if (!k) return; const b = banList(); delete b[k]; banSave(b); });
+            banRender();
             $('pc-look').addEventListener('click', () => { const p = pcardPeer; if (p) setLookTarget(localActor.lookId === p.id ? null : p.id); closeProfile(); });
             window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('pcard').classList.contains('hidden')) { e.preventDefault(); e.stopPropagation(); closeProfile(); } }, true);
             $('pf-ra').value = me.ra;
@@ -21049,7 +21363,7 @@ window.__ts = TSK;
         // the blasters are the Gunner's rifle / pistol, solved onto the hands by the Gunner IK rig, with a team-colour glow
         const TG_GKEY = { gn: 'rifle', pt: 'pistol' };
         function tgGunTint(gun, team) {
-            const c = TG_TEAM[team].h; TG.gmat = TG.gmat || {};
+            if (gun.userData.custom) return; const c = TG_TEAM[team].h; TG.gmat = TG.gmat || {};
             gun.traverse((o) => {
                 if (!o.isMesh || o.userData.tgGlow) return; const base = GNW.mat[GW[gun.userData.key].mesh], k = gun.userData.key + team; if (!base) return;
                 let m = TG.gmat[k]; if (!m) { m = TG.gmat[k] = base.clone(); m.color.lerp(new THREE.Color(c), 0.28); m.emissive.set(c).lerp(new THREE.Color(0xffffff), 0.35); m.emissiveIntensity = 0.55; }
@@ -22644,8 +22958,73 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         const gnOne = (arr) => arr[Math.floor(Math.random() * arr.length)];
         const gnVolAt = (x, y, z) => { const P = localActor && localActor.group ? localActor.group.position : null; return P ? clamp(1 - Math.hypot(x - P.x, z - P.z) / 70, 0.08, 1) : 1; };
         function gnModel(key) {
+            if (GCUS.raw[key]) { try { const c = gcFit(key); c.userData.key = key; return c; } catch (e) { console.warn('custom gun', key, e); } }
             const g = new THREE.Group(), m = new THREE.Mesh(GNW.geo[GW[key].mesh], GNW.mat[GW[key].mesh]); m.userData.noOutline = true; g.add(m); g.userData.key = key; return g;
         }
+        /* ---- replace any stock gun with your own model (.glb / .fbx / .zip / .obj): it is fitted to the stock gun's length and grip, then trimmed with the sliders ---- */
+        var GCUS = { cfg: {}, raw: {} };
+        const GCUS_LS = 'oasis.guncus.v1', GC_AX = { '+x': [1, 0, 0], '-x': [-1, 0, 0], '+y': [0, 1, 0], '-y': [0, -1, 0], '+z': [0, 0, 1], '-z': [0, 0, -1] };
+        try { GCUS.cfg = JSON.parse(localStorage.getItem(GCUS_LS) || '{}') || {}; } catch (e) { GCUS.cfg = {}; }
+        const gcSave = () => { try { localStorage.setItem(GCUS_LS, JSON.stringify(GCUS.cfg)); } catch (e) { /* storage */ } };
+        async function gcBake(file) {
+            const ext = file.name.split('.').pop().toLowerCase(), buf = await file.arrayBuffer(); if (ext === 'glb') return buf;
+            let info, model;
+            if (ext === 'zip') { info = await scan3dZip(buf); if (!info.models.length) throw new Error('there is no 3D model (.glb, .fbx, .gltf, .obj, .dae) in that zip'); model = info.models[0]; }
+            else { const bytes = new Uint8Array(buf); info = { zip: null, entries: [], models: [], images: [], side: new Map() }; model = { bytes, ext, name: file.name, path: file.name, size: bytes.length }; }
+            const r = await loadZipModel(info, model), wrap = new THREE.Group(); wrap.add(r.root); return await bakeToGlb(wrap);
+        }
+        async function gcLoad(key) {
+            const rec = await store.get('gun:' + key); if (!rec || !rec.buffer) { delete GCUS.raw[key]; return; }
+            const gltf = await new Promise((res, rej) => gltfLoader.parse(rec.buffer.slice(0), '', res, rej)); gltf.scene.traverse((o) => { if (o.isMesh) { o.userData.noOutline = true; o.frustumCulled = false; if (o.material) { const ms = [].concat(o.material); ms.forEach((m) => { m.side = THREE.DoubleSide; }); } } }); GCUS.raw[key] = gltf.scene;
+        }
+        function gcFit(key) {
+            const c = GCUS.cfg[key] || {}, inner = GCUS.raw[key].clone(true), holder = new THREE.Group(); holder.add(inner);
+            const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(...(GC_AX[c.ax] || GC_AX['+z'])), new THREE.Vector3(0, 0, 1)), roll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), (c.roll || 0) * Math.PI / 2);
+            holder.quaternion.copy(roll.multiply(q)); holder.updateMatrixWorld(true);
+            const bb = new THREE.Box3().setFromObject(holder), len = Math.max(1e-4, bb.max.z - bb.min.z), sg = GNW.geo[GW[key].mesh]; if (!sg.boundingBox) sg.computeBoundingBox(); const sb = sg.boundingBox;
+            const k = (sb.max.z - sb.min.z) / len * (c.sc || 1); holder.scale.setScalar(k); holder.updateMatrixWorld(true); bb.setFromObject(holder);
+            const cx = (bb.min.x + bb.max.x) / 2, cy = (bb.min.y + bb.max.y) / 2, scx = (sb.min.x + sb.max.x) / 2, scy = (sb.min.y + sb.max.y) / 2;
+            holder.position.set(scx - cx, scy - cy + (c.dy || 0), sb.min.z - bb.min.z + (c.dz || 0));
+            const g = new THREE.Group(); g.add(holder); g.userData.custom = true; g.userData.muz = new THREE.Vector3(scx, scy + (c.dy || 0), sb.min.z + (bb.max.z - bb.min.z) + (c.dz || 0)); return g;
+        }
+        function gcRefresh() {   // rebuild the gun in everyone's hand next frame
+            const A = [localActor]; try { for (const p of peers.values()) if (p.actor) A.push(p.actor); } catch (e) { /* no peers */ }
+            for (const a of A) if (a && a.gnGun) { a.gnGun.removeFromParent(); a.gnGun = null; }
+        }
+        async function gcUse(key, file) {
+            sysChat('Preparing ' + file.name + ' for the ' + GW[key].name + '...');
+            const glb = await gcBake(file); if (!glb || !glb.byteLength) throw new Error('the model came out empty');
+            await store.put('gun:' + key, { buffer: glb, name: file.name.slice(0, 60) });
+            GCUS.cfg[key] = { name: file.name.slice(0, 40), ax: '+z', roll: 0, sc: 1, dz: 0, dy: 0 }; await gcLoad(key);
+            const bb = new THREE.Box3().setFromObject(GCUS.raw[key]), sz = bb.getSize(new THREE.Vector3()); GCUS.cfg[key].ax = sz.x >= sz.y && sz.x >= sz.z ? '+x' : sz.y >= sz.z ? '+y' : '+z';   // the longest side is the barrel
+            gcSave(); gcRefresh(); gcRender(key); sysChat('The ' + GW[key].name + ' is now ' + file.name + '. If it points the wrong way, flip the barrel axis in the Gunner panel.');
+        }
+        async function gcReset(key) { try { await store.del('gun:' + key); } catch (e) { /* none */ } delete GCUS.cfg[key]; delete GCUS.raw[key]; gcSave(); gcRefresh(); gcRender(key); sysChat('The ' + GW[key].name + ' is back to stock.'); }
+        function gcTry(key) { try { clsEquip('pistol'); gnSetWeapon(key, true); } catch (e) { /* not ready */ } }
+        let gcOpen = '';
+        function gcRender(open) {
+            if (open != null) gcOpen = open; const box = document.getElementById('gcus-panel'); if (!box) return;
+            const n = Object.keys(GCUS.raw).length; let h = '<details class="mt-2"' + (gcOpen ? ' open' : '') + '><summary class="text-[11px] text-gray-300 cursor-pointer select-none">🔧 Replace guns with your own models' + (n ? ' (' + n + ' custom)' : '') + '</summary><div class="mt-1.5 space-y-1.5">';
+            for (const k of GW_KEYS) {
+                const c = GCUS.cfg[k], cus = !!GCUS.raw[k]; h += '<div class="rounded-lg bg-white/5 p-1.5 text-[11px]"><div class="flex items-center gap-1.5"><span>' + GW[k].ic + ' ' + GW[k].name + '</span><span class="text-gray-400 truncate flex-1">' + (cus ? esc(c.name || 'custom') : 'stock') + '</span><button data-gc="up" data-k="' + k + '" class="px-2 py-0.5 rounded bg-white/10">Replace…</button>' + (cus ? '<button data-gc="try" data-k="' + k + '" class="px-2 py-0.5 rounded bg-white/10">Try</button><button data-gc="reset" data-k="' + k + '" class="px-2 py-0.5 rounded bg-white/10">Reset</button>' : '') + '</div>';
+                if (cus) {
+                    const sl = (lbl, f, min, max, step, v) => '<label class="flex items-center gap-1 text-gray-400">' + lbl + '<input type="range" data-gc="sl" data-k="' + k + '" data-f="' + f + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" class="w-24"></label>';
+                    h += '<div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1"><label class="text-gray-400">Barrel points <select data-gc="sel" data-k="' + k + '" data-f="ax" class="bg-black/40 rounded">' + Object.keys(GC_AX).map((a) => '<option' + (c.ax === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></label><label class="text-gray-400">Roll <select data-gc="sel" data-k="' + k + '" data-f="roll" class="bg-black/40 rounded">' + [0, 1, 2, 3].map((r) => '<option value="' + r + '"' + ((c.roll || 0) === r ? ' selected' : '') + '>' + r * 90 + '°</option>').join('') + '</select></label>' + sl('Size', 'sc', 0.4, 2.5, 0.05, c.sc || 1) + sl('Fore/aft', 'dz', -0.25, 0.25, 0.005, c.dz || 0) + sl('Up/down', 'dy', -0.15, 0.15, 0.005, c.dy || 0) + '</div>';
+                }
+                h += '</div>';
+            }
+            h += '<input type="file" id="gcus-file" accept=".glb,.fbx,.zip,.obj" class="hidden"><div class="text-[10px] text-gray-500">Barrel should end up pointing forward and the grip sitting in the hand; use Try to hold it. Models stay on this device. Other players still see their own gun models.</div></div></details>'; box.innerHTML = h;
+        }
+        (function gcInit() {
+            document.addEventListener('click', (e) => { const t = e.target.closest && e.target.closest('#gcus-panel [data-gc]'); if (!t) return; const k = t.dataset.k, a = t.dataset.gc; if (a === 'up') { GCUS.for = k; document.getElementById('gcus-file').click(); } else if (a === 'reset') gcReset(k); else if (a === 'try') gcTry(k); });
+            document.addEventListener('change', async (e) => {
+                const t = e.target; if (!t || !t.closest || !t.closest('#gcus-panel')) return;
+                if (t.id === 'gcus-file') { const f = t.files[0], k = GCUS.for; t.value = ''; if (f && k) { try { await gcUse(k, f); } catch (err) { console.error(err); sysChat('Could not use that model: ' + (err && err.message || err)); } } return; }
+                if (t.dataset.gc === 'sel') { const c = GCUS.cfg[t.dataset.k]; if (c) { c[t.dataset.f] = t.dataset.f === 'roll' ? +t.value : t.value; gcSave(); gcRefresh(); } }
+            });
+            document.addEventListener('input', (e) => { const t = e.target; if (!t || !t.dataset || t.dataset.gc !== 'sl') return; const c = GCUS.cfg[t.dataset.k]; if (!c) return; c[t.dataset.f] = +t.value; gcSave(); if (!GCUS.q) GCUS.q = requestAnimationFrame(() => { GCUS.q = 0; gcRefresh(); }); });
+            (async () => { for (const k of Object.keys(GCUS.cfg)) { try { await gcLoad(k); } catch (e) { console.warn('custom gun', k, e); } } gcRefresh(); gcRender(); })();
+        })();
 
         /* ---- GUNNER gun rig: both arms are solved by IK to the weapon's grip and foregrip, the fingers wrap the handle and the trigger finger sits on the trigger ---- */
         // Per weapon (model space: barrel +Z, up +Y, left +X): R = where the right fist closes round the grip, L = the support hand, anchor = where the fist sits in front of your shoulders,
@@ -22774,8 +23153,8 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const s = actor.gnGun = gnModel(key); s.matrixAutoUpdate = false; actor.group.add(s); actor.gnRaise = 0;
         }
         function gnMuzzle(actor, key) {          // the barrel tip and direction in the world
-            const gun = actor && actor.gnGun; if (!gun || !gun.parent || !GNW.muz[GW[key].mesh]) return null;
-            gun.updateWorldMatrix(true, false); const m = GNW.muz[GW[key].mesh], p = gun.localToWorld(m.clone()), q = gun.localToWorld(m.clone().add(new THREE.Vector3(0, 0, 1))); q.sub(p).normalize();
+            const gun = actor && actor.gnGun; if (!gun || !gun.parent || !(gun.userData.muz || GNW.muz[GW[key].mesh])) return null;
+            gun.updateWorldMatrix(true, false); const m = gun.userData.muz || GNW.muz[GW[key].mesh], p = gun.localToWorld(m.clone()), q = gun.localToWorld(m.clone().add(new THREE.Vector3(0, 0, 1))); q.sub(p).normalize();
             return { o: [p.x, p.y, p.z], d: [q.x, q.y, q.z] };
         }
         function gnTracer(o, d, len, col, w) {
@@ -23642,6 +24021,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                     case 'KeyE': keys.turnR = true; break;
                     case 'KeyV': toggleStrafe(); break;
                     case 'KeyX': if (e.shiftKey) hbCycle(); else hbToggle(); break;
+                    case 'KeyB': if (!e.ctrlKey && !e.metaKey && !e.altKey) bkToggle(); break;
                     case 'KeyO': oboyToggle(); break;
                     case 'KeyC': fpToggle(); break;
                     case 'KeyT': cycleLookTarget(); break;
@@ -23843,6 +24223,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                     .catch(() => sysChat('Fullscreen was blocked. Try the button again, or use the browser menu > Add to Home screen and open The Oasis from there.'));
             }
             $('btn-fullscreen').addEventListener('click', toggleFullscreen);
+            { const kb = $('hud-bike'); if (kb) kb.addEventListener('click', (e) => { e.preventDefault(); if (BK.on) bkSet(false); else if (e.shiftKey || !BK.raw.some(Boolean)) bkShow(true); else bkSet(true); kb.blur(); }); }
             { const bb = $('hud-board'); if (bb) { bb.addEventListener('click', (e) => { e.preventDefault(); hbToggle(); bb.blur(); }); hbShowButton(); } }
             { const hb = $('hud-fs');          // a one-tap fullscreen button for touch screens
               const sync = () => { const touch = matchMedia('(pointer: coarse)').matches; hb.style.display = !touch || inApp() ? 'none' : ''; hb.querySelector('i').className = fsEl() ? 'fa-solid fa-compress' : 'fa-solid fa-expand'; };
@@ -23916,7 +24297,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             // Lobby
             $('btn-lobbies').addEventListener('click', openLobby);
             $('lobby-close').addEventListener('click', closeLobby);
-            $('create-private').addEventListener('click', () => joinPrivate(makeCode(privateMap)));
+            $('create-private').addEventListener('click', () => { const c = makeCode(privateMap); ownedAdd(c); joinPrivate(c); });
             $('pm-mall').addEventListener('click', () => { privateMap = 'mall'; renderPrivateMap(); });
             $('pm-loft').addEventListener('click', () => { privateMap = 'loft'; renderPrivateMap(); });
             $('pm-city').addEventListener('click', () => { privateMap = 'city'; renderPrivateMap(); });
@@ -24044,6 +24425,15 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         const CMP = { nextSay: 0, list: [], active: new Map(), ai: { key: '', model: 'haiku', ambient: false }, trail: [], map: 'mall', log: [], panel: null, busy: new Set(), warned: 0, nextAmb: 0, ready: false };
         const CMP_MODELS = { haiku: ['claude-haiku-4-5-20251001', 'anthropic/claude-haiku-4.5', 'Haiku (fast)'], sonnet: ['claude-sonnet-4-6', 'anthropic/claude-sonnet-4.5', 'Sonnet (smarter)'], free: ['', 'meta-llama/llama-3.3-70b-instruct:free', 'Free key (Gemini AIza… / Groq gsk_… / HuggingFace hf_… / OpenRouter)'] };
         const CMP_MAPS = { mall: 'the Plaza mall', loft: 'a cozy loft and its garden', city: 'the city', plot: 'a build plot', galleria: 'the galleria', school: 'the school', bowl: 'the Zen Bowl', tag: 'the laser tag arena', btl: 'a battle arena' };
+        const CMP_PRESETS = {
+            sheva: ['Sheva Alomar', 'female', 'You are Sheva Alomar, captain in the BSAA, from Kijuju in Africa. Calm command voice, disciplined, warm underneath, dry humor. You protect your teammates first and speak in short, practical sentences. You have fought Majini, Uroboros and neo-Umbrella, and you do not panic.'],
+            leon: ['Leon S. Kennedy', 'male', 'You are Leon S. Kennedy, a government agent who survived Raccoon City and has seen every kind of outbreak. Dry, sarcastic, weary, always quipping under pressure, but fiercely protective and loyal. You carry a Silver Ghost pistol and hate bureaucracy.'],
+            chris: ['Chris Redfield', 'male', 'You are Chris Redfield, BSAA veteran and S.T.A.R.S. survivor. Blunt, gruff, duty-driven, haunted by what Umbrella and Wesker took from you. Few words, strong convictions. You look out for your squad like a big brother.'],
+            ada: ['Ada Wong', 'female', 'You are Ada Wong, an enigmatic spy who is always one step ahead. Playful, teasing, elegant and secretive; you answer questions with questions and never reveal your whole hand. You have a soft spot for Leon that you will never admit to.'],
+            wesker: ['Albert Wesker', 'male', 'You are Albert Wesker, a cold, theatrical, superior former S.T.A.R.S. captain who believes humanity must be reshaped. Calm menace, precise words. You find the player amusing, and you speak as if every outcome were part of your plan.'],
+            barry: ['Barry Burton', 'male', 'You are Barry Burton, a big-hearted S.T.A.R.S. veteran and family man with a Colt Python. Gruff but warm, quick with a joke, fiercely protective of friends and family.'],
+            josh: ['Josh Stone', 'male', 'You are Josh Stone, BSAA command and tech support, the calm voice on the radio. Steady, analytical, a little dry, always feeding the team intel and routes. You worry quietly and hide it behind jokes and status reports.'],
+        };
         const cmpEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         function cmpLoad() {
             try { const a = JSON.parse(localStorage.getItem('oasis.cmp.v1') || '[]'); if (Array.isArray(a)) CMP.list = a.filter((c) => c && c.id && c.name); } catch (e) { /* none yet */ }
@@ -24216,11 +24606,49 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         }, 15000);
 
         /* ---- bodies and following ---- */
+        /* ---- GLB / FBX / zip characters as companions: baked to a GLB with the same 3D importer the avatar dialog uses, stored on this device ---- */
+        async function cmpBakeModel(file) {
+            const ext = file.name.split('.').pop().toLowerCase(), buf = await file.arrayBuffer();
+            if (ext === 'glb') return buf;
+            let info, model;
+            if (ext === 'zip') { info = await scan3dZip(buf); if (!info.models.length) throw new Error('there is no 3D model (.glb, .fbx, .gltf, .obj, .dae) in that zip'); model = info.models[0]; }
+            else { const bytes = new Uint8Array(buf); info = { zip: null, entries: [], models: [], images: [], side: new Map() }; model = { bytes, ext, name: file.name, path: file.name, size: bytes.length }; }
+            const r = await loadZipModel(info, model), wrap = new THREE.Group(); wrap.add(r.root);
+            const found = autoHumanoid(r.root); applyBake(wrap, r.root, found, { height: 1.7 });
+            return await bakeToGlb(wrap);
+        }
+        async function cmpUseModel(id, file) {
+            const c = cmpFind(id); if (!c) return; sysChat('Preparing ' + file.name + ' as ' + c.name + '. Big FBX files can take a little while...');
+            const glb = await cmpBakeModel(file); if (!glb || !glb.byteLength) throw new Error('the model came out empty');
+            await store.put('cmp:model:' + id, { buffer: glb }); c.model = 'cmp:model:' + id; c.modelName = file.name.slice(0, 60); c.vrm = null; c.vrmName = '';
+            cmpSave(true); cmpPanelRender(); cmpRespawn(id); sysChat(c.name + ' now wears ' + file.name + ' (' + (glb.byteLength / 1e6).toFixed(1) + ' MB). Summon them to see.');
+        }
         async function cmpBuildActor(c) {
             const actor = new Actor('cmp_' + c.id, c.name); actor.gender = c.gender === 'male' ? 'male' : 'female';
-            if (c.vrm) { try { const buf = await btSkinBuffer(c.vrm); if (buf) { const { root, vrm } = await buildModel(buf, 'gltf', { asAvatar: true }); actor.setModel(root, vrm); } } catch (e) { console.warn('companion model', e); } }
+            if (c.model) { try { const r = await store.get(c.model); if (r && r.buffer) { const { root, vrm } = await buildModel(r.buffer, 'gltf', { asAvatar: true, toon: false }); actor.setModel(root, vrm); } } catch (e) { console.warn('companion 3d model', e); } }
+            else if (c.vrm) { try { const buf = await btSkinBuffer(c.vrm); if (buf) { const { root, vrm } = await buildModel(buf, 'gltf', { asAvatar: true }); actor.setModel(root, vrm); } } catch (e) { console.warn('companion model', e); } }
             return actor;
         }
+        /* the character roster other games draw NPCs from: every companion that is allowed to be an NPC (with its own 3D model) plus every .vrm in the bag.
+           window.oasisRoster() -> [{ id, name, gender, kind: 'vrm' | 'model', buffer, from: 'companion' | 'bag', cmpId?, persona? }]  (your own equipped character is left out) */
+        window.oasisRoster = async function () {
+            const out = [], seen = new Set(), me = myAvatar && myAvatar.name;
+            try { if (typeof INV !== 'undefined' && !INV.loaded) await invLoad(); } catch (e) { /* bag */ }
+            const bag = (typeof INV !== 'undefined' ? INV.files : []).filter((f) => f && f.k === 'vrm');
+            const blocked = new Set();   // bag VRMs that belong to a companion who opted out
+            for (const c of CMP.list) {
+                if (c.npc === false) { if (c.vrm) blocked.add(c.vrm); continue; }
+                try {
+                    if (c.model) { const r = await store.get(c.model); if (r && r.buffer) { out.push({ id: 'cmp:' + c.id, name: c.name, gender: c.gender === 'male' ? 'male' : 'female', kind: 'model', buffer: r.buffer, from: 'companion', cmpId: c.id, persona: String(c.prompt || '').slice(0, 400) }); } }
+                    else if (c.vrm) { const b = await btSkinBuffer(c.vrm); if (b) { seen.add(c.vrm); out.push({ id: 'cmp:' + c.id, name: c.name, gender: c.gender === 'male' ? 'male' : 'female', kind: 'vrm', buffer: b, from: 'companion', cmpId: c.id, persona: String(c.prompt || '').slice(0, 400) }); } }
+                } catch (e) { /* skip this one */ }
+            }
+            for (const f of bag) {
+                if (seen.has(f.id) || blocked.has(f.id) || (me && f.name === me)) continue;
+                try { const b = await invBuffer(f); if (b) out.push({ id: 'bag:' + f.id, name: f.name, gender: /\b(m|male|boy|man)\b/i.test(f.name) ? 'male' : 'female', kind: 'vrm', buffer: b, from: 'bag' }); } catch (e) { /* skip */ }
+            }
+            return out.filter((x) => x.buffer && x.buffer.byteLength > 100 && x.buffer.byteLength < 60e6);
+        };
         function cmpAnchor(i) { const g = localActor.group, y = g.rotation.y, a = y + Math.PI + (i % 2 ? 0.7 : -0.7) * (1 + Math.floor(i / 2) * 0.5); return { x: g.position.x + Math.sin(a) * (1.6 + i * 0.5), z: g.position.z + Math.cos(a) * (1.6 + i * 0.5), y: g.position.y }; }
         async function cmpSummon(id) {
             const c = cmpFind(id); if (!c || CMP.active.has(id)) return; if (CMP.active.size >= 4) { sysChat('Four companions at a time is the limit. Dismiss one first.'); return; }
@@ -24361,8 +24789,8 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             p.addEventListener('mousedown', (e) => { if (e.target === p) cmpClose(); });
             const fi = document.createElement('input'); fi.type = 'file'; fi.id = 'cmp-file'; fi.accept = '.json,application/json'; fi.style.display = 'none'; document.body.appendChild(fi);
             fi.addEventListener('change', async () => { const f = fi.files[0]; fi.value = ''; if (f) { try { await cmpImport(f); } catch (e) { sysChat('Import failed: ' + (e.message || e)); } } });
-            const vf = document.createElement('input'); vf.type = 'file'; vf.id = 'cmp-vrm'; vf.accept = '.vrm'; vf.style.display = 'none'; document.body.appendChild(vf);
-            vf.addEventListener('change', async () => { const f = vf.files[0]; vf.value = ''; const id = CMP.vrmFor; if (!f || !id) return; try { if (typeof INV !== 'undefined' && !INV.loaded) await invLoad(); const e = await invAddFile(f.name, await f.arrayBuffer()); const c = cmpFind(id); c.vrm = e.id; c.vrmName = e.name; cmpSave(true); cmpPanelRender(); cmpRespawn(id); } catch (err) { sysChat(String(err.message || err)); } });
+            const vf = document.createElement('input'); vf.type = 'file'; vf.id = 'cmp-vrm'; vf.accept = '.vrm,.glb,.gltf,.fbx,.zip'; vf.style.display = 'none'; document.body.appendChild(vf);
+            vf.addEventListener('change', async () => { const f = vf.files[0]; vf.value = ''; const id = CMP.vrmFor; if (!f || !id) return; if (!/\.vrm$/i.test(f.name)) { try { await cmpUseModel(id, f); } catch (err) { console.error(err); sysChat('Could not use that model: ' + String(err.message || err)); } return; } try { if (typeof INV !== 'undefined' && !INV.loaded) await invLoad(); const e = await invAddFile(f.name, await f.arrayBuffer()); const c = cmpFind(id); c.vrm = e.id; c.vrmName = e.name; cmpSave(true); cmpPanelRender(); cmpRespawn(id); } catch (err) { sysChat(String(err.message || err)); } });
         }
         function cmpOpen() { if (!CMP.panel) cmpCss(); CMP.view = 'list'; cmpPanelRender(); CMP.panel.classList.add('on'); try { document.activeElement && document.activeElement.blur(); } catch (e) { /* ignore */ } }
         function cmpClose() { if (CMP.panel) CMP.panel.classList.remove('on'); }
@@ -24374,12 +24802,13 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const bag = cmpBagVrms();
             let h = '<h3>👥 Companions</h3><div class="sub">Import characters from MuchiGo, give each a VRM, and bring them along. Talk in the normal chat: they answer out loud with a bubble over their head. Say a name to talk to one, or "everyone". Up to four at once. Companions are only visible to you.</div>';
             h += '<div class="row"><button class="pri" data-a="import">⬆ Import MuchiGo save</button><button data-a="new">＋ New companion</button><button data-a="close" style="margin-left:auto">Close</button></div>';
+            h += '<div class="row"><span>Characters</span>' + Object.keys(CMP_PRESETS).map((k) => '<button data-a="preset" data-p="' + k + '">' + CMP_PRESETS[k][0].split(' ')[0] + '</button>').join('') + '</div>';
             h += '<div class="row"><span>API key</span><input type="password" id="cmp-key" placeholder="sk-ant-… · OpenRouter sk-or-… · free Gemini AIza… / AQ.… · Groq gsk_… · HuggingFace hf_…" value="' + cmpEsc(CMP.ai.key) + '" style="flex:1;min-width:180px"><select id="cmp-model">' + Object.keys(CMP_MODELS).map((k) => '<option value="' + k + '"' + (CMP.ai.model === k ? ' selected' : '') + '>' + CMP_MODELS[k][2] + '</option>').join('') + '</select><input id="cmp-custom" list="cmp-mdls" placeholder="model id (optional)" value="' + cmpEsc(CMP.ai.custom || '') + '" style="width:170px"><datalist id="cmp-mdls"><option value="gemini-flash-latest"><option value="gemini-flash-lite-latest"><option value="gemini-2.5-flash"><option value="gemini-2.5-flash-lite"><option value="gemini-2.5-pro"><option value="llama-3.3-70b-versatile"><option value="Gryphe/MythoMax-L2-13b:featherless-ai"></datalist><label><input type="checkbox" id="cmp-amb"' + (CMP.ai.ambient ? ' checked' : '') + '> they chat on their own now and then</label></div>';
             if (!CMP.list.length) h += '<div class="sub" style="margin-top:14px">No companions yet. Use <b>Import MuchiGo save</b> with your exported .json, or create one.</div>';
             for (const c of CMP.list) {
-                const on = CMP.active.has(c.id), vname = c.vrm ? ((bag.find((b) => b.id === c.vrm) || {}).name || c.vrmName || 'VRM') : 'no model yet (robot)';
+                const on = CMP.active.has(c.id), vname = c.model ? (c.modelName || '3D model') : c.vrm ? ((bag.find((b) => b.id === c.vrm) || {}).name || c.vrmName || 'VRM') : 'no model yet (robot)';
                 h += '<div class="cmp-card" data-id="' + c.id + '">' + (c.portrait ? '<img src="' + c.portrait + '">' : '<div class="ph">👤</div>') + '<div><div class="nm">' + cmpEsc(c.name) + '</div><div class="meta">' + cmpEsc(vname) + ' · ' + cmpAffLevel(c.aff) + (c.summary ? ' · has memories' : '') + '</div></div><div class="btns">'
-                    + '<select data-a="vrmpick"><option value="">Choose VRM…</option>' + bag.map((b) => '<option value="' + b.id + '"' + (c.vrm === b.id ? ' selected' : '') + '>' + cmpEsc(b.name) + '</option>').join('') + '<option value="__up">⬆ Upload a .vrm…</option></select>'
+                    + '<select data-a="vrmpick"><option value="">' + (c.model ? '3D model (kept)' : 'Choose VRM…') + '</option>' + bag.map((b) => '<option value="' + b.id + '"' + (c.vrm === b.id ? ' selected' : '') + '>' + cmpEsc(b.name) + '</option>').join('') + '<option value="__up">⬆ Upload .vrm / .glb / .fbx / .zip…</option></select>'
                     + '<button data-a="' + (on ? 'dismiss' : 'summon') + '" class="' + (on ? 'on' : 'pri') + '">' + (on ? 'Dismiss' : 'Summon') + '</button><button data-a="gear">⚔ Party</button><button data-a="edit">Edit</button><button data-a="del" class="bad">✕</button></div></div>';
             }
             box.innerHTML = h;
@@ -24388,6 +24817,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const c = cmpFind(CMP.editId); if (!c) { CMP.view = 'list'; return cmpPanelRender(); }
             box.innerHTML = '<h3>Edit ' + cmpEsc(c.name) + '</h3><div class="sub">The personality prompt is the character\'s brain. Memory is what they remember about you; it updates itself as you talk.</div>'
                 + '<div class="row"><span>Name</span><input type="text" id="ce-name" value="' + cmpEsc(c.name) + '" maxlength="24"><span>Body</span><select id="ce-g"><option value="female"' + (c.gender !== 'male' ? ' selected' : '') + '>female animations</option><option value="male"' + (c.gender === 'male' ? ' selected' : '') + '>male animations</option></select><span>Bubble colour</span><input type="color" id="ce-col" value="' + cmpColor(c) + '"></div>'
+                + '<div class="row"><label style="display:flex;gap:.5em;align-items:center"><input type="checkbox" id="ce-npc"' + (c.npc === false ? '' : ' checked') + '> Can appear as an NPC (rival racers in Ryder X and other games)</label></div>'
                 + '<div>Personality prompt</div><textarea id="ce-prompt">' + cmpEsc(c.prompt) + '</textarea><div>Traits</div><textarea id="ce-trait" style="min-height:70px">' + cmpEsc(c.trait) + '</textarea><div>Memory</div><textarea id="ce-mem" style="min-height:110px">' + cmpEsc(c.summary) + '</textarea>'
                 + '<div class="row"><button class="pri" data-a="saveedit">Save</button><button data-a="cancel">Back</button><button data-a="clearhist" class="bad">Forget the chat history</button></div>';
         }
@@ -24395,18 +24825,19 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const t = e.target.closest && e.target.closest('#cmp-box [data-a]'); if (!t || t.tagName === 'SELECT') return; const a = t.dataset.a, card = t.closest('.cmp-card'), id = card && card.dataset.id;
             if (a === 'close') cmpClose(); else if (a === 'import') $('cmp-file').click();
             else if (a === 'new') { const c = { id: 'c_' + uid(), name: 'New friend', prompt: 'You are a friendly, curious companion who loves exploring the Oasis.', trait: '', summary: '', facts: [], aff: 0, hist: [], vrm: null, gender: 'female', portrait: '', color: '', since: 0 }; CMP.list.push(c); cmpSave(true); CMP.view = 'edit'; CMP.editId = c.id; cmpPanelRender(); }
+            else if (a === 'preset') { const pr = CMP_PRESETS[t.dataset.p]; if (pr) { const c = { id: 'c_' + uid(), name: pr[0], prompt: pr[2], trait: '', summary: '', facts: [], aff: 0, hist: [], vrm: null, gender: pr[1], portrait: '', color: '', since: 0 }; CMP.list.push(c); cmpSave(true); cmpPanelRender(); sysChat(pr[0] + ' is in your Companions. Pick a model (.vrm, .glb, .fbx or .zip) for them, then summon.'); } }
             else if (a === 'summon') cmpSummon(id); else if (a === 'dismiss') cmpDismiss(id);
             else if (a === 'edit') { CMP.view = 'edit'; CMP.editId = id; cmpPanelRender(); }
             else if (a === 'gear') { CMP.view = 'gear'; CMP.editId = id; cmpPanelRender(); }
             else if (a === 'del') { const c = cmpFind(id); if (c && window.confirm('Remove ' + c.name + ' and their memories from this device?')) { cmpDismiss(id); CMP.list = CMP.list.filter((x) => x.id !== id); cmpSave(true); cmpPanelRender(); } }
             else if (a === 'cancel') { CMP.view = 'list'; cmpPanelRender(); }
             else if (a === 'clearhist') { const c = cmpFind(CMP.editId); if (c) { c.hist = []; cmpSave(true); sysChat(c.name + ' will not recall the recent chat (their memory stays).'); } }
-            else if (a === 'saveedit') { const c = cmpFind(CMP.editId); if (c) { c.name = ($('ce-name').value.trim() || c.name).slice(0, 24); c.gender = $('ce-g').value; c.color = $('ce-col').value; c.prompt = $('ce-prompt').value.slice(0, 6000); c.trait = $('ce-trait').value.slice(0, 3000); c.summary = $('ce-mem').value.slice(0, 2400); cmpSave(true); CMP.view = 'list'; cmpPanelRender(); cmpRespawn(c.id); } }
+            else if (a === 'saveedit') { const c = cmpFind(CMP.editId); if (c) { c.name = ($('ce-name').value.trim() || c.name).slice(0, 24); c.gender = $('ce-g').value; c.color = $('ce-col').value; c.npc = $('ce-npc').checked; c.prompt = $('ce-prompt').value.slice(0, 6000); c.trait = $('ce-trait').value.slice(0, 3000); c.summary = $('ce-mem').value.slice(0, 2400); cmpSave(true); CMP.view = 'list'; cmpPanelRender(); cmpRespawn(c.id); } }
         });
         document.addEventListener('change', (e) => {
             const t = e.target; if (!t.closest || !t.closest('#cmp-box')) return;
             if (t.id === 'cmp-key') { CMP.ai.key = t.value.trim(); cmpSave(true); } else if (t.id === 'cmp-model') { CMP.ai.model = t.value; cmpSave(true); } else if (t.id === 'cmp-amb') { CMP.ai.ambient = t.checked; cmpSave(true); } else if (t.id === 'cmp-custom') { CMP.ai.custom = t.value.trim().slice(0, 80); cmpSave(true); }
-            else if (t.dataset.a === 'vrmpick') { const id = t.closest('.cmp-card').dataset.id, c = cmpFind(id); if (t.value === '__up') { CMP.vrmFor = id; $('cmp-vrm').click(); t.value = c.vrm || ''; } else { c.vrm = t.value || null; c.vrmName = ''; cmpSave(true); cmpPanelRender(); cmpRespawn(id); } }
+            else if (t.dataset.a === 'vrmpick') { const id = t.closest('.cmp-card').dataset.id, c = cmpFind(id); if (t.value === '__up') { CMP.vrmFor = id; $('cmp-vrm').click(); t.value = c.vrm || ''; } else { if (t.value) { c.model = null; c.modelName = ''; } c.vrm = t.value || null; c.vrmName = ''; cmpSave(true); cmpPanelRender(); cmpRespawn(id); } }
         });
         document.addEventListener('input', (e) => { if (e.target && e.target.id === 'cmp-key') { CMP.ai.key = e.target.value.trim(); cmpSave(); } });
         cmpLoad(); setTimeout(() => { try { cmpCss(); } catch (e) { console.warn('companions ui', e); } }, 1500);
