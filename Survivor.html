@@ -2078,7 +2078,25 @@ async function avLoad(buffer, name) {
     for (const side of ['left', 'right']) for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (const j of ['Proximal', 'Intermediate', 'Distal']) N[side + f + j] = vrm.humanoid.getNormalizedBoneNode(side + f + j); for (const side of ['left', 'right']) for (const j of ['Metacarpal', 'Proximal', 'Distal']) N[side + 'Thumb' + j] = vrm.humanoid.getNormalizedBoneNode(side + 'Thumb' + j);
     if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
     if (!N.spine) N.spine = N.hips; if (!N.chest) N.chest = N.spine; if (!N.neck) N.neck = N.head || N.chest;   // (a model without those bones: the next one up does their job)
-    vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), s = 1.68 / h;
+    vrm.scene.updateMatrixWorld(true);
+    { /* finger curl axes, worked out from the model itself: a hand that hangs in an A-pose, or a rig whose fingers roll differently, can't use one fixed axis.
+         For each finger: the axis is (finger direction x palm normal), so a positive turn closes it into the palm. The palm side is the one facing down (T-pose) or in toward the body (arms down). */
+        const ca = {}, V = THREE.Vector3, wp = (n) => n.getWorldPosition(new V()), hp = N.hips ? wp(N.hips) : new V();
+        for (const sd of ['left', 'right']) {
+            const hand = N[sd + 'Hand'], ip = N[sd + 'IndexProximal'], lp = N[sd + 'LittleProximal']; let n = null;
+            if (hand && ip && lp) {
+                const hpz = wp(hand), mid = N[sd + 'MiddleProximal'] || ip, fd = wp(mid).sub(hpz).normalize(), ac = wp(lp).sub(wp(ip)).normalize(); n = new V().crossVectors(fd, ac).normalize();
+                const inw = new V(hp.x - hpz.x, 0, hp.z - hpz.z).normalize(), sc = -n.y + n.dot(inw); if (sc < 0) n.negate();
+            }
+            for (const f of ['Index', 'Middle', 'Ring', 'Little']) {
+                const a = N[sd + f + 'Proximal'], d = N[sd + f + 'Distal'] || N[sd + f + 'Intermediate']; ca[sd + f] = new V(0, 0, sd === 'right' ? 1 : -1); if (!a || !d || !n) continue;
+                const dir = wp(d).sub(wp(a)); if (dir.lengthSq() < 1e-8) continue; dir.normalize(); const nn = n.clone().addScaledVector(dir, -n.dot(dir)); if (nn.lengthSq() < 1e-4) continue; nn.normalize();
+                const ax = new V().crossVectors(dir, nn); if (ax.lengthSq() > 1e-4) ca[sd + f] = ax.normalize();
+            }
+        }
+        AV.ca = ca;
+    }
+    const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), s = 1.68 / h;
     const P = (n) => n.getWorldPosition(new THREE.Vector3()); AV.ua = P(N.rightUpperArm).distanceTo(P(N.rightLowerArm)); AV.la = P(N.rightLowerArm).distanceTo(P(N.rightHand));
     const grp = new THREE.Group(); grp.add(vrm.scene); vrm.scene.position.y = -bb.min.y * 0; grp.scale.setScalar(s); grp.position.y = -bb.min.y * s; { const hn = vrm.humanoid.getNormalizedBoneNode('hips'); if (hn) { const hp = hn.getWorldPosition(new THREE.Vector3()); grp.position.x = -hp.x * s; grp.position.z = -hp.z * s; } }
     if (AV.root) { AV.root.removeFromParent(); }
@@ -2132,7 +2150,7 @@ function acSample(c, t, out, hyOut, w, first) {   // add one clip into the runni
 }
 const UPPER = /^(spine|chest|upperChest|neck|head|(left|right)(Shoulder|UpperArm|LowerArm|Hand|Thumb|Index|Middle|Ring|Little))/;
 function avAct(set, key, o) { const c = acClip(set, key); if (!c) return false; AC.act = { c, t: 0, rate: (o && o.rate) || 1, upper: !!(o && o.upper), hold: !!(o && o.hold), name: key }; AC.actDone = false; return true; }
-function avCurl(side, k) { const sd = side === 'R' ? 'right' : 'left', sg = side === 'R' ? 1 : -1; for (const f of FING) { let i = 0; for (const j of ['Proximal', 'Intermediate', 'Distal']) { const n = AV.N[sd + f + j]; if (n) { _e.set(0, 0, sg * k * [1.1, 1.5, 1.1][i]); n.quaternion.setFromEuler(_e); } i++; } } }
+function avCurl(side, k) { const sd = side === 'R' ? 'right' : 'left', sg0 = side === 'R' ? 1 : -1; for (const f of FING) { let i = 0; const ax = AV.ca && AV.ca[sd + f]; for (const j of ['Proximal', 'Intermediate', 'Distal']) { const n = AV.N[sd + f + j]; if (n) { const a = k * [1.1, 1.5, 1.1][i]; if (ax) n.quaternion.setFromAxisAngle(ax, a); else { _e.set(0, 0, sg0 * a); n.quaternion.setFromEuler(_e); } } i++; } } }
 const FING = ['Index', 'Middle', 'Ring', 'Little'];
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 const HINT = { R: V3(-0.5, -1, -0.25), L: V3(0.5, -1, -0.25) };
