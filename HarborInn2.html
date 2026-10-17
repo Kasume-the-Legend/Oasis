@@ -2284,8 +2284,14 @@ function avAnim(dt, mv) {
     AV.bt -= dt; const em = vrm.expressionManager; if (em) { if (AV.bt < 0) { AV.bt = 2.2 + Math.random() * 3; AV.bl = 0.14; } AV.bl = Math.max(0, (AV.bl || 0) - dt); em.setValue('blink', AV.bl > 0 ? Math.sin(AV.bl / 0.14 * Math.PI) : 0); }
     vrm.update(dt);
 }
+function oasisSig() { try { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); return pa && pa.buffer ? (pa.name || '') + '|' + pa.buffer.byteLength : ''; } catch (e) { return ''; } }
+let avBusy = false;
+async function avSync() {   // keep the character in step with the one you are wearing in the Oasis (it may load late, or you may change it)
+    if (avBusy || (OPT.avatar || 'oasis') !== 'oasis') return; const sg = oasisSig(); if (!sg || sg === AV.sig) return; avBusy = true;
+    try { const ok = await avBoot(); if (ok) { try { PL.light.removeFromParent(); PL.g.add(PL.light); } catch (e) { /* ok */ } if (UI.mode === 'title') titleMenu(); } } catch (e) { /* keep what we have */ } avBusy = false;
+}
 async function avBoot() {
-    const src = OPT.avatar || 'oasis'; let buf = null, name = '';
+    const src = OPT.avatar || 'oasis'; let buf = null, name = ''; AV.sig = src === 'oasis' ? oasisSig() : 'x';
     try {
         if (src === 'upload') { const r = await idbGet('avatar'); if (r) { buf = await r.arrayBuffer(); name = r.name || 'Uploaded VRM'; } }
         if (!buf && src !== 'none') { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); if (pa && pa.buffer) { buf = new Uint8Array(pa.buffer).slice().buffer; name = pa.name || 'Your Oasis character'; AV.src = 'oasis'; AV.gender = pa.gender === 'female' ? 'female' : 'male'; } }
@@ -2881,7 +2887,7 @@ function begin(loaded) {
 }
 function toTitle() { G.started = false; $('hud').classList.add('hide'); $('title').classList.remove('hide'); $('prompt').classList.add('hide'); UI.mode = 'title'; musPlay('title'); titleMenu(); }
 function titleMenu() {
-    const t = $('tmenu'); t.innerHTML = ''; const els = []; const add = (txt, fn) => { const b = btn(txt, fn); t.appendChild(b); els.push(b); };
+    const t = $('tmenu'); t.innerHTML = ''; { const cl = el('div', 'desc', 'Character: ' + (AV.on ? AV.name : (OPT.avatar || 'oasis') === 'oasis' && !oasisSig() ? 'Default soldier (no Oasis character found)' : 'Default soldier')); cl.style.cssText = 'text-align:center;margin:0 0 .6em;opacity:.75'; t.appendChild(cl); } const els = []; const add = (txt, fn) => { const b = btn(txt, fn); t.appendChild(b); els.push(b); };
     add('New Game', () => { auInit(); startNew(); }); if (lsGet('save', null)) add('Continue', () => { auInit(); continueGame(); }); add('Sound and options', () => { auInit(); G.started = false; UI.mode = 'menu'; M.tab = 'sound'; renderMenu(); $('menu').style.zIndex = 20; });
     add('Co-op (2 players)', () => { auInit(); coMenu(); });
     add('Controls', () => { const p = panel('Controls'); p.appendChild(el('div', 'desc', 'Classic: Up/Down walk, Left/Right turn.\nZ or Shift (hold): aim. Space/Enter/E: use, take, open, or fire while aiming.\nQ: quick turn   R: reload   Tab/I: bag, files, sound\n\nTouch: use the on-screen buttons.\n\nFind keys, manage your bag, save at typewriters, and get to the roof.')); const b = btn('Back', () => { closePanel(); UI.mode = 'title'; titleMenu(); }); b.style.marginTop = '1em'; p.appendChild(b); UI.mode = 'ctl'; setNav([b]); UI.back = () => { closePanel(); UI.mode = 'title'; titleMenu(); }; });
@@ -2890,13 +2896,13 @@ function titleMenu() {
 function endScreen() {
     musPlay('safe'); const mins = Math.floor(G.time / 60), secs = Math.floor(G.time % 60), rank = G.saves <= 14 && mins < 270 ? 'S' : G.saves <= 26 && mins < 380 ? 'A' : 'B', gil = { S: 3000, A: 1800, B: 900 }[rank];
     if (!G.rewarded) { G.rewarded = 1; try { const og = window.parent && window.parent.oasisGil; if (og && og.add) og.add(gil, true); } catch (e) { /* standalone */ } }
-    const p = panel(''); const t = el('div', 'big', 'YOU MADE IT OUT'); t.style.cssText = 'top:14%;font-size:2.4em;letter-spacing:.2em;color:#e0c26a;font-weight:900'; p.appendChild(t);
-    const s = el('div', 'big desc', 'Time ' + mins + ':' + String(secs).padStart(2, '0') + '     Saves ' + G.saves + '     Monsters down ' + G.kills + '\n\nRank ' + rank + '   (+' + gil + ' Gil if you came from the Oasis)\n\nHale is gone. The three medals lie in the gate, and the boat engine turns over. The harbor lights come up one by one as you cast off. Behind you, Harbor Inn goes dark at last. The night is over.'); s.style.cssText += ';top:34%;white-space:pre-line'; p.appendChild(s);
+    const p = panel(''); const t = el('div', 'big', 'END OF CHAPTER 1'); t.style.cssText = 'top:14%;font-size:2.4em;letter-spacing:.2em;color:#e0c26a;font-weight:900'; p.appendChild(t);
+    const s = el('div', 'big desc', 'Time ' + mins + ':' + String(secs).padStart(2, '0') + '     Saves ' + G.saves + '     Monsters down ' + G.kills + '\n\nRank ' + rank + '   (+' + gil + ' Gil if you came from the Oasis)\n\nThe Spire lift groans upward into the dark. Below you, the Hive stirs. Chapter 2 is coming.'); s.style.cssText += ';top:34%;white-space:pre-line'; p.appendChild(s);
     const b = btn('Back to title', () => { closePanel(); toTitle(); }); b.style.cssText += ';position:absolute;left:35%;right:35%;bottom:12%'; p.appendChild(b); setNav([b]); UI.back = null;
 }
 /* ----- boot ----- */
 (async function main() {
-    R.useLegacyLights = true; initPlayer(); avBoot().then((ok) => { if (ok) { PL.light.removeFromParent(); PL.g.add(PL.light); sfx('pickup'); } try { if (UI.mode === 'menu' && M.tab === 'opts') renderMenu(); } catch (e) { /* ui */ } }); PL.light = new THREE.PointLight(0xffe0a0, 0, 6); PL.light.position.set(0.3, 1.3, 0.8); PL.g.add(PL.light); PL.g.visible = true;
+    setInterval(() => { try { if (!G.started || UI.mode === 'title') avSync(); } catch (e) { /* ok */ } }, 2000); R.useLegacyLights = true; initPlayer(); avBoot().then((ok) => { if (ok) { PL.light.removeFromParent(); PL.g.add(PL.light); sfx('pickup'); } try { if (UI.mode === 'menu' && M.tab === 'opts') renderMenu(); } catch (e) { /* ui */ } }); PL.light = new THREE.PointLight(0xffe0a0, 0, 6); PL.light.position.set(0.3, 1.3, 0.8); PL.g.add(PL.light); PL.g.visible = true;
     RM.def = null; setupTouch(); try { if (window.OASIS && window.OASIS.join) { const c = String(window.OASIS.join).toUpperCase(); if (/^[A-Z]{4}$/.test(c)) { coMenu(); coJoin(c); } } } catch (e) { /* none */ } if (!OPT.grain) $('grain').style.display = 'none'; sizeR();
     scene.add(new THREE.AmbientLight(0x000000, 0)); loadRoom('ridge', null, { x: 0, z: 3, rot: Math.PI }); RM.busy = false; G.started = false; camPick(true);
     musLoadStore(); titleMenu(); UI.mode = 'title'; requestAnimationFrame(frame);

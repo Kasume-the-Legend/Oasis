@@ -227,3 +227,6 @@ Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/a
 - Fixed per-frame crash when a partner model lacked chest/neck/spine (`ar()` null guard, `rpAnim` wrapped in try/catch): it froze the picture while sound/movement continued.
 - A failed own-avatar load now restores the default soldier and shows the reason on screen.
 - Not verified: 115 MB sample FBX crashes the headless test browser (memory); needs a real-device check.
+
+## Harbor Inn follows the Oasis character
+- `avSync` (every 2 s while on the title) re-loads the character if the Oasis one changed or loaded late; title shows "Character: <name>". HarborInn2 end screen now says END OF CHAPTER 1.
