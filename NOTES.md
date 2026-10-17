@@ -116,11 +116,6 @@ Six presets (Optimal, Performance, Balanced, Nice, Super Nice, Perfect) set reso
 ## Sign-in gate (Oct 2026)
 - After the splash: Log in / Sign up (`acGate`, shown while `acGateOn()`; tiny "Play without an account" link = guest for the session). Sign up -> joins your Harbor Studio, opens "Create your character". Log in -> `acLand()`: your studio, or the public open-world room you last left (`oasis.lastroom`, written in `joinRoom`, cloud-synced). Never an invite/other player's room when signed in (invite links only work for guests). `psHomeLoft` is now in the cloud save so your studio follows your account. Test bypass: localStorage `oasis.nogate`=1.
 
-## Masaki House (Tenchi Muyo) — custom room
-- Map `masaki` (room code prefix N). Built lazily by `ensureMasaki()`; `MK_OWNERS=['kasumex']` controls who sees it under Lobby → Custom Rooms (`renderCustomRooms`). Others can only enter with the code. Open to all: change `MK_OWNERS` check in `mkAcct`.
-- Two-storey house, veranda, pond, shrine hill with lantern path. Stairs ramp + upper floor in `masakiGround`; collisions in `masakiCollide`.
-- Roof + veranda skirt roofs (`MK.roofParts`) hide while you are inside the house footprint and camera max distance drops to 5 (`masakiUpdate`).
-
 ## Party invites to online friends
 - Friends panel shows "Invite to party" for friends who are online in another room (same room still uses the direct peer message). Goes through the save Worker: `/pinv` (drop) and `/pinbox` (poll every 8 s, invites expire after 3 min, table `invites` auto-created). **The Worker must be redeployed** (`server/worker.js`) for this to work.
 
@@ -164,16 +159,6 @@ Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/a
 - Ribbon material must be DoubleSide + polygonOffset (else culled/z-fights).
 - TODO: exclude tree scatter near trail; add paths to plaza/hall/cavern/cliffs; tune cavern crystals.
 
-## Adventure Mode (new)
-Files: `Adventure.js` (loaded on demand like Levels.js), `adventure/zones.json` (data), glue block in index.html after `MAP_DEFS.btl` (search "Adventure Mode"), `Levels.js` now also exports `gk` + `pathTex`.
-- Lobby entry "Adventure Mode" (map `adv`, solo room `adv-<random>`). Title menu: Continue / New Game. Save key `oasisAdv.v1` (zone, flags, spheres, visited, kills).
-- zones.json: per zone `path` (spline points x,z), `width`, `biome`, `weather`, `ground`, `sky/fog/light`, `ambient` + `music {root,scale}` (generative; or `music.src` file), `scatter` (GK models along road), `landmarks`, `saves` (Save Spheres at path t), `encounters {volumes[{t0,t1,rate}|box], groups[{w,foes[]}], lvl[a,b], grace, stepDist}`, `events` (flags), `exits {prev,next}` (+`requires` flag).
-- Road clamp + locked road-following camera (`A.clamp`, `A.cam`). Zone ends fade and load the next zone; walking back past t=0 returns.
-- Encounter -> `advBattle`: saves snapshot, flash, `setMap('btl')` (no network), `BT.bgForce` = zone biome, `BT.advEnc` makes `btNextWave` use the zone's foes and level; `btVictory/btOver` call `advBattleDone` -> back to road at the same spot (loss = wake at last sphere). HP/MP carry over fights; Save Spheres heal + unlock fast travel (Map button).
-- `update` in MAP_DEFS gets the actor group: pass `g.position` (bug fixed).
-- TODO: GLB zones from Unreal (`model` field + helper objects), more zones, boss encounters/story gates, tune zone `lvl` (Macalania 8-14 is hard at Lv1).
-- Tests: headless runs in scratchpad dx `adv2.mjs` (flow) / `adv3.mjs` (screens).
-
 ## College Raimon (school map)
 - Lobby "College Raimon" (room `school-01`, map `raimon`) replaces the old Oasis High School entry; the old `school` map code is still in index.html (private-room option still uses it).
 - Source: user's CollegeRaimon.glb (430 MB, 4.8M tris instanced). Optimized with gltf-transform + meshopt (scripts were in /tmp/gt: opt3.mjs, nav.mjs): decimated by kind (trees 5%, buildings 30%), 1024px WebP textures, 80 m chunks, far sky shells removed, quantized -> `school/raimon.glb` 42 MB / 1.57M tris.
@@ -186,7 +171,7 @@ Files: `Adventure.js` (loaded on demand like Levels.js), `adventure/zones.json` 
 - Forging replaces the hero custom weapon: `cfg {lock:1, dyn:1, fx:{bonus stats}, forge:design, size, grip}`. `dyn` = power is min(forged power, class-level cap) and refreshes on class level-up (`clsAdd`). Worn immediately via `cswGear('hero', true)`; the Equipment card / Upgrade +1..+9 work on it as before. Blade is built +Y with the grip height computed so the existing equipment placement (hand/sheath) lines it up; no model file: it is rebuilt from `cfg.forge` at startup (`forgeRestore`). Importing a model clears the forge data.
 - Infinity Blade zip the user sent is Unreal .uasset (unreadable here); would need GLB/FBX export.
 
-## Weather + day/night on big GLB maps (Raimon, Nuu)
+## Weather + day/night on big GLB maps (Raimon)
 - Both maps build their own sky with `cySkyBuild(root, true)` and call `cySkyUpdate(dt, pos, ctx)` from their `update`; night lamps use `CYT.nightF`.
 - Map ids `raimon`, `nuu` are in every outdoor list (`wxGrp`, `wxMapChanged`, `outdoor`, fog density, audio, weather chip) and in `fsSurface`.
 
@@ -195,12 +180,24 @@ Files: `Adventure.js` (loaded on demand like Levels.js), `adventure/zones.json` 
 - `RM_REGS` in index.html: each region loads when the player gets near (`near`) and is disposed when far (`far`); fetched buffers are cached. Spawn loads S + T.
 - Rebuild: `/tmp/gt/split.mjs` (3 regions via node extras `reg`) then `opt4.mjs <region> out.glb`.
 
-## Forest of Nuu (map id `nuu`, lobby channel `nuu-01`)
-- Data in `nuu/`: `nuu_land.glb` (terrain, positions only), `nuu_props.glb` + `nuu_inst.json` (trees/rocks/shrubs: LOD0 + `@1` low LOD for trees; instance = [type,x,y,z,qx,qy,qz,qw,scale]), `nuu_town.glb` (Village Kit pieces, FBX converted through a browser FBXLoader + GLTFExporter), `nuu.nav` (1 m heights + 0.5 m blocked bits, same format as Raimon).
-- Built by `/tmp/gt/nuu.mjs` (Forest_of_Nuu.glb -> nuu/), `/tmp/gt/town.mjs` (kit -> nuu_town.glb).
-- Town: clearing at `NU.TC` (8, 4); terrain is flattened in JS (`nuFlatW`) for vertices and nav; trees within 37 m removed; houses/stalls/props are placed in `nuBuildTown` and block the walk grid with oriented boxes.
-- Safe zone: radius `NU.SAFE_R` (40 m) around the town; no encounter rolls inside it (toast on enter/leave).
-- Encounters: every `NU_STEP` (4 m) walked outside the zone, after `NU_GRACE` (24 m) since the last fight, chance `NU_RATE` (0.15). Table `NU_TABLE` by distance ring (<100, <175, beyond) picks foes + level. `nuBattle` saves your spot, fades, `advSwitch('btl')` with `BT.advEnc` / `BT.bgForce` (forest biome, weather from WX/night); `advBattleDone` forwards to `nuBattleDone` which returns you to the exact spot (or the village after a defeat).
-- Quirk: quantized GLB attributes are int16; when baking node transforms into geometry use `nuF32()` first.
-- Tests: `window.__nu`, `window.__nuBattle(foes, lv)`, `window.__nuDone(won)`.
-- Music: `nuu/nuu_bgm.mp3` (Berglund's Forest) loops at 75% while on the `nuu` map (`nuBgm`); paused in the battle arena and on other maps, resumes on return.
+
+## Removed
+- Adventure Mode (Adventure.js, adventure/) and Forest of Nuu (nuu/) were deleted on request; `BT.advEnc` hooks in the arena code are left in place but unused.
+- Masaki House (custom room, `masaki` map) was deleted on request.
+
+## Ryder X: tuning + Daily Course
+- Garage TUNING row: four stats per board type (top speed, acceleration, handling, boost), 5 levels each, paid from the Oasis Gil wallet through `window.parent.oasisGil` (add with a negative number; needs launching from the Oasis). Stored in `SAVE.tune[boardType]`; applied to the player's racer only via `tunedType()` in `e_board.js` (`pr.ty = tunedType(...)` in `startRace`). Costs/effects are the `TUNE` table.
+- Daily Course: `d_track.js` pushes one generated track (id `daily-YYYY-MM-DD`, seeded by the UTC date, same for everyone) at the end of `TRACKS`; it shows up in Quick Race / Time Trial with its own best times and ghost. Autopilot-tested on 8 different days: all finish, no stuck racers.
+- Source for Ryder X lives in `/tmp/fg/rx` (split `*.js` + `build.sh`), only the built `RyderX.html` is in this repo.
+
+## AAA pass (first slice)
+- `aaaRender()` in index.html: EffectComposer (HalfFloat MSAA target) -> bloom -> grade/vignette/grain -> OutputPass (ACES). Only on `city` and `diner` maps, Balanced graphics and up, never during emulator. Per-map settings in `AAA.maps`. Kill switch: `window.__noAAA=true`. Backup: /tmp/index.pre-aaa.html.
+- City: cars use MeshPhysicalMaterial clear-coat; car models gained bumpers/mirrors/grille/rims; tree canopies are displaced icosphere detail 4.
+- Still toon-lit: buildings, canopies, road. Next real step is replacing them with authored GLB assets.
+- Facades (FFXII method): `facade()` shader now ends with a baked-look wear block (window reveal shadow `wrv`, ground AO, ledge shadow, grime streaks, mottling; program key `cyfac2`). `cyBuild` adds cornice + drip, base course, floor bands (every 3-4 floors) and corner piers per tier (skipped on party walls). Car paint is its own `M.car` (physical clear-coat); `M.vc` stays toon for props.
+- Key's Kitchen: `ensureKitchen` floors repainted (grouted/worn tile, planked wood with knots), static shader patch `kcM` (wall tile+grout, toe-kick/ceiling AO, cabinet door seams, speckled worktops; key `kc1`), real shadows from the sun light, plus cabinet fronts/handles/toe kicks, shelves with jars, pan rail, skirting, pendant shades. Backup /tmp/index.pre-kc.html.
+- Ryder X (source /tmp/fg/rx): composer now MSAA x4 HalfFloat + bloom + grade pass (sat/contrast/split-tone/vignette/chromatic aberration/grain, scales with speed) + ACES via renderer; road texture 512x1024 with rubber lines, joints, cracks, worn paint; window texture with frames/mullions/gradients; city towers get setback caps, antennas and red beacons. Backups: d2_scenery.pre-aaa.js, g_game.pre-aaa.js, b_util.pre-aaa.js.
+- Key's Kitchen food: `kcItemMesh` rewritten with lathe buns (sesame), displaced patties with grill marks (`kcPattyGeo`, `kcGrillMarks`), ruffled lettuce, seeded tomato slices, ringed onion, seeded pickles, wavy striped bacon, draped cheese, fries in a carton, cups with straw/lid/shake cream+cherry, lumpy potatoes. Grill patties and fryer fries use the same geometry. Test: `__kc.item(it)` returns the group. Backup /tmp/index.pre-food.html.
+- Grab-from crates (lettuce, tomato, cheese, onion, pickle, bacon crates; potato and meat bins) now hold `kcPile(k, ...)` heaps of real ingredient models in a steel tray. Backup /tmp/index.pre-crates.html.
+- Cosy diner dining room (in `ensureKitchen`): rugs, red cloths, candles (flicker in `kcUpdate`), vases, pendant shades, string lights, potted plants, framed pictures, clock, neon OPEN, welcome mat, curtained dusk windows, 3 warm point lights, warmer hemisphere/sun and a warm grade (`AAA.maps.diner.tint`). Static merge now non-indexes everything (Icosahedron is non-indexed; mixing returns null). Backup /tmp/index.pre-cozy.html.
+- GLB characters: `handleFile` now sends any .glb/.gltf with a recognised humanoid skeleton (or a VRM) through Character Setup (gender + saved to My Characters) instead of dropping it in as a prop. A skinned model with an unrecognised skeleton asks (OK = wear anyway, Cancel = prop). Static models still place as props with a hint. Test: /tmp scratchpad dx/glb1.mjs with plain_humanoid.glb (VRM tags stripped). Backup /tmp/index.pre-glbav.html.

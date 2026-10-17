@@ -98,6 +98,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ============================== utilities ============================== */
@@ -112,7 +113,7 @@ const ord = (n) => ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][
 
 /* ============================== save data ============================== */
 const SAVE_KEY = 'ryderx.save.v1';
-const DEF_SAVE = { best: {}, ghosts: {}, cups: {}, opt: { vol: 0.8, mus: 0.6, sfx: 0.9, bloom: 1, laps: 3, steer: 1, hud: 1, shake: 1 }, board: { type: 'speed', color: 0, rider: 0 }, avatar: 'oasis', stats: { races: 0, wins: 0, tricks: 0 } };
+const DEF_SAVE = { best: {}, ghosts: {}, cups: {}, opt: { vol: 0.8, mus: 0.6, sfx: 0.9, bloom: 1, laps: 3, steer: 1, hud: 1, shake: 1 }, board: { type: 'speed', color: 0, rider: 0 }, avatar: 'oasis', stats: { races: 0, wins: 0, tricks: 0 }, tune: {} };
 let SAVE = JSON.parse(JSON.stringify(DEF_SAVE));
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { SAVE = Object.assign(SAVE, s); SAVE.opt = Object.assign({}, DEF_SAVE.opt, s.opt || {}); SAVE.board = Object.assign({}, DEF_SAVE.board, s.board || {}); SAVE.stats = Object.assign({}, DEF_SAVE.stats, s.stats || {}); } } catch (e) { /* storage unavailable */ }
 let _saveT = 0; function save(now) { clearTimeout(_saveT); const f = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); } catch (e) { /* quota or private mode */ } }; if (now) f(); else _saveT = setTimeout(f, 400); }
@@ -242,6 +243,18 @@ const TRACKS = [
     { id: 'magma', name: 'Magma Run', theme: 'lava', diff: 3, seed: 101, R: 310, harm: [[2, 0.15, 0.4], [3, 0.12, 1.5], [4, 0.06, 2.6]], ey: [[2, 14, 1.2], [3, 10, 0.1], [5, 6, 2.2]], width: 29, ramps: 6, pads: 8, rings: 8, blocks: 6, desc: 'Race above rivers of fire. Smash the crates.', bpm: 136, key: 3, mode: 'phr' },
     { id: 'obsidian', name: 'Obsidian Spire', theme: 'lava', diff: 3, seed: 103, R: 360, harm: [[2, 0.12, 1.9], [3, 0.14, 0.7], [5, 0.05, 1.6], [6, 0.02, 0.3]], ey: [[2, 26, 0.2], [3, 16, 1.9], [4, 8, 0.8]], width: 30, ramps: 8, pads: 10, rings: 9, blocks: 6, desc: 'The final test: huge air, hard corners, molten glow.', bpm: 150, key: 6, mode: 'min' },
 ];
+/* ---- the Daily Course: one new generated track a day, the same for everyone (seeded by the UTC date) ---- */
+(function () {
+    const day = new Date().toISOString().slice(0, 10); let h = 2166136261; for (const ch of day) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+    const rnd = (() => { let a = h; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
+    const themes = ['oasis', 'city', 'jungle', 'desert', 'sky', 'ice', 'lava'], th = themes[Math.floor(rnd() * themes.length)];
+    const nm = { oasis: ['Sunny', 'Tidal', 'Breezy'], city: ['Neon', 'Chrome', 'Midnight'], jungle: ['Emerald', 'Mossy', 'Wild'], desert: ['Golden', 'Dusty', 'Scorched'], sky: ['Cirrus', 'Skybound', 'Stratos'], ice: ['Frozen', 'Crystal', 'Polar'], lava: ['Molten', 'Cinder', 'Ember'] }[th];
+    const noun = ['Dash', 'Loop', 'Run', 'Sprint', 'Circuit', 'Rush'];
+    const ks = [2, 3, 4, 5].sort(() => rnd() - 0.5), na = 2 + (rnd() > 0.5 ? 1 : 0);
+    const harm = ks.slice(0, na).map((k, i) => [k, +(0.16 - i * 0.04 - rnd() * 0.03).toFixed(3), +(rnd() * 6.28).toFixed(2)]);
+    const ey = [[2 + Math.floor(rnd() * 3), 8 + Math.floor(rnd() * 12), +(rnd() * 6.28).toFixed(2)], [3 + Math.floor(rnd() * 3), 5 + Math.floor(rnd() * 6), +(rnd() * 6.28).toFixed(2)]];
+    TRACKS.push({ id: 'daily-' + day, name: 'Daily: ' + nm[Math.floor(rnd() * 3)] + ' ' + noun[Math.floor(rnd() * 6)], theme: th, diff: 2, seed: 200 + Math.floor(rnd() * 800), R: 280 + Math.floor(rnd() * 70), harm, ey, width: 26 + Math.floor(rnd() * 7), ramps: 3 + Math.floor(rnd() * 4), pads: 6 + Math.floor(rnd() * 4), rings: 5 + Math.floor(rnd() * 4), blocks: 2 + Math.floor(rnd() * 4), desc: 'Today\'s course (' + day + '). A new one every day, the same for everybody.', bpm: 120 + Math.floor(rnd() * 26), key: Math.floor(rnd() * 12), mode: rnd() > 0.5 ? 'maj' : 'min', daily: day });
+})();
 const CUPS = [
     { id: 'neon', name: 'Neon Cup', tracks: ['oasis', 'neon', 'ruins'] },
     { id: 'sky', name: 'Sky Cup', tracks: ['dunes', 'cloud', 'oasis', 'neon'] },
@@ -329,21 +342,25 @@ const SID = { oasis: 'oasis', city: 'city', jungle: 'jungle', desert: 'dunes', s
 /* ============================== textures, sky, track meshes, scenery ============================== */
 function cvTex(w, h, draw, repeat) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
 function roadTexture(th, id) {
-    return cvTex(256, 512, (g, w, h) => {
-        const rnd = mulberry(7); g.fillStyle = th.road; g.fillRect(0, 0, w, h);
-        for (let i = 0; i < 1800; i++) { g.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.08)'; g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3); }
+    return cvTex(512, 1024, (g, w, h) => {
+        const rnd = mulberry(7); g.fillStyle = th.road; g.fillRect(0, 0, w, h); { const vg = g.createLinearGradient(0, 0, w, 0); vg.addColorStop(0, 'rgba(0,0,0,.28)'); vg.addColorStop(0.12, 'rgba(0,0,0,0)'); vg.addColorStop(0.88, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.28)'); g.fillStyle = vg; g.fillRect(0, 0, w, h); for (const x of [0.27, 0.73]) { const rg = g.createLinearGradient(w * (x - 0.09), 0, w * (x + 0.09), 0); rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(0.5, 'rgba(0,0,0,.2)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(w * (x - 0.09), 0, w * 0.18, h); } }
+        for (let i = 0; i < 7000; i++) { g.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.09)'; g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3); }
+        g.fillStyle = 'rgba(0,0,0,.35)'; for (let y = 0; y < h; y += 256) { g.fillRect(0, y, w, 3); g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(0, y + 3, w, 1); g.fillStyle = 'rgba(0,0,0,.35)'; }
+        g.lineWidth = 1.5; for (let i = 0; i < 16; i++) { g.strokeStyle = 'rgba(0,0,0,' + (0.15 + rnd() * 0.2) + ')'; let x = rnd() * w, y = rnd() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (rnd() - 0.5) * 30; y += 8 + rnd() * 24; g.lineTo(x, y); } g.stroke(); }
+        for (let i = 0; i < 10; i++) { g.strokeStyle = 'rgba(10,10,12,' + (0.1 + rnd() * 0.12) + ')'; g.lineWidth = 5 + rnd() * 3; const x = w * (0.2 + rnd() * 0.6); g.beginPath(); g.moveTo(x, rnd() * h); g.bezierCurveTo(x + 20, rnd() * h, x - 20, rnd() * h, x + 8, rnd() * h); g.stroke(); }
         if (id === 'city') { g.strokeStyle = 'rgba(25,227,255,.13)'; g.lineWidth = 2; for (let y = 0; y < h; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }
         if (id === 'jungle') { g.strokeStyle = 'rgba(20,30,10,.45)'; g.lineWidth = 3; for (let y = 0; y < h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let x = (y / 128 % 2) * 64; x < w; x += 128) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 128); g.stroke(); } } g.fillStyle = 'rgba(60,110,40,.22)'; for (let i = 0; i < 40; i++) g.fillRect(rnd() * w, rnd() * h, 10 + rnd() * 30, 6 + rnd() * 10); }
         if (id === 'dunes') { g.fillStyle = 'rgba(255,230,180,.08)'; for (let i = 0; i < 30; i++) g.fillRect(0, rnd() * h, w, 2 + rnd() * 6); }
         if (id === 'cloud' || id === 'oasis') { g.strokeStyle = id === 'cloud' ? 'rgba(122,92,255,.12)' : 'rgba(255,255,255,.1)'; g.lineWidth = 2; for (let y = 0; y < h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } }
         // lane markings: solid edge lines, dashed lane dividers
-        g.fillStyle = th.line; g.globalAlpha = 0.9; g.fillRect(w * 0.03, 0, 6, h); g.fillRect(w * 0.97 - 6, 0, 6, h); g.globalAlpha = 0.55; for (const x of [0.34, 0.66]) for (let y = 0; y < h; y += 128) g.fillRect(w * x - 3, y + 8, 6, 64); g.globalAlpha = 1;
+        g.fillStyle = th.line; g.globalAlpha = 0.9; g.fillRect(w * 0.03, 0, 12, h); g.fillRect(w * 0.97 - 12, 0, 12, h); g.globalAlpha = 0.55; for (const x of [0.34, 0.66]) for (let y = 0; y < h; y += 256) g.fillRect(w * x - 6, y + 16, 12, 128); g.globalAlpha = 1;
+        for (let i = 0; i < 2600; i++) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(rnd() * w, rnd() * h, 2, 2); }   // worn paint
     }, true);
 }
 function chevronTex(c1, c2, bg) { return cvTex(128, 128, (g, w, h) => { g.fillStyle = bg || '#000'; g.fillRect(0, 0, w, h); for (let k = 0; k < 2; k++) { g.strokeStyle = k ? c2 : c1; g.lineWidth = 14; g.lineCap = 'round'; g.beginPath(); g.moveTo(w * 0.15, h * (0.95 - k * 0.5)); g.lineTo(w * 0.5, h * (0.55 - k * 0.5)); g.lineTo(w * 0.85, h * (0.95 - k * 0.5)); g.stroke(); } }, true); }
 function checkerTex() { return cvTex(128, 32, (g, w, h) => { for (let y = 0; y < 2; y++) for (let x = 0; x < 16; x++) { g.fillStyle = (x + y) % 2 ? '#fff' : '#111'; g.fillRect(x * 8, y * 16, 8, 16); } }, true); }
 function textTex(txt, col, w = 512, h = 128, bg) { return cvTex(w, h, (g) => { if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); } g.font = 'italic 800 ' + Math.floor(h * 0.62) + 'px Orbitron, Arial Black, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = col; g.shadowBlur = 18; g.fillStyle = '#fff'; g.fillText(txt, w / 2, h / 2 + 4); g.shadowBlur = 0; g.lineWidth = 3; g.strokeStyle = col; g.strokeText(txt, w / 2, h / 2 + 4); }); }
-function winTex(seed, w = 64, h = 128) { return cvTex(w, h, (g) => { const r = mulberry(seed); g.fillStyle = '#05060f'; g.fillRect(0, 0, w, h); const cols = ['#ffd27a', '#7ae8ff', '#ff7ac8', '#fff6d8', '#9a8aff']; for (let y = 3; y < h - 3; y += 8) for (let x = 3; x < w - 3; x += 8) if (r() < 0.55) { g.fillStyle = cols[Math.floor(r() * cols.length)]; g.fillRect(x, y, 4, 5); } }, true); }
+function winTex(seed, w = 128, h = 256) { return cvTex(w, h, (g) => { const r = mulberry(seed); g.fillStyle = '#05060f'; g.fillRect(0, 0, w, h); const cols = ['#ffd27a', '#7ae8ff', '#ff7ac8', '#fff6d8', '#9a8aff']; for (let y = 4; y < h - 4; y += 16) { g.fillStyle = 'rgba(70,80,120,.35)'; g.fillRect(0, y - 3, w, 2); for (let x = 4; x < w - 4; x += 16) { g.fillStyle = '#0c0e1c'; g.fillRect(x, y, 9, 11); if (r() < 0.55) { const c = cols[Math.floor(r() * cols.length)]; const gr = g.createLinearGradient(0, y, 0, y + 11); gr.addColorStop(0, c); gr.addColorStop(1, 'rgba(0,0,0,.55)'); g.fillStyle = gr; g.fillRect(x, y, 9, 11); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(x + 4, y, 1, 11); } g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(x, y + 11, 9, 1); } } const gg = g.createLinearGradient(0, 0, 0, h); gg.addColorStop(0, 'rgba(0,0,0,0)'); gg.addColorStop(1, 'rgba(0,0,0,.45)'); g.fillStyle = gg; g.fillRect(0, 0, w, h); }, true); }
 
 /* sky dome with gradient, sun and optional stars */
 function makeSky(th) {
@@ -447,9 +464,13 @@ function buildScenery(T) {
         grp.add(inst(palm, vcMat(), A), inst(isl, vcMat(), B), inst(pyl, vcMat({ emissive: 0x112233 }), C));
         const hills = []; for (let i = 0; i < 22; i++) { const a = i / 22 * TAU + rng(), r = 1500 + rng() * 700; hills.push(MT([Math.cos(a) * r, groundY - 20, Math.sin(a) * r], null, [260 + rng() * 260, 150 + rng() * 200, 260 + rng() * 260])); } grp.add(inst(new THREE.ConeGeometry(1, 1, 6), new THREE.MeshLambertMaterial({ color: 0x5aa0b8, emissive: 0x204050 }), hills));
     } else if (id === 'city') {
-        const towers = [[18, 70, 18], [26, 120, 22], [14, 46, 14], [32, 56, 30], [20, 160, 20]].map((d, i) => { const g = new THREE.BoxGeometry(d[0], d[1], d[2]); g.translate(0, d[1] / 2, 0); const uv = g.attributes.uv; for (let q = 0; q < uv.count; q++) uv.setXY(q, uv.getX(q) * d[0] / 7, uv.getY(q) * d[1] / 8); return g; });
+        const towers = [[18, 70, 18], [26, 120, 22], [14, 46, 14], [32, 56, 30], [20, 160, 20]].map((d, i) => { const g = new THREE.BoxGeometry(d[0], d[1], d[2]); g.translate(0, d[1] / 2, 0); const uv = g.attributes.uv; for (let q = 0; q < uv.count; q++) uv.setXY(q, uv.getX(q) * d[0] / 14, uv.getY(q) * d[1] / 16); return g; });
         const wt = [winTex(1), winTex(2), winTex(3)], arr = towers.map(() => []);
-        place(150, 24, 330, (x, z, y) => { const k = Math.floor(rng() * towers.length), top = y + (rng() - 0.6) * 50 + 20; arr[k].push(MT([x, groundY, z], null, [0.9 + rng() * 0.5, Math.max(0.8, (top - groundY) / [70, 120, 46, 56, 160][k] * (0.9 + rng() * 0.3)), 0.9 + rng() * 0.5], [0, rng() < 0.5 ? 0 : Math.PI / 2, 0])); });
+        const TD = [[18, 70, 18], [26, 120, 22], [14, 46, 14], [32, 56, 30], [20, 160, 20]], caps = [], tops = [], beac = [], r2c = mulberry(321);
+        place(150, 24, 330, (x, z, y) => { const k = Math.floor(rng() * towers.length), top = y + (rng() - 0.6) * 50 + 20, sx = 0.9 + rng() * 0.5, sy = Math.max(0.8, (top - groundY) / TD[k][1] * (0.9 + rng() * 0.3)), sz = 0.9 + rng() * 0.5, ry = rng() < 0.5 ? 0 : Math.PI / 2; arr[k].push(MT([x, groundY, z], null, [sx, sy, sz], [0, ry, 0]));
+            const H = TD[k][1] * sy, W = TD[k][0] * sx, D = TD[k][2] * sz; caps.push(MT([x, groundY + H + 1.6, z], null, [W * 1.04, 3.2, D * 1.04], [0, ry, 0])); tops.push(MT([x, groundY + H + 5.2, z], null, [W * 0.6, 4, D * 0.6], [0, ry, 0])); if (r2c() < 0.55) beac.push(MT([x, groundY + H + 9.5 + r2c() * 6, z], null, [1.1, 1.1, 1.1]));
+            if (H > 60 && r2c() < 0.6) tops.push(MT([x + W * 0.12, groundY + H + 11, z - D * 0.1], null, [0.5, 14, 0.5])); });
+        grp.add(inst(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x4a5070 }), caps), inst(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x2c3150, emissive: 0x0a0e22 }), tops), inst(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff3030).multiplyScalar(2.2) }), beac));
         towers.forEach((g, k) => grp.add(inst(g, new THREE.MeshLambertMaterial({ map: wt[k % 3], emissive: 0xffffff, emissiveMap: wt[k % 3], emissiveIntensity: 0.7, color: 0x303048 }), arr[k])));
         // neon signs and lamps along the road
         const signCols = ['#ff3da6', '#19e3ff', '#ffd23f', '#7a5cff', '#7dffb0'], words = ['RYDER', 'HOVER', 'NEON', 'X', 'AIR', 'DRIFT', 'SPEED'];
@@ -498,6 +519,17 @@ const BTYPES = {
     fly: { name: 'FLY', desc: 'Huge jumps and big trick bonuses. Floaty in the air, lower top speed.', top: 56, accel: 1.04, handle: 1.0, drain: 1.0, launch: 1.42, trick: 1.5, boost: 24, smash: false, col: '#ffd23f' },
     power: { name: 'POWER', desc: 'Smashes blocks and shoves rivals. Strong boost, slower to turn.', top: 57, accel: 0.96, handle: 0.84, drain: 0.95, launch: 1.0, trick: 1.0, boost: 30, smash: true, col: '#ff3da6' },
 };
+/* ---- board tuning: spend Oasis Gil on four stats per board type (5 levels each); the rivals never get any, so it stays a real edge ---- */
+const TUNE = [
+    { k: 'top', name: 'TOP SPEED', per: '+1.3% each', cost: [300, 650, 1100, 1700, 2600] },
+    { k: 'acc', name: 'ACCELERATION', per: '+3% each', cost: [250, 550, 950, 1500, 2300] },
+    { k: 'hnd', name: 'HANDLING', per: '+2.5% each', cost: [250, 550, 950, 1500, 2300] },
+    { k: 'bst', name: 'BOOST POWER', per: '+1 each', cost: [350, 750, 1250, 1900, 2900] },
+];
+const rxGil = () => { try { const g = window.parent && window.parent !== window && window.parent.oasisGil; return g && g.add && g.get ? g : null; } catch (e) { return null; } };
+const tuneOf = (type) => { const t = (SAVE.tune && SAVE.tune[type]) || {}; return { top: t.top | 0, acc: t.acc | 0, hnd: t.hnd | 0, bst: t.bst | 0 }; };
+function tunedType(type) { const b = BTYPES[type], t = tuneOf(type); return Object.assign({}, b, { top: b.top * (1 + 0.013 * t.top), accel: b.accel * (1 + 0.03 * t.acc), handle: b.handle * (1 + 0.025 * t.hnd), boost: b.boost + t.bst }); }
+function tuneBuy(type, k) { const t = tuneOf(type), lv = t[k], def = TUNE.find((x) => x.k === k); if (lv >= 5) return 'MAXED'; const g = rxGil(); if (!g) return 'Open Ryder X from the Oasis to spend Gil'; const c = def.cost[lv]; if (g.get() < c) return 'Not enough Gil (' + c.toLocaleString() + ' needed)'; g.add(-c, true); SAVE.tune = SAVE.tune || {}; SAVE.tune[type] = Object.assign(t, { [k]: lv + 1 }); save(true); return ''; }
 const VARIANTS = [
     { name: 'Cyan Streak', top: 0x1fc8ff, under: 0x1b2a44, accent: 0xffffff, jet: 0x66e8ff },
     { name: 'Solar Flare', top: 0xff7a1a, under: 0x3a1d12, accent: 0xffe08a, jet: 0xffb347 },
@@ -881,9 +913,13 @@ const G = {
     parts: null, lines: null, camP: new THREE.Vector3(), camF: new THREE.Vector3(0, 0, -1), camUp: new THREE.Vector3(0, 1, 0), shake: 0, flash: 0, acc: 0, last: 0, clock: 0, orbit: 0, menuVis: null, lights: [], paused: false, timeScale: 1,
 };
 function initGL() {
-    const cv = $('gl'); const r = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); G.pr = Math.min(devicePixelRatio || 1, 1.5); r.setPixelRatio(G.pr); r.setSize(innerWidth, innerHeight, false); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.NoToneMapping; G.renderer = r;
+    const cv = $('gl'); const r = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); G.pr = Math.min(devicePixelRatio || 1, 1.5); r.setPixelRatio(G.pr); r.setSize(innerWidth, innerHeight, false); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.18; G.renderer = r;
     G.scene = new THREE.Scene(); G.cam = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.3, 9000);
-    G.composer = new EffectComposer(r); G.composer.setPixelRatio(G.pr); G.composer.setSize(innerWidth, innerHeight); G.composer.addPass(new RenderPass(G.scene, G.cam)); G.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.65, 0.78); G.composer.addPass(G.bloom); G.composer.addPass(new OutputPass());
+    const rt = new THREE.WebGLRenderTarget(innerWidth * G.pr, innerHeight * G.pr, { type: THREE.HalfFloatType, samples: 4 }); G.composer = new EffectComposer(r, rt); G.composer.setPixelRatio(G.pr); G.composer.setSize(innerWidth, innerHeight); G.composer.addPass(new RenderPass(G.scene, G.cam)); G.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.65, 0.78); G.composer.addPass(G.bloom);
+    G.grade = new ShaderPass({ uniforms: { tDiffuse: { value: null }, t: { value: 0 }, sat: { value: 1.12 }, con: { value: 1.07 }, vig: { value: 0.34 }, ca: { value: 0.0016 }, spd: { value: 0 } },
+        vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+        fragmentShader: 'uniform sampler2D tDiffuse; uniform float t,sat,con,vig,ca,spd; varying vec2 vUv; float h(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233))+t)*43758.5453); } void main(){ vec2 d=vUv-.5; float r=dot(d,d); float k=ca*(1.+spd*2.)*r*4.; vec3 c=vec3(texture2D(tDiffuse,vUv-d*k).r,texture2D(tDiffuse,vUv).g,texture2D(tDiffuse,vUv+d*k).b); float l=dot(c,vec3(.2126,.7152,.0722)); c=mix(vec3(l),c,sat); c=(c-.18)*con+.18; c+=vec3(-.004,.003,.01)*(1.-l); c*=1.-(vig+spd*.12)*smoothstep(.12,.62,r); c+=(h(vUv*1100.)-.5)*.014; gl_FragColor=vec4(max(c,0.),1.); }' });
+    G.composer.addPass(G.grade); G.composer.addPass(new OutputPass());
     addEventListener('resize', () => { r.setSize(innerWidth, innerHeight, false); G.composer.setSize(innerWidth, innerHeight); G.cam.aspect = innerWidth / innerHeight; G.cam.updateProjectionMatrix(); });
     // particles
     const N = 700, pg = new THREE.BufferGeometry(); G.pp = { n: N, pos: new Float32Array(N * 3), col: new Float32Array(N * 3), vel: new Float32Array(N * 3), life: new Float32Array(N), max: new Float32Array(N), c0: new Float32Array(N * 3), i: 0, grav: new Float32Array(N) };
@@ -935,7 +971,7 @@ function startRace(cfg) {
     G.cam.clearViewOffset(); G.cfg = cfg; const def = TRACKS[cfg.track], laps = cfg.laps || SAVE.opt.laps || 3; clearRacers(); const T = loadTrack(def, !!cfg.mirror); G.laps = laps; G.mode = 'race'; G.phase = 'intro'; G.phaseT = 0; G.done = false; G.finishT = 0; G.clock = 0; G.accTime = 0;
     const R = { T, racers: G.racers, go: false, time: 0, assist: 0.3 + 0.5 * (1 - (SAVE.opt.steer || 1) * 0.8), ev: raceEvent, mult: null };
     const dfac = [0.955, 1.0, 1.035][SAVE.opt.diff == null ? 1 : SAVE.opt.diff]; R.mult = (r) => { if (r.isPlayer) return 1; const pl = G.player; if (!pl) return dfac; const d = pl.dist - r.dist; return dfac * (1 + clamp(d / 420, -0.05, 0.07)); }; G.R = R;
-    const board = SAVE.board, V = variantFor(board.color), pr = new Racer(0, 'YOU', board.type, T, true, 1); pr.look = playerLook(); pr.V = V; G.racers.push(pr); G.player = pr;
+    const board = SAVE.board, V = variantFor(board.color), pr = new Racer(0, 'YOU', board.type, T, true, 1); pr.look = playerLook(); pr.V = V; pr.ty = tunedType(board.type); G.racers.push(pr); G.player = pr;
     const n = cfg.mode === 'tt' ? 1 : 8, pos = startPositions(n); const rivals = RIVALS.slice(); const pool = cfg.mode === 'tt' ? [] : rivals;
     for (let i = 1; i < n; i++) { const rv = pool[i - 1]; const r = new Racer(i, rv.name, rv.type, T, false, rv.skill); r.look = rv.look; r.V = variantFor(rv.col + (rv.type === 'power' ? 1 : 0)); G.racers.push(r); }
     // shuffle grid slots a bit but keep the player mid-pack in GP depending on rank
@@ -1113,6 +1149,7 @@ function frame(now) {
     } else if (G.mode === 'menu') { updParts(dt); updateMenu(dt); if (G.menuVis && AV.vrm && G.menuVis.avatar) AV.vrm.update(dt); const T = G.T; if (T.padTex) T.padTex.offset.y -= dt * 1.4; if (T.stTex) T.stTex.offset.y -= dt * 1.8; G.lines.material.opacity = 0; }
     $('flash').style.opacity = G.flash.toFixed(2);
     if (G.T && G.sky) G.sky.position.copy(G.cam.position);
+    if (G.grade) { G.grade.uniforms.t.value = (G.grade.uniforms.t.value + 0.37) % 100; try { G.grade.uniforms.spd.value = Math.min(1, (G.player && G.player.v ? G.player.v : 0) / 160); } catch (e) { /* no player yet */ } }
     G.composer.render();
 }
 function togglePause() { if (G.mode !== 'race') return; G.paused = !G.paused; if (G.paused) { AUD.pause(true); UI.pause(); } else { AUD.pause(false); UI.hide(); } }
@@ -1176,6 +1213,11 @@ const UI = {
         const ref = () => { rebuildMenuBoard(); save(); this.garage(); };
         row('BOARD', (p) => Object.keys(BTYPES).forEach((k) => p.appendChild(this.pill(BTYPES[k].name, SAVE.board.type === k, () => { SAVE.board.type = k; ref(); }))));
         const bt = BTYPES[SAVE.board.type]; const info = el('div', 'hint', bt.desc + '  TOP ' + bt.top + ' · BOOST +' + bt.boost + ' · JUMP ' + bt.launch.toFixed(1) + '× · TRICKS ' + bt.trick.toFixed(1) + '×'); info.style.margin = '0 0 1vmin'; s.appendChild(info);
+        { const g = rxGil(), t = tuneOf(SAVE.board.type); const box = el('div', 'opt'); box.style.cssText += ';min-width:min(92vmin,820px);flex-direction:column;align-items:stretch;gap:.6vmin;padding:1vmin 1.6vmin';
+          const hd = el('div', 'hint', 'TUNING \u00b7 ' + BTYPES[SAVE.board.type].name + (g ? '  \u00b7  GIL ' + Math.round(g.get()).toLocaleString() : '  \u00b7  open from the Oasis to spend Gil')); hd.style.margin = '0'; box.appendChild(hd);
+          const rowT = el('div'); rowT.style.cssText = 'display:flex;flex-wrap:wrap;gap:.8vmin;justify-content:center';
+          TUNE.forEach((d) => { const lv = t[d.k]; const pips = '\u25cf'.repeat(lv) + '\u25cb'.repeat(5 - lv); const cost = lv >= 5 ? 'MAX' : d.cost[lv].toLocaleString() + ' G'; const b = this.pill(d.name + '  ' + pips + '  ' + cost, false, () => { const e = tuneBuy(SAVE.board.type, d.k); if (e) { hd.textContent = e; hd.style.color = '#ff9a7a'; AUD.ev && AUD.ev('bail'); } else { AUD.ev && AUD.ev('ring'); this.garage(); } }); b.title = d.per; if (lv >= 5) b.style.opacity = .6; rowT.appendChild(b); });
+          box.appendChild(rowT); s.appendChild(box); }
         row('COLOUR', (p) => allVariants().forEach((v, i) => p.appendChild(this.pill(v.name, SAVE.board.color === i, () => { SAVE.board.color = i; SAVE.pickBoard = 1; ref(); }))));
         row('RIDER', (p) => { RIDER_LOOKS.forEach((l, i) => p.appendChild(this.pill(l.name, SAVE.board.rider === i, () => { SAVE.board.rider = i; SAVE.pickRider = 1; ref(); }))); if (AV.on) p.appendChild(this.pill('MY AVATAR', SAVE.board.rider === 'avatar', () => { SAVE.board.rider = 'avatar'; ref(); })); });
         const ar = el('div', 'opt'); ar.style.cssText += ';min-width:min(92vmin,820px);flex-wrap:wrap;justify-content:center'; ar.innerHTML = '<span style="min-width:12ch;text-align:left">VRM</span>'; const ap = el('span');
