@@ -1140,23 +1140,23 @@ function dust(r, n, c) { const m = r.vis.root.matrix.elements; for (let i = 0; i
 function sparkBurst(r, cr, cg, cb, n) { const m = r.vis.root.matrix.elements; for (let i = 0; i < n; i++) emit(m[12], m[13] + 0.2, m[14], (Math.random() - 0.5) * 16, Math.random() * 9, (Math.random() - 0.5) * 16, 0.5 + Math.random() * 0.3, cr, cg, cb, 14); }
 
 /* ---- camera ---- */
-function camSnap() { const r = G.player; const wf = worldFwd(r, _v3); G.camF.copy(wf); const bp = boardPos(r, _p3); G.camP.copy(bp).addScaledVector(wf, -4.6).addScaledVector(r.F.ux !== undefined ? new THREE.Vector3(r.F.ux, r.F.uy, r.F.uz) : G.camUp, 1.9); G.cam.position.copy(G.camP); G.cam.lookAt(bp); }
+function camSnap() { const r = G.player; const wf = worldFwd(r, _v3); G.camF.copy(wf); const bp = boardPos(r, _p3); G.camP.copy(bp).addScaledVector(wf, -3.4).addScaledVector(r.F.ux !== undefined ? new THREE.Vector3(r.F.ux, r.F.uy, r.F.uz) : G.camUp, 1.5); G.cam.position.copy(G.camP); G.cam.lookAt(bp); }
 function worldFwd(r, out) { const F = r.F, c = Math.cos(r.phi), s = Math.sin(r.phi); out.set(F.tx * c + F.rx * s, F.ty * c + F.ry * s, F.tz * c + F.rz * s); if (r.air) { out.y += clamp(r.vh / 60, -0.3, 0.3) * 0.3; } return out.normalize(); }
 function boardPos(r, out) { return r.T.pos(r.s, r.u, r.h + 0.4, out, r.F); }
 const _cf = new THREE.Vector3(), _cp = new THREE.Vector3(), _cu = new THREE.Vector3(), _ct = new THREE.Vector3();
 function updateCamera(dt) {
     const cam = G.cam, r = G.player; if (!r) return; const ph = G.phase;
-    if (ph === 'intro') { const t = G.phaseT / 2.4, F = r.F; boardPos(r, _ct); const a = lerp(2.3, 0.0, sstep(clamp(t, 0, 1))); const d = lerp(7, 9, t); _cf.set(F.tx, F.ty, F.tz); const rr = new THREE.Vector3(F.rx, F.ry, F.rz); _cp.copy(_ct).addScaledVector(_cf, -d * Math.cos(a) - 0.0).addScaledVector(rr, d * Math.sin(a) * 1.1 + 0).addScaledVector(G.camUp.set(F.ux, F.uy, F.uz), lerp(1.8, 3.4, t)); cam.position.lerp(_cp, 1 - Math.exp(-14 * dt)); G.camP.copy(cam.position); cam.up.set(F.ux, F.uy, F.uz); cam.lookAt(_ct.addScaledVector(G.camUp, 0.8)); cam.fov = damp(cam.fov, 62, 6, dt); cam.updateProjectionMatrix(); G.camF.set(F.tx, F.ty, F.tz); return; }
+    if (ph === 'intro') { const t = G.phaseT / 2.4, F = r.F; boardPos(r, _ct); const a = lerp(2.3, 0.0, sstep(clamp(t, 0, 1))); const d = lerp(5.2, 7, t); _cf.set(F.tx, F.ty, F.tz); const rr = new THREE.Vector3(F.rx, F.ry, F.rz); _cp.copy(_ct).addScaledVector(_cf, -d * Math.cos(a) - 0.0).addScaledVector(rr, d * Math.sin(a) * 1.1 + 0).addScaledVector(G.camUp.set(F.ux, F.uy, F.uz), lerp(1.5, 2.6, t)); cam.position.lerp(_cp, 1 - Math.exp(-14 * dt)); G.camP.copy(cam.position); cam.up.set(F.ux, F.uy, F.uz); cam.lookAt(_ct.addScaledVector(G.camUp, 0.8)); cam.fov = damp(cam.fov, 62, 6, dt); cam.updateProjectionMatrix(); G.camF.set(F.tx, F.ty, F.tz); return; }
     if (ph === 'results' || r.finished && ph === 'finish') { G.orbit += dt * 0.5; boardPos(r, _ct); const F = r.F; _cf.set(F.tx, F.ty, F.tz); const rr = _v3.set(F.rx, F.ry, F.rz); const a = G.orbit + 1.2; _cp.copy(_ct).addScaledVector(_cf, Math.cos(a) * 9 * -1).addScaledVector(rr, Math.sin(a) * 9).add(_cu.set(F.ux, F.uy, F.uz).multiplyScalar(3.2)); cam.position.lerp(_cp, 1 - Math.exp(-3 * dt)); G.camP.copy(cam.position); cam.up.set(0, 1, 0); cam.lookAt(_ct); cam.fov = damp(cam.fov, 58, 4, dt); cam.updateProjectionMatrix(); return; }
     const F = r.F, wf = worldFwd(r, _cf); const kPlan = 1 - Math.exp(-(r.air ? 3.2 : 6.5) * dt); G.camF.lerp(wf, kPlan).normalize();
-    const boost = r.boosting || r.padT > 0 || r.turboT > 0 || r.startBoost > 0; const back = 4.3 + r.v * 0.012 + (boost ? 0.9 : 0), up = 1.75 + (r.air ? clamp((r.h - r.gr) * 0.04, 0, 1.0) : 0);   // close behind the rider, Mario Kart style
+    const boost = r.boosting || r.padT > 0 || r.turboT > 0 || r.startBoost > 0; const back = 3.1 + r.v * 0.009 + (boost ? 0.6 : 0), up = 1.4 + (r.air ? clamp((r.h - r.gr) * 0.04, 0, 1.0) : 0);   // close behind the rider, Mario Kart style
     boardPos(r, _ct); _cu.set(F.ux, F.uy, F.uz).lerp(_v3.set(0, 1, 0), r.air ? 0.8 : 0.35).normalize();
     _cp.copy(_ct).addScaledVector(G.camF, -back).addScaledVector(_cu, up);
     const kx = 1 - Math.exp(-11 * dt), ky = 1 - Math.exp(-(r.air ? 3.5 : 9) * dt); G.camP.x += (_cp.x - G.camP.x) * kx; G.camP.z += (_cp.z - G.camP.z) * kx; G.camP.y += (_cp.y - G.camP.y) * ky;
     // keep above the track surface
     const sh = G.shake * (SAVE.opt.shake == null ? 1 : SAVE.opt.shake) * (0.12 + r.v * 0.0016); cam.position.copy(G.camP); cam.position.x += (Math.random() - 0.5) * sh; cam.position.y += (Math.random() - 0.5) * sh; cam.position.z += (Math.random() - 0.5) * sh;
     cam.up.copy(_cu).lerp(_v3.set(0, 1, 0), 0.5); cam.up.x += r.lean * 0.04 * _cf.z; _ct.addScaledVector(G.camF, 12).addScaledVector(_cu, 0.9 + (r.air ? clamp(r.vh * 0.02, -0.6, 0.8) : 0)); cam.lookAt(_ct);
-    const fov = 62 + clamp(r.v, 0, 90) * 0.17 + (boost ? 9 : 0) + (r.drift ? 3 : 0); cam.fov = damp(cam.fov, fov, 5, dt); cam.updateProjectionMatrix();
+    const fov = 58 + clamp(r.v, 0, 90) * 0.15 + (boost ? 9 : 0) + (r.drift ? 3 : 0); cam.fov = damp(cam.fov, fov, 5, dt); cam.updateProjectionMatrix();
 }
 function updateSpeedLines(dt) {
     const r = G.player, S = G.sl, sp = r ? r.v : 0; const boost = r && (r.boosting || r.padT > 0 || r.turboT > 0 || r.startBoost > 0); const k = clamp((sp - 52) / 40, 0, 1) + (boost ? 0.45 : 0); G.lines.material.opacity = damp(G.lines.material.opacity, clamp(k, 0, 1) * 0.55, 6, dt);
@@ -1253,7 +1253,7 @@ function menuScene(trackIdx, rebuildOnly) {
 }
 function rebuildMenuBoard() { if (G.mode !== 'menu' || !G.player) return; const r = G.player; G.scene.remove(G.menuVis.root, G.menuVis.blob); r.type = SAVE.board.type; r.ty = BTYPES[r.type]; r.look = playerLook(); r.V = playerV(); const v = mkVisual(r, r.V, r.look, useAv()); G.menuVis = v; r.vis = v; }
 function updateMenu(dt) {
-    const r = G.player; if (!r || !G.menuVis) return; const sr = G.showroom; sr.a += dt * (G.garage ? 0.5 : 0.18); const F = r.F; boardPos(r, _ct); const tgtD = G.garage ? 5.6 : 8.2, tgtH = G.garage ? 1.5 : 2.6; sr.d = damp(sr.d, tgtD, 3, dt);
+    const r = G.player; if (!r || !G.menuVis) return; const sr = G.showroom; sr.a += dt * (G.garage ? 0.5 : 0.18); const F = r.F; boardPos(r, _ct); const tgtD = G.garage ? 4.8 : 6.2, tgtH = G.garage ? 1.3 : 2.0; sr.d = damp(sr.d, tgtD, 3, dt);
     _cf.set(F.tx, F.ty, F.tz); const rr = _v3.set(F.rx, F.ry, F.rz); _cp.copy(_ct).addScaledVector(_cf, -Math.cos(sr.a) * sr.d).addScaledVector(rr, Math.sin(sr.a) * sr.d).add(_cu.set(F.ux, F.uy, F.uz).multiplyScalar(tgtH)); G.cam.position.copy(_cp); G.cam.up.set(0, 1, 0); G.cam.lookAt(_ct.addScaledVector(_cu, 0.8)); G.cam.fov = 52; const W = innerWidth, H = innerHeight; if (G.garage) G.cam.setViewOffset(W, H, 0, H * 0.3, W, H); else G.cam.setViewOffset(W, H, -W * 0.2, 0, W, H); G.cam.updateProjectionMatrix();
     r.lean = Math.sin(G.clock * 0.8) * 0.15; r.jumpCh = 0; r.v = 18; r.boosting = false; r.padT = G.garage ? 0 : 0; placeVisual(G.menuVis, r, dt); G.menuVis.root.position.y += 0; if (!G.garage) { const m = G.menuVis.root.matrix; /* gentle hover bob */ G.menuVis.tilt.position.y = Math.sin(G.clock * 2) * 0.05; }
 }
