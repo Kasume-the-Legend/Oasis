@@ -940,6 +940,7 @@
                 <div id="char-library" class="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar mb-2"></div>
                 <p id="char-library-empty" class="text-[11px] text-gray-500 mb-2">Characters you upload (VRM files or 3D character zips) are kept here so you can switch back any time.</p>
                 <button id="char-upload" class="w-full py-2.5 rounded-xl text-xs font-semibold transition bg-white/10 hover:bg-white/20"><i class="fa-solid fa-file-arrow-up mr-1"></i> Upload a VRM or GLB character</button>
+                <button id="char-export-vrm" class="w-full mt-1.5 py-2.5 rounded-xl text-xs font-semibold transition bg-white/10 hover:bg-white/20"><i class="fa-solid fa-file-export mr-1"></i> Export my character as a VRM</button>
                 <button id="char-sprite" class="w-full mt-1.5 py-2.5 rounded-xl text-xs font-semibold transition bg-white/10 hover:bg-white/20"><i class="fa-solid fa-file-zipper mr-1"></i> Import a 3D character zip <span class="text-gray-400 font-normal">(model + textures)</span></button>
             </div>
 
@@ -1470,6 +1471,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
         import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
         import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+        import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
         import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -6162,6 +6164,62 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 };
                 o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
             });
+        }
+
+        /* ---- export my current character (clothes and all) as a VRM 1.0 file ---- */
+        async function exportCharacterVrm() {
+            const a = localActor;
+            if (!a || !a.model) { sysChat('There is no character to export yet.'); return; }
+            if (a.kind === 'sprite' || !a.vrm) { sysChat(a.kind === 'sprite' ? 'Sprite characters are flat pictures with no skeleton, so they cannot be exported as a VRM.' : 'Only characters with a humanoid skeleton (VRM / VRoid characters and the base characters) can be exported as a VRM.'); return; }
+            sysChat('Exporting your character as a VRM...');
+            try {
+                const H = a.vrm.humanoid, nm = String((myAvatar && myAvatar.name) || 'character').replace(/\.(vrm|glb|gltf)$/i, '').replace(/[^\w\- ]+/g, '').trim().slice(0, 40) || 'character';
+                try { if (H.resetNormalizedPose) H.resetNormalizedPose(); if (H.update) H.update(); } catch (e) { /* keep the current pose */ }   // stand in the rest (T) pose, whatever the animation is doing
+                a.model.updateMatrixWorld(true);
+                const clone = SkeletonUtils.clone(a.model), pairs = new Map(), A = [], B = [];
+                a.model.traverse((o) => A.push(o)); clone.traverse((o) => B.push(o));
+                if (A.length !== B.length) throw new Error('could not copy the character');
+                A.forEach((o, i) => pairs.set(o, B[i]));
+                const drop = [];
+                clone.traverse((o) => { if ((o.userData && o.userData.isOutline) || o.visible === false) drop.push(o); });
+                const nb = H.normalizedHumanBonesRoot && pairs.get(H.normalizedHumanBonesRoot); if (nb) drop.push(nb);
+                for (const o of drop) o.removeFromParent();
+                clone.position.set(0, 0, 0); clone.updateMatrixWorld(true);
+                prepareForExport(clone);
+                const bones = {};
+                for (const k of Object.keys(H.humanBones || {})) { const raw = H.getRawBoneNode ? H.getRawBoneNode(k) : null, c = raw && pairs.get(raw); if (c && c.parent) bones[k] = c; }
+                if (!bones.hips) throw new Error('this character has no hips bone');
+                const exps = {}, em = a.vrm.expressionManager;
+                if (em && em.expressionMap) for (const [name, ex] of Object.entries(em.expressionMap)) {
+                    const bs = [];
+                    for (const b of (ex._binds || [])) if (b && b.primitives && b.index !== undefined) for (const m of b.primitives) { const c = pairs.get(m); if (c && c.parent) bs.push({ mesh: c, index: b.index, weight: b.weight === undefined ? 1 : b.weight }); }
+                    if (bs.length) exps[name] = { bs, bin: !!ex.isBinary, ob: ex.overrideBlink, ol: ex.overrideLookAt, om: ex.overrideMouth };
+                }
+                const PRESETS = ['happy', 'angry', 'sad', 'relaxed', 'surprised', 'aa', 'ih', 'ou', 'ee', 'oh', 'blink', 'blinkLeft', 'blinkRight', 'lookUp', 'lookDown', 'lookLeft', 'lookRight', 'neutral'];
+                const plugin = (writer) => ({
+                    afterParse() {
+                        const idx = (o) => writer.nodeMap.get(o), json = writer.json, humanBones = {};
+                        for (const [k, o] of Object.entries(bones)) if (idx(o) !== undefined) humanBones[k] = { node: idx(o) };
+                        const preset = {}, custom = {};
+                        for (const [name, e] of Object.entries(exps)) {
+                            const binds = e.bs.filter((b) => idx(b.mesh) !== undefined).map((b) => ({ node: idx(b.mesh), index: b.index, weight: b.weight }));
+                            if (!binds.length) continue;
+                            const def = { morphTargetBinds: binds, isBinary: e.bin, overrideBlink: e.ob || 'none', overrideLookAt: e.ol || 'none', overrideMouth: e.om || 'none' };
+                            (PRESETS.includes(name) ? preset : custom)[name] = def;
+                        }
+                        const vrm = { specVersion: '1.0', meta: { name: nm, version: '1.0', authors: ['The Oasis'], licenseUrl: 'https://vrm.dev/licenses/1.0/', avatarPermission: 'onlyAuthor', commercialUsage: 'personalNonProfit', creditNotation: 'required', allowRedistribution: 'prohibited', modification: 'allowModification' }, humanoid: { humanBones }, expressions: { preset, custom } };
+                        json.extensions = json.extensions || {}; json.extensions.VRMC_vrm = vrm;
+                        json.extensionsUsed = json.extensionsUsed || []; if (!json.extensionsUsed.includes('VRMC_vrm')) json.extensionsUsed.push('VRMC_vrm');
+                        writer.extensionsUsed.VRMC_vrm = true;
+                    }
+                });
+                const exporter = new GLTFExporter(); exporter.register(plugin);
+                const glb = await new Promise((res, rej) => exporter.parse(clone, res, rej, { binary: true, maxTextureSize: 2048, onlyVisible: true }));
+                if (!(glb instanceof ArrayBuffer)) throw new Error('could not write the file');
+                const url = URL.createObjectURL(new Blob([glb], { type: 'application/octet-stream' })), l = document.createElement('a');
+                l.href = url; l.download = nm + '.vrm'; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+                sysChat('Saved ' + nm + '.vrm (' + (glb.byteLength / 1e6).toFixed(1) + ' MB). Cel-shading and outlines are not part of the file, so it opens with plain lit materials.');
+            } catch (e) { console.error('VRM export', e); sysChat('Could not export the character: ' + ((e && e.message) || e)); }
         }
         async function bakeToGlb(wrap) {
             prepareForExport(wrap);
@@ -25200,6 +25258,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                 const target = animTargetSlot; animTargetSlot = null;
                 if (files.length) importAnimFiles(files, target);
             });
+            $('char-export-vrm').addEventListener('click', () => { exportCharacterVrm(); });
             $('char-upload').addEventListener('click', () => { closeCharacterSetup(); setTarget('avatar'); $('model-file-input').click(); });
             $('char-confirm').addEventListener('click', confirmCharacter);
             $('char-cancel').addEventListener('click', closeCharacterSetup);
