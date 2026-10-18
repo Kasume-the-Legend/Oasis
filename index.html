@@ -25424,6 +25424,8 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                 if (!AAA.c) {
                     const rt = new THREE.WebGLRenderTarget(w * pr, h * pr, { type: THREE.HalfFloatType, samples: 4 });
                     const c = new L.EffectComposer(renderer, rt); c.addPass(new L.RenderPass(scene, camera));
+                    /* a single NaN / infinite pixel (rain, stars, glow points at night) is smeared over the whole screen by the bloom blur and turns the picture black for a moment: wipe those out first */
+                    c.addPass(new L.ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }', fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); if(!(c.r==c.r)||!(c.g==c.g)||!(c.b==c.b)||!(c.a==c.a)) c=vec4(0.,0.,0.,1.); gl_FragColor=vec4(clamp(c.rgb,0.,24.),c.a); }' }));
                     AAA.bloom = new L.UnrealBloomPass(new THREE.Vector2(w, h), 0.4, 0.5, 0.85); c.addPass(AAA.bloom);
                     AAA.grade = new L.ShaderPass({ uniforms: { tDiffuse: { value: null }, sat: { value: 1.1 }, con: { value: 1.05 }, vig: { value: 0.3 }, t: { value: 0 }, tint: { value: new THREE.Vector3(1.03, 1.0, 0.96) } },
                         vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
