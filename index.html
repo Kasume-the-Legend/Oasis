@@ -17111,7 +17111,9 @@ function scnPick(r) {
     for (const h of r.intersectObject(root, true)) {
         const o = h.object; if (!(o.isMesh || o.isSprite)) continue; let vis = true; for (let q = o; q; q = q.parent) if (q.visible === false) { vis = false; break; } if (!vis || scnSkip(o, root)) continue;
         const chain = []; for (let q = o; q && q !== root; q = q.parent) chain.unshift(q); if (!chain.length) continue;
-        const unit = chain[Math.min(SCN.depth, chain.length) - 1], b = new THREE.Box3().setFromObject(unit), sz = b.getSize(new THREE.Vector3()); if (Math.max(sz.x, sz.z) > 400 && !SCN.objKey.has(unit)) continue;
+        let ui = Math.min(SCN.depth, chain.length) - 1, unit = chain[ui], sz = new THREE.Vector3(); const big = (u) => { new THREE.Box3().setFromObject(u).getSize(sz); return Math.max(sz.x, sz.z) > 400 && !SCN.objKey.has(u); };
+        while (big(unit) && ui < chain.length - 1) unit = chain[++ui];   // Destiny City is built from a few huge groups: go down to the first piece you can actually pick
+        if (big(unit)) continue;
         return { unit, point: h.point, chain };
     }
     return null;
