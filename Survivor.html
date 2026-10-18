@@ -725,7 +725,7 @@ Object.assign(WPN, {
     rifle: { gun: true, dmg: 2.1, rate: 0.11, range: 14, cls: 'gunner', ammo: 'ammoR', mag: 30, auto: true, spread: 0.05, rel: 2.3, key: 'rifle', len: 0.7 },
     shotgun: { gun: true, dmg: 3.5, rate: 0.95, range: 8, cls: 'gunner', ammo: 'ammoS', mag: 6, pellets: 8, spread: 0.2, rel: 2.6, key: 'shotgun', len: 0.8 },
     sniper: { gun: true, dmg: 15, rate: 1.25, range: 30, cls: 'gunner', ammo: 'ammoH', mag: 5, pierce: 3, spread: 0.004, rel: 2.7, key: 'sniper', len: 0.95 },
-    rocket: { gun: true, dmg: 34, rate: 1.4, range: 15, cls: 'gunner', ammo: 'ammoX', mag: 1, splash: 3.3, rel: 2.5, key: 'rocket', len: 0.85 },
+    rocket: { gun: true, dmg: 70, rate: 1.4, range: 15, cls: 'gunner', ammo: 'ammoX', mag: 1, splash: 3.3, rel: 2.5, key: 'rocket', len: 0.85 },
     grenade: { gun: true, dmg: 20, rate: 0.8, range: 12, cls: 'gunner', ammo: 'ammoG', mag: 4, splash: 2.7, rel: 2.4, key: 'grenade', len: 0.6 },
 });
 WPN.pistol.ammo = 'ammo'; WPN.pistol.mag = 12; WPN.pistol.rel = 1.3; WPN.pistol.key = 'pistol';
@@ -946,7 +946,7 @@ function spawnEnemy(e, key, chase) {
     }
     else if (e.t === 'z') { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 3 + (e.cr ? 1 : 0))); E = { hp: e.cr ? 7 : 11, spd: e.cr ? 0.9 : 1.35, rad: 0.42, dmg: 14, cd: 1.3, wind: 0.55, reach: 1.15 }; }
     else if (e.t === 'h') { mdl = makeHound(); E = { hp: 6, spd: 5.2, rad: 0.4, dmg: 9, cd: 0.9, wind: 0.3, reach: 1.1 }; }
-    else { mdl = makeBoss(); E = { hp: 80, spd: 1.2, rad: 0.95, dmg: 30, cd: 1.6, wind: 0.85, reach: 2.5, boss: 1 }; }
+    else { mdl = makeBoss(); E = { hp: 140, spd: 1.2, rad: 0.95, dmg: 24, cd: 1.6, wind: 0.85, reach: 2.5, boss: 1 }; }
     Object.assign(E, { t: e.t, key, x: e.x, z: e.z, rot: e.rot || 0, mdl, st: e.dorm ? 'dorm' : chase ? 'chase' : 'idle', stT: 0, stun: 0, atkT: 0, hurt: 0, ph: Math.random() * 6, hp0: E.hp, cr: e.cr ? 1 : 0, charge: 0, chT: 3 + Math.random() * 3, wake: 0 });
     mdl.root.position.set(E.x, 0, E.z); RM.group.add(mdl.root); RM.enemies.push(E); if (E.st === 'dorm') { mdl.root.rotation.x = -Math.PI / 2; mdl.root.position.y = 0.18; } return E;
 }
@@ -1028,7 +1028,7 @@ function updateEnemy0(E, dt) {
     let want = Math.atan2(dx, dz), sp = E.spd;
     if (E.boss) {   // the stoker charges every few seconds
         if (E.st === 'tele') { E.stT += dt; if (E.stT > 0.6) { E.st = 'charge'; E.stT = 0; E.cdir = Math.atan2(dx, dz); esfx('roar'); } animEnemy(E, 0); return finishEnemy(E); }
-        if (E.st === 'charge') { E.stT += dt; const vx = Math.sin(E.cdir) * 7.5 * dt, vz = Math.cos(E.cdir) * 7.5 * dt, ox = E.x, oz = E.z; moveTo(E, vx, vz, Math.min(E.rad, 0.55)); if (Math.hypot(T.x - E.x, T.z - E.z) < 1.5 && alive) { hurtT(T, E.cdmg || 38, T.x - E.x, T.z - E.z); E.st = 'recover'; E.stT = 0; } else if (Math.hypot(E.x - ox, E.z - oz) < Math.hypot(vx, vz) * 0.4 || E.stT > 1.3) { E.st = 'recover'; E.stT = 0; RM.shake = 0.5; esfx('boom'); } animEnemy(E, 1.5); return finishEnemy(E); }
+        if (E.st === 'charge') { E.stT += dt; const vx = Math.sin(E.cdir) * 7.5 * dt, vz = Math.cos(E.cdir) * 7.5 * dt, ox = E.x, oz = E.z; moveTo(E, vx, vz, Math.min(E.rad, 0.55)); if (Math.hypot(T.x - E.x, T.z - E.z) < 1.5 && alive) { hurtT(T, E.cdmg || Math.round(E.dmg * 1.2), T.x - E.x, T.z - E.z); E.st = 'recover'; E.stT = 0; } else if (Math.hypot(E.x - ox, E.z - oz) < Math.hypot(vx, vz) * 0.4 || E.stT > 1.3) { E.st = 'recover'; E.stT = 0; RM.shake = 0.5; esfx('boom'); } animEnemy(E, 1.5); return finishEnemy(E); }
         if (E.st === 'recover') { E.stT += dt; if (E.stT > 1.1) { E.st = 'chase'; E.chT = 3 + Math.random() * 2; } animEnemy(E, 0); return finishEnemy(E); }
         { const mv = Math.hypot(E.x - (E.px === undefined ? E.x : E.px), E.z - (E.pz === undefined ? E.z : E.pz)); E.px = E.x; E.pz = E.z; E.stk = (E.st === 'chase' && dist > E.reach && mv < sp * dt * 0.25) ? (E.stk || 0) + dt : 0; if (E.stk > 0.7) { E.stk = 0; E.chT = 0; E.slide = 0.8; E.sdir = Math.random() < 0.5 ? 1 : -1; } }
         E.chT -= dt; if (E.chT <= 0 && dist > 3) { E.st = 'tele'; E.stT = 0; esfx('groan'); return; }
@@ -1734,14 +1734,14 @@ function themeDecor(S) {
 }
 /* ================= the campaign: Act 2 (the lab under the boiler) and Act 3 (sewers and harbour) ================= */
 const BS = {   // boss stat blocks
-    cryo: { v: 'parasite', sc: [1.3, 1.5], hp: 90, spd: 1.7, rad: 0.8, dmg: 24, cd: 1.3, wind: 0.6, reach: 2.2, phases: 2, name: 'Cryo Parasite' },
-    burner: { v: 'skeletonzombie', sc: [1.65, 1.38], hp: 110, spd: 1.15, rad: 0.95, dmg: 30, cd: 1.6, wind: 0.8, reach: 2.4, phases: 2, name: 'Burner Tyrant' },
-    tyrant: { v: 'warzombie', sc: [1.6, 1.42], hp: 150, spd: 1.5, rad: 0.95, dmg: 24, cd: 1.8, wind: 0.7, reach: 2.5, phases: 3, name: 'Tyrant T-103' },
-    beast: { kind: 'hound', sc: 2.7, hp: 120, spd: 4.2, rad: 1.0, dmg: 20, cd: 1.0, wind: 0.4, reach: 2.4, phases: 3, name: 'Sewer Beast' },
-    warden: { v: 'yaku', sc: [1.45, 1.32], hp: 100, spd: 1.4, rad: 0.9, dmg: 28, cd: 1.5, wind: 0.75, reach: 2.3, phases: 2, name: 'Crypt Warden' },
-    coldbrute: { v: 'prisoner', sc: [1.55, 1.38], hp: 110, spd: 1.35, rad: 0.95, dmg: 30, cd: 1.5, wind: 0.8, reach: 2.4, phases: 2, name: 'Cold Store Brute' },
+    cryo: { v: 'parasite', sc: [1.3, 1.5], hp: 150, spd: 1.7, rad: 0.8, dmg: 20, cd: 1.3, wind: 0.6, reach: 2.2, phases: 2, name: 'Cryo Parasite' },
+    burner: { v: 'skeletonzombie', sc: [1.65, 1.38], hp: 170, spd: 1.15, rad: 0.95, dmg: 24, cd: 1.6, wind: 0.8, reach: 2.4, phases: 2, name: 'Burner Tyrant' },
+    tyrant: { v: 'warzombie', sc: [1.6, 1.42], hp: 240, spd: 1.5, rad: 0.95, dmg: 26, cd: 1.8, wind: 0.7, reach: 2.5, phases: 3, name: 'Tyrant T-103' },
+    beast: { kind: 'hound', sc: 2.7, hp: 160, spd: 4.2, rad: 1.0, dmg: 16, cd: 1.0, wind: 0.4, reach: 2.4, phases: 3, name: 'Sewer Beast' },
+    warden: { v: 'yaku', sc: [1.45, 1.32], hp: 150, spd: 1.4, rad: 0.9, dmg: 22, cd: 1.5, wind: 0.75, reach: 2.3, phases: 2, name: 'Crypt Warden' },
+    coldbrute: { v: 'prisoner', sc: [1.55, 1.38], hp: 170, spd: 1.35, rad: 0.95, dmg: 24, cd: 1.5, wind: 0.8, reach: 2.4, phases: 2, name: 'Cold Store Brute' },
     stoker: { v: 'skeletonzombie', sc: [1.75, 1.45], hp: 100, spd: 2.3, rad: 0.85, dmg: 7, cdmg: 9, cd: 1.3, wind: 0.5, reach: 2.4, phases: 3, name: 'The Stoker' },
-    hale: { v: 'parasite', sc: [1.95, 1.8], hp: 200, spd: 1.9, rad: 1.1, dmg: 32, cd: 1.4, wind: 0.65, reach: 2.8, phases: 3, name: 'Parasite Hale' },
+    hale: { v: 'parasite', sc: [1.95, 1.8], hp: 300, spd: 1.9, rad: 1.1, dmg: 28, cd: 1.4, wind: 0.65, reach: 2.8, phases: 3, name: 'Parasite Hale' },
 };
 const SEQ = (id, flag, title, desc, btns, seq, ok, o) => Object.assign({ type: 'seq', flag, title, desc, btns, seq, ok, text: title }, o || {});
 // ---- Act 2: the lab (floor 4)
