@@ -296,7 +296,14 @@ const SFX = {
     die() { voice(180, 1.6, 0.25, 600, 1300, 0, 4, 0.5); tone(140, 1.8, 'sawtooth', 0.12, 28, 0, null, 0.4); burst(1.2, 900, 0.2, '~lowpass', 0.1, 0, 120, 0.5); },
 };
 const UIKEY = { move: 'ui_move', ok: 'ui_ok', back: 'ui_ok', pickup: 'ui_pick', save: 'ui_save', type: 'ui_save' };
-function sfx(n, a, b, c) { try { if (!AU.ctx) return; const k = UIKEY[n], hb = CO.role === 'guest' && CO.on && CO.peer && CO.hu, bf = hb ? hb[k] : AU.buf[k]; if (k && bf) { const s = AU.ctx.createBufferSource(); s.buffer = bf; s.connect(AU.out); s.start(); return; } if (SFX[n]) SFX[n](a, b, c); } catch (e) { /* audio */ } }
+/* ---------- Mod Kit state (early, so sound and combat code can see it; the screen and loaders are further down) ---------- */
+const MOD = { cfg: null, buf: {}, aLoaded: false, models: {}, baseW: {}, sk: null };
+try { MOD.cfg = JSON.parse(localStorage.getItem(SK + 'mod') || 'null'); } catch (e) { MOD.cfg = null; }
+MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {} }, MOD.cfg || {}); MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
+function modSave() { try { localStorage.setItem(SK + 'mod', JSON.stringify(MOD.cfg)); } catch (e) { /* storage */ } }
+function modVol(k) { const c = MOD.cfg.sfx[k.slice(2)]; return c && c.vol ? c.vol : 1; }
+function modPlay(key, vol) { try { const b = MOD.buf[key]; if (!b || !AU.ctx) return false; const s = AU.ctx.createBufferSource(); s.buffer = b; const g = AU.ctx.createGain(); g.gain.value = vol == null ? 1 : vol; s.connect(g); g.connect(AU.out); s.start(); return true; } catch (e) { return false; } }
+function sfx(n, a, b, c) { try { if (!AU.ctx) return; if (!MOD.aLoaded) modLoadAudio(); if (MOD.buf['s:' + n] && modPlay('s:' + n, modVol('s:' + n))) return; const k = UIKEY[n], hb = CO.role === 'guest' && CO.on && CO.peer && CO.hu, bf = hb ? hb[k] : AU.buf[k]; if (k && bf) { const s = AU.ctx.createBufferSource(); s.buffer = bf; s.connect(AU.out); s.start(); return; } if (SFX[n]) SFX[n](a, b, c); } catch (e) { /* audio */ } }
 /* custom audio kept in IndexedDB so uploads survive between sessions */
 const IDB = { db: null };
 function idb() { return IDB.p || (IDB.p = new Promise((res, rej) => { const q = indexedDB.open('oasis-sv', 1); q.onupgradeneeded = () => q.result.createObjectStore('a'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })); }
@@ -774,15 +781,18 @@ function gunSnd(name, vol) { try { const b = GPK.buf[name]; if (!b || !AU.ctx) r
 const GSND = { pistol: ['pistol_fire1', 'pistol_fire2', 'pistol_fire3'], rifle: ['rifle_fire1', 'rifle_fire2', 'rifle_fire3'], shotgun: ['shotgun_fire1', 'shotgun_fire2'], sniper: ['sniper_fire1', 'sniper_fire2'], rocket: ['rocket_fire1'], grenade: ['grenade_fire1', 'grenade_fire2'] };
 const GREL = { pistol: ['pistol_eject', 0.1, 'pistol_insert', 0.8, 'pistol_rack', 1.4], rifle: ['rifle_rel1', 0.1, 'rifle_rel2', 0.9, 'rifle_rel3', 1.7], shotgun: ['shotgun_rel1', 0.2, 'shotgun_rel2', 1.0, 'shotgun_rel3', 1.9], sniper: ['sniper_rel1', 0.2, 'sniper_rel2', 1.1, 'sniper_rel3', 2.0], rocket: ['rocket_rel1', 0.2, 'rocket_rel2', 1.0, 'rocket_rel3', 1.8], grenade: ['grenade_rel1', 0.2, 'grenade_rel2', 1.1, 'grenade_rel1', 1.8] };
 function gunFireSnd(id) {
+    if (MOD.buf['gf:' + id] && modPlay('gf:' + id, modVol('s:gf_' + id))) return true;
     const a = GSND[id] || GSND.pistol; if (GPK.buf[a[0]] && gunSnd(a[Math.floor(Math.random() * a.length)], id === 'sniper' || id === 'rocket' ? 1 : 0.8)) return true;
     if (id === 'shotgun' || id === 'rocket' || id === 'grenade') { sfx('shot'); setTimeout(() => sfx('boom'), 25); } else sfx('shot'); return false;
 }
-function gunRelSnd(id) { const a = GREL[id] || GREL.pistol; if (GPK.buf[a[0]]) { for (let i = 0; i < a.length; i += 2) setTimeout(() => gunSnd(a[i], 0.7), a[i + 1] * 1000); return; } sfx('reload'); }
+function gunRelSnd(id) { if (MOD.buf['gr:' + id] && modPlay('gr:' + id, modVol('s:gr_' + id))) return; const a = GREL[id] || GREL.pistol; if (GPK.buf[a[0]]) { for (let i = 0; i < a.length; i += 2) setTimeout(() => gunSnd(a[i], 0.7), a[i + 1] * 1000); return; } sfx('reload'); }
 /* a gun in the hand: model +Z is the barrel; the hand's fingers point along -X, so the model is turned a quarter round */
 const GSC = { pistol: 1, rifle: 0.88, shotgun: 0.9, sniper: 0.8, rocket: 0.75, grenade: 0.9 };
 function gunMesh(id, inv) {
     const g = new THREE.Group(), w = WPN[id], key = w.key || id; let fp;
-    if (GPK.ready && GPK.geo[key]) {
+    const cgm = modGunInner(id);
+    if (cgm) { const m = cgm.m; m.rotation.y = -Math.PI / 2; m.scale.setScalar(inv); m.position.set(-0.03 * inv, -0.005 * inv, 0); g.add(m); fp = [-cgm.mz * inv - 0.03 * inv, cgm.my * inv - 0.005 * inv, 0]; }
+    else if (GPK.ready && GPK.geo[key]) {
         const sc = GSC[key] || 1, m = new THREE.Mesh(GPK.geo[key], GPK.mat[key]), mu = GPK.muz[key]; m.rotation.y = -Math.PI / 2; m.scale.setScalar(sc * inv); m.position.set(-0.03 * inv, -0.005 * inv, 0); g.add(m);
         fp = [-mu[2] * sc * inv - 0.03 * inv, mu[1] * sc * inv - 0.005 * inv, mu[0] * sc * inv];
     } else {
@@ -799,7 +809,7 @@ function gunRefreshModels() {   // the pack arrived after the avatars were built
     } catch (e) { console.warn('gun models', e); }
 }
 function explode(x, z, w, dmg) {
-    RM.shake = 0.5; RM.flash = 0.15; if (!(GPK.buf.rocket_boom1 && gunSnd(w.splash > 3 ? 'rocket_boom1' : 'grenade_boom1', 1))) sfx('boom');
+    RM.shake = 0.5; RM.flash = 0.15; if (!(!MOD.buf['s:boom'] && GPK.buf.rocket_boom1 && gunSnd(w.splash > 3 ? 'rocket_boom1' : 'grenade_boom1', 1))) sfx('boom');
     for (const E of RM.enemies) { if (E.st === 'dead') continue; const d = Math.hypot(E.x - x, E.z - z); if (d < w.splash + E.rad) dealHit(E, dmg * (1 - Math.min(0.7, d / (w.splash + E.rad) * 0.7)), false, false); }
 }
 const RISE_T = 2.6;
@@ -807,7 +817,8 @@ const newG = () => ({ rez: {}, room: 'ridge', door: null, x: 0, z: 3, rot: Math.
 let G = newG(), RM = { id: null, busy: false, cols: [], inter: [], enemies: [], t: 0 };
 const PL = { g: null, P: null, W: null, x: 0, z: 0, rot: 0, aim: false, cd: 0, state: 'idle', st: 0, walk: 0, turnLeft: 0, hurtT: 0, speed: 0 };
 const KEYS = {}, EDGE = {};
-const gearMult = (wid) => { try { const og = window.parent && window.parent.oasisGear; if (og && og.stats) { const s = og.stats(WPN[wid].cls); return 1 + Math.min(300, s.atk || 0) / 250; } } catch (e) { /* standalone */ } return 1; };
+const gearMult = (wid) => MOD.cfg.glob.pd * gearMult0(wid);
+const gearMult0 = (wid) => { try { const og = window.parent && window.parent.oasisGear; if (og && og.stats) { const s = og.stats(WPN[wid].cls); return 1 + Math.min(300, s.atk || 0) / 250; } } catch (e) { /* standalone */ } return 1; };
 /* inventory helpers */
 function invCount(id) { return G.inv.reduce((n, s) => n + (s && s.id === id ? s.n : 0), 0); }
 function invHas(id) { return G.inv.some((s) => s && s.id === id); }
@@ -954,6 +965,7 @@ function spawnEnemy(e, key, chase) {
     else if (e.t === 'z') { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 3 + (e.cr ? 1 : 0)), (window.__NX && ZV && ZV.names.includes('parasite')) ? 'parasite' : null); E = { hp: e.cr ? 7 : 11, spd: e.cr ? 0.9 : 1.35, rad: 0.42, dmg: 14, cd: 1.3, wind: 0.55, reach: 1.15 }; }
     else if (e.t === 'h') { mdl = makeHound(); E = { hp: 6, spd: 5.2, rad: 0.4, dmg: 9, cd: 0.9, wind: 0.3, reach: 1.1 }; }
     else { mdl = makeBoss(); E = { hp: 140, spd: 1.2, rad: 0.95, dmg: 24, cd: 1.6, wind: 0.85, reach: 2.5, boss: 1 }; }
+    try { const rm = modApplyEnemy(e, E, mdl); if (rm) mdl = rm; } catch (er) { console.warn('mod kit', er); }
     Object.assign(E, { t: e.t, key, x: e.x, z: e.z, rot: e.rot || 0, mdl, st: e.dorm ? 'dorm' : chase ? 'chase' : 'idle', stT: 0, stun: 0, atkT: 0, hurt: 0, ph: Math.random() * 6, hp0: E.hp, cr: e.cr ? 1 : 0, charge: 0, chT: 3 + Math.random() * 3, wake: 0 });
     mdl.root.position.set(E.x, 0, E.z); RM.group.add(mdl.root); RM.enemies.push(E); if (E.st === 'dorm') { mdl.root.rotation.x = -Math.PI / 2; mdl.root.position.y = 0.18; } return E;
 }
@@ -1076,7 +1088,7 @@ function zAnimate(E, dt) {
 }
 function finishEnemy(E) { E.mdl.root.position.x = E.x; E.mdl.root.position.z = E.z; E.mdl.root.rotation.y = E.rot; }
 function animEnemy(E, sp, wind) {
-    if (E.mdl.rig) return;
+    if (E.mdl.rig) return; if (E.mdl.cust) return custAnim(E, sp, wind);
     const P = E.mdl.P, s = Math.sin(E.ph * (E.t === 'h' ? 14 : 4) * Math.min(1.6, 0.4 + sp * 0.5));
     if (E.t === 'h') { P.legs.forEach((l, i) => { l.rotation.x = s * (i % 2 ? -0.7 : 0.7) * (sp > 0.1 ? 1 : 0.1); }); E.mdl.root.position.y = sp > 1 ? Math.abs(s) * 0.12 : 0; if (wind) E.mdl.root.position.y = Math.sin(wind * Math.PI) * 0.4; return; }
     P.legL.rotation.x = s * 0.5 * (sp > 0.1 ? 1 : 0); P.legR.rotation.x = -s * 0.5 * (sp > 0.1 ? 1 : 0);
@@ -4064,6 +4076,190 @@ async function hqPlate(id, ci, o) {
 }
 window.__bg = { hq: hqPlate, guide: bgGuide, rooms: () => Object.keys(ROOMS), camCount: (id) => { buildRoom(id); return ROOMS[id].cams.length; }, tex: BG.tex, sync: bgSync, import: bgImport, clear: bgClear };
 function bgPick() { const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.accept = 'image/*'; i.onchange = async () => { const n = await bgImport([...i.files]); say(n ? n + ' background image' + (n > 1 ? 's' : '') + ' loaded. Names must look like roomid_0.jpg' : 'No images loaded. Files must be named roomid_cam.jpg, for example lobby_0.jpg', 3200); renderMenu(); }; i.click(); }
+/* ====================================================================================================================
+ *  MOD KIT: swap the default enemies, guns and sounds for your own files, and rebalance the numbers. Options > Mod Kit.
+ *  Everything is kept in this browser (settings in localStorage, your files in IndexedDB) and can be exported as one file.
+ * ==================================================================================================================== */
+const MOD_EN = [['zombie', 'Zombie', 1.75, 'The common walking dead.'], ['crawler', 'Crawler', 1.2, 'Dropped or legless ones.'], ['brute', 'Brute', 2.0, 'The big heavy ones.'], ['tyrant', 'Tyrant', 2.5, 'Tall relentless stalkers and huge brutes.'], ['hound', 'Hound', 0.9, 'The fast dogs.'], ['boss', 'Boss', 2.4, 'Every named boss.']];
+const MOD_GUNS = [['pistol', 'Handgun'], ['rifle', 'Assault Rifle'], ['shotgun', 'Shotgun'], ['sniper', 'Sniper Rifle'], ['rocket', 'Rocket Launcher'], ['grenade', 'Grenade Launcher'], ['blade', 'Hero Blade'], ['gloves', 'Fighter Gloves']];
+const MOD_SFX = [['hit', 'Bullet hits an enemy'], ['hurt', 'You take damage'], ['groan', 'Zombie groan'], ['roar', 'Boss roar'], ['hound', 'Hound bark'], ['die', 'Death cry'], ['boom', 'Explosion'], ['click', 'Empty gun click'], ['swing', 'Melee swing'], ['step', 'Your footsteps'], ['estep', 'Enemy footsteps'], ['door', 'Door'], ['locked', 'Locked door'], ['latch', 'Latch'], ['glass', 'Breaking glass'], ['pickup', 'Item pickup'], ['heal', 'Healing'], ['save', 'Saving'], ['move', 'Menu: move'], ['ok', 'Menu: select'], ['back', 'Menu: back']];
+const modClass = (e) => (e.bs ? 'boss' : e.t === 'h' ? 'hound' : e.t === 'z' ? (e.cr ? 'crawler' : e.br ? 'brute' : e.ty ? 'tyrant' : 'zombie') : 'boss');
+async function modLoadAudio() {
+    if (MOD.aLoaded || !AU.ctx) return; MOD.aLoaded = true;
+    for (const k of Object.keys(MOD.cfg.sfx)) { try { const r = await idbGet('mod:a:' + k); if (r && r.b) MOD.buf[(/^g[fr]_/.test(k) ? '' : 's:') + modKey(k)] = await AU.ctx.decodeAudioData(r.b.slice(0)); } catch (e) { console.warn('mod sound', k, e); } }
+}
+/* slot keys: plain names are sound effects ('s:hit'), 'gf_rifle' / 'gr_rifle' are a gun's fire and reload */
+const modKey = (k) => (/^g[fr]_/.test(k) ? k.replace('_', ':') : k);
+async function modSetSound(slot, file) {
+    if (!AU.ctx) auInit(); const b = await file.arrayBuffer(); const buf = await AU.ctx.decodeAudioData(b.slice(0)); await idbPut('mod:a:' + slot, { n: file.name, b });
+    MOD.buf[(/^g[fr]_/.test(slot) ? '' : 's:') + modKey(slot)] = buf; MOD.cfg.sfx[slot] = Object.assign(MOD.cfg.sfx[slot] || {}, { name: file.name }); modSave();
+}
+async function modClearSound(slot) { delete MOD.buf[(/^g[fr]_/.test(slot) ? '' : 's:') + modKey(slot)]; delete MOD.cfg.sfx[slot]; try { await idbDel('mod:a:' + slot); } catch (e) { /* none */ } modSave(); }
+function modPreview(slot) {
+    if (!AU.ctx) auInit(); const k = (/^g[fr]_/.test(slot) ? '' : 's:') + modKey(slot);
+    if (MOD.buf[k]) { modPlay(k, modVol('s:' + slot)); return; } if (/^gf_/.test(slot)) gunFireSnd(slot.slice(3)); else if (/^gr_/.test(slot)) gunRelSnd(slot.slice(3)); else sfx(slot);
+}
+/* ---- models ---- */
+async function modParse(buf, name) {
+    const isFbx = /\.fbx$/i.test(name || '') || avIsFbx(buf); let sc, clips = [];
+    if (isFbx) { const { FBXLoader } = await import('three/addons/loaders/FBXLoader.js'); const u8 = repairFbx(new Uint8Array(buf.slice(0))); sc = new FBXLoader().parse(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength), ''); clips = sc.animations || []; }
+    else { const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js'); const ld = new GLTFLoader(); try { const { MeshoptDecoder } = await import('three/addons/libs/meshopt_decoder.module.js'); ld.setMeshoptDecoder(MeshoptDecoder); } catch (e) { /* plain files only */ } const g = await new Promise((res, rej) => ld.parse(buf.slice(0), '', res, rej)); sc = g.scene; clips = g.animations || []; }
+    if (!MOD.sk) MOD.sk = await import('three/addons/utils/SkeletonUtils.js');
+    sc.traverse((n) => { n.frustumCulled = false; if (n.isMesh && n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach((m) => { if (m.map) m.map.colorSpace = THREE.SRGBColorSpace; }); });
+    sc.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(sc), sz = box.getSize(new THREE.Vector3()), ct = box.getCenter(new THREE.Vector3());
+    const holder = new THREE.Group(); holder.add(sc); sc.position.set(-ct.x, -box.min.y, -ct.z);
+    return { holder, clips, h: Math.max(0.05, sz.y), w: sz.x, d: sz.z, name: name || 'model' };
+}
+async function modSetModel(slot, file) {
+    const buf = await file.arrayBuffer(), m = await modParse(buf, file.name); await idbPut('mod:m:' + slot, { n: file.name, b: buf });
+    MOD.models[slot] = m; const c = slot[0] === 'e' ? (MOD.cfg.en[slot.slice(2)] = MOD.cfg.en[slot.slice(2)] || {}) : (MOD.cfg.gun[slot.slice(2)] = MOD.cfg.gun[slot.slice(2)] || {}); c.mf = file.name; modSave(); if (slot[0] === 'g') { modApplyGuns(); gunRefreshModels(); }
+}
+async function modClearModel(slot) { delete MOD.models[slot]; const c = slot[0] === 'e' ? MOD.cfg.en[slot.slice(2)] : MOD.cfg.gun[slot.slice(2)]; if (c) delete c.mf; try { await idbDel('mod:m:' + slot); } catch (e) { /* none */ } modSave(); if (slot[0] === 'g') gunRefreshModels(); }
+async function modBoot() {
+    modApplyGuns();
+    const slots = []; for (const k of Object.keys(MOD.cfg.en)) if (MOD.cfg.en[k].mf) slots.push('e:' + k); for (const k of Object.keys(MOD.cfg.gun)) if (MOD.cfg.gun[k].mf) slots.push('g:' + k);
+    for (const s of slots) { try { const r = await idbGet('mod:m:' + s); if (r && r.b) MOD.models[s] = await modParse(r.b, r.n); } catch (e) { console.warn('mod model', s, e); } }
+    if (slots.some((s) => s[0] === 'g')) gunRefreshModels();
+}
+/* ---- enemies: stats and a replacement body that uses the model's own clips (idle / walk / run / attack / death) or simple motion ---- */
+function modApplyEnemy(e, E, mdl) {
+    const k = modClass(e), c = MOD.cfg.en[k] || {}, g = MOD.cfg.glob, sz = c.sz || 1;
+    E.hp = Math.max(1, Math.round(E.hp * g.eh * (c.hp || 1))); E.spd *= g.es * (c.sp || 1); E.dmg = Math.max(1, Math.round(E.dmg * g.ed * (c.dm || 1))); if (E.cdmg) E.cdmg = Math.max(1, Math.round(E.cdmg * g.ed * (c.dm || 1)));
+    E.cd = Math.max(0.2, E.cd / Math.max(0.25, c.ar || 1)); E.rad = (E.rad || 0.5) * Math.max(0.6, sz); E.reach = (E.reach || 1.1) * Math.max(0.7, sz);
+    const m = MOD.models['e:' + k]; if (!m) { if (sz !== 1) mdl.root.scale.multiplyScalar(sz); return null; }
+    const root = new THREE.Group(), inner = new THREE.Group(), body = MOD.sk.clone(m.holder), H = (MOD_EN.find((q) => q[0] === k)[2]) * sz, s = H / m.h;
+    body.scale.setScalar(s); inner.rotation.y = (c.rot || 0) * Math.PI / 180; inner.add(body); root.add(inner); const acts = {}; let mixer = null;
+    if (m.clips.length) {
+        mixer = new THREE.AnimationMixer(body); const pick = (re) => m.clips.find((q) => re.test(q.name));
+        const set = { idle: pick(/idle|stand|breath|wait/i), walk: pick(/walk|shamble|limp|crawl/i), run: pick(/run|sprint|charge/i), attack: pick(/attack|punch|bite|claw|slash|swing|strike|hit/i), death: pick(/death|die|dead|fall/i) };
+        if (!set.idle && !set.walk) set.idle = m.clips[0];
+        for (const [n, cl] of Object.entries(set)) if (cl) { const a = mixer.clipAction(cl); if (n === 'attack' || n === 'death') { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } acts[n] = a; }
+    }
+    return { root, inner, body, P: {}, cust: true, mixer, acts, cur: null, t: performance.now(), v: 0 };
+}
+function custAnim(E, sp, wind) {
+    const m = E.mdl, now = performance.now(), dt = Math.min(0.1, (now - m.t) / 1000); m.t = now; const A = m.acts;
+    const want = E.st === 'dead' ? 'death' : (wind > 0 || E.atkT > 0) ? 'attack' : sp > 2.6 ? (A.run ? 'run' : 'walk') : sp > 0.15 ? 'walk' : 'idle';
+    if (m.mixer && Object.keys(A).length) {
+        const use = A[want] ? want : (want === 'run' && A.walk ? 'walk' : A.idle ? 'idle' : Object.keys(A)[0]);
+        if (m.cur !== use) { const prev = A[m.cur], next = A[use]; if (prev) prev.fadeOut(0.18); next.reset().fadeIn(0.18).play(); m.cur = use; }
+        else if (use === 'attack' && wind > 0 && wind < 0.1 && !A.attack.isRunning()) A.attack.reset().play();
+        m.mixer.update(dt); return;
+    }
+    const mv = sp > 0.15, ph = E.ph * (sp > 2.6 ? 9 : 6), inn = m.inner;   // no clips: a walking bob, a sway, and a lunge when it attacks
+    inn.position.y = mv ? Math.abs(Math.sin(ph)) * 0.07 : Math.sin(E.ph * 1.5) * 0.015; inn.rotation.z = mv ? Math.sin(ph) * 0.06 : Math.sin(E.ph * 1.1) * 0.015;
+    inn.rotation.x = wind > 0 ? 0.4 * Math.sin(wind * Math.PI) : mv ? 0.1 : 0.03; inn.position.z = wind > 0 ? Math.sin(wind * Math.PI) * 0.35 : 0;
+}
+/* ---- guns ---- */
+function modApplyGuns() {
+    for (const id of Object.keys(WPN)) { if (!MOD.baseW[id]) MOD.baseW[id] = Object.assign({}, WPN[id]); const b = MOD.baseW[id], c = MOD.cfg.gun[id] || {}; for (const f of ['dmg', 'rate', 'mag', 'range', 'rel', 'reach']) if (b[f] !== undefined) WPN[id][f] = c[f] != null && c[f] !== '' && isFinite(+c[f]) && +c[f] > 0 ? +c[f] : b[f]; }
+}
+function modGunInner(id) {
+    const m = MOD.models['g:' + id], c = MOD.cfg.gun[id] || {}; if (!m || !WPN[id] || !WPN[id].gun) return null;
+    const ax = c.ax || '+Z', th = { '+Z': 0, '-Z': Math.PI, '+X': -Math.PI / 2, '-X': Math.PI / 2 }[ax] || 0, L = (WPN[id].len || 0.3) * (c.sc || 1), wrap = new THREE.Group(), rot = new THREE.Group(), body = MOD.sk.clone(m.holder);
+    rot.rotation.y = th; rot.add(body); rot.updateMatrixWorld(true); const bx = new THREE.Box3().setFromObject(rot), len = Math.max(0.01, bx.max.z - bx.min.z), s = L / len;
+    wrap.add(rot); rot.scale.setScalar(s); rot.updateMatrixWorld(true); const b2 = new THREE.Box3().setFromObject(wrap), cy = (b2.min.y + b2.max.y) / 2;
+    rot.position.set(-(b2.min.x + b2.max.x) / 2 + (c.ox || 0) * 0.1, -cy + (c.oy || 0) * 0.1, -(b2.min.z + 0.35 * (b2.max.z - b2.min.z)));
+    return { m: wrap, mz: 0.65 * (b2.max.z - b2.min.z), my: (c.oy || 0) * 0.1 };
+}
+/* ---- the screen ---- */
+const MODUI = { el: null, tab: 'en' };
+function modEl(t, css, txt) { const e = document.createElement(t); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; }
+function modPickFile(accept, cb) { const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.onchange = async () => { const f = i.files && i.files[0]; if (f) { try { await cb(f); } catch (e) { alert('That file could not be used: ' + (e && e.message || e)); } } }; i.click(); }
+function modOpen() {
+    if (MODUI.el) return; const ov = MODUI.el = modEl('div', 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#e8dcc0;font:14px/1.35 Georgia,serif;display:flex;flex-direction:column;align-items:center;padding:14px;overflow:auto'); document.body.appendChild(ov);
+    for (const ev of ['keydown', 'keyup', 'keypress']) ov.addEventListener(ev, (e) => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') modClose(); }, true);
+    ov.addEventListener('pointerdown', (e) => e.stopPropagation()); modRender();
+}
+function modClose() { if (MODUI.el) { MODUI.el.remove(); MODUI.el = null; } try { renderMenu(); } catch (e) { /* no menu */ } }
+function modRender() {
+    const ov = MODUI.el; if (!ov) return; ov.textContent = ''; const wrap = modEl('div', 'width:min(860px,100%)'); ov.appendChild(wrap);
+    const top = modEl('div', 'display:flex;align-items:center;gap:10px;margin-bottom:10px'); top.appendChild(modEl('div', 'font:700 22px Georgia,serif;flex:1;letter-spacing:.06em', 'MOD KIT')); const x = modEl('button', B_CSS, 'Close'); x.onclick = modClose; top.appendChild(x); wrap.appendChild(top);
+    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['snd', 'Sounds'], ['bal', 'Balance & backup']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
+    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, snd: modTabSnd, bal: modTabBal })[MODUI.tab](body);
+}
+const B_CSS = 'background:#2a2014;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:5px 11px;font:13px Georgia,serif;cursor:pointer';
+const CARD = 'background:#150f08;border:1px solid #4a3d28;border-radius:8px;padding:10px 12px;margin-bottom:9px';
+function modSlider(host, label, get, set, lo, hi, step, fmt) {
+    const r = modEl('div', 'display:flex;align-items:center;gap:8px;margin:3px 0'), l = modEl('span', 'width:150px;font-size:13px', label), v = modEl('span', 'width:52px;text-align:right;font-size:13px;color:#c9b27a'), s = document.createElement('input');
+    s.type = 'range'; s.min = lo; s.max = hi; s.step = step; s.value = get(); s.style.cssText = 'flex:1;accent-color:#c9a24a'; const show = () => { v.textContent = fmt ? fmt(+s.value) : '×' + (+s.value).toFixed(2); }; show();
+    s.oninput = () => { set(+s.value); show(); modSave(); }; r.append(l, s, v); host.appendChild(r);
+}
+function modFileRow(host, slot, label, accept, setFn, clearFn, nameNow) {
+    const r = modEl('div', 'display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap'); r.appendChild(modEl('span', 'width:150px;font-size:13px', label));
+    const nm = modEl('span', 'flex:1;font-size:13px;color:' + (nameNow ? '#9be39b' : '#8a7c5c'), nameNow || 'Default'); const b = modEl('button', B_CSS, nameNow ? 'Replace file…' : 'Choose file…'); b.onclick = () => modPickFile(accept, async (f) => { await setFn(f); modRender(); });
+    r.append(nm, b); if (nameNow) { const c = modEl('button', B_CSS, 'Reset'); c.onclick = async () => { await clearFn(); modRender(); }; r.appendChild(c); } host.appendChild(r);
+}
+function modTabEn(body) {
+    body.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'Pick a model file (.glb, .gltf, .fbx or .vrm) to replace a kind of enemy. If the file has animations named like idle, walk, run, attack or death they are used; otherwise it walks with a bob and lunges when it attacks. Changes apply to enemies that appear from now on (re-enter the room).'));
+    for (const [k, name, H, desc] of MOD_EN) {
+        const c = MOD.cfg.en[k] = MOD.cfg.en[k] || {}, card = modEl('div', CARD); card.appendChild(modEl('div', 'font:700 15px Georgia,serif', name + '  ')).appendChild(modEl('span', 'font:12px Georgia,serif;color:#8a7c5c', desc));
+        modFileRow(card, 'e:' + k, 'Model', '.glb,.gltf,.fbx,.vrm', (f) => modSetModel('e:' + k, f), () => modClearModel('e:' + k), MOD.models['e:' + k] ? c.mf : (c.mf ? c.mf + ' (loading…)' : ''));
+        const face = modEl('div', 'display:flex;align-items:center;gap:8px;margin:3px 0'); face.appendChild(modEl('span', 'width:150px;font-size:13px', 'Model faces')); const sel = document.createElement('select'); sel.style.cssText = B_CSS; for (const d of [0, 90, 180, 270]) { const o = document.createElement('option'); o.value = d; o.textContent = d === 0 ? 'Forward (default)' : 'Turned ' + d + '°'; sel.appendChild(o); } sel.value = c.rot || 0; sel.onchange = () => { c.rot = +sel.value; modSave(); }; face.appendChild(sel); card.appendChild(face);
+        modSlider(card, 'Health', () => c.hp || 1, (v) => { c.hp = v; }, 0.1, 4, 0.05); modSlider(card, 'Speed', () => c.sp || 1, (v) => { c.sp = v; }, 0.3, 2.5, 0.05); modSlider(card, 'Damage', () => c.dm || 1, (v) => { c.dm = v; }, 0.1, 4, 0.05); modSlider(card, 'Attack rate', () => c.ar || 1, (v) => { c.ar = v; }, 0.4, 2.5, 0.05); modSlider(card, 'Size', () => c.sz || 1, (v) => { c.sz = v; }, 0.5, 2, 0.05);
+        body.appendChild(card);
+    }
+}
+function modTabGun(body) {
+    body.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'Edit the numbers (empty = the default) and swap the model of any gun. For a gun model, say which way its barrel points in the file, then adjust size and position until it sits right in the hand.'));
+    for (const [id, name] of MOD_GUNS) {
+        const w = MOD.baseW[id] || WPN[id]; if (!w) continue; const c = MOD.cfg.gun[id] = MOD.cfg.gun[id] || {}, card = modEl('div', CARD); card.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:4px', name));
+        const grid = modEl('div', 'display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px'); const fields = w.gun ? [['dmg', 'Damage'], ['rate', 'Delay between shots (s)'], ['mag', 'Magazine'], ['range', 'Range'], ['rel', 'Reload time (s)']] : [['dmg', 'Damage'], ['rate', 'Swing delay (s)'], ['reach', 'Reach']];
+        for (const [f, l] of fields) { if (w[f] === undefined) continue; const g = modEl('label', 'display:flex;flex-direction:column;font-size:12px;color:#b9a77f'); g.appendChild(modEl('span', '', l)); const i = document.createElement('input'); i.type = 'number'; i.step = 'any'; i.min = 0; i.placeholder = String(w[f]); i.value = c[f] != null ? c[f] : ''; i.style.cssText = 'width:96px;background:#0d0804;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:5px;padding:4px'; i.oninput = () => { if (i.value === '') delete c[f]; else c[f] = +i.value; modSave(); modApplyGuns(); }; g.appendChild(i); grid.appendChild(g); }
+        card.appendChild(grid);
+        if (w.gun) {
+            modFileRow(card, 'g:' + id, 'Model', '.glb,.gltf,.fbx,.vrm', (f) => modSetModel('g:' + id, f), () => modClearModel('g:' + id), MOD.models['g:' + id] ? c.mf : (c.mf ? c.mf + ' (loading…)' : ''));
+            if (c.mf) {
+                const r = modEl('div', 'display:flex;align-items:center;gap:8px;margin:3px 0'); r.appendChild(modEl('span', 'width:150px;font-size:13px', 'Barrel points')); const sel = document.createElement('select'); sel.style.cssText = B_CSS; for (const a of ['+Z', '-Z', '+X', '-X']) { const o = document.createElement('option'); o.value = a; o.textContent = a; sel.appendChild(o); } sel.value = c.ax || '+Z'; sel.onchange = () => { c.ax = sel.value; modSave(); gunRefreshModels(); }; r.appendChild(sel); card.appendChild(r);
+                const re = () => gunRefreshModels(); modSlider(card, 'Size', () => c.sc || 1, (v) => { c.sc = v; clearTimeout(modSlider.t); modSlider.t = setTimeout(re, 150); }, 0.3, 3, 0.05); modSlider(card, 'Forward / back', () => c.ox || 0, (v) => { c.ox = v; clearTimeout(modSlider.t); modSlider.t = setTimeout(re, 150); }, -3, 3, 0.1, (v) => v.toFixed(1)); modSlider(card, 'Up / down', () => c.oy || 0, (v) => { c.oy = v; clearTimeout(modSlider.t); modSlider.t = setTimeout(re, 150); }, -3, 3, 0.1, (v) => v.toFixed(1));
+            }
+            const rowS = modEl('div', 'font-size:12px;color:#8a7c5c;margin-top:4px', 'Sounds for this gun are on the Sounds tab.'); card.appendChild(rowS);
+        }
+        body.appendChild(card);
+    }
+}
+function modTabSnd(body) {
+    body.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'Replace any sound with your own audio file (mp3, wav, ogg). Use ▶ to hear what is playing now.'));
+    const slots = []; for (const [id, name] of MOD_GUNS) if (WPN[id] && WPN[id].gun) { slots.push(['gf_' + id, name + ': fire']); slots.push(['gr_' + id, name + ': reload']); } slots.push(...MOD_SFX);
+    const card = modEl('div', CARD); body.appendChild(card);
+    for (const [slot, label] of slots) {
+        const c = MOD.cfg.sfx[slot], r = modEl('div', 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #2a2014;flex-wrap:wrap'); const p = modEl('button', B_CSS, '▶'); p.onclick = () => modPreview(slot);
+        r.append(p, modEl('span', 'width:200px;font-size:13px', label), modEl('span', 'flex:1;font-size:13px;color:' + (c ? '#9be39b' : '#8a7c5c'), c ? c.name : 'Default'));
+        const b = modEl('button', B_CSS, c ? 'Replace…' : 'Choose…'); b.onclick = () => modPickFile('audio/*', async (f) => { await modSetSound(slot, f); modRender(); }); r.appendChild(b);
+        if (c) { const v = document.createElement('input'); v.type = 'range'; v.min = 0.2; v.max = 2; v.step = 0.05; v.value = c.vol || 1; v.title = 'Volume'; v.style.cssText = 'width:80px;accent-color:#c9a24a'; v.oninput = () => { c.vol = +v.value; modSave(); }; const x = modEl('button', B_CSS, 'Reset'); x.onclick = async () => { await modClearSound(slot); modRender(); }; r.append(v, x); }
+        card.appendChild(r);
+    }
+}
+function modTabBal(body) {
+    const g = MOD.cfg.glob, card = modEl('div', CARD); body.appendChild(card); card.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:6px', 'Overall balance'));
+    const pre = modEl('div', 'display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap'); for (const [n, v] of [['Easy', { eh: 0.7, ed: 0.6, es: 0.9, pd: 1.2 }], ['Normal', { eh: 1, ed: 1, es: 1, pd: 1 }], ['Hard', { eh: 1.4, ed: 1.3, es: 1.1, pd: 0.9 }], ['Brutal', { eh: 2, ed: 1.8, es: 1.2, pd: 0.8 }]]) { const b = modEl('button', B_CSS, n); b.onclick = () => { Object.assign(g, v); modSave(); modRender(); }; pre.appendChild(b); } card.appendChild(pre);
+    modSlider(card, 'Enemy health', () => g.eh, (v) => { g.eh = v; }, 0.2, 4, 0.05); modSlider(card, 'Enemy damage', () => g.ed, (v) => { g.ed = v; }, 0.2, 4, 0.05); modSlider(card, 'Enemy speed', () => g.es, (v) => { g.es = v; }, 0.4, 2, 0.05); modSlider(card, 'Your damage', () => g.pd, (v) => { g.pd = v; }, 0.3, 3, 0.05);
+    card.appendChild(modEl('div', 'font-size:12px;color:#8a7c5c;margin-top:4px', 'These stack with the per-enemy and per-gun values. In co-op, the host’s enemy settings are the ones used.'));
+    const bk = modEl('div', CARD); body.appendChild(bk); bk.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:6px', 'Backup and sharing'));
+    bk.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:6px', 'Export everything (settings plus your model and sound files) to one file, or load one from a friend.'));
+    const row = modEl('div', 'display:flex;gap:8px;flex-wrap:wrap'); const ex = modEl('button', B_CSS, 'Export mod pack'); ex.onclick = () => modExport(); const im = modEl('button', B_CSS, 'Import mod pack'); im.onclick = () => modPickFile('.json,application/json', (f) => modImport(f)); const rs = modEl('button', B_CSS + ';border-color:#8a3a3a', 'Reset everything'); rs.onclick = async () => { if (!confirm('Remove all your enemy, gun and sound changes and go back to the defaults?')) return; await modReset(); modRender(); };
+    row.append(ex, im, rs); bk.appendChild(row);
+}
+const modB64 = (buf) => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const modUnB64 = (s) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
+async function modExport() {
+    const out = { game: 'oasis-survivor-modkit', v: 1, cfg: MOD.cfg, files: {} };
+    for (const k of Object.keys(MOD.cfg.sfx)) { const r = await idbGet('mod:a:' + k); if (r) out.files['a:' + k] = { n: r.n, b: modB64(r.b) }; }
+    for (const [g, o] of [['e', MOD.cfg.en], ['g', MOD.cfg.gun]]) for (const k of Object.keys(o)) if (o[k].mf) { const r = await idbGet('mod:m:' + g + ':' + k); if (r) out.files['m:' + g + ':' + k] = { n: r.n, b: modB64(r.b) }; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' })); a.download = 'harbor-inn-modpack.json'; document.body.appendChild(a); a.click(); a.remove();
+}
+async function modReset() {
+    for (const k of Object.keys(MOD.cfg.sfx)) { try { await idbDel('mod:a:' + k); } catch (e) { /* none */ } }
+    for (const [g, o] of [['e', MOD.cfg.en], ['g', MOD.cfg.gun]]) for (const k of Object.keys(o)) { try { await idbDel('mod:m:' + g + ':' + k); } catch (e) { /* none */ } }
+    MOD.cfg = { v: 1, en: {}, gun: {}, sfx: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }; MOD.buf = {}; MOD.models = {}; modSave(); modApplyGuns(); gunRefreshModels();
+}
+async function modImport(f) {
+    const o = JSON.parse(await f.text()); if (!o || o.game !== 'oasis-survivor-modkit' || !o.cfg) throw new Error('not a Harbor Inn mod pack'); await modReset();
+    MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }, o.cfg); MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
+    for (const [k, v] of Object.entries(o.files || {})) { if (k.startsWith('a:')) await idbPut('mod:a:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('m:')) await idbPut('mod:m:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); }
+    modSave(); MOD.aLoaded = false; if (AU.ctx) await modLoadAudio(); await modBoot(); modRender();
+}
+window.__mod = MOD; MOD.fn = { modOpen, modSetModel, modSetSound, modApplyEnemy, modGunInner }; setTimeout(() => { try { modBoot(); } catch (e) { console.warn('mod kit', e); } }, 0);
 function frame(now) {
     requestAnimationFrame(frame); const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
     try { padPoll(dt); } catch (e) { /* pad */ }
@@ -4928,6 +5124,7 @@ function menuOpts(p) {
     row('Film grain: ' + (OPT.grain ? 'On' : 'Off'), () => { OPT.grain = OPT.grain ? 0 : 1; $('grain').style.display = OPT.grain ? '' : 'none'; saveOpt(); renderMenu(); });
     row('Scanlines: ' + ['Off', 'Light', 'Strong'][OPT.scan | 0], () => { OPT.scan = ((OPT.scan | 0) + 1) % 3; applyScan(); saveOpt(); renderMenu(); });
     row('Pre-rendered backgrounds: ' + (OPT.bg ? 'On' : 'Off') + '  (' + Object.keys(BG.tex).length + ' loaded)', () => { OPT.bg = OPT.bg ? 0 : 1; saveOpt(); renderMenu(); });
+    row('Mod Kit: your own enemies, guns, sounds and balance...', () => modOpen());
     row('Load background images...', () => bgPick());
     if (Object.keys(BG.tex).length) row('Remove loaded backgrounds', () => { bgClear().then(() => renderMenu()); });
     row('Volume: ' + Math.round(OPT.vol * 100) + '%  (tap to change)', () => { OPT.vol = OPT.vol >= 1 ? 0.2 : Math.round((OPT.vol + 0.2) * 10) / 10; saveOpt(); musVol(); renderMenu(); });
