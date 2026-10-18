@@ -182,6 +182,7 @@ function texFor(kind, col, rx, ry) {
     }
     const t = b.clone(); t.needsUpdate = true; t.repeat.set(rx || 1, ry || 1); return t;
 }
+{ const _tf = texFor; texFor = function (kind, col, rx, ry) { const t = _tf(kind, col, rx, ry); t.userData.pk = kind; t.userData.pc = col; return t; }; }   // tag procedural textures so the plate renderer can swap in photo textures
 const mat = (col, o) => new THREE.MeshLambertMaterial(Object.assign({ color: col, flatShading: true }, o || {}));
 const tmat = (kind, col, rx, ry) => new THREE.MeshLambertMaterial({ map: texFor(kind, col, rx, ry), flatShading: true });
 const boxM = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -1988,7 +1989,67 @@ function bgGuide(id, ci) {   // a clean 1024x768 render of a room from one of it
         x.putImageData(im, 0, 0); return cv.toDataURL('image/png');
     } finally { R.setRenderTarget(prev); rt.dispose(); if (PL.g) PL.g.visible = vis; }
 }
-window.__bg = { guide: bgGuide, rooms: () => Object.keys(ROOMS), camCount: (id) => { buildRoom(id); return ROOMS[id].cams.length; }, tex: BG.tex, sync: bgSync, import: bgImport, clear: bgClear };
+/* ---------- high-quality plate renderer: offline "pre-render" of a room with image textures, shadows, bloom and grade ---------- */
+const HQ = { tex: {}, dir: 'textures/' };
+function hqImg(u) { return new Promise((res) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = u; }); }
+async function hqLoad(dir) {
+    HQ.dir = dir || HQ.dir; if (HQ.ready === HQ.dir) return; HQ.tex = {};
+    for (const k of ['wood', 'brick', 'tile', 'stone', 'wall', 'carpet', 'metal']) {
+        const o = HQ.tex[k] = {};
+        for (const [sl, suf] of [['map', 'd'], ['bump', 'b'], ['rough', 'r'], ['norm', 'n']]) {
+            const im = await hqImg(HQ.dir + k + '_' + suf + '.jpg'); if (!im) continue;
+            const t = new THREE.Texture(im); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = sl === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.needsUpdate = true; o[sl] = t;
+        }
+    }
+    HQ.ready = HQ.dir;
+}
+const HQ_LOOK = { wood: [0.9, 0.0], brick: [0.95, 0.0], tile: [0.6, 0.0], stone: [0.9, 0.0], wall: [0.92, 0.0], carpet: [1, 0.0], metal: [0.5, 0.55] };   // roughness, metalness
+async function hqPlate(id, ci, o) {
+    o = o || {}; await hqLoad(o.dir); buildRoom(id); const def = ROOMS[id], c = def.cams && def.cams[ci]; if (!c) return null;
+    const W = o.w || 2048, H = Math.round(W * 0.75), rt = new THREE.WebGLRenderTarget(W, H, { samples: 4, type: THREE.HalfFloatType }), prev = R.getRenderTarget(), vis = PL.g ? PL.g.visible : true;
+    const swaps = [], cache = new Map(), lights = [], rep = o.rep || 0.5;
+    const conv = (m) => {
+        if (cache.has(m)) return cache.get(m); let r = m;
+        if (m.isMeshLambertMaterial || m.isMeshPhongMaterial) {
+            const k = m.map && m.map.userData.pk; let set = k && HQ.tex[k] && HQ.tex[k].map ? HQ.tex[k] : null, col = new THREE.Color(m.color);
+            if (set) {
+                const base = new THREE.Color(m.map.userData.pc), mx = Math.max(base.r, base.g, base.b, 0.01), tint = base.clone().multiplyScalar(1 / mx).lerp(new THREE.Color(1, 1, 1), 0.12).multiplyScalar(Math.min(1.3, 0.3 + mx * 1.3));   // room colour tints the photo
+                const lk = HQ_LOOK[k], rp = m.map.repeat, mk = (t) => { if (!t) return null; t = t.clone(); t.needsUpdate = true; t.repeat.set(rp.x * rep, rp.y * rep); return t; };
+                const keep = (k === 'wall' || k === 'carpet') && m.map; if (keep) { const pm = m.map.clone(); pm.needsUpdate = true; pm.magFilter = THREE.LinearFilter; pm.minFilter = THREE.LinearMipmapLinearFilter; pm.anisotropy = 8; set = Object.assign({}, set, { map: pm, bump: null }); }   // keep the room's own wallpaper/carpet pattern, add photo surface detail
+                r = new THREE.MeshStandardMaterial({ map: keep ? set.map : mk(set.map), bumpMap: set.norm ? null : mk(set.bump), bumpScale: 2, normalMap: mk(set.norm), roughnessMap: mk(set.rough), color: keep ? new THREE.Color(1.15, 1.15, 1.15) : tint, roughness: lk[0], metalness: lk[1], side: m.side, transparent: m.transparent, opacity: m.opacity });
+            } else r = new THREE.MeshStandardMaterial({ color: col, map: m.map, roughness: 0.88, metalness: 0, side: m.side, transparent: m.transparent, opacity: m.opacity, emissive: m.emissive || 0, emissiveIntensity: m.emissiveIntensity });
+        }
+        cache.set(m, r); return r;
+    };
+    try {
+        if (PL.g) PL.g.visible = false;
+        RM.group.traverse((n) => {
+            if (n.isMesh && n.material) { const orig = n.material; n.material = Array.isArray(orig) ? orig.map(conv) : conv(orig); swaps.push([n, orig]); n.castShadow = true; n.receiveShadow = true; }
+        });
+        scene.traverse((n) => { if (n.isPointLight || n.isSpotLight) lights.push(n); });
+        lights.sort((a, b) => b.intensity - a.intensity); const sh = [];
+        lights.filter((l) => l !== PL.light).slice(0, o.shadowLights || 3).forEach((l) => { sh.push([l, l.castShadow, l.shadow.mapSize.x]); l.castShadow = true; l.shadow.mapSize.set(1024, 1024); l.shadow.bias = -0.002; l.shadow.radius = 3; });
+        const sm = R.shadowMap.enabled, st = R.shadowMap.type; R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap; R.shadowMap.needsUpdate = true;
+        const cam = new THREE.PerspectiveCamera(c.fov, W / H, camera.near, camera.far); cam.position.set(...c.p); cam.lookAt(...c.t);
+        R.setRenderTarget(rt); R.render(scene, cam); const buf = new Uint16Array(W * H * 4); R.readRenderTargetPixels(rt, 0, 0, W, H, buf);
+        R.shadowMap.enabled = sm; R.shadowMap.type = st; sh.forEach(([l, cs, ms]) => { l.castShadow = cs; l.shadow.mapSize.set(ms, ms); });
+        const half = (h) => { const s = (h & 0x8000) ? -1 : 1, e = (h >> 10) & 31, f = h & 1023; return e === 0 ? s * Math.pow(2, -14) * (f / 1024) : e === 31 ? s * 65504 : s * Math.pow(2, e - 15) * (1 + f / 1024); };
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d'), im = x.createImageData(W, H), ex = o.exposure || 0.75;
+        for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+            const a = ((H - 1 - y) * W + xx) * 4, b = (y * W + xx) * 4, dx = xx / W - 0.5, dy = y / H - 0.5, vg = 1 - 1.5 * (dx * dx + dy * dy), n = (Math.random() - 0.5) * 0.025;
+            let r = half(buf[a]) * ex * vg, g = half(buf[a + 1]) * ex * vg, bl = half(buf[a + 2]) * ex * vg; const l = 0.3 * r + 0.59 * g + 0.11 * bl;
+            r = l + (r - l) * 0.9; g = l + (g - l) * 0.9; bl = l + (bl - l) * 0.9; r *= 1.02; bl *= 1.0;
+            const f = (v) => { v = Math.max(0, v + n); v = (v * (2.51 * v + 0.03)) / (v * (2.43 * v + 0.59) + 0.14); return Math.round(255 * Math.pow(Math.min(1, Math.max(0, v)), 1 / 2.2)); };
+            im.data[b] = f(r); im.data[b + 1] = f(g); im.data[b + 2] = f(bl); im.data[b + 3] = 255;
+        }
+        x.putImageData(im, 0, 0);
+        const bl = document.createElement('canvas'); bl.width = W / 4; bl.height = H / 4; const bx = bl.getContext('2d'); bx.filter = 'brightness(0.75) contrast(2.2) blur(6px)'; bx.drawImage(cv, 0, 0, bl.width, bl.height); bx.filter = 'none';
+        x.globalCompositeOperation = 'screen'; x.globalAlpha = 0.55; x.filter = 'blur(10px)'; x.drawImage(bl, 0, 0, W, H); x.filter = 'none'; x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+        const out = document.createElement('canvas'); out.width = o.outW || 1280; out.height = Math.round(out.width * 0.75); const ox = out.getContext('2d'); ox.imageSmoothingQuality = 'high'; ox.drawImage(cv, 0, 0, out.width, out.height);
+        return out.toDataURL('image/jpeg', o.q || 0.9);
+    } finally { swaps.forEach(([n, m]) => { n.material = m; }); cache.forEach((v, k) => { if (v !== k) v.dispose(); }); R.setRenderTarget(prev); rt.dispose(); if (PL.g) PL.g.visible = vis; }
+}
+window.__bg = { hq: hqPlate, guide: bgGuide, rooms: () => Object.keys(ROOMS), camCount: (id) => { buildRoom(id); return ROOMS[id].cams.length; }, tex: BG.tex, sync: bgSync, import: bgImport, clear: bgClear };
 function bgPick() { const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.accept = 'image/*'; i.onchange = async () => { const n = await bgImport([...i.files]); say(n ? n + ' background image' + (n > 1 ? 's' : '') + ' loaded. Names must look like roomid_0.jpg' : 'No images loaded. Files must be named roomid_cam.jpg, for example lobby_0.jpg', 3200); renderMenu(); }; i.click(); }
 function frame(now) {
     requestAnimationFrame(frame); const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
@@ -2861,6 +2922,29 @@ function menuOpts(p) {
     { const w = el('div'); w.style.cssText = 'margin:-.2em 0 .5em;display:flex;gap:.6em;align-items:center'; const sl = document.createElement('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(OPT.sfx * 100); sl.style.cssText = 'flex:1'; sl.oninput = () => { OPT.sfx = sl.value / 100; musVol(); saveOpt(); }; sl.onchange = () => { sfx('click'); renderMenu(); }; w.appendChild(sl); L.appendChild(w); }
     row('Character: ' + (AV.on ? AV.name : 'Default soldier') + (AV.err ? '\n' + AV.err : ''), async () => { const src = OPT.avatar || 'oasis'; OPT.avatar = src === 'oasis' ? 'upload' : src === 'upload' ? 'none' : 'oasis'; saveOpt(); if (OPT.avatar === 'none') { say('Using the default soldier next time you start.', 2200); } else await avBoot(); renderMenu(); });
     row('Upload a VRoid (.vrm)', () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.vrm,.glb'; fi.onchange = async () => { const fl = fi.files[0]; if (!fl) return; await idbPut('avatar', fl); OPT.avatar = 'upload'; saveOpt(); say('Loading ' + fl.name + '...', 2500); await avBoot(); renderMenu(); }; fi.click(); });
+    row('Export save + character (.json)', async () => {
+        try {
+            const out = { game: 'oasis-survivor', v: 1, ls: {}, avatar: null };
+            for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf(SK) === 0) out.ls[k] = localStorage.getItem(k); }
+            const av = await idbGet('avatar');
+            if (av) { const u8 = new Uint8Array(await av.arrayBuffer()); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); out.avatar = { name: av.name || 'character.vrm', b64: btoa(bin) }; }
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' })); a.download = 'survivor-backup.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+            say(out.avatar ? 'Exported your save and character.' : 'Exported your save (no uploaded character found).', 2600);
+        } catch (e) { say('Export failed.', 2000); }
+    });
+    row('Import save + character (.json)', () => {
+        const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.json,application/json';
+        fi.onchange = async () => {
+            const fl = fi.files[0]; if (!fl) return;
+            try {
+                const d = JSON.parse(await fl.text()); if (!d || d.game !== 'oasis-survivor' || !d.ls) throw new Error('bad');
+                for (const k in d.ls) if (k.indexOf(SK) === 0) localStorage.setItem(k, d.ls[k]);
+                if (d.avatar && d.avatar.b64) { const bin = atob(d.avatar.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); await idbPut('avatar', new File([u8], d.avatar.name || 'character.vrm')); }
+                say('Imported. Reloading...', 1800); setTimeout(() => location.reload(), 900);
+            } catch (e) { say('That is not a valid backup file.', 2200); }
+        };
+        fi.click();
+    });
     if (CO.on) { const c = el('div', 'desc', 'Co-op: ' + (CO.role === 'host' ? 'hosting, code ' + CO.code : 'joined ' + CO.code) + (CO.peer ? ' (partner connected)' : ' (waiting for partner)')); c.style.marginTop = '.6em'; L.appendChild(c); }
     const h = el('div', 'desc'); h.style.marginTop = '.8em'; h.textContent = 'Keys: Arrow keys or WASD move/turn, Z or Shift (hold) aim, Space/Enter/E action (shoot while aiming), Q quick turn, R reload, C or Ctrl run, Tab or I bag.\nTouch: use the buttons on screen.'; L.appendChild(h); p.appendChild(L); setNav(els, 1);
 }

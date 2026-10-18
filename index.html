@@ -8604,6 +8604,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
 
             // ---- the TV on the left wall ----
             buildLoftTV(root);
+            try { buildLoftTheaterDoor(root); } catch (e) { console.warn('theater door', e); }
             buildLoftExtras(root, M, { bx, rc, cyl, sph, std });
 
             /* ---------------- outside: deck, pool, garden (after the house render) ---------------- */
@@ -15413,16 +15414,17 @@ function btMusicStop() {
          * ==================================================================================================== */
         const TH_X = 13, TH_ZN = -16.5, TH_ZS = 10.5, TH_H = 14, TH_Z0 = -5.5, TH_PITCH = 1.5, TH_RISE = 0.3, TH_ROWS = 8, TH_SZ = -16.2;
         const TH_BLOCKS = [[-10.9, -4.7], [-3.1, 3.1], [4.7, 10.9]];
-        const THEATER = { ready: false, group: null, dock: null, rects: [], near: null, btn: null, t: 0, light: null, door: null, doorBtn: null, doorNear: false };
+        const THEATER = { sitT: 0, seats: [], seat: null, ready: false, group: null, dock: null, rects: [], near: null, btn: null, t: 0, light: null, door: null, doorBtn: null, doorNear: false };
         try { THEATER.dock = JSON.parse(localStorage.getItem('oasis.theater') || 'null'); } catch (e) { THEATER.dock = null; }
         function myTheaterCode() { let c = null; try { c = localStorage.getItem('oasis.theatercode'); } catch (e) { /* storage */ } if (!c || !/^N[A-Z0-9]{11}$/.test(c)) { c = makeCode('theater'); try { localStorage.setItem('oasis.theatercode', c); } catch (e) { /* storage */ } } return c; }
         function theaterGround(x, z) {
+            if (THEATER.seat && Math.hypot(x - THEATER.seat.x, z - THEATER.seat.z) < 0.6) return THEATER.seat.y;
             if (z < TH_SZ + 2.8) return 0.5;                                                   // the stage in front of the screen
             const k = Math.floor((z - (TH_Z0 - TH_PITCH / 2)) / TH_PITCH);
             return k < 0 ? 0 : TH_RISE * Math.min(k, TH_ROWS - 1);
         }
         function theaterClamp(pos) { pos.x = clamp(pos.x, -(TH_X - 0.5), TH_X - 0.5); pos.z = clamp(pos.z, TH_SZ + 0.6, TH_ZS - 0.2); }
-        function theaterCollide(pos) { for (const r of THEATER.rects) pushOutRect(pos, r, 0.34); }
+        function theaterCollide(pos) { if (THEATER.seat) return; for (const r of THEATER.rects) pushOutRect(pos, r, 0.34); }
         function theaterSpawn() { return { x: (Math.random() - 0.5) * 1.2, y: 0, z: TH_ZS - 3.2, ry: Math.PI }; }
         function ensureTheater() {
             if (THEATER.ready) return; THEATER.ready = true;
@@ -15478,7 +15480,7 @@ function btMusicStop() {
                 const top = r * TH_RISE, zc = TH_Z0 + r * TH_PITCH;
                 for (const [x0, x1] of TH_BLOCKS) {
                     const n = Math.round((x1 - x0) / sw);
-                    for (let i = 0; i < seatsPer; i++) { const x = x0 + sw * (i + 0.5); mt.makeTranslation(x, top + 0.43, zc + 0.3); cush.setMatrixAt(si, mt); mt.makeTranslation(x, top + 0.82, zc + 0.6); mt.multiply(new THREE.Matrix4().makeRotationX(-0.12)); back.setMatrixAt(si, mt); mt.makeTranslation(x, top + 0.17, zc + 0.35); ped.setMatrixAt(si, mt); si++; }
+                    for (let i = 0; i < seatsPer; i++) { const x = x0 + sw * (i + 0.5); THEATER.seats.push({ x, y: top + 0.27, z: zc + 0.3, row: r + 1, n: THEATER.seats.length }); mt.makeTranslation(x, top + 0.43, zc + 0.3); cush.setMatrixAt(si, mt); mt.makeTranslation(x, top + 0.82, zc + 0.6); mt.multiply(new THREE.Matrix4().makeRotationX(-0.12)); back.setMatrixAt(si, mt); mt.makeTranslation(x, top + 0.17, zc + 0.35); ped.setMatrixAt(si, mt); si++; }
                     for (let i = 0; i <= seatsPer; i++) { mt.makeTranslation(x0 + sw * i, top + 0.62, zc + 0.35); arms.setMatrixAt(ai++, mt); }
                     THEATER.rects.push([x0, zc + 0.12, x1, zc + 0.75]);
                 }
@@ -15507,14 +15509,30 @@ function btMusicStop() {
             const lc = myLoftCode(), d = THEATER.dock && THEATER.dock.id && THEATER.dock.map !== 'theater' ? THEATER.dock : { id: 'private-' + lc, label: 'Harbor Studio', isPrivate: true, code: lc, map: 'loft' };
             try { joinRoom(d.id, { label: d.label, isPrivate: d.isPrivate, code: d.code, map: d.map }); } catch (e) { console.error(e); sysChat('Could not leave the theater.'); }
         }
-        function theaterAct() { if (activeMap === 'theater') { if (THEATER.near === 'exit') theaterLeave(); } else if (activeMap === 'loft' && THEATER.doorNear) theaterEnter(); }
+        function theaterSit(st) {
+            if (!st) return; THEATER.seat = st; THEATER.sitT = THEATER.t; localActor.group.position.set(st.x, st.y, st.z); localActor.group.rotation.y = Math.PI;
+            try { localActor.playEmote('sit'); localActor.emoteDur = 0; net && net.send({ t: 'emote', name: 'sit' }); } catch (e) { /* not ready */ }
+        }
+        function theaterStand() {
+            const st = THEATER.seat; THEATER.seat = null; if (!st) return;
+            try { if (localActor.emote === 'sit') { localActor.playEmote('stand'); net && net.send({ t: 'emote', name: 'stand' }); } } catch (e) { /* not ready */ }
+            localActor.group.position.set(st.x, theaterGround(st.x, st.z - 0.9), st.z - 0.9);   // step out into the leg room in front
+        }
+        function theaterAct() { if (activeMap === 'theater') { if (THEATER.near === 'exit') theaterLeave(); else if (THEATER.near === 'sit') theaterSit(THEATER.cand); else if (THEATER.near === 'stand') theaterStand(); } else if (activeMap === 'loft' && THEATER.doorNear) theaterEnter(); }
         function theaterUpdate(g, dt) {
             if (!THEATER.ready || !THEATER.group || !THEATER.group.visible) return;
             THEATER.t += dt; if (THEATER.light) THEATER.light.intensity += ((activeSrc() ? 14 : 4) - THEATER.light.intensity) * Math.min(1, dt * 2);
-            const p = g.position, near = p.z > TH_ZS - 2.4 && Math.abs(p.x) < 2.6 ? 'exit' : null;
-            if (near !== THEATER.near) { THEATER.near = near; if (THEATER.btn) { THEATER.btn.style.display = near ? 'block' : 'none'; THEATER.btn.textContent = near ? 'Leave theater  (Y)' : ''; } }
+            const p = g.position;
+            if (THEATER.seat) {   // seated: held in place facing the screen; any walking input stands you up
+                if (localActor.emote !== 'sit' && THEATER.t - THEATER.sitT < 0.8) { try { localActor.playEmote('sit'); localActor.emoteDur = 0; } catch (e) { /* not ready */ } }   // the jump into the seat can read as speed and drop the pose: put it back
+                const mv = keys.forward || keys.backward || keys.left || keys.right || Math.hypot(padMove.x, padMove.z) > 0.35 || (localActor.emote !== 'sit' && THEATER.t - THEATER.sitT >= 0.8);
+                if (mv) theaterStand(); else { p.set(THEATER.seat.x, THEATER.seat.y, THEATER.seat.z); g.rotation.y = Math.PI; }
+            }
+            let near = !THEATER.seat && p.z > TH_ZS - 2.4 && Math.abs(p.x) < 2.6 ? 'exit' : null;
+            if (!near) { if (THEATER.seat) near = 'stand'; else { let best = null, bd = 1.15; for (const st of THEATER.seats) { if (st.taken) continue; const d = Math.hypot(st.x - p.x, st.z - p.z); if (d < bd) { bd = d; best = st; } } THEATER.cand = best; if (best) near = 'sit'; } }
+            if (near !== THEATER.near) { THEATER.near = near; if (THEATER.btn) { THEATER.btn.style.display = near ? 'block' : 'none'; THEATER.btn.textContent = near === 'exit' ? 'Leave theater  (Y)' : near === 'sit' ? 'Sit down  (Y)' : near === 'stand' ? 'Stand up  (Y)' : ''; } }
         }
-        function theaterMapChanged(id) { if (id !== 'theater' && THEATER.btn) { THEATER.btn.style.display = 'none'; THEATER.near = null; } if (id !== 'loft' && THEATER.doorBtn) { THEATER.doorBtn.style.display = 'none'; THEATER.doorNear = false; } }
+        function theaterMapChanged(id) { if (id !== 'theater') THEATER.seat = null; if (id !== 'theater' && THEATER.btn) { THEATER.btn.style.display = 'none'; THEATER.near = null; } if (id !== 'loft' && THEATER.doorBtn) { THEATER.doorBtn.style.display = 'none'; THEATER.doorNear = false; } }
         MAP_DEFS.theater = { id: 'theater', ground: theaterGround, clamp: theaterClamp, collide: theaterCollide, spawn: theaterSpawn, update: theaterUpdate };
         /* the theater door in Harbor Studio: east wall, between the deck door and the lift */
         const TH_DOOR = { x: 4.42, z: -3.6 };
@@ -15532,9 +15550,10 @@ function btMusicStop() {
             const p = g.position, near = activeMap === 'loft' && Math.abs(p.z - TH_DOOR.z) < 1.5 && p.x > LOFT.X1 - 2.2;
             if (near !== THEATER.doorNear) { THEATER.doorNear = near; THEATER.doorBtn.style.display = near ? 'block' : 'none'; }
         }
+        { const _lu = MAP_DEFS.loft.update; MAP_DEFS.loft.update = (g, dt) => { if (_lu) _lu(g, dt); try { theaterDoorTick(g); } catch (e) { /* door */ } }; }
         document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('#btn-theater'); if (t) { e.preventDefault(); theaterEnter(); } });
         window.addEventListener('keydown', (e) => { if (e.code === 'KeyY' && !e.repeat && !e.ctrlKey && !e.metaKey && (activeMap === 'theater' || (activeMap === 'loft' && THEATER.doorNear)) && !isTyping(e)) { e.preventDefault(); theaterAct(); } });
-        window.__theater = { THEATER, theaterEnter, theaterLeave, theaterAct, myTheaterCode };
+        window.__theater = { theaterSit, theaterStand, THEATER, theaterEnter, theaterLeave, theaterAct, myTheaterCode };
 
         window.__gfx = { ac: { AC, acWelcome, acSync, acHtml, acDerive, acEnc, acDec, acParts, acSess, acClick }, cs: { CS, csSnap, csApply, csHash, csHtml, csFresh, csSync }, GFX, toggle: gfxToggle, preset: gfxSetPreset, bench: gfxBench, sweep: gfxShadowSweep };
 
