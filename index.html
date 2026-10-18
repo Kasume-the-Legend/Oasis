@@ -87,7 +87,8 @@
             document.addEventListener('DOMContentLoaded', apply);
             window.addEventListener('resize', apply);
             window.addEventListener('orientationchange', function () { setTimeout(function () { apply(); window.dispatchEvent(new Event('resize')); }, 250); });
-            document.addEventListener('fullscreenchange', function () { setTimeout(apply, 120); });
+            function fsReapply() { [120, 400, 900].forEach(function (t) { setTimeout(function () { apply(); window.dispatchEvent(new Event('resize')); }, t); }); }   // the viewport settles late when fullscreen toggles, so re-fit a few times
+            document.addEventListener('fullscreenchange', fsReapply); document.addEventListener('webkitfullscreenchange', fsReapply);
         })();
     </script>
 
@@ -1421,8 +1422,9 @@
         /* ============ XMB bottom menu (categories along the bottom, lists open upward) ============ */
         /* wide screens (touch default): the HUD frame is 16:9 but the picture fills the screen, so the bottom bars drop to the real screen bottom (--wy is minus the top offset of the frame) */
         .stagewide nav.xmb-bar { bottom: var(--wy) !important; }
-        .stagewide #chat-panel { bottom: calc(7rem + var(--wy)) !important; }
-        .stagewide #chatbar { bottom: calc(7rem + var(--wy)) !important; }
+        .stagewide #chat-panel, .stagewide #chat-panel.home-log { bottom: calc(8.4rem + var(--wy)) !important; }
+        .stagewide #chatbar { bottom: calc(8.4rem + var(--wy)) !important; }
+        html.stagewide.dc-compact #chat-panel.home-log { bottom: calc(8px + var(--wy)) !important; }
         nav.xmb-bar { background: linear-gradient(180deg, rgba(4,10,26,0) 0%, rgba(6,16,40,.55) 55%, rgba(6,16,40,.86) 100%) !important; padding: 0 !important; }
         .xmb { position: relative; display: flex; justify-content: center; width: 100%; }
         .xmb-row { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: clamp(2px, calc(1.6 * var(--svw)), 26px); padding: 22px 12px 12px; max-width: 100%; }
