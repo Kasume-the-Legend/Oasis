@@ -93,6 +93,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#d9cfb4;fon
 #tmenu{position:absolute;left:50%;top:48%;transform:translateX(-50%);display:flex;flex-direction:column;gap:.5em;min-width:16em}
 #tmenu .btn{text-align:center;font-size:1.15em}
 #touch{position:absolute;inset:0;pointer-events:none}
+#touch.gp{display:none!important}
 #touch button{position:absolute;pointer-events:auto;width:5.4em;height:5.4em;border-radius:50%;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.35);color:#fff;font:700 1em Georgia,serif;touch-action:none}
 #touch button:active,#touch button.dn{background:rgba(255,255,255,.35)}
 .askrow{display:flex;flex-direction:column;gap:.3em;margin-top:.6em}
@@ -1939,7 +1940,8 @@ const HUDS = {};
 const PAD = { on: {}, rep: {}, ax: { x: 0, y: 0 }, armed: {}, id: null };
 function padKey(code, down) { try { window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, bubbles: true, cancelable: true })); } catch (e) { /* no keyboard events */ } }
 function padPoll(dt) {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : []; let g = null; for (const q of pads) if (q && q.connected) { g = q; break; } if (!g) { for (const k in PAD.on) if (PAD.on[k]) { PAD.on[k] = false; padKey(k, false); } return; }
+    const pads = navigator.getGamepads ? navigator.getGamepads() : []; let g = null; for (const q of pads) if (q && q.connected) { g = q; break; } { const tc = document.getElementById('touch'); if (tc) tc.classList.toggle('gp', !!g); }   // controller connected: hide the on-screen buttons
+    if (!g) { for (const k in PAD.on) if (PAD.on[k]) { PAD.on[k] = false; padKey(k, false); } return; }
     // a button only counts once it has been seen released: some pads report triggers or odd buttons as held at rest, which would lock the aim on
     if (PAD.id !== g.id) { PAD.id = g.id; PAD.armed = {}; }
     const raw = (i) => !!(g.buttons[i] && (g.buttons[i].pressed || g.buttons[i].value > 0.5));
