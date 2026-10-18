@@ -3178,6 +3178,25 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             else if (slot === 'mention') { chsPop(620, 0.13, 0.26); chsPop(930, 0.13, 0.22, 0.11); chsPop(1240, 0.16, 0.2, 0.22); }
             else { chsPop(760, 0.12, 0.24); chsPop(1010, 0.1, 0.16, 0.08); }
         }
+        /* iOS / Android: sound is locked until a real tap, and the iPhone silent switch mutes web audio. Unlock on the first taps (and again after a call or app switch) so chat sounds work on mobile. */
+        (function chsUnlock() {
+            const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+            let el = null;
+            const lift = () => {   // tell iOS this page plays sound (so the silent switch does not mute it)
+                try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+                try { if (!el) { el = document.createElement('audio'); el.src = SILENT; el.loop = true; el.setAttribute('playsinline', ''); el.volume = 0.01; el.preload = 'auto'; } const pr = el.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { /* none */ }
+            };
+            const unlock = () => {
+                try {
+                    lift();
+                    const ac = chsCtx(); if (ac) { if (ac.state !== 'running') ac.resume().catch(() => {}); const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination); src.start(0); }
+                    try { dnBeep(1, 0.001, 'sine', 0.0001); } catch (e) { /* not ready */ }
+                } catch (e) { /* no audio */ }
+            };
+            for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) window.addEventListener(ev, unlock, { capture: true, passive: true });
+            document.addEventListener('visibilitychange', () => { if (!document.hidden && CHS.ac && CHS.ac.state !== 'running') CHS.ac.resume().catch(() => {}); });
+            window.addEventListener('pageshow', () => { if (CHS.ac && CHS.ac.state !== 'running') CHS.ac.resume().catch(() => {}); });
+        })();
         function chsType() { if (!CHS.on || !CHS.typing) return; const t = performance.now(); if (t - CHS.lastType < 55) return; CHS.lastType = t; chsPop(900 + Math.random() * 500, 0.05, 0.12); }
         function chsOnChat(user, text) {
             if (user === 'System' || !text) return; const mine = user === me.name;
