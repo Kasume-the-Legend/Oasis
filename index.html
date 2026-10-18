@@ -8604,7 +8604,6 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
 
             // ---- the TV on the left wall ----
             buildLoftTV(root);
-            try { buildLoftTheaterDoor(root); } catch (e) { console.warn('theater door', e); }
             buildLoftExtras(root, M, { bx, rc, cyl, sph, std });
 
             /* ---------------- outside: deck, pool, garden (after the house render) ---------------- */
@@ -15533,7 +15532,6 @@ function btMusicStop() {
             const p = g.position, near = activeMap === 'loft' && Math.abs(p.z - TH_DOOR.z) < 1.5 && p.x > LOFT.X1 - 2.2;
             if (near !== THEATER.doorNear) { THEATER.doorNear = near; THEATER.doorBtn.style.display = near ? 'block' : 'none'; }
         }
-        { const _lu = MAP_DEFS.loft.update; MAP_DEFS.loft.update = (g, dt) => { if (_lu) _lu(g, dt); try { theaterDoorTick(g); } catch (e) { /* door */ } }; }
         document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('#btn-theater'); if (t) { e.preventDefault(); theaterEnter(); } });
         window.addEventListener('keydown', (e) => { if (e.code === 'KeyY' && !e.repeat && !e.ctrlKey && !e.metaKey && (activeMap === 'theater' || (activeMap === 'loft' && THEATER.doorNear)) && !isTyping(e)) { e.preventDefault(); theaterAct(); } });
         window.__theater = { THEATER, theaterEnter, theaterLeave, theaterAct, myTheaterCode };
