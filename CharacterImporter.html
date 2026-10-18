@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Character Importer</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/","@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js"}}</script>
+<style>
+:root{--bg:#0d1014;--panel:#151a21;--line:#262e38;--fg:#e7ecf2;--mut:#8b97a6;--acc:#4fb3ff;--ok:#5fd38a;--bad:#ff6b6b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+#app{display:grid;grid-template-columns:minmax(300px,380px) 1fr;height:100%}
+#side{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:17px;margin:0}
+h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:0 0 6px}
+p{margin:0;color:var(--mut)}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:22px 12px;text-align:center;cursor:pointer;color:var(--mut);transition:.15s}
+#drop.on,#drop:hover{border-color:var(--acc);color:var(--fg)}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input[type=text],input[type=number],select{width:100%;background:#0d1117;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;gap:8px;align-items:center;color:var(--fg);font-size:13px;margin:4px 0}
+button{background:var(--acc);color:#04121f;border:0;border-radius:9px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.sec{background:#212a35;color:var(--fg)}
+button:disabled{opacity:.4;cursor:default}
+#act{gap:10px;flex-wrap:wrap}#act:not([hidden]){display:flex}
+#status{padding:9px 11px;border-radius:9px;background:#0d1117;border:1px solid var(--line);min-height:40px;white-space:pre-wrap}
+#status.ok{border-color:var(--ok)}#status.bad{border-color:var(--bad)}
+#map{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:9px}
+#map table{border-collapse:collapse;width:100%;font-size:12px}
+#map td{padding:3px 6px;border-bottom:1px solid var(--line)}
+#map td:first-child{color:var(--mut);white-space:nowrap}
+#map select{padding:3px 5px;font-size:12px}
+.miss td:first-child{color:var(--bad)}
+#view{position:relative;min-height:300px}
+canvas{display:block;width:100%;height:100%}
+#hint{position:absolute;left:14px;bottom:12px;color:var(--mut);font-size:12px;pointer-events:none}
+@media(max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:auto 55vh}#side{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="side">
+    <div><h1>Character Importer</h1><p>Turn an FBX or GLB character into a VRoid-compatible <b>.vrm</b> the game can load.</p></div>
+    <div id="drop">Drop a character here, or click to choose<br><small>.fbx &middot; .glb &middot; .gltf &middot; .vrm</small></div>
+    <input id="file" type="file" accept=".fbx,.glb,.gltf,.vrm" hidden>
+    <div id="status">Waiting for a character file.</div>
+    <div id="opts" hidden>
+      <div class="row"><div><label>Character name</label><input id="nm" type="text" maxlength="60"></div><div><label>Author</label><input id="au" type="text" maxlength="60" value="Me"></div></div>
+      <div class="row" style="margin-top:10px"><div><label>Height (metres)</label><input id="ht" type="number" min="0.3" max="4" step="0.01" value="1.7"></div><div><label>Facing</label><select id="face"><option value="0">As the file has it</option><option value="180">Turn around 180&deg;</option></select></div></div>
+      <label class="chk"><input id="tp" type="checkbox" checked> Straighten to a T-pose (as the game does)</label>
+    </div>
+    <div id="mapwrap" hidden><h2>Bones the game will use</h2><div id="map"></div><p style="margin-top:6px">Red rows are required and missing. Pick the right bone from the list to fix a wrong or missing match.</p></div>
+    <div id="act" hidden><button id="go">Convert &amp; download .vrm</button><button id="chk" class="sec">Test result</button></div>
+    <p>Load the downloaded .vrm in the game with <b>Options &rarr; Upload a VRoid (.vrm)</b>.</p>
+  </div>
+  <div id="view"><canvas id="cv"></canvas><div id="hint">Drag to orbit &middot; scroll to zoom &middot; right-drag to pan</div></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import * as VM from '@pixiv/three-vrm';
+
+/* ===== the same skeleton recognition the game uses (copied from it) ===== */
+        const SKIP_WORDS = new Set(['ik', 'fk', 'pole', 'target', 'helper', 'twist', 'roll', 'corrective', 'ctrl', 'control', 'cntrl', 'mch', 'org', 'tweak', 'nub', 'end', 'tip', 'eff', 'effector', 'socket', 'weapon', 'prop', 'top', 'jiggle', 'fix', 'unused', 'holster', 'corr', 'sleeve']);
+        const FINGER_WORDS = new Set(['thumb', 'index', 'middle', 'mid', 'ring', 'pinky', 'pinkie', 'little', 'finger', 'fingers', 'f']);
+        function boneTokens(name) {
+            let s = String(name).replace(/^.*[:|]/, '');                                  // "mixamorig:Hips", "Armature|Hips" -> "Hips"
+            s = s.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Za-z])(\d)/g, '$1 $2').replace(/(\d)([A-Za-z])/g, '$1 $2');
+            return s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+        }
+        function boneDepth(n) { let d = 0; for (let p = n.parent; p; p = p.parent) d++; return d; }
+        function ancestorsOf(n) { const a = []; for (let p = n.parent; p; p = p.parent) a.push(p); return a; }
+        function commonAncestor(a, b) { const set = new Set([a, ...ancestorsOf(a)]); for (let p = b; p; p = p.parent) if (set.has(p)) return p; return null; }
+
+        // Finds the human bones of a rigged character. Returns { map: { hips: Bone, spine: Bone, ... }, matched, total } or null when this is not a humanoid.
+        function autoHumanoid(root) {
+            const bones = []; root.traverse((o) => { if (o.isBone) bones.push(o); });
+            if (bones.length < 12) return null;
+            root.updateMatrixWorld(true);
+            const info = bones.map((node) => { const t = boneTokens(node.name); return { node, t, side: t.includes('left') || t.includes('l') ? 'left' : (t.includes('right') || t.includes('r') ? 'right' : null), skip: t.some((w) => SKIP_WORDS.has(w)), finger: t.some((w) => FINGER_WORDS.has(w)) }; });
+            const rank = (a, b) => a.t.length - b.t.length || boneDepth(a.node) - boneDepth(b.node);
+            const wx = (n) => n.getWorldPosition(new THREE.Vector3()).x;
+            // a landmark (hand, foot) on each side: by name, falling back to left/right position when the names carry no side
+            const landmark = (test, prefer) => {
+                const c = info.filter((i) => !i.skip && test(i));
+                const pick = (side) => { const list = c.filter((i) => i.side === side).sort(rank); const pr = prefer ? list.filter(prefer) : []; return (pr[0] || list[0] || {}).node || null; };
+                let l = pick('left'), r = pick('right');
+                if (!l || !r) {
+                    const none = c.filter((i) => !i.side).sort(rank);
+                    if (none.length === 2) { const [a, b] = wx(none[0].node) > wx(none[1].node) ? [none[0], none[1]] : [none[1], none[0]]; l = l || a.node; r = r || b.node; }   // facing +Z, the left side is +X
+                }
+                return [l, r];
+            };
+            const [lHand, rHand] = landmark((i) => (i.t.includes('hand') || i.t.includes('wrist')) && !i.finger, (i) => i.t.includes('hand'));
+            const [lFoot, rFoot] = landmark((i) => (i.t.includes('foot') || i.t.includes('ankle')) && !i.t.includes('toe') && !i.t.includes('ball'), (i) => i.t.includes('foot'));
+            if (!lHand || !rHand || !lFoot || !rFoot) return null;
+            const clean = (list) => list.filter((n) => n.isBone && !boneTokens(n.name).some((w) => SKIP_WORDS.has(w)));
+            const legRoot = commonAncestor(lFoot, rFoot);
+            if (!legRoot || !legRoot.isBone) return null;
+            let hips = legRoot;
+            const FACE = new Set(['jaw', 'eye', 'eyes', 'eyeball', 'eyebrow', 'eyelid', 'eyelids', 'eyelash', 'lip', 'lips', 'hair', 'tongue', 'teeth', 'tooth', 'nose', 'ear', 'brow', 'cheek', 'mouth', 'face']);
+            const headC = info.filter((i) => !i.skip && i.t.includes('head') && !i.t.some((w) => FACE.has(w))).sort(rank);
+            let head = headC.length ? headC[0].node : null;
+            if (headC.length > 1 && headC.every((c) => c.t.includes('neck'))) head = headC.slice().sort((a, b) => boneDepth(b.node) - boneDepth(a.node))[0].node;   // "head_neck_lower", "head_neck_upper": the top one is the head
+            if (!head) {                                                                  // the head is not called "head" (Rigify's "DEF-spine.006"): the highest bone of the upper body
+                const limbs = [lHand, rHand, lFoot, rFoot], hy = hips.getWorldPosition(new THREE.Vector3()).y, fy = Math.min(...[lFoot, rFoot].map((f) => f.getWorldPosition(new THREE.Vector3()).y));
+                let best = null, by = -Infinity;
+                for (const i of info) {
+                    if (i.skip || i.finger || i.t.includes('toe') || !ancestorsOf(i.node).includes(hips) || limbs.some((l) => l === i.node || ancestorsOf(i.node).includes(l))) continue;
+                    const y = i.node.getWorldPosition(new THREE.Vector3()).y; if (y > by) { by = y; best = i.node; }
+                }
+                if (best && by > hy + 0.15 * (hy - fy)) head = best;
+            }
+            if (!head) return null;
+            while (hips && !ancestorsOf(head).includes(hips)) hips = hips.parent;               // a pelvis bone under a separate root_hips: the true hips is the one above both the legs and the spine
+            if (!hips || !hips.isBone) return null;
+            const upTo = (n, stop) => { const out = []; for (let p = n.parent; p && p !== stop; p = p.parent) out.push(p); return out; };
+            // bones with no readable name (a garbled Japanese "twist" helper: "??????.R_059") sit between the real ones and would be taken for the elbow / knee
+            const named = (list) => { const f = list.filter((n) => boneTokens(n.name).some((w) => /^[a-z]{3,}$/.test(w))); return f.length >= 2 ? f : list; };
+            const legs = [lFoot, rFoot].map((f) => named(clean(upTo(f, legRoot))));
+            if (legs.some((c) => c.length < 2)) return null;
+            const armTop = commonAncestor(lHand, rHand);
+            if (!armTop || !armTop.isBone) return null;
+            const arms = [lHand, rHand].map((h) => named(clean(upTo(h, armTop))));
+            if (arms.some((c) => c.length < 2)) return null;
+            // the spine: the bones between the hips and the head; the lowest bone named "neck" is the neck, everything below it is spine
+            const nk = clean(upTo(head, hips)).filter((n) => boneTokens(n.name).includes('neck'));
+            const neck = nk.length ? nk[nk.length - 1] : null;
+            const below = neck ? clean(upTo(neck, hips)) : clean(upTo(head, hips));
+            const sp = below.slice().reverse();                                          // bottom (hips side) first
+            if (sp.length < 1) return null;
+            const map = { hips, spine: sp[0], head };
+            if (sp.length >= 2) map.chest = sp[1];
+            if (sp.length >= 3) map.upperChest = sp[sp.length - 1];
+            if (neck) map.neck = neck;
+            const side = (s, hand, foot, arm, leg) => {
+                map[s + 'Hand'] = hand; map[s + 'LowerArm'] = arm[0]; map[s + 'UpperArm'] = arm[1]; if (arm.length >= 3) map[s + 'Shoulder'] = arm[2];
+                map[s + 'Foot'] = foot; map[s + 'LowerLeg'] = leg[0]; map[s + 'UpperLeg'] = leg[leg.length - 1];
+                const toe = foot.children.find((c) => c.isBone && boneTokens(c.name).some((w) => w === 'toe' || w === 'toes' || w === 'ball'));
+                if (toe) map[s + 'Toes'] = toe;
+            };
+            side('left', lHand, lFoot, arms[0], legs[0]); side('right', rHand, rFoot, arms[1], legs[1]);
+            // fingers: each finger is a short chain of bones hanging off the hand, named thumb / index / middle / ring / pinky (or Finger0..4)
+            const KIND = [['Thumb', ['thumb', 'pollex']], ['Index', ['index', 'pointer']], ['Middle', ['middle', 'mid']], ['Ring', ['ring']], ['Little', ['pinky', 'pinkie', 'little', 'small', 'baby']]];
+            const fingerChain = (n) => { const c = [n]; for (let i = 0; i < 2; i++) { const nx = c[c.length - 1].children.find((k) => k.isBone && !boneTokens(k.name).some((w) => SKIP_WORDS.has(w))); if (!nx) break; c.push(nx); } return c; };
+            for (const [sd, hand] of [['left', lHand], ['right', rHand]]) {
+                const roots = hand.children.filter((k) => k.isBone && !boneTokens(k.name).some((w) => SKIP_WORDS.has(w)));
+                const fingerNo = (k) => { const t = boneTokens(k.name), i = t.lastIndexOf('finger'); return i < 0 ? NaN : +(t.slice(i + 1).find((w) => /^\d+$/.test(w))); };   // "Bip01 L Finger2": the 2, not the 01 of Bip01
+                const numbered = roots.filter((k) => Number.isFinite(fingerNo(k)));
+                const base = numbered.length ? Math.min(...numbered.map(fingerNo)) : 0;
+                for (const k of roots) {
+                    const t = boneTokens(k.name); let kind = (KIND.find(([, words]) => t.some((w) => words.includes(w))) || [])[0];
+                    if (!kind && numbered.includes(k)) kind = ['Thumb', 'Index', 'Middle', 'Ring', 'Little'][fingerNo(k) - base];
+                    if (!kind || map[sd + kind + 'Proximal']) continue;
+                    const ch = fingerChain(k), names = kind === 'Thumb' ? (ch.length >= 3 ? ['Metacarpal', 'Proximal', 'Distal'] : ['Proximal', 'Distal']) : (ch.length >= 3 ? ['Proximal', 'Intermediate', 'Distal'] : ['Proximal', 'Distal']);
+                    ch.slice(0, names.length).forEach((b, i) => { map[sd + kind + names[i]] = b; });
+                }
+            }
+            if (new Set(Object.values(map)).size !== Object.keys(map).length) return null;   // one bone cannot be two body parts
+            return { map, matched: Object.keys(map).length, total: bones.length };
+        }
+
+        // Re-poses a recognised skeleton into the T-pose the animations were made for (arms straight out, legs straight down), the same
+        // correction the Mixamo-to-Unreal retarget tools make for A-pose and slightly-off rest poses. Rest of the rig is read AFTER this.
+        function tposeFix(found, root) {
+            root.updateMatrixWorld(true);
+            const m = found.map, V = (x, y, z) => new THREE.Vector3(x, y, z), wp = (n) => n.getWorldPosition(new THREE.Vector3()), wq = (n) => n.getWorldQuaternion(new THREE.Quaternion());
+            if (!m.hips || !m.head || !m.leftUpperLeg || !m.rightUpperLeg) return;
+            if (wp(m.head).sub(wp(m.hips)).normalize().y < 0.9 || wp(m.leftUpperLeg).sub(wp(m.rightUpperLeg)).normalize().x < 0.9) return;   // only when it stands upright with its left on +X (the frame the animations use)
+            const fix = (bone, child, target) => {
+                if (!bone || !child || !bone.parent) return;
+                const d = wp(child).sub(wp(bone)); if (d.lengthSq() < 1e-12) return; d.normalize();
+                const ang = d.angleTo(target); if (ang < 0.02 || d.dot(target) < -0.2) return;       // already straight, or not a believable rest pose to correct
+                const dq = new THREE.Quaternion().setFromUnitVectors(d, target);
+                bone.quaternion.copy(wq(bone.parent).invert().multiply(dq.multiply(wq(bone)))); bone.updateMatrixWorld(true);
+            };
+            for (const [s, sx] of [['left', 1], ['right', -1]]) {
+                fix(m[s + 'UpperArm'], m[s + 'LowerArm'], V(sx, 0, 0)); fix(m[s + 'LowerArm'], m[s + 'Hand'], V(sx, 0, 0));
+                fix(m[s + 'UpperLeg'], m[s + 'LowerLeg'], V(0, -1, 0)); fix(m[s + 'LowerLeg'], m[s + 'Foot'], V(0, -1, 0));
+            }
+        }
+        // A VRM stand-in for a recognised skeleton: the same humanoid object a VRM has, so the Actor needs no special case.
+        function makePseudoVrm(root, found, VM) {
+            const humanBones = {};
+            for (const [k, node] of Object.entries(found.map)) humanBones[k] = { node };
+            const humanoid = new VM.VRMHumanoid(humanBones);
+            root.add(humanoid.normalizedHumanBonesRoot);
+            return { scene: root, humanoid, meta: { metaVersion: '1', name: 'recognised humanoid' }, expressionManager: null, springBoneManager: null, lookAt: null, auto: true, update() { humanoid.update(); } };
+        }
+function repairFbx(bytes) {   // some Mixamo FBX files end with footer padding that FBXLoader mis-measures: trim to the real end of the node records
+    if (bytes.length < 40) return bytes; const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); if (dv.getUint32(23, true) < 7500) return bytes; let off = 27;
+    for (let g = 0; g < 1000 && off + 25 <= bytes.length; g++) { const end = Number(dv.getBigUint64(off, true)); if (end === 0) { let size = off + 25 + 100; if (size % 16 === 0) size += 1; return bytes.subarray(0, Math.min(size, bytes.length)); } if (end > bytes.length || end <= off) return bytes; off = end; }
+    return bytes;
+}
+const avIsFbx = (buffer) => { try { return String.fromCharCode(...new Uint8Array(buffer, 0, 18)) === 'Kaydara FBX Binary'; } catch (e) { return false; } };
+
+/* ===== page ===== */
+const $ = (id) => document.getElementById(id);
+const REQUIRED = ['hips', 'spine', 'neck', 'head', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'leftLowerLeg', 'leftFoot', 'rightUpperLeg', 'rightLowerLeg', 'rightFoot'];
+const VRM1_KEYS = new Set(['hips','spine','chest','upperChest','neck','head','leftEye','rightEye','jaw','leftUpperLeg','leftLowerLeg','leftFoot','leftToes','rightUpperLeg','rightLowerLeg','rightFoot','rightToes','leftShoulder','leftUpperArm','leftLowerArm','leftHand','rightShoulder','rightUpperArm','rightLowerArm','rightHand',...['left','right'].flatMap((s) => ['Thumb','Index','Middle','Ring','Little'].flatMap((f) => (f === 'Thumb' ? ['Metacarpal','Proximal','Distal'] : ['Proximal','Intermediate','Distal']).map((p) => s + f + p)))]);
+const S = { root: null, map: {}, bones: [], isVrm: false, name: '', buf: null, tposeDone: false, file: null };
+
+const renderer = new THREE.WebGLRenderer({ canvas: $('cv'), antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d1014);
+const cam = new THREE.PerspectiveCamera(35, 1, 0.05, 200); cam.position.set(0, 1.2, 4);
+const ctl = new OrbitControls(cam, $('cv')); ctl.target.set(0, 0.9, 0); ctl.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.6)); const dl = new THREE.DirectionalLight(0xffffff, 2); dl.position.set(2, 4, 3); scene.add(dl);
+scene.add(new THREE.GridHelper(6, 24, 0x2a3440, 0x1a222c));
+let shown = null;
+function resize() { const v = $('view'), w = v.clientWidth, h = v.clientHeight; renderer.setSize(w, h, false); cam.aspect = w / Math.max(1, h); cam.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+(function loop() { requestAnimationFrame(loop); ctl.update(); renderer.render(scene, cam); })();
+
+function status(t, cls) { const s = $('status'); s.textContent = t; s.className = cls || ''; }
+function show(obj) {
+  if (shown) scene.remove(shown); shown = obj; if (!obj) return; scene.add(obj); obj.updateMatrixWorld(true);
+  const b = new THREE.Box3().setFromObject(obj), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3()), r = Math.max(sz.x, sz.y, sz.z) || 1;
+  ctl.target.copy(c); cam.position.set(c.x, c.y + r * 0.1, c.z + r * 2.4); cam.near = r / 100; cam.far = r * 100; cam.updateProjectionMatrix();
+}
+const heightOf = (root) => { root.updateMatrixWorld(true); return new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).y; };
+
+async function loadFile(file) {
+  status('Reading ' + file.name + '...'); $('act').hidden = true; $('opts').hidden = true; $('mapwrap').hidden = true;
+  try {
+    const buf = await file.arrayBuffer(); S.buf = buf; S.file = file; S.name = file.name.replace(/\.[^.]+$/, ''); S.isVrm = false; S.tposeDone = false;
+    let root;
+    if (avIsFbx(buf)) {
+      const u8 = repairFbx(new Uint8Array(buf.slice(0))); root = new FBXLoader().parse(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength), '');
+    } else {
+      const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p));
+      const gl = await ld.parseAsync(buf.slice(0), ''); root = gl.scene;
+      if (gl.userData.vrm) { S.isVrm = true; try { VM.VRMUtils.rotateVRM0(gl.userData.vrm); } catch (e) { /* vrm1 */ } }
+    }
+    const junk = []; root.traverse((o) => { if (o.isLight || o.isCamera) junk.push(o); }); junk.forEach((o) => o.parent && o.parent.remove(o));
+    S.root = root; root.updateMatrixWorld(true);
+    $('nm').value = S.name.slice(0, 60);
+    if (S.isVrm) { show(root); status('This is already a VRM, so it needs no conversion. You can load it straight into the game.\nUse the button to save a copy.', 'ok'); S.map = {}; $('act').hidden = false; $('go').textContent = 'Download copy'; $('chk').hidden = true; return; }
+    $('go').textContent = 'Convert & download .vrm'; $('chk').hidden = false;
+    $('ht').value = Math.max(0.3, Math.min(4, +(heightOf(root) > 5 ? 1.7 : (heightOf(root) || 1.7)).toFixed(2)));
+    S.bones = []; root.traverse((o) => { if (o.isBone) S.bones.push(o); });
+    const found = autoHumanoid(root);
+    S.map = found ? { ...found.map } : {};
+    show(root); $('opts').hidden = false; $('act').hidden = false; $('mapwrap').hidden = false;
+    renderMap();
+    if (!found) status('No humanoid skeleton was recognised (' + S.bones.length + ' bones found). You can still pick the bones by hand below.', 'bad');
+    else status('Recognised ' + found.matched + ' of ' + found.total + ' bones.' + (missingReq().length ? '\nSome required bones are missing - fix them below.' : '\nReady to convert.'), missingReq().length ? 'bad' : 'ok');
+  } catch (e) { console.error(e); status('Could not read that file: ' + (e.message || e), 'bad'); }
+}
+const missingReq = () => REQUIRED.filter((k) => !S.map[k]);
+function renderMap() {
+  const keys = [...new Set([...REQUIRED, ...Object.keys(S.map)])].filter((k) => VRM1_KEYS.has(k));
+  const opts = '<option value="">- none -</option>' + S.bones.map((b, i) => '<option value="' + i + '">' + String(b.name).replace(/[<>&"]/g, '') + '</option>').join('');
+  $('map').innerHTML = '<table>' + keys.map((k) => '<tr class="' + (REQUIRED.includes(k) && !S.map[k] ? 'miss' : '') + '"><td>' + k + '</td><td><select data-k="' + k + '">' + opts + '</select></td></tr>').join('') + '</table>';
+  $('map').querySelectorAll('select').forEach((sel) => { const b = S.map[sel.dataset.k]; sel.value = b ? String(S.bones.indexOf(b)) : ''; sel.onchange = () => { if (sel.value === '') delete S.map[sel.dataset.k]; else S.map[sel.dataset.k] = S.bones[+sel.value]; renderMap(); const m = missingReq(); status(m.length ? 'Still missing: ' + m.join(', ') : 'All required bones are set. Ready to convert.', m.length ? 'bad' : 'ok'); }; });
+}
+
+/* ---- build the VRM ---- */
+const pad4 = (n) => (4 - n % 4) % 4;
+function readGlb(buf) {
+  const dv = new DataView(buf); if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('exporter did not return a GLB');
+  let off = 12, json = null, bin = null;
+  while (off + 8 <= buf.byteLength) { const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true), d = buf.slice(off + 8, off + 8 + len); if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(d)); else if (type === 0x004E4942) bin = new Uint8Array(d); off += 8 + len; }
+  return { json, bin };
+}
+function writeGlb(json, bin) {
+  let jb = new TextEncoder().encode(JSON.stringify(json)); const jp = pad4(jb.length); if (jp) { const t = new Uint8Array(jb.length + jp).fill(0x20); t.set(jb); jb = t; }
+  const bp = bin ? pad4(bin.length) : 0, blen = bin ? bin.length + bp : 0, total = 12 + 8 + jb.length + (bin ? 8 + blen : 0), o = new Uint8Array(total), dv = new DataView(o.buffer);
+  dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true); dv.setUint32(12, jb.length, true); dv.setUint32(16, 0x4E4F534A, true); o.set(jb, 20);
+  if (bin) { const q = 20 + jb.length; dv.setUint32(q, blen, true); dv.setUint32(q + 4, 0x004E4942, true); o.set(bin, q + 8); }
+  return o.buffer;
+}
+function uniqueNames(root) { const seen = new Set(); let n = 0; root.traverse((o) => { let nm = o.name && o.name.trim() ? o.name : 'node'; if (seen.has(nm)) { let i = 2; while (seen.has(nm + '_' + i)) i++; nm = nm + '_' + i; } seen.add(nm); o.name = nm; n++; }); return n; }
+
+async function buildVrm() {
+  const root = S.root, parent = root.parent, prevPos = root.position.clone();
+  if ($('tp').checked && !S.tposeDone) { try { const f = { map: S.map }; tposeFix(f, root); S.tposeDone = true; } catch (e) { console.warn('t-pose', e); } }
+  root.updateMatrixWorld(true);
+  const wrap = new THREE.Group(); wrap.name = 'VRMRoot';
+  if (shown === root) scene.remove(root);
+  const h = heightOf(root), k = (+$('ht').value || 1.7) / (h || 1.7);
+  wrap.scale.setScalar(k); wrap.rotation.y = THREE.MathUtils.degToRad(+$('face').value || 0); wrap.add(root);
+  wrap.updateMatrixWorld(true);
+  // put the feet on the floor
+  { const b = new THREE.Box3().setFromObject(wrap); wrap.position.y -= b.min.y; wrap.updateMatrixWorld(true); }
+  uniqueNames(wrap);
+  const names = {}; for (const [key, node] of Object.entries(S.map)) if (VRM1_KEYS.has(key)) names[key] = node.name;
+  let glb;
+  try { glb = await new Promise((ok, no) => new GLTFExporter().parse(wrap, ok, no, { binary: true, onlyVisible: false, trs: false })); }
+  finally { wrap.remove(root); root.position.copy(prevPos); root.updateMatrixWorld(true); if (shown === root) scene.add(root); }
+  const { json, bin } = readGlb(glb);
+  const idx = {}; json.nodes.forEach((n, i) => { if (n.name !== undefined) idx[n.name] = i; });
+  const humanBones = {}; for (const [key, nm] of Object.entries(names)) if (idx[nm] !== undefined) humanBones[key] = { node: idx[nm] };
+  const lost = REQUIRED.filter((r) => !humanBones[r]); if (lost.length) throw new Error('these bones did not survive the export: ' + lost.join(', '));
+  json.extensionsUsed = [...new Set([...(json.extensionsUsed || []), 'VRMC_vrm'])];
+  json.extensions = { ...(json.extensions || {}), VRMC_vrm: {
+    specVersion: '1.0',
+    meta: { name: $('nm').value || S.name || 'Character', version: '1.0', authors: [$('au').value || 'Unknown'], licenseUrl: 'https://vrm.dev/licenses/1.0/', avatarPermission: 'everyone', commercialUsage: 'personalNonProfit', allowExcessivelyViolentUsage: false, allowExcessivelySexualUsage: false, allowPoliticalOrReligiousUsage: false, allowAntisocialOrHateUsage: false, creditNotation: 'unnecessary', allowRedistribution: false, modification: 'allowModification' },
+    humanoid: { humanBones } } };
+  return writeGlb(json, bin);
+}
+async function testVrm(buf) {
+  const ld = new GLTFLoader(); ld.register((p) => new VM.VRMLoaderPlugin(p)); const gl = await ld.parseAsync(buf.slice(0), ''), vrm = gl.userData.vrm;
+  if (!vrm) throw new Error('the game would not recognise this as a VRM'); const miss = REQUIRED.filter((r) => !vrm.humanoid.getRawBoneNode(r));
+  if (miss.length) throw new Error('the VRM is missing: ' + miss.join(', '));
+  return { vrm, gl, n: Object.keys(vrm.humanoid.humanBones).filter((k) => vrm.humanoid.getRawBoneNode(k)).length };
+}
+function save(buf, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+const outName = () => (($('nm').value || S.name || 'character').replace(/[^\w.-]+/g, '_').slice(0, 50) || 'character') + '.vrm';
+let last = null;
+$('go').onclick = async () => {
+  if (!S.root) return; $('go').disabled = true;
+  try {
+    if (S.isVrm) { save(S.buf, outName()); status('Saved a copy.', 'ok'); return; }
+    const m = missingReq(); if (m.length) throw new Error('Missing required bones: ' + m.join(', '));
+    status('Converting...'); const buf = await buildVrm(); const t = await testVrm(buf); last = buf;
+    save(buf, outName()); status('Done. ' + outName() + ' (' + (buf.byteLength / 1e6).toFixed(1) + ' MB) saved with ' + t.n + ' humanoid bones. It loads as a VRM.', 'ok');
+  } catch (e) { console.error(e); status('Conversion failed: ' + (e.message || e), 'bad'); } finally { $('go').disabled = false; }
+};
+$('chk').onclick = async () => {
+  if (!S.root || S.isVrm) return; $('chk').disabled = true;
+  try { const m = missingReq(); if (m.length) throw new Error('Missing required bones: ' + m.join(', ')); status('Converting a test copy...'); const buf = await buildVrm(), t = await testVrm(buf); last = buf; show(t.gl.scene); status('Test passed: the result loads as a VRM with ' + t.n + ' humanoid bones. Showing the converted model.', 'ok'); }
+  catch (e) { console.error(e); status('Test failed: ' + (e.message || e), 'bad'); } finally { $('chk').disabled = false; }
+};
+const drop = $('drop'), fi = $('file');
+drop.onclick = () => fi.click(); fi.onchange = () => { if (fi.files[0]) loadFile(fi.files[0]); fi.value = ''; };
+['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('on'); }));
+['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('on'); }));
+addEventListener('dragover', (e) => e.preventDefault()); addEventListener('drop', (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+window.__imp = { S, loadFile, buildVrm, testVrm, autoHumanoid };
+</script>
+</body>
+</html>
