@@ -3119,7 +3119,8 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             },
             get(k) { return this.run('readonly', (s) => s.get(k)); },
             put(k, v) { return this.run('readwrite', (s) => s.put(v, k)); },
-            del(k) { return this.run('readwrite', (s) => s.delete(k)); }
+            del(k) { return this.run('readwrite', (s) => s.delete(k)); },
+            keys() { return this.run('readonly', (s) => s.getAllKeys()); }
         };
 
         /* ------------------------------------------------------------------ *
@@ -15047,13 +15048,43 @@ function btMusicStop() {
             } catch (e) { csMsg('Cloud save: ' + (e.message || e)); } finally { CS.busy = false; csMsg(CS.msg); }
         }
         function csOut() { try { if (CS.tok && window.google) google.accounts.oauth2.revoke(CS.tok, () => {}); } catch (e) { /* ignore */ } CS.tok = null; csSet('oasis.gemail', ''); csSet('oasis.gsync', ''); csMsg('Signed out. Your save stays on this device and in your Drive.'); }
+        async function csJsonExport() {   // everything the cloud save would carry, plus Harbor Studio layouts, as one file you keep yourself
+            try {
+                const out = { v: 1, kind: 'oasis-save', t: Date.now(), keys: csSnap(), decor: {} };
+                try { for (const k of (await store.keys()) || []) if (typeof k === 'string' && k.startsWith('decor:') && k !== 'decor:lib') { const r = await store.get(k); if (r && Array.isArray(r.items)) out.decor[k.slice(6)] = r; } } catch (e) { /* layouts are optional */ }
+                const blob = new Blob([JSON.stringify(out)], { type: 'application/json' }), a = document.createElement('a'), d = new Date();
+                a.href = URL.createObjectURL(blob); a.download = 'oasis-save-' + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + '.json';
+                document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+                csMsg('Save file exported (' + Object.keys(out.keys).length + ' items, ' + Object.keys(out.decor).length + ' studio layout' + (Object.keys(out.decor).length === 1 ? '' : 's') + ').');
+            } catch (e) { csMsg('Export failed: ' + (e.message || e)); }
+        }
+        function csJsonImport() {
+            const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
+            i.addEventListener('change', async () => {
+                const f = i.files && i.files[0]; if (!f) return;
+                try {
+                    if (f.size > 40e6) throw new Error('that file is too large to be a save');
+                    const o = JSON.parse(await f.text());
+                    if (!o || typeof o !== 'object' || typeof o.keys !== 'object' || !o.keys || (o.kind && o.kind !== 'oasis-save')) throw new Error('that is not an Oasis save file');
+                    const okC = (c) => /^[A-Z][A-Z0-9]{11}$/.test(c) && o.decor[c] && Array.isArray(o.decor[c].items);
+                    const nd = o.decor && typeof o.decor === 'object' ? Object.keys(o.decor).filter(okC).length : 0;
+                    if (!window.confirm('Load this save file?\n\nIt was made ' + (o.t ? new Date(o.t).toLocaleString() : 'at an unknown time') + ' and holds ' + Object.keys(o.keys).length + ' items' + (nd ? ' and ' + nd + ' studio layout' + (nd === 1 ? '' : 's') : '') + '.\nOK = replace the matching progress on this device.\nCancel = change nothing.')) { csMsg('Import cancelled.'); return; }
+                    window.__csNoXp = true; try { clearTimeout(_cmpSaveT); } catch (e) { /* none */ }
+                    const n = csApply(o);
+                    if (nd) for (const c of Object.keys(o.decor)) if (okC(c)) { try { await store.put('decor:' + c, o.decor[c]); } catch (e) { /* skip this one */ } }
+                    csMsg('Loaded ' + n + ' items' + (nd ? ' and ' + nd + ' studio layout' + (nd === 1 ? '' : 's') : '') + ' from the file. Reloading…'); setTimeout(() => location.reload(), 400);
+                } catch (e) { csMsg('Import failed: ' + (e.message || e)); }
+            });
+            i.click();
+        }
         function csClick(k) {
+            if (k === 'cs-jexp') { csJsonExport(); return; } if (k === 'cs-jimp') { csJsonImport(); return; }
             if (k === 'cs-in' || k === 'cs-now') csSync(true); else if (k === 'cs-out') csOut();
             else if (k === 'cs-idsave') { const v = (document.getElementById('cs-id') || {}).value || ''; if (/^[\w.-]+\.apps\.googleusercontent\.com$/.test(v.trim())) { csSet('oasis.gcid', v.trim()); csMsg('Client ID saved. Now press Sign in.'); } else csMsg('That does not look like a Google client ID (it ends in .apps.googleusercontent.com).'); }
         }
         function csHtml() {
             const id = csId(), em = csGet('oasis.gemail', ''), linked = !!em;
-            return '<hr><div class="row"><b>Cloud save (Google Drive)</b><div class="opts">' + (linked ? '<button data-k="cs-now">☁ Sync now</button><button data-k="cs-out">Sign out</button>' : '<button data-k="cs-in"' + (id ? '' : ' disabled') + '>☁ Sign in with Google</button>') + '</div><p>' + (CS.msg ? CS.msg + '<br>' : '') + (linked ? 'Signed in as ' + em.replace(/[<>&"]/g, '') + '. Progress (gear, bag, Gil, class levels, companions) follows you to any device where you sign in. Avatar files and AI keys are never uploaded.' : id ? 'Sign in to save your progress to your own Google Drive.' : 'Paste the Google client ID below first.') + '</p><details' + (id ? '' : ' open') + '><summary>Google client ID</summary><input id="cs-id" type="text" value="' + id.replace(/[<>&"]/g, '') + '" placeholder="123456-abc.apps.googleusercontent.com" style="width:100%;margin:4px 0;padding:6px;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2)"><button data-k="cs-idsave">Save ID</button></details></div>';
+            return '<hr><div class="row"><b>Cloud save (Google Drive)</b><div class="opts">' + (linked ? '<button data-k="cs-now">☁ Sync now</button><button data-k="cs-out">Sign out</button>' : '<button data-k="cs-in"' + (id ? '' : ' disabled') + '>☁ Sign in with Google</button>') + '</div><p>' + (CS.msg ? CS.msg + '<br>' : '') + (linked ? 'Signed in as ' + em.replace(/[<>&"]/g, '') + '. Progress (gear, bag, Gil, class levels, companions) follows you to any device where you sign in. Avatar files and AI keys are never uploaded.' : id ? 'Sign in to save your progress to your own Google Drive.' : 'Paste the Google client ID below first.') + '</p><details' + (id ? '' : ' open') + '><summary>Google client ID</summary><input id="cs-id" type="text" value="' + id.replace(/[<>&"]/g, '') + '" placeholder="123456-abc.apps.googleusercontent.com" style="width:100%;margin:4px 0;padding:6px;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2)"><button data-k="cs-idsave">Save ID</button></details></div><div class="row"><b>Save file (JSON)</b><div class="opts"><button data-k="cs-jexp">⬇ Export save</button><button data-k="cs-jimp">⬆ Import save</button></div><p>Works without signing in. Moves your progress, Harbor Inn saves and Harbor Studio layouts between devices. Studio photos and 3D models are not inside the file. Avatar files and AI keys are never exported.</p></div>';
         }
         setInterval(() => { try { if (csGet('oasis.gemail', '') && CS.tok && Date.now() < CS.exp - 120000 && !CS.busy && csHash(csSnap()) !== (csGet('oasis.gsync', '').split('|')[0])) csSync(false); } catch (e) { /* retry later */ } }, 120000);
         document.addEventListener('visibilitychange', () => { try { if (document.hidden && csGet('oasis.gemail', '') && CS.tok && Date.now() < CS.exp - 60000 && !CS.busy && csHash(csSnap()) !== (csGet('oasis.gsync', '').split('|')[0])) csSync(false); } catch (e) { /* ignore */ } });
@@ -16443,6 +16474,13 @@ window.__ts = TSK;
             DC.items.clear(); DC.style = dcDefaultStyle(); DC.from = null; DC.asking.clear();
             if (DC.root) dcApplyStyle();
         }
+        function dcApplyRecord(st) {   // replace the current layout with a recovered or imported one, and save it under this studio's code
+            if (!DC.owner || !st) return;
+            dcSelect(null); for (const it of DC.items.values()) dcRemoveGroup(it); DC.items.clear();
+            DC.style = dcCleanStyle(st.style);
+            for (const r of (Array.isArray(st.items) ? st.items : []).slice(0, dcLimit())) { const it = dcCleanItem(r); if (it) { DC.items.set(it.id, it); dcInstantiate(it); } }
+            dcApplyStyle(); dcChanged();
+        }
         async function dcEnter() {
             dcSetEdit(false); dcClear();
             DC.owner = dcOwns(); DC.hist.i = -1;
@@ -16673,6 +16711,30 @@ window.__ts = TSK;
                 for (const it of DC.items.values()) { const r = dcEl('div', 'dc-brow2' + (DC.sel === it.id ? ' on' : '')); const sp = dcEl('span'); sp.textContent = (it.lock ? '🔒 ' : '') + ({ b: '🪑', s: '🧱', p: '🖼️', m: '📦' }[it.t] || '') + ' ' + (it.n || 'Item'); sp.style.cursor = 'pointer'; sp.addEventListener('click', () => { dcSelect(it.id); dcRenderPanel(); }); r.append(sp, dcBtn('✕', () => { dcDelete(it.id); dcRenderPanel(); }, 'dim')); body.append(r); }
                 if (!DC.items.size) body.append(dcEl('p', 'dc-note', 'Nothing placed yet.'));
                 else { let arm = false; const ca = dcBtn('Delete everything', () => { if (!arm) { arm = true; ca.textContent = 'Really delete all? (Undo can bring it back)'; return; } for (const id of [...DC.items.keys()]) { const q = DC.items.get(id); dcSelect(null); dcRemoveGroup(q); DC.items.delete(id); } dcChanged(); dcRenderPanel(); }, 'red'); body.append(ca); }
+            } else if (DC.tab === 'rec') {
+                const tok = DC.recTok = (DC.recTok || 0) + 1;
+                body.append(dcEl('p', 'dc-note', 'Lost your house? This looks through this browser for saved Harbor Studio layouts and lets you put one back. Pieces that use your own photos or 3D models also need those files to still be in this browser.'));
+                if (!DC.owner) body.append(dcEl('p', 'dc-note', 'Go to your own Harbor Studio to restore a layout.'));
+                const list = dcEl('div', 'dc-list'); body.append(list);
+                (async () => {
+                    let keys = []; try { keys = (await store.keys()) || []; } catch (e) { keys = []; }
+                    const found = [];
+                    for (const k of keys) { if (typeof k !== 'string' || !k.startsWith('decor:') || k === 'decor:lib') continue; let r = null; try { r = await store.get(k); } catch (e) { r = null; } if (r && Array.isArray(r.items)) found.push([k.slice(6), r]); }
+                    if (tok !== DC.recTok || DC.tab !== 'rec') return;
+                    if (!found.length) { list.append(dcEl('p', 'dc-note', 'No saved layouts were found in this browser. If the browser data was cleared, or you used a different browser or device, the layout is not here. If you exported a backup, import it below.')); return; }
+                    for (const [code, r] of found) {
+                        const here = code === dcCode(), row = dcEl('div', 'dc-lrow'), sp = dcEl('span');
+                        sp.textContent = (here ? 'This studio' : 'Studio ' + code.slice(0, 6) + '…') + ' · ' + r.items.length + ' pieces'; row.append(sp);
+                        if (DC.owner) { let arm = false; const b = dcBtn('Restore here', () => { if (DC.items.size && !arm) { arm = true; b.textContent = 'Replace current layout?'; return; } dcApplyRecord(r); sysChat('Layout restored.'); dcRenderPanel(); }, 'gold'); row.append(b); }
+                        list.append(row);
+                    }
+                })();
+                if (DC.owner) {
+                    body.append(dcEl('p', 'dc-note', 'Backup: save your layout to a file you can keep or open on another device. Photos and 3D models are not inside the file.'));
+                    const br = dcEl('div', 'dc-brow');
+                    br.append(dcBtn('Export layout…', () => { const blob = new Blob([JSON.stringify({ v: 1, kind: 'harbor-studio-layout', ...dcWire() })], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'harbor-studio-layout.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }), dcBtn('Import layout…', () => dcPickFile('.json,application/json', false, async (f) => { const j = JSON.parse(await f.text()); if (!j || !Array.isArray(j.items)) throw new Error('that is not a layout file'); dcApplyRecord(j); sysChat('Layout imported.'); dcRenderPanel(); })));
+                    body.append(br);
+                }
             } else if (DC.tab === 'build') { dcRenderBuild(body);
             } else if (DC.tab === 'photo') {
                 body.append(dcEl('p', 'dc-note', 'Hang your own pictures on the walls. They snap to the wall you drag them across.'), dcBtn('＋ Import photos…', () => dcPickFile('image/*', true, async (f) => { const e = await dcImportImage(f); dcRenderPanel(); await dcDescribe(e, 'Describe this photo'); dcRenderPanel(); dcAddPhoto(e.id, e.ar, e.name); }), 'gold'));
@@ -16836,7 +16898,7 @@ window.__ts = TSK;
             const head = dcEl('div', 'dc-head', '<b>🛋️ Decorate</b><span class="dc-sp"></span><button type="button" id="dc-def" style="display:none;margin-right:8px;padding:2px 8px;border-radius:7px;background:rgba(255,255,255,.12);font-size:11px"></button><label><input type="checkbox" id="dc-snap" checked> Grid snap</label><select id="dc-grid"><option value="0.1">10 cm</option><option value="0.2" selected>20 cm</option><option value="0.5">50 cm</option><option value="1">1 m</option></select>');
             head.appendChild(dcBtn('Done', () => dcSetEdit(false), 'gold'));
             const tabs = dcEl('div', 'dc-tabs'), tabBtns = [];
-            for (const [k, l] of [['furn', 'Furniture'], ['build', 'Build'], ['photo', 'Photos'], ['model', 'My models'], ['room', 'Room'], ['list', 'Placed']]) { const b = dcEl('button', 'dc-tab', l); b.type = 'button'; b.dataset.tab = k; b.addEventListener('click', () => { DC.tab = k; dcRenderPanel(); }); tabs.appendChild(b); tabBtns.push(b); }
+            for (const [k, l] of [['furn', 'Furniture'], ['build', 'Build'], ['photo', 'Photos'], ['model', 'My models'], ['room', 'Room'], ['list', 'Placed'], ['rec', 'Recover']]) { const b = dcEl('button', 'dc-tab', l); b.type = 'button'; b.dataset.tab = k; b.addEventListener('click', () => { DC.tab = k; dcRenderPanel(); }); tabs.appendChild(b); tabBtns.push(b); }
             const tools = dcEl('div', 'dc-toolhost'); const body = dcEl('div', 'dc-body'); panel.append(head, tools, tabs, body);
             const bar = dcEl('div', 'dc hidden'); bar.id = 'dc-bar';
             document.body.append(panel, bar);
