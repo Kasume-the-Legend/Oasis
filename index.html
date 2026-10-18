@@ -538,7 +538,7 @@
         <!-- Hidden File Input for Native File Browser Selection -->
         <input type="file" id="model-file-input" accept=".vrm,.gltf,.glb,.obj,.zip,.bbmodel" class="hidden">
 
-        <div class="xmb pointer-events-none"><div class="xmb-row pointer-events-auto" role="menubar"><div class="xmb-col" data-k="0"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-user"></i></span><span class="xl">Avatar</span></button><div class="xmb-list" role="menu"><button id="btn-character" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-user"></i></span><span class="xt"><b>Character</b><small>Pick or upload your look</small></span></button><button id="btn-equip" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment</b><small>Wear clothes and items</small></span></button><button id="btn-inventory" type="button" class="xmb-item"><span class="xi">🎒</span><span class="xt"><b>Inventory</b><small>Your bag, files and trading</small></span></button><a id="xmb-booth" class="xmb-item" href="https://booth.pm/en/search/VRoid%20clothes" target="_blank" rel="noopener noreferrer"><span class="xi"><i class="fa-solid fa-bag-shopping"></i></span><span class="xt"><b>Booth Shop</b><small>Find VRoid clothes (opens Booth)</small></span></a><button id="btn-companions" type="button" class="xmb-item"><span class="xi">👥</span><span class="xt"><b>Companions</b><small>Import NPCs, give them a VRM, talk</small></span></button><button id="btn-animations" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-person-running"></i></span><span class="xt"><b>Animations</b><small>Walk, run and idle clips</small></span></button><button id="btn-upload" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-file-arrow-up"></i></span><span class="xt"><b>Upload VRM</b><small>Use your own avatar</small></span></button></div></div><div class="xmb-col" data-k="1"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-comments"></i></span><span class="xl">Social</span></button><div class="xmb-list" role="menu"><button id="btn-emotes" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-icons"></i></span><span class="xt"><b>Emotes</b><small>Dances and poses</small></span></button><button id="btn-friends" type="button" class="xmb-item"><span class="xi">💚</span><span class="xt"><b>Friends</b><small>Add friends, see who is online</small></span></button><button id="btn-party" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Party</b><small>Friends, invites, codes (J)</small></span></button><button id="btn-lobbies" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-door-open"></i></span><span class="xt"><b>Lobbies</b><small>Change room or invite friends</small></span></button><button id="btn-chat" type="button" class="xmb-item lg:hidden"><span class="xi"><i class="fa-solid fa-comment-dots"></i></span><span class="xt"><b>Chat</b><small>Open the chat log</small></span></button></div></div><div class="xmb-col" data-k="2"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-house"></i></span><span class="xl">Home</span></button><div class="xmb-list" role="menu"><button id="btn-decorate" type="button" class="xmb-item"><span class="xi">🛋️</span><span class="xt"><b>Decorate</b><small>Furnish your Harbor Studio</small></span></button><button id="btn-ship" type="button" class="xmb-item"><span class="xi">🚀</span><span class="xt"><b>Your Ship</b><small>Board it, fly it, dock anywhere</small></span></button><button id="btn-diner" type="button" class="xmb-item"><span class="xi">🍔</span><span class="xt"><b>Key's Diner</b><small>Cooking rush game</small></span></button><button id="btn-bowl" type="button" class="xmb-item"><span class="xi">🎳</span><span class="xt"><b>Zen Bowl</b><small>Multiplayer bowling</small></span></button><button id="btn-btl" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Warriors of Light</b><small>Co-op turn-based fights</small></span></button><button id="btn-surv" type="button" class="xmb-item"><span class="xi">🧟</span><span class="xt"><b>Harbor Inn: Survivor</b><small>Fixed-camera survival horror</small></span></button><button id="btn-gear" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment Shop</b><small>FF7 / FF8 / FF9 gear for Gil</small></span></button><button id="btn-blitz" type="button" class="xmb-item"><span class="xi">🌊</span><span class="xt"><b>Blitzball</b><small>Underwater ball, vs CPU or a friend</small></span></button><button id="btn-tag" type="button" class="xmb-item"><span class="xi">🔫</span><span class="xt"><b>Laser Tag</b><small>Guns, bows and blades</small></span></button><button id="btn-construct" type="button" class="xmb-item"><span class="xi">🕶</span><span class="xt"><b>The Construct</b><small>Hero class training</small></span></button><button id="btn-industries" type="button" class="xmb-item"><span class="xi">🛹</span><span class="xt"><b>Oasis Industries</b><small>Build your hoverboard</small></span></button><button id="btn-weather" type="button" class="xmb-item"><span class="xi">🌦️</span><span class="xt"><b>Weather</b><small>Seasons, radar, forecast (U)</small></span></button><button id="btn-inspector" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-cubes"></i></span><span class="xt"><b>Inspector</b><small>Props in this room</small></span></button></div></div><div class="xmb-col" data-k="3"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-tv"></i></span><span class="xl">Media</span></button><div class="xmb-list" role="menu"><button id="btn-tv" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-tv"></i></span><span class="xt"><b>Central TV</b><small>Videos and retro games</small></span></button></div></div><div class="xmb-col" data-k="4"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-circle-info"></i></span><span class="xl">Info</span></button><div class="xmb-list" role="menu"><button id="btn-space" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-circle-info"></i></span><span class="xt"><b>Space Info</b><small>Network, help and about</small></span></button><button id="btn-fit" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-expand"></i></span><span class="xt"><b>Screen Fit</b><small>16:9 console frame</small></span></button><button id="btn-fullscreen" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-maximize"></i></span><span class="xt"><b>Fullscreen</b><small>Hide the browser bars</small></span></button><button id="btn-settings" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-gear"></i></span><span class="xt"><b>Settings</b><small>Frame counter</small></span></button></div></div></div></div>
+        <div class="xmb pointer-events-none"><div class="xmb-row pointer-events-auto" role="menubar"><div class="xmb-col" data-k="0"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-user"></i></span><span class="xl">Avatar</span></button><div class="xmb-list" role="menu"><button id="btn-character" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-user"></i></span><span class="xt"><b>Character</b><small>Pick or upload your look</small></span></button><button id="btn-equip" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment</b><small>Wear clothes and items</small></span></button><button id="btn-inventory" type="button" class="xmb-item"><span class="xi">🎒</span><span class="xt"><b>Inventory</b><small>Your bag, files and trading</small></span></button><a id="xmb-booth" class="xmb-item" href="https://booth.pm/en/search/VRoid%20clothes" target="_blank" rel="noopener noreferrer"><span class="xi"><i class="fa-solid fa-bag-shopping"></i></span><span class="xt"><b>Booth Shop</b><small>Find VRoid clothes (opens Booth)</small></span></a><button id="btn-companions" type="button" class="xmb-item"><span class="xi">👥</span><span class="xt"><b>Companions</b><small>Import NPCs, give them a VRM, talk</small></span></button><button id="btn-animations" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-person-running"></i></span><span class="xt"><b>Animations</b><small>Walk, run and idle clips</small></span></button><button id="btn-upload" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-file-arrow-up"></i></span><span class="xt"><b>Upload VRM</b><small>Use your own avatar</small></span></button></div></div><div class="xmb-col" data-k="1"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-comments"></i></span><span class="xl">Social</span></button><div class="xmb-list" role="menu"><button id="btn-emotes" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-icons"></i></span><span class="xt"><b>Emotes</b><small>Dances and poses</small></span></button><button id="btn-friends" type="button" class="xmb-item"><span class="xi">💚</span><span class="xt"><b>Friends</b><small>Add friends, see who is online</small></span></button><button id="btn-party" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Party</b><small>Friends, invites, codes (J)</small></span></button><button id="btn-lobbies" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-door-open"></i></span><span class="xt"><b>Lobbies</b><small>Change room or invite friends</small></span></button><button id="btn-chat" type="button" class="xmb-item lg:hidden"><span class="xi"><i class="fa-solid fa-comment-dots"></i></span><span class="xt"><b>Chat</b><small>Open the chat log</small></span></button></div></div><div class="xmb-col" data-k="2"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-house"></i></span><span class="xl">Home</span></button><div class="xmb-list" role="menu"><button id="btn-decorate" type="button" class="xmb-item"><span class="xi">🛋️</span><span class="xt"><b>Decorate</b><small>Furnish your Harbor Studio</small></span></button><button id="btn-ship" type="button" class="xmb-item"><span class="xi">🚀</span><span class="xt"><b>Your Ship</b><small>Board it, fly it, dock anywhere</small></span></button><button id="btn-theater" type="button" class="xmb-item"><span class="xi">🎬</span><span class="xt"><b>Your Theater</b><small>IMAX screen, watch together</small></span></button><button id="btn-diner" type="button" class="xmb-item"><span class="xi">🍔</span><span class="xt"><b>Key's Diner</b><small>Cooking rush game</small></span></button><button id="btn-bowl" type="button" class="xmb-item"><span class="xi">🎳</span><span class="xt"><b>Zen Bowl</b><small>Multiplayer bowling</small></span></button><button id="btn-btl" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Warriors of Light</b><small>Co-op turn-based fights</small></span></button><button id="btn-surv" type="button" class="xmb-item"><span class="xi">🧟</span><span class="xt"><b>Harbor Inn: Survivor</b><small>Fixed-camera survival horror</small></span></button><button id="btn-gear" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment Shop</b><small>FF7 / FF8 / FF9 gear for Gil</small></span></button><button id="btn-blitz" type="button" class="xmb-item"><span class="xi">🌊</span><span class="xt"><b>Blitzball</b><small>Underwater ball, vs CPU or a friend</small></span></button><button id="btn-tag" type="button" class="xmb-item"><span class="xi">🔫</span><span class="xt"><b>Laser Tag</b><small>Guns, bows and blades</small></span></button><button id="btn-construct" type="button" class="xmb-item"><span class="xi">🕶</span><span class="xt"><b>The Construct</b><small>Hero class training</small></span></button><button id="btn-industries" type="button" class="xmb-item"><span class="xi">🛹</span><span class="xt"><b>Oasis Industries</b><small>Build your hoverboard</small></span></button><button id="btn-weather" type="button" class="xmb-item"><span class="xi">🌦️</span><span class="xt"><b>Weather</b><small>Seasons, radar, forecast (U)</small></span></button><button id="btn-inspector" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-cubes"></i></span><span class="xt"><b>Inspector</b><small>Props in this room</small></span></button></div></div><div class="xmb-col" data-k="3"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-tv"></i></span><span class="xl">Media</span></button><div class="xmb-list" role="menu"><button id="btn-tv" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-tv"></i></span><span class="xt"><b>Central TV</b><small>Videos and retro games</small></span></button></div></div><div class="xmb-col" data-k="4"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-circle-info"></i></span><span class="xl">Info</span></button><div class="xmb-list" role="menu"><button id="btn-space" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-circle-info"></i></span><span class="xt"><b>Space Info</b><small>Network, help and about</small></span></button><button id="btn-fit" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-expand"></i></span><span class="xt"><b>Screen Fit</b><small>16:9 console frame</small></span></button><button id="btn-fullscreen" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-maximize"></i></span><span class="xt"><b>Fullscreen</b><small>Hide the browser bars</small></span></button><button id="btn-settings" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-gear"></i></span><span class="xt"><b>Settings</b><small>Frame counter</small></span></button></div></div></div></div>
     </nav>
 
     <!-- Lobby Browser -->
@@ -1914,6 +1914,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             { id: 'surv-01', name: 'Harbor Inn: Survivor', tag: 'Survival horror', map: 'survivor' },
             { id: 'surv-02', name: 'Harbor Inn 2: NX', tag: 'Survival horror', map: 'survivor2' },
             { id: 'rx-01', name: 'Ryder X', tag: 'Hoverboard racing', map: 'ryderx' },
+            { id: 'tbs-01', name: 'Toy Box Smash', tag: 'Platform fighter', map: 'toysmash' },
             { id: 'diner-01', name: "Key's Kitchen Clash", tag: 'Channel 1', map: 'diner' },
             { id: 'tag-01', name: 'Laser Tag Arena', tag: 'Channel 1', map: 'tag' },
             { id: 'construct-01', name: 'The Construct (Hero class)', tag: 'Channel 1', map: 'construct' }
@@ -4517,7 +4518,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 btn.textContent = d.map === 'blitz' || d.map === 'survivor' || d.map === 'survivor2' || d.map === 'ryderx' ? 'Play' : room && room.id === d.id ? 'Here' : 'Join';
                 btn.disabled = !!(room && room.id === d.id);
                 if (btn.disabled) btn.classList.add('opacity-50');
-                btn.addEventListener('click', () => { if (d.map === 'ryderx') { try { closeLobby(); rxOpen(); } catch (e) { sysChat('Could not open Ryder X.'); } return; } if (d.map === 'survivor2') { try { closeLobby(); svOpen('HarborInn2.html'); } catch (e) { sysChat('Could not open Harbor Inn 2.'); } return; } if (d.map === 'survivor') { try { closeLobby(); svOpen(); } catch (e) { sysChat('Could not open Survivor.'); } return; } if (d.map === 'blitz') { try { closeLobby(); bzOpen(); } catch (e) { sysChat('Could not open Blitzball.'); } return; } joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); });
+                btn.addEventListener('click', () => { if (d.map === 'toysmash') { try { closeLobby(); tbsOpen(); } catch (e) { sysChat('Could not open Toy Box Smash.'); } return; } if (d.map === 'ryderx') { try { closeLobby(); rxOpen(); } catch (e) { sysChat('Could not open Ryder X.'); } return; } if (d.map === 'survivor2') { try { closeLobby(); svOpen('HarborInn2.html'); } catch (e) { sysChat('Could not open Harbor Inn 2.'); } return; } if (d.map === 'survivor') { try { closeLobby(); svOpen(); } catch (e) { sysChat('Could not open Survivor.'); } return; } if (d.map === 'blitz') { try { closeLobby(); bzOpen(); } catch (e) { sysChat('Could not open Blitzball.'); } return; } joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); });
                 row.append(left, btn);
                 list.appendChild(row);
             }
@@ -4526,14 +4527,14 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         // The first letter of a private code says which map it opens: L = Harbor Studio, anything else = Central Mall.
         // 11 random characters (55 bits) after the map letter: too many to guess, so the code is a real key (it also encrypts the room's traffic)
-        const makeCode = (map = 'mall') => (map === 'loft' ? 'L' : map === 'city' ? 'C' : map === 'galleria' ? 'G' : map === 'school' ? 'S' : map === 'bowl' ? 'B' : map === 'btl' ? 'F' : map === 'diner' ? 'K' : map === 'tag' ? 'T' : map === 'plot' ? 'P' : map === 'ship' ? 'H' : map === 'party' ? 'Q' : 'M') + Array.from(crypto.getRandomValues(new Uint8Array(11)), (b) => CODE_CHARS[b % 32]).join('');
+        const makeCode = (map = 'mall') => (map === 'loft' ? 'L' : map === 'city' ? 'C' : map === 'galleria' ? 'G' : map === 'school' ? 'S' : map === 'bowl' ? 'B' : map === 'btl' ? 'F' : map === 'diner' ? 'K' : map === 'tag' ? 'T' : map === 'plot' ? 'P' : map === 'ship' ? 'H' : map === 'theater' ? 'N' : map === 'party' ? 'Q' : 'M') + Array.from(crypto.getRandomValues(new Uint8Array(11)), (b) => CODE_CHARS[b % 32]).join('');
         const normCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
         const validCode = (c) => /^[MLCPGKTSBFHN][A-Z0-9]{10,14}$/.test(c);
         const fmtCode = (c) => (String(c).match(/.{1,4}/g) || [String(c)]).join('-');
-        const mapOfCode = (code) => (String(code)[0] === 'L' ? 'loft' : String(code)[0] === 'C' ? 'city' : String(code)[0] === 'G' ? 'galleria' : String(code)[0] === 'S' ? 'school' : String(code)[0] === 'B' ? 'bowl' : String(code)[0] === 'F' ? 'btl' : String(code)[0] === 'K' ? 'diner' : String(code)[0] === 'T' ? 'tag' : String(code)[0] === 'H' ? 'ship' : String(code)[0] === 'P' ? 'plot' : 'mall');
+        const mapOfCode = (code) => (String(code)[0] === 'L' ? 'loft' : String(code)[0] === 'C' ? 'city' : String(code)[0] === 'G' ? 'galleria' : String(code)[0] === 'S' ? 'school' : String(code)[0] === 'B' ? 'bowl' : String(code)[0] === 'F' ? 'btl' : String(code)[0] === 'K' ? 'diner' : String(code)[0] === 'T' ? 'tag' : String(code)[0] === 'H' ? 'ship' : String(code)[0] === 'N' ? 'theater' : String(code)[0] === 'P' ? 'plot' : 'mall');
         function joinPrivate(code) {
             const map = mapOfCode(code);
-            joinRoom('private-' + code, { label: map === 'loft' ? 'Private Harbor Studio' : map === 'city' ? 'Private Destiny City' : map === 'galleria' ? 'Private Oasis Galleria' : map === 'school' ? 'Private Oasis High School' : map === 'bowl' ? 'Private Zen Bowl' : map === 'btl' ? 'Private Warriors of Light' : map === 'diner' ? 'Private Kitchen Clash' : map === 'tag' ? 'Private Laser Tag' : map === 'plot' ? (myPlots().find((x) => x.code === code) || {}).name || "Builder's Plot" : 'Private Room', isPrivate: true, code, map });
+            joinRoom('private-' + code, { label: map === 'loft' ? 'Private Harbor Studio' : map === 'city' ? 'Private Destiny City' : map === 'galleria' ? 'Private Oasis Galleria' : map === 'school' ? 'Private Oasis High School' : map === 'bowl' ? 'Private Zen Bowl' : map === 'btl' ? 'Private Warriors of Light' : map === 'diner' ? 'Private Kitchen Clash' : map === 'tag' ? 'Private Laser Tag' : map === 'theater' ? 'Your Theater' : map === 'plot' ? (myPlots().find((x) => x.code === code) || {}).name || "Builder's Plot" : 'Private Room', isPrivate: true, code, map });
         }
         // Everyone has a loft of their own: a stable code per browser, so friends can come back to the same place
         function myLoftCode() {
@@ -8602,6 +8603,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
 
             // ---- the TV on the left wall ----
             buildLoftTV(root);
+            try { buildLoftTheaterDoor(root); } catch (e) { console.warn('theater door', e); }
             buildLoftExtras(root, M, { bx, rc, cyl, sph, std });
 
             /* ---------------- outside: deck, pool, garden (after the house render) ---------------- */
@@ -10346,6 +10348,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             if (activeMap === 'bowl') { try { bwKeepCam(); } catch (e) { /* not ready */ } return; }
             if (activeMap === 'btl') { try { btKeepCam(); } catch (e) { /* not ready */ } return; }
             if (activeMap === 'school') { try { schKeepCam(); } catch (e) { /* not ready */ } return; }
+            if (activeMap === 'theater') { const c = camera.position; c.x = clamp(c.x, -TH_X + 0.4, TH_X - 0.4); c.z = clamp(c.z, TH_ZN + 0.6, TH_ZS - 0.4); c.y = clamp(c.y, 0.3, TH_H - 0.6); return; }
             if (activeMap !== 'loft') return;
             if (camera.position.y < 0.25) camera.position.y = 0.25;                       // looking up from low down is allowed, but never from under the floor
             const g = localActor.group.position, c = camera.position, t = controls.target, m = 0.3, { X0, X1, Z0, Z1, H } = LOFT;
@@ -13316,6 +13319,34 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
         function rxClose() { if (RXX.ov) { try { RXX.fr.srcdoc = ''; } catch (e) { /* ok */ } RXX.ov.remove(); } RXX.ov = null; RXX.fr = null; try { window.focus(); } catch (e) { /* ok */ } }
         window.__rx2 = { open: rxOpen, close: rxClose };
+        /* ---------- Toy Box Smash: ToyBoxSmash.html in an iframe. It reads your avatar, class and animation clips through window.oasisSmash(). ---------- */
+        const TBX = { ov: null, fr: null, html: '' };
+        async function tbsFetch() { if (TBX.html) return TBX.html; const r = await fetch('ToyBoxSmash.html'); if (!r.ok) throw new Error('ToyBoxSmash.html ' + r.status); TBX.html = await r.text(); return TBX.html; }
+        function tbsOpen() {
+            if (TBX.ov) return; try { closeStart(); } catch (e) { /* menu */ } document.querySelectorAll('.xmb-col.open').forEach((e) => e.classList.remove('open'));
+            const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:#1a1030';
+            const ld = document.createElement('div'); ld.textContent = 'Loading Toy Box Smash…'; ld.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ffd24a;font:800 14px Orbitron,Nunito,sans-serif;letter-spacing:.2em';
+            const fr = document.createElement('iframe'); fr.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0'; fr.allow = 'autoplay; gamepad; fullscreen';
+            tbsFetch().then((html) => { if (TBX.fr === fr) fr.srcdoc = html; }).catch(() => { if (TBX.fr === fr) fr.src = 'ToyBoxSmash.html'; });
+            const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Exit'; x.style.cssText = 'position:absolute;right:8px;top:8px;z-index:2;font:800 12px Nunito,sans-serif;color:#fff;background:rgba(40,10,70,.88);border:2px solid #ffd24a;border-radius:8px;padding:5px 12px;cursor:pointer';
+            x.addEventListener('click', tbsClose); ov.append(ld, fr, x); document.body.appendChild(ov); TBX.ov = ov; TBX.fr = fr; fr.addEventListener('load', () => { try { ld.remove(); fr.contentWindow.focus(); } catch (e) { /* ok */ } });
+        }
+        function tbsClose() { if (TBX.ov) { try { TBX.fr.srcdoc = ''; } catch (e) { /* ok */ } TBX.ov.remove(); } TBX.ov = null; TBX.fr = null; try { window.focus(); } catch (e) { /* ok */ } }
+        window.__tbs = { open: tbsOpen, close: tbsClose };
+        window.oasisFXAtlas = () => { const el = document.getElementById('fx-atlas'); return el ? el.textContent.trim() : ''; };   // the FX Variety Pack atlas (muzzle flashes, stars, rings, streaks, smoke) as base64 PNG, for Toy Box Smash
+        window.oasisSmashRoster = async () => {   // every character you could pick in Toy Box Smash: My Characters (your uploads), companions, bag characters, the two stock bodies. buffers load on demand
+            const out = [], seen = new Set();
+            for (const e of library) if (e && e.kind === 'vrm') { seen.add(e.name); out.push({ id: 'lib:' + e.id, name: e.name, gender: e.gender === 'male' ? 'male' : 'female', from: 'mine', load: async () => { const r = await store.get('char:' + e.id); return r && r.buffer ? r.buffer : null; } }); }
+            try { for (const r of await window.oasisRoster()) if (r.kind === 'vrm' && !seen.has(r.name)) { seen.add(r.name); out.push({ id: r.id, name: r.name, gender: r.gender, from: r.from, load: async () => r.buffer }); } } catch (e) { /* no companions */ }
+            out.push({ id: 'base:female', name: 'Base Female', gender: 'female', from: 'stock', load: async () => getBaseBuffer('female') }, { id: 'base:male', name: 'Base Male', gender: 'male', from: 'stock', load: async () => getBaseBuffer('male') });
+            return out;
+        };
+        window.oasisSmash = (gender, useCustom = true) => {   // what Toy Box Smash needs: who you are, your class, and every animation clip (stock sets, with your own uploads laid over them when useCustom, so custom attack animations are used)
+            const g = (gender || (localActor && localActor.gender)) === 'female' ? 'female' : 'male', slots = resolveSlots(g, useCustom && localActor ? localActor.customAnims : null), cls = CLS.wpn === 'pistol' ? 'pistol' : CLS.wpn === 'fighter' ? 'fighter' : CLS.wpn === 'sword' ? 'sword' : 'fists';
+            const acts = { ...ANIM_EMOTES, ...HERO_ACTS }; delete acts.__boardTried; delete acts.board; delete acts.sit;
+            const custom = {}; try { if (useCustom) for (const k of Object.keys((localActor && localActor.customAnims) || {})) if (localActor.customAnims[k]) custom[k] = 1; } catch (e) { /* none */ }
+            return { avatar: window.oasisAvatar(), gender: g, cls, slots, acts, custom, name: me.name, stock: { male: getBaseBuffer('male'), female: getBaseBuffer('female') }, lvl: (() => { try { return clsLv(CLS.wpn); } catch (e) { return 1; } })() };
+        };
         window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && RXX.ov && e.target === document.body) { /* the game handles Esc for its own pause menu */ } });
 
         /* ---------- Hug emote: ask a nearby player; if they accept you stand face to face and stay hugging until one of you walks off.
@@ -15344,6 +15375,138 @@ function btMusicStop() {
         document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('#btn-ship'); if (t) { e.preventDefault(); shipBoard(); } });
         window.addEventListener('keydown', (e) => { if (e.code === 'KeyY' && !e.repeat && !e.ctrlKey && !e.metaKey && activeMap === 'ship' && !isTyping(e)) { e.preventDefault(); shipAct(); } });
         window.__ship = { SHIP, shipBoard, shipLeave, shipAct, myShipCode, shipDockHere };
+
+        /* ====================================================================================================
+         *  YOUR THEATER: a private movie theater that comes with your Harbor Studio. A tiered auditorium of red velvet seats and an IMAX-size digital
+         *  screen (20 m wide) that plays the same shared / local video as the studio TV, so a whole private room can watch together.
+         *  Enter by the theater door in your studio (or from the menu). The back doors return you to where you came from.
+         * ==================================================================================================== */
+        const TH_X = 13, TH_ZN = -16.5, TH_ZS = 10.5, TH_H = 14, TH_Z0 = -5.5, TH_PITCH = 1.5, TH_RISE = 0.3, TH_ROWS = 8, TH_SZ = -16.2;
+        const TH_BLOCKS = [[-10.9, -4.7], [-3.1, 3.1], [4.7, 10.9]];
+        const THEATER = { ready: false, group: null, dock: null, rects: [], near: null, btn: null, t: 0, light: null, door: null, doorBtn: null, doorNear: false };
+        try { THEATER.dock = JSON.parse(localStorage.getItem('oasis.theater') || 'null'); } catch (e) { THEATER.dock = null; }
+        function myTheaterCode() { let c = null; try { c = localStorage.getItem('oasis.theatercode'); } catch (e) { /* storage */ } if (!c || !/^N[A-Z0-9]{11}$/.test(c)) { c = makeCode('theater'); try { localStorage.setItem('oasis.theatercode', c); } catch (e) { /* storage */ } } return c; }
+        function theaterGround(x, z) {
+            if (z < TH_SZ + 2.8) return 0.5;                                                   // the stage in front of the screen
+            const k = Math.floor((z - (TH_Z0 - TH_PITCH / 2)) / TH_PITCH);
+            return k < 0 ? 0 : TH_RISE * Math.min(k, TH_ROWS - 1);
+        }
+        function theaterClamp(pos) { pos.x = clamp(pos.x, -(TH_X - 0.5), TH_X - 0.5); pos.z = clamp(pos.z, TH_SZ + 0.6, TH_ZS - 0.2); }
+        function theaterCollide(pos) { for (const r of THEATER.rects) pushOutRect(pos, r, 0.34); }
+        function theaterSpawn() { return { x: (Math.random() - 0.5) * 1.2, y: 0, z: TH_ZS - 3.2, ry: Math.PI }; }
+        function ensureTheater() {
+            if (THEATER.ready) return; THEATER.ready = true;
+            const root = new THREE.Group(); root.visible = false; scene.add(root); THEATER.group = root;
+            const M = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.85, metalness: 0.05 }, o));
+            const EM = (c, k = 1.6) => new THREE.MeshStandardMaterial({ color: 0x111111, emissive: c, emissiveIntensity: k, roughness: 0.5 });
+            const box = (w, h, d, x, y, z, mat, par = root) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); par.add(m); return m; };
+            const ZC = (TH_ZS + TH_ZN) / 2, ZL = TH_ZS - TH_ZN;
+            root.add(new THREE.HemisphereLight(0x9a8aac, 0x2a1418, 0.8), new THREE.AmbientLight(0x5a4a62, 0.75));
+            // ---- textures: carpet, acoustic wall slats, velvet curtain
+            const carpet = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#2a0f18'; g.fillRect(0, 0, w, h); let s = 11; const R = () => (s = (s * 16807) % 2147483647) / 2147483647; for (let i = 0; i < 2600; i++) { g.fillStyle = R() < 0.5 ? 'rgba(0,0,0,.25)' : 'rgba(150,50,70,.14)'; g.fillRect(R() * w, R() * h, 2, 2); } g.strokeStyle = 'rgba(200,150,90,.22)'; g.lineWidth = 2; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { g.beginPath(); g.moveTo(i * 64 + 32, j * 64 + 8); g.lineTo(i * 64 + 56, j * 64 + 32); g.lineTo(i * 64 + 32, j * 64 + 56); g.lineTo(i * 64 + 8, j * 64 + 32); g.closePath(); g.stroke(); } });
+            carpet.wrapS = carpet.wrapT = THREE.RepeatWrapping;
+            const slats = canvasTex(256, 256, (g, w, h) => { const gd = g.createLinearGradient(0, 0, w, 0); for (let i = 0; i <= 8; i++) gd.addColorStop(i / 8, i % 2 ? '#2b1a26' : '#1a0f18'); g.fillStyle = gd; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 32) { g.fillStyle = 'rgba(255,200,160,.07)'; g.fillRect(x + 2, 0, 3, h); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(x + 30, 0, 2, h); } g.fillStyle = 'rgba(0,0,0,.28)'; for (let y = 0; y < h; y += 128) g.fillRect(0, y, w, 3); });
+            slats.wrapS = slats.wrapT = THREE.RepeatWrapping;
+            const velvet = canvasTex(256, 256, (g, w, h) => { const gd = g.createLinearGradient(0, 0, w, 0); for (let i = 0; i <= 12; i++) gd.addColorStop(i / 12, i % 2 ? '#8c1226' : '#4a0612'); g.fillStyle = gd; g.fillRect(0, 0, w, h); for (let i = 0; i < 600; i++) { g.fillStyle = 'rgba(255,120,130,.05)'; g.fillRect(Math.random() * w, Math.random() * h, 1, 4); } });
+            velvet.wrapS = velvet.wrapT = THREE.RepeatWrapping;
+            // ---- floor: stepped tiers, the walkway at the back, the pit and the stage in front
+            const carp = (rx, rz) => { const t = carpet.clone(); t.needsUpdate = true; t.repeat.set(rx, rz); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 }); };
+            { const pz1 = TH_Z0 - TH_PITCH / 2; box(TH_X * 2, 0.2, pz1 - TH_ZN, 0, -0.1, (pz1 + TH_ZN) / 2, carp(TH_X, (pz1 - TH_ZN) / 2)); }
+            for (let r = 0; r < TH_ROWS; r++) { const top = r * TH_RISE, zc = TH_Z0 + r * TH_PITCH, z0 = zc - TH_PITCH / 2, z1 = r === TH_ROWS - 1 ? TH_ZS : zc + TH_PITCH / 2; box(TH_X * 2, top + 0.2, z1 - z0, 0, (top - 0.2) / 2, (z0 + z1) / 2, carp(TH_X, (z1 - z0) / 2)); }
+            box(TH_X * 2, 0.5, TH_SZ + 2.8 - TH_ZN, 0, 0.25, (TH_ZN + TH_SZ + 2.8) / 2, M(0x1a1216, { roughness: 0.5 }));
+            // ---- walls, ceiling
+            const wallM = (rx, ry) => { const t = slats.clone(); t.needsUpdate = true; t.repeat.set(rx, ry); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }); };
+            for (const s of [-1, 1]) { box(0.5, TH_H, ZL, s * (TH_X + 0.25), TH_H / 2, ZC, wallM(ZL / 3, TH_H / 5)); box(0.16, 0.2, ZL, s * (TH_X - 0.05), 3.2, ZC, EM(0xffa060, 0.9)); box(0.16, 0.12, ZL, s * (TH_X - 0.05), 0.35, ZC, EM(0xff6a3a, 0.7)); }
+            box(TH_X * 2 + 1, TH_H, 0.5, 0, TH_H / 2, TH_ZN - 0.25, M(0x0a0608));
+            box(TH_X * 2 + 1, 0.5, ZL + 0.5, 0, TH_H + 0.25, ZC, M(0x241628, { roughness: 1 }));
+            box(TH_X * 2, 0.4, 0.3, 0, TH_H - 0.2, TH_ZN + 0.15, EM(0x3a2030, 0.4));
+            // rear wall with the booth windows and the exit doors
+            const rz = TH_ZS + 0.25, dg = 2.0; for (const s of [-1, 1]) box(TH_X - dg + 0.5, TH_H, 0.5, s * ((TH_X + dg - 0.5) / 2 + 0.25), TH_H / 2, rz, wallM(4, TH_H / 5)); { const y0 = 3.4 + TH_RISE * (TH_ROWS - 1); box(dg * 2, TH_H - y0, 0.5, 0, y0 + (TH_H - y0) / 2, rz, wallM(2, 2)); }
+            const ydoor = TH_ZS - 0.01 + 0.5, dm = M(0x24161c, { roughness: 0.5, metalness: 0.2 }); box(dg * 2, 3.4, 0.2, 0, 1.7 + TH_RISE * (TH_ROWS - 1), ydoor - 0.35, dm);
+            for (const s of [-1, 1]) box(0.12, 3.4, 0.3, s * dg, 1.7 + TH_RISE * (TH_ROWS - 1), ydoor - 0.1, M(0x5a3a22, { metalness: 0.5, roughness: 0.35 }));
+            box(1.5, 0.4, 0.1, 0, 3.8 + TH_RISE * (TH_ROWS - 1), ydoor - 0.15, EM(0x3dff7a, 1.8));
+            for (const x of [-7, -3.5, 3.5, 7]) { box(1.8, 1.0, 0.1, x, 8.2, TH_ZS - 0.02, new THREE.MeshStandardMaterial({ color: 0x050a10, roughness: 0.15, metalness: 0.8, emissive: 0x0a1a28, emissiveIntensity: 0.6 })); box(0.9, 0.5, 0.05, x, 8.2, TH_ZS - 0.1, EM(0xbfe8ff, 1.2)); }
+            // ---- the screen: a black bezel, a silver frame, speakers behind it, the picture plane the video layer fills
+            const SW = 20, SH = 11.25, SY0 = 1.7, scy = SY0 + SH / 2, SZ = TH_SZ;
+            box(SW + 1.4, SH + 1.2, 0.5, 0, scy, SZ - 0.28, M(0x050506, { roughness: 0.4 }));
+            box(SW + 1.5, 0.12, 0.6, 0, SY0 - 0.6, SZ - 0.2, M(0x9aa2ae, { metalness: 0.9, roughness: 0.25 })); box(SW + 1.5, 0.12, 0.6, 0, SY0 + SH + 0.6, SZ - 0.2, M(0x9aa2ae, { metalness: 0.9, roughness: 0.25 }));
+            for (const s of [-1, 1]) box(0.12, SH + 1.2, 0.6, s * (SW / 2 + 0.7), scy, SZ - 0.2, M(0x9aa2ae, { metalness: 0.9, roughness: 0.25 }));
+            const g = new THREE.Group(); g.position.set(0, 0, SZ); root.add(g);
+            const hit = [], idle = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: SCREEN.idleTex, toneMapped: false, fog: false })); idle.position.set(0, scy, 0.072); g.add(idle); hit.push(idle);
+            const hole = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0, blending: THREE.NoBlending, side: THREE.FrontSide, fog: false, toneMapped: false })); hole.position.set(0, scy, 0.072); hole.visible = false; hole.userData.noOutline = true; g.add(hole); hit.push(hole);
+            SCREEN_SITES.theater = { x: 0, z: SZ + 0.072, y0: SY0, w: SW, h: SH, ry: 0, near: 40, reach: 40, group: g, hit, edge: [], idleMesh: idle, holeMesh: hole };
+            // ---- curtains either side of the screen, a valance across the top, a marquee strip on the stage lip
+            const vm = (rx) => { const t = velvet.clone(); t.needsUpdate = true; t.repeat.set(rx, 1); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.95, side: THREE.DoubleSide }); };
+            for (const s of [-1, 1]) box(2.5, TH_H - 0.5, 0.5, s * 11.85, (TH_H - 0.5) / 2, SZ + 0.3, vm(3));
+            box(TH_X * 2, 1.6, 0.6, 0, TH_H - 1.0, SZ + 0.5, vm(14));
+            box(TH_X * 2, 0.08, 0.1, 0, 0.55, TH_SZ + 2.8, EM(0xffb060, 1.4));
+            // ---- seats: instanced velvet seats with armrests, row by row on the tiers
+            const seatsPer = 10, sw = 0.62, nS = TH_BLOCKS.length * TH_ROWS * seatsPer, nA = TH_BLOCKS.length * TH_ROWS * (seatsPer + 1);
+            const cush = new THREE.InstancedMesh(new THREE.BoxGeometry(0.54, 0.16, 0.5), M(0x9a1428, { roughness: 0.9 }), nS), back = new THREE.InstancedMesh(new THREE.BoxGeometry(0.56, 0.7, 0.14), M(0x8a1024, { roughness: 0.9 }), nS), arms = new THREE.InstancedMesh(new THREE.BoxGeometry(0.07, 0.11, 0.55), M(0x15101a, { roughness: 0.5, metalness: 0.4 }), nA), ped = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.34, 0.3), M(0x15101a, { roughness: 0.6 }), nS);
+            const mt = new THREE.Matrix4(); let si = 0, ai = 0, stripes = [];
+            for (let r = 0; r < TH_ROWS; r++) {
+                const top = r * TH_RISE, zc = TH_Z0 + r * TH_PITCH;
+                for (const [x0, x1] of TH_BLOCKS) {
+                    const n = Math.round((x1 - x0) / sw);
+                    for (let i = 0; i < seatsPer; i++) { const x = x0 + sw * (i + 0.5); mt.makeTranslation(x, top + 0.43, zc + 0.3); cush.setMatrixAt(si, mt); mt.makeTranslation(x, top + 0.82, zc + 0.6); mt.multiply(new THREE.Matrix4().makeRotationX(-0.12)); back.setMatrixAt(si, mt); mt.makeTranslation(x, top + 0.17, zc + 0.35); ped.setMatrixAt(si, mt); si++; }
+                    for (let i = 0; i <= seatsPer; i++) { mt.makeTranslation(x0 + sw * i, top + 0.62, zc + 0.35); arms.setMatrixAt(ai++, mt); }
+                    THEATER.rects.push([x0, zc + 0.12, x1, zc + 0.75]);
+                }
+                for (const [a, b] of [[TH_BLOCKS[0][1], TH_BLOCKS[1][0]], [TH_BLOCKS[1][1], TH_BLOCKS[2][0]]]) stripes.push([(a + b) / 2, top, zc - TH_PITCH / 2 + 0.08, b - a]);
+                for (const sx of [-1, 1]) stripes.push([sx * (TH_X - 0.55), top, zc - TH_PITCH / 2 + 0.08, 1.0]);
+            }
+            [cush, back, arms, ped].forEach((m) => { m.instanceMatrix.needsUpdate = true; root.add(m); });
+            for (const [x, top, z, w] of stripes) box(w - 0.2, 0.05, 0.08, x, top + 0.04, z, EM(0xffb060, 1.6));          // glowing step lights down the aisles
+            THEATER.rects.push([-TH_X, TH_SZ - 0.3, TH_X, TH_SZ + 0.2]);
+            // ---- lights: warm wall washes, a cool stage wash, and a screen glow that brightens when something is playing
+            const pts = [[-10, 4.2, -2, 0xffa468, 9], [10, 4.2, -2, 0xffa468, 9], [-10, 6.2, 5, 0xffa468, 9], [10, 6.2, 5, 0xffa468, 9], [0, 8, 2, 0x9a86c8, 7], [0, 5.5, -12, 0x6a8cff, 12]];
+            pts.forEach(([x, y, z, c, k]) => { const l = new THREE.PointLight(c, k, 22, 1.6); l.position.set(x, y, z); root.add(l); if (k === 12) THEATER.light = l; });
+            const dl = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 12), EM(0xffe2b0, 1.4), 40); let di = 0;
+            for (let zz = -12; zz <= 8; zz += 5) for (let xx = -9; xx <= 9; xx += 4.5) { if (di >= 40) break; mt.makeTranslation(xx, TH_H - 0.05, zz); dl.setMatrixAt(di++, mt); } dl.count = di; dl.instanceMatrix.needsUpdate = true; root.add(dl);
+            // ---- exit button
+            const b = document.createElement('button'); b.id = 'theater-act'; b.type = 'button'; b.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:35;display:none;padding:10px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(30,10,16,.9);color:#fff;font:800 14px Nunito,Inter,sans-serif;letter-spacing:.04em;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.45)';
+            b.addEventListener('pointerdown', (e) => e.stopPropagation()); b.addEventListener('click', () => theaterAct()); document.body.appendChild(b); THEATER.btn = b;
+        }
+        function theaterDockHere() { if (!room || room.map === 'theater') return; THEATER.dock = { id: room.id, label: room.label, isPrivate: !!room.isPrivate, code: room.code || null, map: room.map }; try { localStorage.setItem('oasis.theater', JSON.stringify(THEATER.dock)); } catch (e) { /* storage */ } }
+        function theaterEnter() {
+            if (activeMap === 'theater') { sysChat('You are already in your theater.'); return; }
+            if (SHIP_NO.includes(activeMap) || activeMap === 'ship') { sysChat('Leave this first, then go to your theater.'); return; }
+            try { theaterDockHere(); const code = myTheaterCode(); joinRoom('private-' + code, { label: 'Your Theater', isPrivate: true, code, map: 'theater' }); sysChat('Welcome to your theater. The screen plays the same videos as your studio TV: paste a link from the TV menu. The back doors lead out.'); } catch (e) { console.error(e); sysChat('Could not open the theater.'); }
+        }
+        function theaterLeave() {
+            const lc = myLoftCode(), d = THEATER.dock && THEATER.dock.id && THEATER.dock.map !== 'theater' ? THEATER.dock : { id: 'private-' + lc, label: 'Harbor Studio', isPrivate: true, code: lc, map: 'loft' };
+            try { joinRoom(d.id, { label: d.label, isPrivate: d.isPrivate, code: d.code, map: d.map }); } catch (e) { console.error(e); sysChat('Could not leave the theater.'); }
+        }
+        function theaterAct() { if (activeMap === 'theater') { if (THEATER.near === 'exit') theaterLeave(); } else if (activeMap === 'loft' && THEATER.doorNear) theaterEnter(); }
+        function theaterUpdate(g, dt) {
+            if (!THEATER.ready || !THEATER.group || !THEATER.group.visible) return;
+            THEATER.t += dt; if (THEATER.light) THEATER.light.intensity += ((activeSrc() ? 14 : 4) - THEATER.light.intensity) * Math.min(1, dt * 2);
+            const p = g.position, near = p.z > TH_ZS - 2.4 && Math.abs(p.x) < 2.6 ? 'exit' : null;
+            if (near !== THEATER.near) { THEATER.near = near; if (THEATER.btn) { THEATER.btn.style.display = near ? 'block' : 'none'; THEATER.btn.textContent = near ? 'Leave theater  (Y)' : ''; } }
+        }
+        function theaterMapChanged(id) { if (id !== 'theater' && THEATER.btn) { THEATER.btn.style.display = 'none'; THEATER.near = null; } if (id !== 'loft' && THEATER.doorBtn) { THEATER.doorBtn.style.display = 'none'; THEATER.doorNear = false; } }
+        MAP_DEFS.theater = { id: 'theater', ground: theaterGround, clamp: theaterClamp, collide: theaterCollide, spawn: theaterSpawn, update: theaterUpdate };
+        /* the theater door in Harbor Studio: east wall, between the deck door and the lift */
+        const TH_DOOR = { x: 4.42, z: -3.6 };
+        function buildLoftTheaterDoor(parent) {
+            const g = new THREE.Group(); g.position.set(LOFT.X1 - 0.04, 0, TH_DOOR.z); g.rotation.y = -Math.PI / 2; parent.add(g);   // faces into the room (-x)
+            const wood = new THREE.MeshStandardMaterial({ color: 0x3a1c20, roughness: 0.55 }), gold = new THREE.MeshStandardMaterial({ color: 0xc9a24a, roughness: 0.3, metalness: 0.8 });
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.7, 0.1), new THREE.MeshStandardMaterial({ color: 0x120a0c, roughness: 0.6 })); frame.position.set(0, 1.35, 0.05); g.add(frame);
+            for (const s of [-1, 1]) { const d = new THREE.Mesh(new THREE.BoxGeometry(0.92, 2.45, 0.06), wood); d.position.set(s * 0.47, 1.25, 0.12); g.add(d); const h = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), gold); h.position.set(s * 0.12, 1.2, 0.18); g.add(h); }
+            const sign = canvasTex(256, 64, (c, w, h) => { c.fillStyle = '#1a0508'; c.fillRect(0, 0, w, h); c.strokeStyle = '#ffcf7a'; c.lineWidth = 3; c.strokeRect(3, 3, w - 6, h - 6); c.fillStyle = '#ffd98a'; c.font = '800 34px Georgia,serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('THEATER', w / 2, h / 2 + 2); });
+            const mq = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.42), new THREE.MeshBasicMaterial({ map: sign, toneMapped: false })); mq.position.set(0, 2.95, 0.12); g.add(mq);
+            const l = new THREE.PointLight(0xffc070, 1.2, 4, 2); l.position.set(0, 2.6, 0.6); g.add(l);
+        }
+        function theaterDoorTick(g) {
+            if (!THEATER.doorBtn) { const b = document.createElement('button'); b.id = 'theater-door'; b.type = 'button'; b.textContent = 'Enter your theater  (Y)'; b.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:35;display:none;padding:10px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(30,10,16,.9);color:#fff;font:800 14px Nunito,Inter,sans-serif;letter-spacing:.04em;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.45)'; b.addEventListener('pointerdown', (e) => e.stopPropagation()); b.addEventListener('click', () => theaterAct()); document.body.appendChild(b); THEATER.doorBtn = b; }
+            const p = g.position, near = activeMap === 'loft' && Math.abs(p.z - TH_DOOR.z) < 1.5 && p.x > LOFT.X1 - 2.2;
+            if (near !== THEATER.doorNear) { THEATER.doorNear = near; THEATER.doorBtn.style.display = near ? 'block' : 'none'; }
+        }
+        { const _lu = MAP_DEFS.loft.update; MAP_DEFS.loft.update = (g, dt) => { if (_lu) _lu(g, dt); try { theaterDoorTick(g); } catch (e) { /* door */ } }; }
+        document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('#btn-theater'); if (t) { e.preventDefault(); theaterEnter(); } });
+        window.addEventListener('keydown', (e) => { if (e.code === 'KeyY' && !e.repeat && !e.ctrlKey && !e.metaKey && (activeMap === 'theater' || (activeMap === 'loft' && THEATER.doorNear)) && !isTyping(e)) { e.preventDefault(); theaterAct(); } });
+        window.__theater = { THEATER, theaterEnter, theaterLeave, theaterAct, myTheaterCode };
+
         window.__gfx = { ac: { AC, acWelcome, acSync, acHtml, acDerive, acEnc, acDec, acParts, acSess, acClick }, cs: { CS, csSnap, csApply, csHash, csHtml, csFresh, csSync }, GFX, toggle: gfxToggle, preset: gfxSetPreset, bench: gfxBench, sweep: gfxShadowSweep };
 
         /* ---- THE FOREST EDGE behind the Harbor Studio: a hillside of pines and leafy trees, a valley and layered mountains (replaces the old bay and city) ---- */
@@ -16726,6 +16889,7 @@ window.__ts = TSK;
             if (BT.group) BT.group.visible = id === 'btl';
             if (id === 'diner') { try { ensureKitchen(); } catch (e) { console.error('Kitchen failed to build', e); } }
             if (KC.ready && KC.group) KC.group.visible = id === 'diner';
+            try { if (id === 'theater') ensureTheater(); if (THEATER.ready && THEATER.group) THEATER.group.visible = id === 'theater'; } catch (e) { console.error('Theater failed to build', e); }
             try { if (id === 'ship') ensureShip(); if (SHIP.ready && SHIP.group) SHIP.group.visible = id === 'ship'; } catch (e) { console.error('Ship failed to build', e); }
             try { if (id === 'tag') ensureTagArena(); if (TG.ready && TG.group) TG.group.visible = id === 'tag'; } catch (e) { console.error('Laser tag arena failed to build', e); }
             { const host = id === 'plot' ? PLOT.group : loftGroup; if (DC.root && host && DC.root.parent !== host) host.add(DC.root); if (DC.wallG) DC.wallG.visible = id !== 'plot'; BP.dirty = true; }
@@ -16740,12 +16904,13 @@ window.__ts = TSK;
             else if (id === 'plot') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.00085); }
             else if (id === 'diner') { scene.background = new THREE.Color(0x2a1a1c); scene.fog = new THREE.FogExp2(0x2a1a1c, 0.004); }
             else if (id === 'tag') { scene.background = new THREE.Color(0x070a1c); scene.fog = new THREE.FogExp2(0x070a1c, 0.005); }
+            else if (id === 'theater') { scene.background = new THREE.Color(0x050308); scene.fog = new THREE.FogExp2(0x050308, 0.003); }
             else if (id === 'ship') { scene.background = new THREE.Color(0x02030a); scene.fog = new THREE.FogExp2(0x02030a, 0.004); }
             else if (id === 'construct') { scene.background = new THREE.Color(0xf4f6f8); scene.fog = new THREE.FogExp2(0xf4f6f8, 0.011); }
             else { scene.background = new THREE.Color(0x030712); scene.fog = new THREE.FogExp2(0x030712, 0.011); }
-            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'construct' ? 15 : id === 'ship' ? 9 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
+            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'construct' ? 15 : id === 'ship' ? 9 : id === 'theater' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
             if (typeof fpOn !== 'undefined' && fpOn && controls) { if (fpSaved) fpSaved.polar = controls.maxPolarAngle; controls.maxPolarAngle = Math.PI - 0.05; controls.minPolarAngle = 0.05; }
-            if ((id === 'loft' || id === 'diner' || id === 'tag' || id === 'construct' || id === 'bowl' || id === 'btl' || id === 'ship') && typeof hbSet === 'function' && hbOn) hbSet(false, true);
+            if ((id === 'loft' || id === 'diner' || id === 'tag' || id === 'construct' || id === 'bowl' || id === 'btl' || id === 'ship' || id === 'theater') && typeof hbSet === 'function' && hbOn) hbSet(false, true);
             if (typeof BK !== 'undefined' && BK.on && !BK_OUT.includes(id)) bkSet(false, true);
             try { kcMapChanged(id); } catch (e) { /* kitchen not loaded yet */ }
             try { tgMapChanged(id); } catch (e) { console.error('laser tag map', e); }
@@ -16754,6 +16919,7 @@ window.__ts = TSK;
             try { wxMapChanged(id); } catch (e) { console.error('weather map', e); }
             try { hcMapChanged(id); } catch (e) { console.error('construct map', e); }
             try { shipMapChanged(id); } catch (e) { console.error('ship map', e); }
+            try { theaterMapChanged(id); } catch (e) { console.error('theater map', e); }
             try { hbShowButton(); } catch (e) { /* not ready yet */ }
             selectScreenSite(id);                                    // the TV of the room we are in
             applyScreen();                                          // leaving a room with a TV silences and removes the player
