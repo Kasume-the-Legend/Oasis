@@ -1419,6 +1419,10 @@
     </style>
     <style id="xmb-style">
         /* ============ XMB bottom menu (categories along the bottom, lists open upward) ============ */
+        /* wide screens (touch default): the HUD frame is 16:9 but the picture fills the screen, so the bottom bars drop to the real screen bottom (--wy is minus the top offset of the frame) */
+        .stagewide nav.xmb-bar { bottom: var(--wy) !important; }
+        .stagewide #chat-panel { bottom: calc(7rem + var(--wy)) !important; }
+        .stagewide #chatbar { bottom: calc(7rem + var(--wy)) !important; }
         nav.xmb-bar { background: linear-gradient(180deg, rgba(4,10,26,0) 0%, rgba(6,16,40,.55) 55%, rgba(6,16,40,.86) 100%) !important; padding: 0 !important; }
         .xmb { position: relative; display: flex; justify-content: center; width: 100%; }
         .xmb-row { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: clamp(2px, calc(1.6 * var(--svw)), 26px); padding: 22px 12px 12px; max-width: 100%; }
@@ -9960,19 +9964,45 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
         const _cyTc = new THREE.Color(), _cyFar = new THREE.Color();
         function cyTrees(root, CM, green, sakura) {
-            const trunkG = new THREE.CylinderGeometry(0.14, 0.22, 3.4, 7), blob = (() => { const g = new THREE.IcosahedronGeometry(1, 4), P = g.attributes.position, v = new THREE.Vector3(); for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); const n = Math.sin(v.x * 5.1 + v.y * 3.7) * Math.cos(v.z * 4.3 - v.x * 2.9) * 0.5 + Math.sin(v.x * 11 + v.z * 9.3) * Math.sin(v.y * 10.2 + v.x * 7) * 0.25, k = 1 + n * 0.22 - Math.max(0, -v.y) * 0.12; P.setXYZ(i, v.x * k, v.y * k, v.z * k); } g.computeVertexNormals(); return g; })();
-            const place = (list, canopyMat, trunkMat, blobs) => {
+            // a real tree shape: a flared, tapering trunk, three limbs that fork off it and reach out, and many small leaf clusters
+            // layered in tiers (wide and low, narrower above, a crown on top), every tree arranged differently and turned its own way
+            const trunkG = new THREE.LatheGeometry([[0.5, 0], [0.3, 0.32], [0.21, 0.9], [0.16, 2.0], [0.12, 3.1]].map(([r, y]) => new THREE.Vector2(r, y)), 9);
+            const limbG = new THREE.CylinderGeometry(0.05, 0.11, 1, 6).translate(0, 0.5, 0);
+            const blob = (() => { const g = new THREE.IcosahedronGeometry(1, 3), P = g.attributes.position, v = new THREE.Vector3(); for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); const n = Math.sin(v.x * 5.1 + v.y * 3.7) * Math.cos(v.z * 4.3 - v.x * 2.9) * 0.5 + Math.sin(v.x * 11 + v.z * 9.3) * Math.sin(v.y * 10.2 + v.x * 7) * 0.25, k = 1 + n * 0.3 - Math.max(0, -v.y) * 0.3; P.setXYZ(i, v.x * k, v.y * (v.y < 0 ? k * 0.7 : k * 0.9), v.z * k); } g.computeVertexNormals(); return g; })();
+            const hash = (a, b) => { const h = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return h - Math.floor(h); };
+            const UPV = new THREE.Vector3(0, 1, 0);
+            const place = (list, canopyMat, trunkMat, N, spread, rad) => {
                 if (!list.length) return;
-                const tr = new THREE.InstancedMesh(trunkG, trunkMat, list.length), cn = new THREE.InstancedMesh(blob, canopyMat, list.length * blobs.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
-                let k = 0; list.forEach(([x, z, sc = 1], i) => {
-                    q.identity(); s.set(sc, sc, sc); p.set(x, 1.7 * sc, z); m.compose(p, q, s); tr.setMatrixAt(i, m);
-                    for (const [bx, by, bz, br] of blobs) { s.set(br * sc * 1.15, br * sc * 0.95, br * sc * 1.15); p.set(x + bx * sc, (3.4 + by) * sc, z + bz * sc); m.compose(p, q, s); cn.setMatrixAt(k, m); const hv = Math.sin(x * 12.9 + z * 7.7 + bx * 3.1 + by * 5.3) * 0.5 + 0.5, up = clamp((by + 0.6) / 1.8, 0, 1); _cyTc.setHSL(0.0 + 0.0 * hv, 0, 0.82 + 0.28 * up + 0.18 * hv); if (canopyMat === CM.green) _cyTc.setRGB(0.78 + 0.3 * hv + 0.25 * up, 0.92 + 0.12 * up, 0.7 + 0.2 * hv); cn.setColorAt(k++, _cyTc); }
+                const LIMBS = 3, tr = new THREE.InstancedMesh(trunkG, trunkMat, list.length), lb = new THREE.InstancedMesh(limbG, trunkMat, list.length * LIMBS), cn = new THREE.InstancedMesh(blob, canopyMat, list.length * N);
+                const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), d = new THREE.Vector3(), yq = new THREE.Quaternion();
+                let k = 0, kl = 0;
+                list.forEach(([x, z, sc = 1], i) => {
+                    const rot = hash(x, z) * Math.PI * 2; yq.setFromAxisAngle(UPV, rot);
+                    q.copy(yq); s.set(sc, sc * (0.92 + hash(z, x) * 0.2), sc); p.set(x, 0, z); m.compose(p, q, s); tr.setMatrixAt(i, m);
+                    const pts = [];
+                    for (let n = 0; n < N; n++) {
+                        const tier = n < N * 0.45 ? 0 : n < N * 0.8 ? 1 : 2, a = (n / N) * Math.PI * 2 * 2.3 + hash(i, n) * 1.6, h1 = hash(x + n, z - n), h2 = hash(z + n * 3, x);
+                        const rr = tier === 0 ? spread * (0.8 + h1 * 0.5) : tier === 1 ? spread * (0.45 + h1 * 0.4) : spread * 0.2 * h1;
+                        const by = (tier === 0 ? -0.5 + h2 * 0.6 : tier === 1 ? 0.5 + h2 * 0.6 : 1.4 + h2 * 0.4), br = rad * (tier === 2 ? 0.95 : 0.78 + h1 * 0.4);
+                        pts.push([Math.cos(a) * rr, by, Math.sin(a) * rr, br]);
+                    }
+                    pts.forEach(([bx, by, bz, br], n) => {
+                        const wx = x + (bx * Math.cos(rot) + bz * Math.sin(rot)) * sc, wz = z + (-bx * Math.sin(rot) + bz * Math.cos(rot)) * sc;
+                        q.copy(yq).multiply(yq.clone().setFromAxisAngle(UPV, hash(n, i) * 3)); s.set(br * sc * 1.12, br * sc * 0.82, br * sc * 1.12); p.set(wx, (3.5 + by) * sc, wz); m.compose(p, q, s); cn.setMatrixAt(k, m);
+                        const hv = hash(wx + n, wz), up = clamp((by + 0.6) / 1.8, 0, 1); _cyTc.setHSL(0, 0, 0.82 + 0.28 * up + 0.18 * hv);
+                        if (canopyMat === CM.green) _cyTc.setRGB(0.62 + 0.3 * hv + 0.3 * up, 0.86 + 0.14 * up, 0.55 + 0.22 * hv); cn.setColorAt(k++, _cyTc);
+                    });
+                    // limbs: from a fork up the trunk out to the three lowest, widest clusters
+                    for (let l = 0; l < LIMBS; l++) {
+                        const [bx, by, bz] = pts[l * 2 % Math.floor(N * 0.45)], wx = x + (bx * Math.cos(rot) + bz * Math.sin(rot)) * sc * 0.8, wz = z + (-bx * Math.sin(rot) + bz * Math.cos(rot)) * sc * 0.8, wy = (3.5 + by) * sc;
+                        p.set(x, (2.1 + l * 0.35) * sc, z); d.set(wx - p.x, wy - p.y, wz - p.z); const len = d.length(); d.normalize(); q.setFromUnitVectors(UPV, d); s.set(sc, len, sc); m.compose(p, q, s); lb.setMatrixAt(kl++, m);
+                    }
                     CITY.circ.push({ x, z, r: 0.3 * sc });
                 });
-                tr.castShadow = cn.castShadow = true; cn.receiveShadow = true; tr.userData.noOutline = cn.userData.noOutline = true; root.add(tr, cn);
+                tr.castShadow = lb.castShadow = cn.castShadow = true; cn.receiveShadow = true; tr.userData.noOutline = lb.userData.noOutline = cn.userData.noOutline = true; root.add(tr, lb, cn);
             };
-            place(green, CM.green, CM.sakuraT, [[0, 0.3, 0, 1.9], [1.1, -0.3, 0.4, 1.3], [-1.0, -0.1, -0.5, 1.4], [0.2, 1.0, 0.8, 1.2]]);
-            place(sakura, CM.pink, CM.sakuraT, [[0, 0.5, 0, 2.2], [1.4, 0, 0.6, 1.6], [-1.3, 0.1, -0.5, 1.7], [0.3, 1.4, 0.9, 1.4], [-0.5, 0.2, 1.5, 1.3]]);
+            place(green, CM.green, CM.sakuraT, 11, 1.7, 1.15);
+            place(sakura, CM.pink, CM.sakuraT, 13, 2.1, 1.3);
         }
 
         // ---------- the sunburst plaza, the Paopu fountain, the promenade, the beach, the islet ----------
@@ -17173,7 +17203,7 @@ function scnSetEdit(on) {
 }
 /* ---- panel ---- */
 function scnInitUI() {
-    const panel = dcEl('div', 'dc hidden'); panel.id = 'scn-panel'; panel.style.cssText = 'right:12px;top:70px;width:300px;max-height:calc(calc(100 * var(--svh)) - 150px);display:flex;flex-direction:column;z-index:26';
+    const panel = dcEl('div', 'dc hidden'); panel.id = 'scn-panel'; panel.style.cssText = 'right:12px;top:70px;width:300px;max-height:calc(calc(100 * var(--svh)) - 150px);flex-direction:column;z-index:26'; { const st = document.createElement('style'); st.textContent = '#scn-panel.hidden{display:none!important} #scn-panel:not(.hidden){display:flex}'; document.head.appendChild(st); }
     const head = dcEl('div', 'dc-head', '<b>🧰 Edit map</b><span class="dc-sp"></span><label><input type="checkbox" id="scn-snap" checked> Snap</label>'); head.appendChild(dcBtn('Done', () => scnSetEdit(false), 'gold'));
     const tabs = dcEl('div', 'dc-tabs'), tb = []; for (const [k, l] of [['obj', 'Selected'], ['add', 'Build'], ['land', 'Land'], ['del', 'Removed'], ['lay', 'Layout']]) { const b = dcEl('button', 'dc-tab', l); b.type = 'button'; b.dataset.tab = k; b.addEventListener('click', () => { SCN.tab = k; scnRenderUI(); }); tabs.appendChild(b); tb.push(b); }
     const body = dcEl('div', 'dc-body'); panel.append(head, tabs, body); document.body.appendChild(panel); panel.addEventListener('pointerdown', (e) => e.stopPropagation()); panel.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
@@ -17706,7 +17736,7 @@ async function pubExport(name) {
     sysChat('Exported ' + slug + '.oasismap (' + Math.round(JSON.stringify(pack).length / 1024) + ' KB). Put it in the maps folder and add this line to maps/index.json (copied for you): ' + line);
 }
 setTimeout(() => { try { pubBoot(); } catch (e) { /* maps */ } }, 800);
-window.__scn = { pubGather, pubApply, pubLocal, pubExport, pubBoot, PUB, setHour: (h) => { CYT.override = h; }, testPlot: () => { const c = newPlot('Test plot'); enterPlot(c); return c; }, LS, lsCreate, lsHeight, lsPack, lsUnpack, lsStroke, lsErode, lsClearPaint, lsBudget, lsSetupInput, lsRay, lsFolStroke, SCN, scnSetEdit, scnPick, scnEntryFor, scnSelect, scnDelete, scnDuplicate, scnAddBlock, scnMove, scnOp, scnUndo, scnRefresh, scnRoot, scnEnter, scnLeave, scnWire, scnClean, scnCollide, scnGround };
+window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', map: 'city' }), pubGather, pubApply, pubLocal, pubExport, pubBoot, PUB, setHour: (h) => { CYT.override = h; }, testPlot: () => { const c = newPlot('Test plot'); enterPlot(c); return c; }, LS, lsCreate, lsHeight, lsPack, lsUnpack, lsStroke, lsErode, lsClearPaint, lsBudget, lsSetupInput, lsRay, lsFolStroke, SCN, scnSetEdit, scnPick, scnEntryFor, scnSelect, scnDelete, scnDuplicate, scnAddBlock, scnMove, scnOp, scnUndo, scnRefresh, scnRoot, scnEnter, scnLeave, scnWire, scnClean, scnCollide, scnGround };
 
         function charImpToggle(on) {
             let o = document.getElementById('charimp-ov');
@@ -17717,6 +17747,7 @@ window.__scn = { pubGather, pubApply, pubLocal, pubExport, pubBoot, PUB, setHour
             const fr = document.createElement('iframe'); fr.src = 'CharacterImporter.html'; fr.style.cssText = 'flex:1;border:0;width:100%'; fr.setAttribute('allow', 'fullscreen'); o.append(bar, fr); document.body.appendChild(o);
         }
         document.addEventListener('click', (e) => { const ci = e.target && e.target.closest && e.target.closest('#btn-charimp'); if (ci) { e.preventDefault(); charImpToggle(true); } });
+        { const sync = () => { const b = document.getElementById('btn-mapedit'); if (b) b.style.display = scnAllowed() ? '' : 'none'; }; sync(); setInterval(sync, 1500); }   // the Edit Map entry only exists for the two owner accounts
         document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('#btn-mapedit'); if (t) { e.preventDefault(); scnSetEdit(!SCN.edit); } });
         function setMap(id) {
             activeMap = id;
