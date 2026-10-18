@@ -723,7 +723,7 @@ Object.assign(ITEMS, {
 });
 Object.assign(WPN, {
     rifle: { gun: true, dmg: 2.1, rate: 0.11, range: 14, cls: 'gunner', ammo: 'ammoR', mag: 30, auto: true, spread: 0.05, rel: 2.3, key: 'rifle', len: 0.7 },
-    shotgun: { gun: true, dmg: 1.7, rate: 0.95, range: 8, cls: 'gunner', ammo: 'ammoS', mag: 6, pellets: 8, spread: 0.2, rel: 2.6, key: 'shotgun', len: 0.8 },
+    shotgun: { gun: true, dmg: 3.5, rate: 0.95, range: 8, cls: 'gunner', ammo: 'ammoS', mag: 6, pellets: 8, spread: 0.2, rel: 2.6, key: 'shotgun', len: 0.8 },
     sniper: { gun: true, dmg: 15, rate: 1.25, range: 30, cls: 'gunner', ammo: 'ammoH', mag: 5, pierce: 3, spread: 0.004, rel: 2.7, key: 'sniper', len: 0.95 },
     rocket: { gun: true, dmg: 34, rate: 1.4, range: 15, cls: 'gunner', ammo: 'ammoX', mag: 1, splash: 3.3, rel: 2.5, key: 'rocket', len: 0.85 },
     grenade: { gun: true, dmg: 20, rate: 0.8, range: 12, cls: 'gunner', ammo: 'ammoG', mag: 4, splash: 2.7, rel: 2.4, key: 'grenade', len: 0.6 },
@@ -1740,7 +1740,7 @@ const BS = {   // boss stat blocks
     beast: { kind: 'hound', sc: 2.7, hp: 120, spd: 4.2, rad: 1.0, dmg: 20, cd: 1.0, wind: 0.4, reach: 2.4, phases: 3, name: 'Sewer Beast' },
     warden: { v: 'yaku', sc: [1.45, 1.32], hp: 100, spd: 1.4, rad: 0.9, dmg: 28, cd: 1.5, wind: 0.75, reach: 2.3, phases: 2, name: 'Crypt Warden' },
     coldbrute: { v: 'prisoner', sc: [1.55, 1.38], hp: 110, spd: 1.35, rad: 0.95, dmg: 30, cd: 1.5, wind: 0.8, reach: 2.4, phases: 2, name: 'Cold Store Brute' },
-    stoker: { v: 'skeletonzombie', sc: [1.75, 1.45], hp: 150, spd: 2.3, rad: 0.85, dmg: 12, cdmg: 14, cd: 1.3, wind: 0.5, reach: 2.4, phases: 3, name: 'The Stoker' },
+    stoker: { v: 'skeletonzombie', sc: [1.75, 1.45], hp: 100, spd: 2.3, rad: 0.85, dmg: 7, cdmg: 9, cd: 1.3, wind: 0.5, reach: 2.4, phases: 3, name: 'The Stoker' },
     hale: { v: 'parasite', sc: [1.95, 1.8], hp: 200, spd: 1.9, rad: 1.1, dmg: 32, cd: 1.4, wind: 0.65, reach: 2.8, phases: 3, name: 'Parasite Hale' },
 };
 const SEQ = (id, flag, title, desc, btns, seq, ok, o) => Object.assign({ type: 'seq', flag, title, desc, btns, seq, ok, text: title }, o || {});
