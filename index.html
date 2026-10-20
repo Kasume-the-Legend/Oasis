@@ -15068,8 +15068,8 @@ function btMusicStop() {
             performance: { n: 'Performance', d: 'Smooth and light, no shadows', res: '0.75', shadow: 'off', cap: 60, emu: 'first' },
             balanced: { n: 'Balanced', d: 'Soft shadows, sensible sharpness', res: '1', shadow: 'low', cap: 60, emu: 'balanced' },
             nice: { n: 'Nice', d: 'Good shadows and a sharper picture', res: '1.25', shadow: 'med', cap: 60, emu: 'balanced' },
-            supernice: { n: 'Super Nice', d: 'Sharp, detailed shadows', res: '1.5', shadow: 'high', cap: 0, emu: 'full' },
-            perfect: { n: 'Perfect', d: 'Everything maxed: your device\'s full resolution and the biggest shadows', res: 'native', shadow: 'ultra', cap: 0, emu: 'full' }
+            supernice: { n: 'Super Nice', d: 'Sharp, detailed shadows', res: '1.5', shadow: 'high', cap: 60, emu: 'full' },
+            perfect: { n: 'Perfect', d: 'Everything maxed: your device\'s full resolution and the biggest shadows', res: 'native', shadow: 'ultra', cap: 60, emu: 'full' }
         };
         const GFX_SH = { off: { n: 'Off', on: false, max: 512, every: 1 }, low: { n: 'Low', on: true, max: 512, every: 3 }, med: { n: 'Medium', on: true, max: 1024, every: 2 }, high: { n: 'High', on: true, max: 2048, every: 1 }, ultra: { n: 'Ultra', on: true, max: 4096, every: 1 } };
         const GFX = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('oasis.gfx') || '{}') || {}; } catch (e) { /* storage */ } const fresh = !s.preset && s.res === undefined, pr = GFX_PRESETS[s.preset] ? s.preset : (fresh ? 'balanced' : 'custom'), P = GFX_PRESETS[pr] || {};
@@ -15089,13 +15089,19 @@ function btMusicStop() {
             });
         }
         function gfxFrame(t) {   // called at the top of every animation frame; returns false to skip this frame (frame-rate cap)
-            if (GFX.cap && GFX.last && t - GFX.last < 1000 / GFX.cap - 2) return false; GFX.last = t;
+            let cap = GFX.cap;      // cool-down: an idle or unfocused window does not need a full frame rate
+            try { if (!document.hasFocus()) cap = cap ? Math.min(cap, 20) : 20; else if (t - (GFX.act || 0) > 20000 && !GFX.pad && !PERF.emu && activeMap !== 'budokai' && activeMap !== 'btl') cap = cap ? Math.min(cap, 30) : 30; } catch (e) { /* no focus info */ }
+            if (cap && GFX.last && t - GFX.last < 1000 / cap - 2) return false; GFX.last = t;
             if (t - GFX.sw > 1500) { GFX.sw = t; try { gfxShadowSweep(); } catch (e) { /* scene not ready */ } }
             try { if (typeof renderer !== 'undefined' && renderer && !PERF.emu) { const ev = (GFX_SH[GFX.shadow] || GFX_SH.ultra).every; renderer.shadowMap.autoUpdate = ev <= 1; if (ev > 1 && animFrameNo % ev === 0) renderer.shadowMap.needsUpdate = true; } } catch (e) { /* not ready */ }
             if (GFX.fps) { GFX.fc++; if (t - GFX.ft >= 500) { const f = GFX.fc * 1000 / (t - GFX.ft); GFX.fc = 0; GFX.ft = t; if (!GFX.el) { const e = document.createElement('div'); e.style.cssText = 'position:fixed;right:8px;bottom:3px;z-index:60;font:700 11px/1.2 ui-monospace,Menlo,monospace;color:#9fffc8;background:rgba(0,0,0,.55);padding:2px 7px;border-radius:6px;pointer-events:none;text-shadow:0 1px 1px #000'; document.body.appendChild(e); GFX.el = e; } let r = 1; try { r = renderer.getPixelRatio(); } catch (x) { /* none */ } GFX.el.textContent = Math.round(f) + ' fps · ' + Math.round(innerWidth * r) + '×' + Math.round(innerHeight * r); } }
             else if (GFX.el) { GFX.el.remove(); GFX.el = null; }
             return true;
         }
+        GFX.act = performance.now();
+        for (const ev of ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart']) window.addEventListener(ev, () => { GFX.act = performance.now(); }, { passive: true, capture: true });
+        window.addEventListener('gamepadconnected', () => { GFX.pad = true; });
+        window.addEventListener('gamepaddisconnected', () => { try { GFX.pad = Array.from(navigator.getGamepads ? navigator.getGamepads() : []).some((g) => g && g.connected); } catch (e) { GFX.pad = false; } });
         function gfxApply() { gfxSave(); try { perfApply(); } catch (e) { /* renderer not ready */ } try { gfxShadowSweep(); } catch (e) { /* scene not ready */ } }
         function gfxSetPreset(id) { const P = GFX_PRESETS[id]; if (!P) return; GFX.preset = id; GFX.res = P.res; GFX.shadow = P.shadow; GFX.cap = P.cap; GFX.emu = P.emu; gfxApply(); }
         function gfxBench() {   // find the best preset this device holds at about 60 fps: start in the middle, step up while it holds, down while it does not
@@ -15140,6 +15146,7 @@ function btMusicStop() {
             const pr = GFX.preset, pd = GFX_PRESETS[pr] ? GFX_PRESETS[pr].d : 'Your own mix of the settings below';
             const ar = (window.__fitAR && window.__fitAR()) || 16 / 9, fit = (window.__stage && window.__stage.mode) || 'fill';
             d.innerHTML = `<h3><span>Settings</span><button data-k="close">Close</button></h3>
+<div class="row"><b>Graphics card</b><div class="opts"><span style="font-size:12px;opacity:.85">${gpuLabel()}</span></div></div>
 <div class="row"><b>Graphics quality</b><div class="opts">${Object.keys(GFX_PRESETS).map((id) => `<button data-k="preset" data-v="${id}" class="${pr === id ? 'on' : ''}">${GFX_PRESETS[id].n}</button>`).join('')}${pr === 'custom' ? '<button class="on" disabled>Custom</button>' : ''}</div><p>${pd}.</p></div>
 <div class="row"><div class="opts"><button class="auto" data-k="auto">${GFX.bench ? '⏳ ' + GFX.bench.msg : '⚡ Auto: test my device and choose'}</button></div><p>Runs a short test (about 10 seconds) and picks the best setting your device can hold at a smooth frame rate.</p></div>
 <hr><div class="row"><b>Resolution</b><div class="opts">${o('res', GFX.res, [['0.5', '50%'], ['0.6', '60%'], ['0.75', '75%'], ['1', '100%'], ['1.25', '125%'], ['1.5', '150%'], ['native', 'Native']])}</div><p>How sharp the picture is. Lower is much cooler: a 2K screen at 100% draws a quarter of the pixels of Native on a 2× display. Drawing now: ${Math.round(innerWidth * r)}×${Math.round(innerHeight * r)}.</p></div>
@@ -23304,7 +23311,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             BUD.hallKids = root.children.slice(); BUD.stageId = 'hall'; BUD.stg = {};
         }
         function budCrowd(dt) {
-            const C = BUD.crowd; if (!C) return; C.t += dt; C.cheer = Math.max(0, C.cheer - dt * 0.8);
+            const C = BUD.crowd; if (!C) return; C.t += dt; C.cheer = Math.max(0, C.cheer - dt * 0.8); if ((BUD.cf = (BUD.cf | 0) + 1) & 1) return;
             const up = 0.06 + C.cheer * 0.22, sp = 3 + C.cheer * 6;
             for (let i = 0; i < C.seats.length; i++) { const s = C.seats[i], hop = Math.abs(Math.sin(C.t * sp + C.ph[i])) * up; C.p.set(s[0], s[1] + 0.52 + hop, s[2]); C.q.setFromAxisAngle(UP, s[3] + Math.PI); C.m.compose(C.p, C.q, C.s); C.bm.setMatrixAt(i, C.m); C.p.y += 0.52; C.m.compose(C.p, C.q, C.s); C.hm.setMatrixAt(i, C.m); }
             C.bm.instanceMatrix.needsUpdate = true; C.hm.instanceMatrix.needsUpdate = true;
@@ -26352,6 +26359,13 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         // 3D world takes is one the game does not get) the world is drawn at half rate with slowly-updating shadows and no more than 1x resolution.
         const PERF = { acc: 0, n: 0, ratio: 0, max: 0, good: 0, lastDown: -99, emu: false, fps: 60 };
         function perfRatio() { if (!PERF.max) { PERF.max = Math.min(window.devicePixelRatio || 1, 2); PERF.ratio = PERF.max; } if (GFX.res !== 'auto') return PERF.emu ? Math.min(gfxFixedRatio(), gfxEmuCap()) : gfxFixedRatio(); return Math.min(PERF.ratio, PERF.emu ? 1 : 4); }
+        // Which graphics chip is the browser really drawing with? (the page can only ask for the fast one; the browser / operating system decides)
+        function gpuInfo() {
+            if (window.__gpu) return window.__gpu; let name = '';
+            try { const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); } catch (e) { /* no context */ }
+            return (window.__gpu = { name, soft: /swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen/i.test(name) });
+        }
+        function gpuLabel() { const g = window.__gpu; if (!g || !g.name) return 'detecting…'; return g.name.replace(/[<>&"]/g, '') + (g.soft ? ' — ⚠ software rendering (no graphics card)' : ' ✓'); }
         function perfApply() { try { const r = perfRatio(); if (Math.abs(renderer.getPixelRatio() - r) > 0.01) renderer.setPixelRatio(r); } catch (e) { /* renderer not ready */ } }
         function perfTick(dt) {
             const emu = !!(EMU.on && (EMU.isHost || EMU.playing));
@@ -27112,6 +27126,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             try { renderer.setPixelRatio(perfRatio()); } catch (e) { /* default ratio */ }
+            setTimeout(() => { try { const g = gpuInfo(); console.info('GPU:', g.name); if (g.soft) sysChat('Your browser is drawing the game with software, not your graphics card, so it will run slowly. Turn on hardware acceleration in your browser settings (Chrome / Edge: Settings → System → Use graphics acceleration when available), then restart the browser. On a laptop with two graphics chips, also set the browser to High performance in your system graphics settings.'); } catch (e) { /* no GPU info */ } }, 2500);
             if (GFX.fresh) setTimeout(() => { try { sysChat('Graphics are set to ' + GFX_PRESETS[GFX.preset].n + ' to keep your device cool. Open Info → Settings to change it, or press Auto to test your device.'); GFX.fresh = false; gfxSave(); } catch (e) { /* chat */ } }, 6000);
             renderer.toneMapping = THREE.NoToneMapping;           // flat, saturated colours: matches how VRoid / MToon avatars are drawn
             container.appendChild(renderer.domElement);
