@@ -23495,7 +23495,10 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const budBotAvail = () => BUD.bot && BUD.bot.actor;
         function budBotGet() {
             if (BUD.bot && BUD.bot.actor) return Promise.resolve(BUD.bot.actor); if (BUD.bot && BUD.bot.p) return BUD.bot.p;
-            const pr = (async () => { try { const g = Math.random() < 0.5 ? 'male' : 'female', { root, vrm } = await buildModel(getBaseBuffer(g), 'gltf', { asAvatar: true }); const a = new Actor('budbot', 'CPU'); a.gender = g; a.setModel(root, vrm); a.group.visible = false; scene.add(a.group); BUD.bot = { actor: a }; return a; } catch (e) { console.warn('budokai cpu', e); BUD.bot = null; return null; } })();
+            const pr = (async () => { try { const pk = BUD.botPick; let g = Math.random() < 0.5 ? 'male' : 'female', built = null;
+                if (pk) { try { const L = await pk.load(); if (L && L.buffer) { built = await buildModel(L.buffer, L.kind, Object.assign({ asAvatar: true }, L.toon === undefined ? {} : { toon: L.toon })); g = L.gender === 'male' ? 'male' : 'female'; } } catch (e) { console.warn('budokai cpu pick', e); } }
+                if (!built) built = await buildModel(getBaseBuffer(g), 'gltf', { asAvatar: true });
+                const { root, vrm } = built; const a = new Actor('budbot', 'CPU'); a.gender = g; a.setModel(root, vrm); a.group.visible = false; scene.add(a.group); BUD.bot = { actor: a }; return a; } catch (e) { console.warn('budokai cpu', e); BUD.bot = null; return null; } })();
             BUD.bot = { p: pr }; return pr;
         }
         const budAmIn = (S) => !!S && ((S.a && S.a.id === me.id) || (S.b && S.b.id === me.id));
@@ -23737,7 +23740,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
 #bud-br{margin-top:4px;font:700 11px Nunito,sans-serif;color:#ddd}.bud-q{font-size:11px;color:#cfd;margin:2px 0}
 #bud-pad{position:absolute;left:0;right:0;bottom:10px;display:none;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 8px;pointer-events:none}#bud-pad.on{display:flex}
 #bud-pad button{pointer-events:auto;touch-action:none;width:52px;height:52px;border-radius:50%;border:2px solid #f2c14a;background:rgba(14,10,20,.7);color:#fff;font:900 14px Orbitron,sans-serif}#bud-pad button:active{background:#f2c14a;color:#201400}
-body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff}.bud-b.pf{outline:2px solid #fff}@media (min-width:900px) and (pointer:fine){#bud-pad{display:none!important}}`;
+body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff}.bud-b.pf{outline:2px solid #fff}.bud-fr{display:flex;align-items:center;gap:5px;margin:4px 0}.bud-fr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bud-fr span i{display:block;opacity:.6;font:600 10px Nunito,sans-serif;font-style:normal}.bud-fr .bud-b{padding:4px 8px}@media (min-width:900px) and (pointer:fine){#bud-pad{display:none!important}}`;
             document.head.appendChild(st);
         }
         function budHudBuild() {
@@ -23752,6 +23755,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, v = b.dataset.v;
                 if (a === 'stage') { BUD.stagePick = v; } else if (a === 'prac') budPractice(v); else if (a === 'quit') budQuitPractice(); else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
                 else if (a === 'moves') { try { openAnimations(); } catch (er) { sysChat('Open your Animations panel to set Budokai moves.'); } } else if (a === 'leave') { try { openLobby(); } catch (er) { /* none */ } }
+                else if (a === 'fighters') budSelOpen(); else if (a === 'fback') { BUD.sel = false; } else if (a === 'pl') budPlayAs(+v); else if (a === 'cp') budCpuAs(+v);
                 else if (a === 'help') { BUD.help = !BUD.help; } BUD.lastHud = '';
             });
             const pad = h.querySelector('#bud-pad');
@@ -23788,14 +23792,71 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             if (hit(11)) budPress('F'); if (hit(10)) budPress('B'); if (hit(7)) budPress(lx < -T ? 'Q' : 'E'); if (hit(9)) { BUD.menuOpen = !BUD.menuOpen; BUD.lastMn = ''; }
             return true;
         }
+        /* ---- FIGHTER SELECT: every model you have loaded. Play = wear it as your fighter (this session only, your saved avatar is untouched); CPU = the practice opponent ---- */
+        const budEsc = (t) => String(t == null ? '' : t).replace(/[<>&"']/g, '');
+        const budBlocked = () => !!BUD.me || !!BUD.P || (BUD.S && budAmIn(BUD.S) && BUD.S.ph !== 'idle');
+        async function budSelOpen() {
+            BUD.sel = true; BUD.roster = null; BUD.lastHud = '';
+            const out = [], seen = new Set(), add = (r) => { const k = String(r.name || '').toLowerCase(); if (r.from !== 'Stock' && seen.has(k)) return; seen.add(k); out.push(r); };
+            try { for (const e of library) if (e && e.kind !== 'sprite') add({ name: e.name, from: 'My Characters', gender: e.gender === 'male' ? 'male' : 'female', id: e.id, equip: () => equipFromLibrary(e.id, { save: false }), load: async () => { const r = await store.get('char:' + e.id); return r && r.buffer ? { buffer: r.buffer, kind: r.kind || e.kind, gender: e.gender, toon: e.toon !== false } : null; } }); } catch (e) { /* library */ }
+            const cmpVrm = new Set();
+            try {
+                for (const c of CMP.list) {
+                    if (c.vrm) cmpVrm.add(c.vrm); if (!c.model && !c.vrm) continue;
+                    const gender = c.gender === 'male' ? 'male' : 'female';
+                    const ld = async () => { if (c.model) { const r = await store.get(c.model); return r && r.buffer ? { buffer: r.buffer, kind: 'gltf', gender, toon: false } : null; } const b = await btSkinBuffer(c.vrm); return b ? { buffer: b, kind: 'gltf', gender } : null; };
+                    add({ name: c.name, from: 'Companion', gender, id: 'cmp:' + c.id, load: ld, equip: async () => { const L = await ld(); if (!L) throw new Error('missing model'); await equipAvatar(L.buffer, L.kind, c.name, Object.assign({ id: 'cmp:' + c.id, gender, save: false }, L.toon === undefined ? {} : { toon: L.toon })); } });
+                }
+            } catch (e) { /* companions */ }
+            try {
+                if (typeof INV !== 'undefined' && !INV.loaded) await invLoad();
+                for (const f of (typeof INV !== 'undefined' ? INV.files : []).filter((x) => x && x.k === 'vrm')) {
+                    if (cmpVrm.has(f.id)) continue;
+                    const gender = /\b(m|male|boy|man)\b/i.test(f.name) ? 'male' : 'female';
+                    const ld = async () => { const b = await invBuffer(f); return b ? { buffer: b, kind: 'gltf', gender } : null; };
+                    add({ name: f.name, from: 'Bag', gender, id: 'bag:' + f.id, load: ld, equip: async () => { const L = await ld(); if (!L) throw new Error('missing model'); await equipAvatar(L.buffer, 'gltf', f.name, { id: 'bag:' + f.id, gender, save: false }); } });
+                }
+            } catch (e) { /* bag */ }
+            for (const k of ['female', 'male']) add({ name: 'Base ' + (k === 'male' ? 'Male' : 'Female'), from: 'Stock', gender: k, id: 'base:' + k, equip: () => equipBase(k, { save: false }), load: async () => ({ buffer: getBaseBuffer(k), kind: 'gltf', gender: k }) });
+            BUD.roster = out; BUD.lastHud = '';
+        }
+        function budFightersHtml() {
+            let h = '<h4>CHOOSE FIGHTERS</h4><div class="bud-q">Play = wear it as your fighter (this session). CPU = practice opponent.</div>';
+            if (BUD.selBusy) h += '<div class="bud-q">Loading ' + budEsc(BUD.selBusy) + '…</div>';
+            if (!BUD.roster) h += '<div class="bud-q">Loading your models…</div>';
+            else {
+                h += '<div class="bud-r"><button class="bud-b' + (BUD.botPick ? '' : ' on') + '" data-a="cp" data-v="-1">CPU: random</button></div>';
+                BUD.roster.forEach((r, i) => {
+                    const me1 = myAvatar && myAvatar.id === r.id, cp = BUD.botPick && BUD.botPick.id === r.id;
+                    h += '<div class="bud-fr"><span>' + budEsc(r.name) + '<i>' + r.from + (me1 ? ' · you' : '') + (cp ? ' · CPU' : '') + '</i></span><button class="bud-b' + (me1 ? ' on' : '') + '" data-a="pl" data-v="' + i + '">Play</button><button class="bud-b' + (cp ? ' on' : '') + '" data-a="cp" data-v="' + i + '">CPU</button></div>';
+                });
+                if (!BUD.roster.length) h += '<div class="bud-q">No models found.</div>';
+            }
+            return h + '<div class="bud-r" style="margin-top:8px"><button class="bud-b" data-a="fback">Back</button></div>';
+        }
+        async function budPlayAs(i) {
+            const r = BUD.roster && BUD.roster[i]; if (!r) return;
+            if (budBlocked()) { sysChat('Finish the current bout before changing fighter.'); return; }
+            if (BUD.selBusy) return; BUD.selBusy = r.name; BUD.lastHud = '';
+            try { await r.equip(); } catch (e) { console.warn('budokai fighter', e); sysChat('Could not load ' + r.name + '.'); }
+            BUD.selBusy = ''; BUD.lastHud = '';
+        }
+        function budCpuAs(i) {
+            if (BUD.P) { sysChat('Quit the current practice first, then pick the CPU opponent.'); return; }
+            const r = i >= 0 && BUD.roster ? BUD.roster[i] : null; BUD.botPick = r ? { id: r.id, name: r.name, load: r.load } : null;
+            const b = BUD.bot; BUD.bot = null; if (b && b.actor) { try { b.actor.dispose(); } catch (e) { /* gone */ } }
+            BUD.lastHud = '';
+        }
         function budPress(L) { if (BUD.me && BUD.live) budLetter(BUD.me, L); }
         function budMenuHtml() {
             const S = BUD.P || BUD.S, inM = budAmIn(S) && S.ph !== 'idle', T = BUD.S && BUD.S.tour, q = BUD.S ? BUD.S.q : [], on = (x) => (BUD.level === x ? ' on' : '');
             let h = '';
             if (BUD.help) return `<h4>CONTROLS</h4><div style="line-height:1.55">A / D move away / toward<br>W / S sidestep in / out<br><b>J</b> punch · <b>K</b> kick · <b>L</b> throw · <b>H</b> hold<br><b>Space / Shift / G</b> guard (hold)<br><b>Q / E</b> dodge left / right<br><b>X</b> or double-tap D = forward dash · <b>Z</b> or double-tap A = back dash (dash then press an attack to cancel into it)<br><b>U</b> special (needs 50 SP)<br><br><b>Combos:</b> J J J · K K K · J J K · K K J · J then K · K then J (press the next button as the move lands).<br><b>Triangle:</b> strikes beat throws, throws beat guards, holds catch strikes (counter).<br><b>Gamepad:</b> stick/D-pad move &amp; sidestep · X punch · A kick · Y throw · B hold · LT/LB guard · RB special · RT+stick dodge · L3 back dash · R3 forward dash (or flick the stick twice) · Start menu.<br>Your own animations: open <i>My moves</i> and set the “Budokai” slots.</div><div class="bud-r" style="margin-top:8px"><button class="bud-b" data-a="help">Back</button></div>`;
+            if (BUD.sel && !BUD.P && !inM) return budFightersHtml();
             if (BUD.P) h += `<h4>PRACTICE</h4><div class="bud-r"><button class="bud-b dng" data-a="quit">Quit practice</button></div>`;
             else if (inM) h += `<h4>${S.mode === 'tour' ? 'TOURNAMENT' : 'VERSUS'}</h4><div class="bud-q">Match in progress — best of 3.</div>`;
             else {
+                h += `<h4>FIGHTER</h4><div class="bud-r"><button class="bud-b" data-a="fighters">Choose fighters</button></div><div class="bud-q">You: ${budEsc(myAvatar && myAvatar.name || 'your avatar')} · CPU: ${BUD.botPick ? budEsc(BUD.botPick.name) : 'random'}</div>`;
                 h += `<h4>STAGE</h4><div class="bud-r">${Object.keys(BUD_STAGES).map((k) => `<button class="bud-b${BUD.stagePick === k ? ' on' : ''}" data-a="stage" data-v="${k}">${BUD_STAGES[k].n}</button>`).join('')}</div><div class="bud-q">${budIsRef() ? 'You pick the stage for online matches.' : 'The room host picks the stage for online matches.'}</div>`;
                 h += `<h4>PRACTICE (CPU)</h4><div class="bud-r">${Object.keys(BUD_LV).map((k) => `<button class="bud-b${on(k)}" data-a="prac" data-v="${k}">${BUD_LV[k].n}</button>`).join('')}</div>`;
                 h += `<h4>ONLINE VERSUS</h4><div class="bud-r"><button class="bud-b${BUD.inQ ? ' on' : ''}" data-a="q">${BUD.inQ ? 'Leave queue' : 'Join queue'}</button></div><div class="bud-q">${q.length ? 'Queue: ' + q.map((x, i) => (i + 1) + '. ' + String(x.name).replace(/[<>&]/g, '')).join('  ') : 'Queue empty — winner stays on'}</div>`;
@@ -23827,7 +23888,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             const cb = $('bud-cb'), cs = BUD.comboShow; if (cs && cs.n >= 2 && cs.t > 0) { cb.style.display = 'block'; cb.innerHTML = `<b>${cs.n}</b> HITS<small>${cs.d} damage</small>`; } else cb.style.display = 'none';
             $('bud-pad').classList.toggle('on', !!BUD.me); $('bud-mt').textContent = BUD.menuOpen ? 'HIDE' : 'MENU';
             const mn = $('bud-mn'); mn.style.display = BUD.menuOpen ? '' : 'none';
-            if (BUD.menuOpen) { const sig2 = JSON.stringify([BUD.stagePick, BUD.S && BUD.S.n, BUD.S && BUD.S.q, BUD.S && BUD.S.tour && BUD.S.tour.t | 0, !!BUD.P, BUD.inQ, BUD.help, BUD.me && 1, BUD.stats, BUD.S && BUD.S.ph, peers.size]) + BUD.lastHud; if (sig2 !== BUD.lastMn) { BUD.lastMn = sig2; mn.innerHTML = budMenuHtml(); } }
+            if (BUD.menuOpen) { const sig2 = JSON.stringify([BUD.stagePick, BUD.S && BUD.S.n, BUD.S && BUD.S.q, BUD.S && BUD.S.tour && BUD.S.tour.t | 0, !!BUD.P, BUD.inQ, BUD.help, BUD.me && 1, BUD.stats, BUD.S && BUD.S.ph, peers.size, BUD.sel, BUD.roster ? BUD.roster.length : -1, BUD.selBusy, BUD.botPick && BUD.botPick.name, myAvatar && myAvatar.id]) + BUD.lastHud; if (sig2 !== BUD.lastMn) { BUD.lastMn = sig2; mn.innerHTML = budMenuHtml(); } }
             if (BUD.lastHud === '') BUD.lastMn = '';
             BUD.lastHud = BUD.lastHud === '' ? ' ' : BUD.lastHud;
         }
