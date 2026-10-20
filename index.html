@@ -19459,7 +19459,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const SELF = { on: false };
         const HOLO2 = { mesh: null, cv: null, ctx: null, tex: null, drawAt: 0, k: 0, id: null };
         const HOLO = { mesh: null, cv: null, ctx: null, tex: null, k: 0, drawAt: 0, gaze: new THREE.Vector3() };
-        const holoWanted = () => SELF.on || !!padOverlay() || !$('pcard').classList.contains('hidden') || !!document.querySelector('.xmb-col.open');
+        const holoWanted = () => !(activeMap === 'budokai' && BUD.me) && (SELF.on || !!padOverlay() || !$('pcard').classList.contains('hidden') || !!document.querySelector('.xmb-col.open'));
         function holoDraw(t) {
             const c = HOLO.ctx, W = 512, H = 320;
             c.clearRect(0, 0, W, H);
@@ -23211,11 +23211,11 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const BUD_LV = { dummy: { n: 'Dummy', think: 9, atk: 0, grd: 0, thr: 0 }, easy: { n: 'Easy', think: 0.7, atk: 0.35, grd: 0.15, thr: 0.1 }, normal: { n: 'Normal', think: 0.42, atk: 0.55, grd: 0.35, thr: 0.2 }, hard: { n: 'Hard', think: 0.24, atk: 0.8, grd: 0.55, thr: 0.3 } };
         // move table: dmg, playback rate, kind (strike / throw / special / hold), reach, knockback, flags; hit windows come from the clip ( * 1 / rate ) when it has one
         const BUD_MV = {
-            p1: { dmg: 5, rate: 1.9, kind: 'strike', reach: 1.9, stun: 0.42, step: 0.5, ch: { P: 'p2', K: 'k2' }, cn: 0.5 },
-            p2: { dmg: 6, rate: 1.9, kind: 'strike', reach: 1.9, stun: 0.44, step: 0.4, ch: { P: 'p3', K: 'pk' }, cn: 0.5 },
+            p1: { dmg: 5, rate: 1.9, kind: 'strike', reach: 1.9, stun: 0.42, step: 0.5, ch: { P: 'p2', K: 'k2' }, cn: 0.4 },
+            p2: { dmg: 6, rate: 1.9, kind: 'strike', reach: 1.9, stun: 0.44, step: 0.4, ch: { P: 'p3', K: 'pk' }, cn: 0.4 },
             p3: { dmg: 9, rate: 1.7, kind: 'strike', reach: 2.0, stun: 0.6, kb: 2.4, big: true, step: 0.2 },
-            k1: { dmg: 6, rate: 1.8, kind: 'strike', reach: 2.0, stun: 0.42, step: 0.3, ch: { K: 'k2', P: 'p2' }, cn: 0.5 },
-            k2: { dmg: 7, rate: 1.8, kind: 'strike', reach: 2.1, stun: 0.46, step: 0.7, ch: { K: 'k3', P: 'kp' }, cn: 0.5 },
+            k1: { dmg: 6, rate: 1.8, kind: 'strike', reach: 2.0, stun: 0.42, step: 0.3, ch: { K: 'k2', P: 'p2' }, cn: 0.4 },
+            k2: { dmg: 7, rate: 1.8, kind: 'strike', reach: 2.1, stun: 0.46, step: 0.7, ch: { K: 'k3', P: 'kp' }, cn: 0.4 },
             k3: { dmg: 10, rate: 1.7, kind: 'strike', reach: 2.1, stun: 0.6, kb: 2.6, big: true, step: 0.4 },
             pk: { dmg: 13, rate: 1.7, kind: 'strike', reach: 2.1, kd: true, big: true, step: 0.5 },
             kp: { dmg: 15, rate: 1.9, kind: 'strike', reach: 2.2, kd: true, big: true, step: 0.4 },
@@ -23283,6 +23283,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const nm = new THREE.Mesh(mergeGeometries(N, false), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); nm.userData.noOutline = true; nm.frustumCulled = false; root.add(nm);
             for (const [txt, c, a] of [['BUDOKAI', '#f2c14a', P], ['BUDOKAI', '#ff5a4a', P / 2], ['BUDOKAI', '#4a8aff', -P / 2], ['武道会', '#f2c14a', P * 0.72], ['武道会', '#f2c14a', -P * 0.72]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(11, 3.4), new THREE.MeshBasicMaterial({ map: signTexture(txt, c), toneMapped: false, transparent: true })); m.position.set(Math.sin(a) * (BUD.hall - 0.3), 9.6, Math.cos(a) * (BUD.hall - 0.3)); m.rotation.y = a + P; m.userData.noOutline = true; root.add(m); }
             const ex = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.1), new THREE.MeshBasicMaterial({ map: signTexture('ENTRANCE', '#9ad7ff'), toneMapped: false, transparent: true })); ex.position.set(0, 4.4, BUD.hall - 0.3); ex.rotation.y = P; ex.userData.noOutline = true; root.add(ex);
+            BUD.hallKids = root.children.slice(); BUD.stageId = 'hall'; BUD.stg = {};
         }
         function budCrowd(dt) {
             const C = BUD.crowd; if (!C) return; C.t += dt; C.cheer = Math.max(0, C.cheer - dt * 0.8);
@@ -23295,7 +23296,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function budClamp(pos) { const r = Math.hypot(pos.x, pos.z); if (r > BUD.hall - 1.2) { pos.x *= (BUD.hall - 1.2) / r; pos.z *= (BUD.hall - 1.2) / r; } }
         function budCollide(pos) {
             const r = Math.hypot(pos.x, pos.z) || 1e-6, a = Math.atan2(pos.x, pos.z);                     // a = 0 at the open south side
-            if (r > BUD.stand && Math.abs(a) > 0.8) { pos.x *= BUD.stand / r; pos.z *= BUD.stand / r; }
+            if (BUD.stageId === 'hall' && r > BUD.stand && Math.abs(a) > 0.8) { pos.x *= BUD.stand / r; pos.z *= BUD.stand / r; }
             if (BUD.S && BUD.S.ph !== 'idle' && !BUD.me && r < BUD.ringR + 0.9) { const k = (BUD.ringR + 0.9) / r; pos.x *= k; pos.z *= k; }      // spectators stay out of the ring while others fight
         }
         const budSpawn = () => ({ x: (Math.random() - 0.5) * 7, y: 0, z: 19 + Math.random() * 2, ry: Math.PI });
@@ -23304,7 +23305,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         BUD_MV.sl = { rate: 1.5, kind: 'dodge', side: -1, inv: 0.5, dist: 1.7 }; BUD_MV.sr = { rate: 1.5, kind: 'dodge', side: 1, inv: 0.5, dist: 1.7 };
         const budPosOf = (F) => F.actor.group.position;
         const budDist = (A, B) => { const a = budPosOf(A), b = budPosOf(B); return Math.hypot(a.x - b.x, a.z - b.z); };
-        function budSetStance(a, on) { if (!a) return; if (on) { a.heroW = 'hf'; a.bdOn = true; } else if (a.bdOn) { if (a.heroW === 'hf') a.heroW = null; a.bdOn = false; } }
+        function budSetStance(a, on) { if (!a) return; if (on) { a.heroW = 'hf'; a.bdOn = true; if (a.label) a.label.visible = false; } else if (a.bdOn) { if (a.heroW === 'hf') a.heroW = null; a.bdOn = false; if (a.label) a.label.visible = true; } }
         function budPlay(F, key, rate, hold) {
             const a = F.actor; if (!a || !a.playEmote) return null; const c = budClip(a, key);
             try { a.playEmote(c.name); a.emoteRate = rate || 1; a.emoteDur = hold ? Infinity : c.dur; } catch (e) { return c; }
@@ -23329,7 +23330,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function budLetter(F, L) {
             if (F.ko || F.st === 'stun' || F.st === 'down' || F.st === 'getup' || F.st === 'win' || F.st === 'lose' || !BUD.live) return;
             const now = nowS();
-            if (F.st === 'act') { if (F.act && F.act.mv.kind !== 'hold' && F.act.mv.kind !== 'dodge' && F.act.mv.ch && F.act.mv.ch[L]) { F.buf = L; F.bufT = now; } return; }
+            if (F.st === 'act') { F.buf = L; F.bufT = now; return; }
             const key = ({ P: 'p1', K: 'k1', T: 'th', H: 'hd', S: 'sp', Q: 'sl', E: 'sr' })[L]; if (!key) return;
             if ((key === 'p1' || key === 'k1') && now - (F.lastChain || -9) < 0.12) return; budStart(F, key);
         }
@@ -23387,6 +23388,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (out === 'stuff') { budPop(x, y + 0.4, z, 'STUFFED', 'blk'); } else if (out === 'block') { budPop(x, y + 0.2, z, 'BLOCK', 'blk'); budFx(x, y, z, 'block', 0); dnBeep(380, 0.07, 'square', 0.05, 220); }
             else if (out === 'counter') { budPop(x, y + 0.5, z, 'COUNTER!', 'crit'); budFx(x, y, z, 'counter', 1); hcSfx('hit'); }
             else { budPop(x, y + 0.3, z, String(dmg), meD ? 'hurt' : big ? 'crit' : ''); budFx(x, y, z, out, big); hcSfx('hit'); if (out === 'throw') budPop(x, y + 0.9, z, 'THROW!', 'crit'); }
+            budHitStop(big ? 0.11 : out === 'block' ? 0.05 : 0.07);
             if (big || out === 'counter') { BUD.shake = Math.max(BUD.shake, big ? 0.3 : 0.2); if (BUD.crowd) BUD.crowd.cheer = Math.min(1, BUD.crowd.cheer + 0.45); } else if (BUD.crowd) BUD.crowd.cheer = Math.min(1, BUD.crowd.cheer + 0.12);
             const A = budLocalF(m.a); if (!A) return; const now = nowS();
             if (out === 'hit' || out === 'throw') { A.combo = now - A.comboT < 1.8 ? A.combo + 1 : 1; A.comboT = now; A.comboDmg = (A.combo > 1 ? A.comboDmg : 0) + dmg; A.sp = Math.min(100, A.sp + dmg * 1.2); if (A === BUD.me) BUD.comboShow = { n: A.combo, d: A.comboDmg, t: 1.8 }; }
@@ -23412,12 +23414,13 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             else if (F.st === 'getup') { F.down -= dt; if (F.down <= 0) { F.st = 'idle'; budStand(F); } }
             else if (F.st === 'act') {
                 const A = F.act; if (!A) { F.st = 'idle'; } else {
-                    A.t += dt; const u = Math.min(1, A.t / Math.max(0.01, A.dur * 0.6)); const stepNow = (A.mv.step || 0) * u, stepPrev = (A.mv.step || 0) * Math.min(1, (A.t - dt) / Math.max(0.01, A.dur * 0.6));
+                    A.t += dt; const ez = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); }, stepNow = (A.mv.step || 0) * ez(A.t / Math.max(0.01, A.dur * 0.6)), stepPrev = (A.mv.step || 0) * ez((A.t - dt) / Math.max(0.01, A.dur * 0.6));
                     if (A.mv.kind === 'dodge') { const dd = (A.mv.dist) * (Math.min(1, A.t / A.dur) - Math.min(1, (A.t - dt) / A.dur)), ux = op.x - p.x, uz = op.z - p.z, l = Math.hypot(ux, uz) || 1, fx = uz / l, fz = -ux / l; p.x += fx * dd * A.mv.side * -1; p.z += fz * dd * A.mv.side * -1; }
                     else if (A.mv.step) { const ux = op.x - p.x, uz = op.z - p.z, l = Math.hypot(ux, uz) || 1, ds = stepNow - stepPrev; if (l > 0.95) { p.x += ux / l * ds; p.z += uz / l * ds; } }
                     if (A.hit) budCheckHit(F, dt);
-                    if (A.mv.ch && F.buf && now - F.bufT < 0.5 && A.t >= A.dur * (A.mv.cn || 0.5)) { const nk = A.mv.ch[F.buf]; F.buf = null; F.lastChain = now; if (nk) { budStart(F, nk); F.act.chained = true; } }
-                    else if (A.t >= A.dur) { F.act = null; F.st = 'idle'; F.buf = null; budStand(F); }
+                    const bufOk = F.buf && now - F.bufT < 0.6;
+                    if (A.mv.ch && bufOk && A.mv.ch[F.buf] && A.t >= A.dur * (A.mv.cn || 0.4)) { const nk = A.mv.ch[F.buf]; F.buf = null; F.lastChain = now; budStart(F, nk); F.act.chained = true; }
+                    else if (A.t >= A.dur) { const L = bufOk ? F.buf : null; F.buf = null; F.act = null; F.st = 'idle'; if (L && BUD.live) budLetter(F, L); else budStand(F); }
                 }
             }
             if (F.st !== 'down' && F.st !== 'ko' && F.st !== 'getup') budFace(F, O, F.st === 'act' ? 6 : 14, dt);
@@ -23427,8 +23430,9 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 const wantG = !!inp.guard;
                 if (wantG && F.st === 'idle') { F.st = 'guard'; F.guard = true; budPlay(F, 'gd', 1.2, true); } else if (!wantG && F.st === 'guard') { F.st = 'idle'; F.guard = false; budStand(F); }
                 const sp = F.guard ? 1.1 : (inp.x > 0 ? 2.7 : 2.1), mx = ux * inp.x * (inp.x > 0 ? 2.7 : 2.1) + fx * inp.z * 2.4, mz = uz * inp.x * (inp.x > 0 ? 2.7 : 2.1) + fz * inp.z * 2.4, k = F.guard ? 0.45 : 1;
-                p.x += mx * dt * k; p.z += mz * dt * k;
+                const mv = F.mvv || (F.mvv = { x: 0, z: 0 }), ac = 1 - Math.exp(-dt * 13); mv.x += (mx * k - mv.x) * ac; mv.z += (mz * k - mv.z) * ac; p.x += mv.x * dt; p.z += mv.z * dt;
             }
+            if (F.st !== 'idle' && F.st !== 'guard' && F.mvv) { const dk = Math.exp(-dt * 9); F.mvv.x *= dk; F.mvv.z *= dk; }
             // keep apart, keep inside the ring
             { const dx = p.x - op.x, dz = p.z - op.z, d = Math.hypot(dx, dz); if (d < 0.9 && d > 1e-5) { const k = (0.9 - d); p.x += dx / d * k * 0.5; p.z += dz / d * k * 0.5; if (!O.remote && O.st !== 'down') { op.x -= dx / d * k * 0.5; op.z -= dz / d * k * 0.5; } } }
             { const r = Math.hypot(p.x, p.z), R = BUD.ringR - 0.55; if (r > R) { p.x *= R / r; p.z *= R / r; } p.y = BUD.ringH; }
@@ -23451,6 +23455,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             } else if (F.st === 'act' && F.aiChain > 0 && F.act && F.act.t > F.act.dur * 0.25 && !F.buf && F.act.mv.ch) { F.buf = Math.random() < 0.6 ? 'P' : 'K'; F.bufT = now; F.aiChain--; }
             return inp;
         }
+        function budHitStop(t) { BUD.hs = Math.max(BUD.hs || 0, t); for (const F of [BUD.me, BUD.foe]) if (F && !F.remote && F.sr === undefined) { F.sr = F.actor.emoteRate; F.actor.emoteRate = 0.05; } }
         /* ---- Warriors-of-Light style hit effects and floating damage numbers ---- */
         function budFx(x, y, z, out, big) {
             const col = out === 'block' ? 0x9ad7ff : out === 'counter' ? 0xffe14a : out === 'throw' ? 0xff8a4a : 0xffd27a;
@@ -23500,8 +23505,9 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const budHpOf = (id) => { const F = budLocalF(id); return F ? F.hp : BUD.hp[id] === undefined ? 100 : BUD.hp[id]; };
         function budPhase(S) {                 // every device: the session just moved to a new phase
             const inM = budAmIn(S), now = nowS();
-            if (S.ph === 'idle') { if (BUD.me) budEndBout(); BUD.text = S.msg || ''; BUD.textT = now + 5; return; }
+            if (S.ph === 'idle') { budStageSet('hall'); if (BUD.me) budEndBout(); BUD.text = S.msg || ''; BUD.textT = now + 5; return; }
             if (!S.a || !S.b) return;
+            budStageSet(S.stage || 'hall');
             if (inM && !BUD.me) { if (!budMakeF(S)) return; }
             if (!inM && BUD.me) budEndBout();
             for (const s of BUD.sp) { const p = peers.get(s); if (p) budSetStance(p.actor, false); } BUD.sp = [];
@@ -23525,11 +23531,11 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const budHere = (id) => id === me.id || peers.has(id);
         const budPh = (S, ph, pt) => { S.ph = ph; S.pt = pt; S.n++; if (!S.prac) budBroadcast(S); budSync(S); };
         function budBroadcast(S) {
-            const o = { n: S.n, ph: S.ph, mode: S.mode, a: S.a, b: S.b, w: S.w, rd: S.rd, tl: Math.round((S.tl || 0) * 10) / 10, lv: S.lv, q: S.q, tour: S.tour, msg: S.msg || '' };
+            const o = { n: S.n, ph: S.ph, mode: S.mode, a: S.a, b: S.b, w: S.w, rd: S.rd, tl: Math.round((S.tl || 0) * 10) / 10, lv: S.lv, stage: S.stage, q: S.q, tour: S.tour, msg: S.msg || '' };
             budSend({ k: 'st', s: o });
         }
         function budNewS() { return { n: 0, ph: 'idle', pt: 0, mode: 'vs', a: null, b: null, w: [0, 0], rd: 1, tl: 60, lv: 'normal', q: [], tour: null, msg: '' }; }
-        function budMatch(S, a, b, mode, lv) { S.a = a; S.b = b; S.mode = mode; S.lv = lv || 'normal'; S.w = [0, 0]; S.rd = 1; S.msg = ''; S.tl = 60; budPh(S, 'ready', 3); }
+        function budMatch(S, a, b, mode, lv) { S.stage = S.prac ? BUD.stagePick : (S.mode === 'tour' || mode === 'tour' ? (BUD.stagePick !== 'hall' ? BUD.stagePick : ['waste', 'lava', 'snow', 'garden'][(Math.random() * 4) | 0]) : BUD.stagePick); S.a = a; S.b = b; S.mode = mode; S.lv = lv || 'normal'; S.w = [0, 0]; S.rd = 1; S.msg = ''; S.tl = 60; budPh(S, 'ready', 3); }
         function budRoundEnd(S, side, why) {
             if (side === 0 || side === 1) S.w[side]++; else S.w[Math.random() < 0.5 ? 0 : 1]++;
             S.tl = 0; const done = S.w[0] >= 2 || S.w[1] >= 2; budPh(S, done ? 'result' : 'between', done ? 4.5 : 3.2);
@@ -23603,24 +23609,112 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         async function budPractice(lv) {
             if (BUD.P || (BUD.S && BUD.S.ph !== 'idle' && budAmIn(BUD.S))) return;
             const a = await budBotGet(); if (!a) { sysChat('The CPU fighter could not load.'); return; }
-            const S = budNewS(); S.prac = 1; S.mode = 'prac'; S.lv = lv; S.a = { id: me.id, name: me.name, bot: 0 }; S.b = { id: 'cpu:p', name: 'CPU ' + (BUD_LV[lv] || BUD_LV.normal).n, bot: 1 }; BUD.P = S; BUD.seen = -1; BUD.menuOpen = false; BUD.hp = {}; S.w = [0, 0]; S.rd = 1; budPh(S, 'ready', 3);
+            const S = budNewS(); S.prac = 1; S.mode = 'prac'; S.lv = lv; S.stage = BUD.stagePick || 'hall'; S.a = { id: me.id, name: me.name, bot: 0 }; S.b = { id: 'cpu:p', name: 'CPU ' + (BUD_LV[lv] || BUD_LV.normal).n, bot: 1 }; BUD.P = S; BUD.seen = -1; BUD.menuOpen = false; BUD.hp = {}; S.w = [0, 0]; S.rd = 1; budPh(S, 'ready', 3);
         }
         function budQuitPractice() { const S = BUD.P; if (!S) return; BUD.P = null; budEndBout(); BUD.menuOpen = true; BUD.text = ''; BUD.seen = -1; }
         function budQueue(on) { const S = BUD.S; if (!S) return; if (budIsRef()) { S.q = S.q.filter((x) => x.id !== me.id); if (on && !budInMatch(S, me.id)) S.q.push({ id: me.id, name: me.name }); S.n++; budBroadcast(S); } else budSend({ k: 'q', on: on ? 1 : 0 }); BUD.inQ = !!on; }
         function budTour(on) { const S = BUD.S; if (!S) return; if (!S.tour) { if (!on) return; if (S.ph !== 'idle') { sysChat('A match is in progress. Try again when it ends.'); return; } if (budIsRef()) { S.tour = { ph: 'reg', t: 25, p: [{ id: me.id, name: me.name }], br: null, r: 0, m: 0 }; S.msg = ''; S.n++; budBroadcast(S); } else budSend({ k: 'tnew' }); return; } if (S.tour.ph !== 'reg') return; if (budIsRef()) { S.tour.p = S.tour.p.filter((x) => x.id !== me.id); if (on && S.tour.p.length < 8) S.tour.p.push({ id: me.id, name: me.name }); S.n++; budBroadcast(S); } else budSend({ k: 'tj', on: on ? 1 : 0 }); }
         function budOpen() { try { joinRoom('budokai-01', { label: 'Budokai Arena • Channel 1', map: 'budokai' }); } catch (e) { sysChat('Could not open the Budokai arena.'); } }
+        /* ---- stages: open-air arenas (the hall stays the lobby; during a match the whole room becomes the chosen stage for everyone in it) ---- */
+        const BUD_STAGES = {
+            hall: { n: 'Budokai Hall' },
+            waste: { n: 'Rocky Wasteland', sky: [0x5d6168, 0x9b9a96, 0xd8cfbd], fog: 0xc9c0ae, fd: 0.0075, gnd: { base: '#3a3633', crack: '#15120f', speck: '#6a625a', rough: 0.32, metal: 0.25 }, sun: [0xfff0d8, 1.5, [-30, 26, -40]], hemi: [0xb8bcc4, 0x4a4036, 0.9], rock: [0x3a3733, 0x77726b], spires: 30 },
+            lava: { n: 'Magma Rift', sky: [0x1a0606, 0x5a1a0c, 0xd2561c], fog: 0x6a2410, fd: 0.011, gnd: { base: '#26201f', crack: '#ff5a1a', speck: '#4a3a34', rough: 0.55, metal: 0.1 }, sun: [0xff8a4a, 1.0, [20, 18, -40]], hemi: [0xff9a6a, 0x2a0e08, 0.7], rock: [0x1c1514, 0x4a302a], spires: 26 },
+            snow: { n: 'Frozen Peak', sky: [0x6f8fb4, 0xb7cbe0, 0xeef3f8], fog: 0xdce6f0, fd: 0.009, gnd: { base: '#e6edf4', crack: '#a9bbcd', speck: '#ffffff', rough: 0.55, metal: 0.02 }, sun: [0xffffff, 1.4, [30, 30, -30]], hemi: [0xdbe9ff, 0x8aa0b8, 1.0], rock: [0x5a6f88, 0xcfe0ee], spires: 28 },
+            garden: { n: 'Cherry Blossom Shrine', sky: [0x8fb6d8, 0xf0d7d0, 0xfde9d6], fog: 0xf1ddd0, fd: 0.008, gnd: { base: '#6f7b5e', crack: '#454b38', speck: '#9aa583', rough: 0.85, metal: 0 }, sun: [0xfff0dc, 1.3, [-25, 24, 35]], hemi: [0xfff0f0, 0x6a7a5a, 0.95], rock: [0x6b645c, 0x9a9288], spires: 14 },
+        };
+        function budRng(seed) { let s = (seed | 0) || 1; return () => { s = (Math.imul(s, 1664525) + 1013904223) | 0; return (s >>> 0) / 4294967296; }; }
+        function budPaint(geo, fn) { const n = geo.attributes.position.count, a = new Float32Array(n * 3), c = new THREE.Color(); for (let i = 0; i < n; i++) { fn(c, geo.attributes.position.getY(i), i); a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } geo.setAttribute('color', new THREE.BufferAttribute(a, 3)); return geo; }
+        function budRockGeos(R, list, cols, flat) {      // list: [x, z, size, height, kind] ; kind 0 boulder, 1 spire
+            const out = [], ca = new THREE.Color(cols[0]), cb = new THREE.Color(cols[1]);
+            for (const [x, z, s, h, k] of list) {
+                let g = k ? new THREE.ConeGeometry(s, h, 5 + ((R() * 2) | 0), 2) : new THREE.DodecahedronGeometry(s, 1); g = g.toNonIndexed();
+                const p = g.attributes.position, rot = R() * 6.28;
+                for (let i = 0; i < p.count; i++) { const hx = Math.sin(p.getX(i) * 12.9 + p.getY(i) * 7.3 + p.getZ(i) * 3.1 + s * 5) * 43758.5; const j = 0.78 + (hx - Math.floor(hx)) * 0.44; p.setXYZ(i, p.getX(i) * j, p.getY(i) * (k ? 1 : 0.8 * j), p.getZ(i) * j); }
+                if (k) { g.translate(0, h / 2 - 0.3, 0); g.rotateZ((R() - 0.5) * 0.18); } else g.translate(0, s * 0.35, 0);
+                g.rotateY(rot); g.translate(x, 0, z); const ymax = k ? h : s * 1.2;
+                budPaint(g, (c, y) => c.copy(ca).lerp(cb, Math.min(1, Math.max(0, y / ymax)) * (0.6 + R() * 0.0)).multiplyScalar(0.85 + ((y * 13.7) % 1) * 0.0));
+                g.computeVertexNormals(); out.push(g);
+            }
+            return out;
+        }
+        function budGlow() { if (!BUD.glowT) BUD.glowT = canvasTex(128, 128, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,240,210,.5)'); gr.addColorStop(1, 'rgba(255,240,210,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }); return BUD.glowT; }
+        function budSkyTex(top, mid, hor) { const c = (x) => '#' + x.toString(16).padStart(6, '0'); return canvasTex(8, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, c(top)); gr.addColorStop(0.5, c(mid)); gr.addColorStop(0.78, c(hor)); gr.addColorStop(1, c(hor)); g.fillStyle = gr; g.fillRect(0, 0, w, h); }); }
+        function budCloudTex() { return canvasTex(512, 256, (g, w, h) => { g.clearRect(0, 0, w, h); const R = budRng(7); for (let i = 0; i < 70; i++) { const x = R() * w, y = h * 0.3 + R() * h * 0.45, r = 18 + R() * 40; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); } }); }
+        function budStageBuild(id) {
+            const T = BUD_STAGES[id], R = budRng(id.length * 977 + id.charCodeAt(0)), root = new THREE.Group(); root.visible = false; BUD.group.add(root); const P = Math.PI;
+            // sky dome (follows the camera) and clouds
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(280, 24, 16), new THREE.MeshBasicMaterial({ map: budSkyTex(...T.sky), side: THREE.BackSide, fog: false, depthWrite: false })); dome.userData.noOutline = true; dome.renderOrder = -10; dome.frustumCulled = false; root.add(dome);
+            const cl = new THREE.Mesh(new THREE.SphereGeometry(270, 24, 12), new THREE.MeshBasicMaterial({ map: budCloudTex(), side: THREE.BackSide, transparent: true, fog: false, depthWrite: false })); cl.userData.noOutline = true; cl.renderOrder = -9; cl.frustumCulled = false; root.add(cl); root.userData.dome = dome; root.userData.cl = cl;
+            // lights
+            root.add(new THREE.HemisphereLight(T.hemi[0], T.hemi[1], T.hemi[2]), new THREE.AmbientLight(0xffffff, 0.25)); const sun = new THREE.DirectionalLight(T.sun[0], T.sun[1]); sun.position.set(...T.sun[2]); root.add(sun);
+            // ground: cracked, sheened
+            const gt = canvasTex(1024, 1024, (g, w, h) => {
+                g.fillStyle = T.gnd.base; g.fillRect(0, 0, w, h); const r = budRng(33);
+                for (let i = 0; i < 9000; i++) { g.fillStyle = T.gnd.speck; g.globalAlpha = 0.05 + r() * 0.18; g.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 3); } g.globalAlpha = 1;
+                g.strokeStyle = T.gnd.crack; g.lineCap = 'round';
+                for (let i = 0; i < 70; i++) { let x = r() * w, y = r() * h, a = r() * 6.28; g.lineWidth = 1 + r() * 2.2; g.globalAlpha = 0.55; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 14; k++) { a += (r() - 0.5) * 1.1; x += Math.cos(a) * (14 + r() * 26); y += Math.sin(a) * (14 + r() * 26); g.lineTo(x, y); if (r() < 0.18) { g.moveTo(x, y); a += (r() - 0.5) * 2; } } g.stroke(); } g.globalAlpha = 1;
+            });
+            gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(10, 10); gt.anisotropy = 8;
+            const gm = new THREE.Mesh(new THREE.CircleGeometry(90, 64).rotateX(-P / 2), new THREE.MeshStandardMaterial({ map: gt, roughness: T.gnd.rough, metalness: T.gnd.metal })); gm.userData.noOutline = true; root.add(gm);
+            // fighting circle: a faint painted line
+            const ln = new THREE.Mesh(new THREE.RingGeometry(BUD.ringR - 0.1, BUD.ringR + 0.05, 96).rotateX(-P / 2), new THREE.MeshBasicMaterial({ color: id === 'snow' ? 0x7a8aa0 : 0xffffff, transparent: true, opacity: 0.22, depthWrite: false })); ln.position.y = 0.02; ln.userData.noOutline = true; root.add(ln);
+            // rocks: boulders around the arena and a far ring of spires
+            const near = [], far = [];
+            for (let i = 0; i < 26; i++) { const a = R() * 6.28, r = 13 + R() * 18; near.push([Math.sin(a) * r, Math.cos(a) * r, 0.7 + R() * 2.0, 0, 0]); }
+            for (let i = 0; i < T.spires; i++) { const a = (i / T.spires) * 6.28 + R() * 0.2, r = 55 + R() * 55, h = 22 + R() * 55; far.push([Math.sin(a) * r, Math.cos(a) * r, 7 + R() * 12, h, 1]); }
+            for (let i = 0; i < 18; i++) { const a = R() * 6.28, r = 32 + R() * 20; far.push([Math.sin(a) * r, Math.cos(a) * r, 3 + R() * 5, 8 + R() * 16, 1]); }
+            const rg = budRockGeos(R, near.concat(far), T.rock), rm = new THREE.Mesh(mergeGeometries(rg, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true })); rm.userData.noOutline = true; rm.frustumCulled = false; root.add(rm);
+            // stage extras
+            const L = (c, i, x, y, z, r) => { const l = new THREE.PointLight(c, i, r, 1.6); l.position.set(x, y, z); root.add(l); return l; };
+            root.userData.part = null;
+            const parts = (n, col, size, box, vy, vx, op) => { const pos = new Float32Array(n * 3), vel = []; for (let i = 0; i < n; i++) { pos[i * 3] = (R() - 0.5) * box[0]; pos[i * 3 + 1] = R() * box[1]; pos[i * 3 + 2] = (R() - 0.5) * box[2]; vel.push([(R() - 0.5) * vx, vy * (0.6 + R() * 0.8), (R() - 0.5) * vx]); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pt = new THREE.Points(g, new THREE.PointsMaterial({ color: col, size, transparent: true, opacity: op, depthWrite: false, sizeAttenuation: true })); pt.frustumCulled = false; pt.userData.noOutline = true; root.add(pt); root.userData.part = { pt, vel, box }; };
+            if (id === 'waste') { parts(160, 0xd8cdb8, 0.07, [60, 10, 60], -0.02, 0.5, 0.35); const sg = new THREE.Sprite(new THREE.SpriteMaterial({ map: budGlow(), color: 0xfff0d0, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.7, fog: false, depthWrite: false })); sg.scale.set(90, 90, 1); sg.position.set(-110, 80, -150); root.add(sg); }
+            if (id === 'lava') {
+                const lm = new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false, fog: false });
+                for (let i = 0; i < 9; i++) { const a = i / 9 * 6.28 + R(), r = 12 + R() * 14, p = new THREE.Mesh(new THREE.CircleGeometry(2.5 + R() * 4.5, 20).rotateX(-P / 2), lm); p.position.set(Math.sin(a) * r, 0.03, Math.cos(a) * r); p.userData.noOutline = true; root.add(p); if (i % 3 === 0) L(0xff6a2a, 14, p.position.x, 1.5, p.position.z, 24); }
+                const ring = new THREE.Mesh(new THREE.RingGeometry(BUD.ringR + 3.4, BUD.ringR + 4.4, 64).rotateX(-P / 2), lm); ring.position.y = 0.03; ring.userData.noOutline = true; root.add(ring); L(0xff7a3a, 18, 0, 4, -9, 40); parts(220, 0xff9a3a, 0.12, [50, 14, 50], 1.4, 0.6, 0.9);
+            }
+            if (id === 'snow') { parts(700, 0xffffff, 0.09, [46, 18, 46], -1.6, 0.8, 0.9); for (let i = 0; i < 22; i++) { const a = R() * 6.28, r = 16 + R() * 26, x = Math.sin(a) * r, z = Math.cos(a) * r, h = 3 + R() * 4; const t = new THREE.Group(); for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry(1.5 - k * 0.38, h * 0.5, 7), new THREE.MeshStandardMaterial({ color: k === 2 ? 0xf2f6fa : 0x2f5a3f, roughness: 0.9, flatShading: true })); c.position.y = h * 0.28 + k * h * 0.28; t.add(c); } t.position.set(x, 0, z); t.userData.noOutline = true; root.add(t); } }
+            if (id === 'garden') {
+                parts(260, 0xffc0d4, 0.11, [50, 14, 50], -0.55, 1.1, 0.95);
+                const red = new THREE.MeshStandardMaterial({ color: 0xc02a22, roughness: 0.6 }), blk = new THREE.MeshStandardMaterial({ color: 0x1c1a1a, roughness: 0.7 });
+                const torii = (x, z, ry, s) => { const g = new THREE.Group(), pil = new THREE.CylinderGeometry(0.28, 0.32, 7, 10); for (const sx of [-2.8, 2.8]) { const p = new THREE.Mesh(pil, red); p.position.set(sx, 3.5, 0); g.add(p); } const b1 = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.5, 0.6), red); b1.position.y = 7.2; const b2 = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.35, 0.45), blk); b2.position.y = 6.2; const b3 = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.3, 0.9), blk); b3.position.y = 7.6; g.add(b1, b2, b3); g.position.set(x, 0, z); g.rotation.y = ry; g.scale.setScalar(s); g.traverse((m) => { m.userData.noOutline = true; }); root.add(g); };
+                torii(0, -22, 0, 1.4); torii(-24, 4, P / 2, 1.1); torii(24, 4, -P / 2, 1.1);
+                const trunk = new THREE.MeshStandardMaterial({ color: 0x4a3426, roughness: 1 }), pink = [new THREE.MeshStandardMaterial({ color: 0xf6b3c8, roughness: 0.9, flatShading: true }), new THREE.MeshStandardMaterial({ color: 0xffd0de, roughness: 0.9, flatShading: true })];
+                for (let i = 0; i < 20; i++) { const a = R() * 6.28, r = 14 + R() * 22, x = Math.sin(a) * r, z = Math.cos(a) * r, h = 3.5 + R() * 2.5, t = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.4, h, 7), trunk); tr.position.y = h / 2; t.add(tr); for (let k = 0; k < 4; k++) { const s = 1.5 + R() * 1.4, c = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 1), pink[k & 1]); c.position.set((R() - 0.5) * 2.4, h + R() * 1.4, (R() - 0.5) * 2.4); t.add(c); } t.position.set(x, 0, z); t.traverse((m) => { m.userData.noOutline = true; }); root.add(t); }
+                for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28 + 0.2, x = Math.sin(a) * 10.5, z = Math.cos(a) * 10.5, l = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.5), new THREE.MeshBasicMaterial({ color: 0xffd488, toneMapped: false })), base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.9, 6), new THREE.MeshStandardMaterial({ color: 0x777066 })); base.position.set(x, 0.45, z); l.position.set(x, 1.25, z); l.userData.noOutline = base.userData.noOutline = true; root.add(base, l); }
+            }
+            BUD.stg[id] = root; return root;
+        }
+        function budStageSet(id) {
+            if (!BUD.ready) return; if (!BUD_STAGES[id]) id = 'hall'; if (BUD.stageId === id) return; BUD.stageId = id; const T = BUD_STAGES[id];
+            for (const k of BUD.hallKids || []) k.visible = id === 'hall';
+            for (const k of Object.keys(BUD.stg || {})) BUD.stg[k].visible = k === id;
+            if (id === 'hall') { BUD.ringH = 0.2; scene.background = new THREE.Color(0x0c0a14); scene.fog = new THREE.FogExp2(0x0c0a14, 0.006); BUD.sky = null; return; }
+            if (!BUD.stg[id]) { try { budStageBuild(id); } catch (e) { console.warn('budokai stage', e); BUD.stageId = 'hall'; return budStageSet('hall'); } }
+            BUD.stg[id].visible = true; BUD.ringH = 0; scene.background = new THREE.Color(T.fog); scene.fog = new THREE.FogExp2(T.fog, T.fd); BUD.sky = BUD.stg[id];
+        }
+        function budStageTick(dt) {
+            const S = BUD.sky; if (!S) return; const u = S.userData; if (u.dome) { u.dome.position.copy(camera.position); u.cl.position.copy(camera.position); u.cl.rotation.y += dt * 0.004; }
+            const p = u.part; if (!p) return; const a = p.pt.geometry.attributes.position, b = p.box, cx = camera.position.x, cz = camera.position.z; BUD.pT = (BUD.pT || 0) + dt;
+            for (let i = 0; i < p.vel.length; i++) { const v = p.vel[i]; let x = a.getX(i) + v[0] * dt + Math.sin(BUD.pT * 0.7 + i) * 0.004, y = a.getY(i) + v[1] * dt, z = a.getZ(i) + v[2] * dt; if (y < 0) y += b[1]; else if (y > b[1]) y -= b[1]; if (x - cx > b[0] / 2) x -= b[0]; else if (x - cx < -b[0] / 2) x += b[0]; if (z - cz > b[2] / 2) z -= b[2]; else if (z - cz < -b[2] / 2) z += b[2]; a.setXYZ(i, x, y, z); }
+            a.needsUpdate = true;
+        }
         /* ---- HUD, menu, controls, camera ---- */
         function budCss() {
             if (document.getElementById('bud-css')) return; const st = document.createElement('style'); st.id = 'bud-css';
             st.textContent = `#bud-hud{position:fixed;inset:0;z-index:40;pointer-events:none;display:none;font-family:Orbitron,Nunito,sans-serif;color:#fff}#bud-hud.on{display:block}
 #bud-nl{position:fixed;inset:0;z-index:41;pointer-events:none;overflow:hidden}.bud-n{position:absolute;left:0;top:0;font:900 26px Orbitron,Arial Black,sans-serif;color:#fff;text-shadow:0 0 6px #000,2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000;white-space:nowrap;will-change:transform}
 .bud-n.hurt{color:#ff6b6b}.bud-n.crit{color:#ffd24a;font-size:36px}.bud-n.blk{color:#9ad7ff;font-size:18px}.bud-n.eva{color:#b8ffc4;font-size:18px}
-#bud-top{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:min(94vw,820px);display:flex;align-items:flex-start;gap:10px}
-.bud-side{flex:1;min-width:0}.bud-side.r{text-align:right}.bud-nm{font-weight:800;font-size:13px;letter-spacing:.06em;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bud-bar{height:16px;background:rgba(0,0,0,.6);border:2px solid #f2c14a;border-radius:3px;overflow:hidden;transform:skewX(-14deg);margin:3px 4px}.bud-bar i{display:block;height:100%;background:linear-gradient(#ffe36a,#e8a21a);transition:width .12s}.bud-side.r .bud-bar i{margin-left:auto}.bud-bar i.low{background:linear-gradient(#ff8a7a,#d0342c)}
-.bud-sp{height:7px;background:rgba(0,0,0,.55);border:1px solid #9ad7ff;border-radius:2px;overflow:hidden;transform:skewX(-14deg);margin:0 4px;width:70%}.bud-side.r .bud-sp{margin-left:auto}.bud-sp i{display:block;height:100%;background:#5ab8ff;transition:width .12s}.bud-sp.full i{background:#fff;box-shadow:0 0 8px #9ad7ff}
-.bud-pips{display:flex;gap:4px;margin:2px 4px;height:12px}.bud-side.r .bud-pips{justify-content:flex-end}.bud-pips b{width:12px;height:12px;border-radius:50%;border:2px solid #f2c14a;background:rgba(0,0,0,.5)}.bud-pips b.on{background:#f2c14a}
-#bud-tm{width:64px;text-align:center;font:900 28px Orbitron,sans-serif;text-shadow:0 2px 4px #000;color:#f4efe2;padding-top:6px}
+#bud-top{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:min(96vw,980px);display:flex;align-items:flex-start;gap:6px}
+.bud-side{flex:1;min-width:0}.bud-side.r{text-align:right}.bud-nm{font:italic 800 14px Orbitron,sans-serif;letter-spacing:.08em;text-shadow:0 1px 4px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 18px;color:#f4f4f4}
+.bud-bar{height:24px;background:linear-gradient(#0a1018,#1a2230);border:2px solid #cfd6de;border-radius:2px;overflow:hidden;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 100%,14px 100%);margin:2px 0;box-shadow:0 0 10px rgba(80,170,255,.35)}
+.bud-side.r .bud-bar{clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 100%,0 100%)}.bud-bar i{display:block;height:100%;background:linear-gradient(180deg,#9aeaff 0,#2ab4e6 45%,#1b6fd8 100%);transition:width .1s linear;box-shadow:inset 0 -6px 8px rgba(0,0,0,.25)}
+.bud-side.r .bud-bar i{margin-left:auto}.bud-bar i.mid{background:linear-gradient(180deg,#fff4a0 0,#ffc531 50%,#f08a1a 100%)}.bud-bar i.low{background:linear-gradient(180deg,#ffb08a 0,#ff5a2a 50%,#c41a1a 100%);animation:budlow .5s infinite alternate}@keyframes budlow{to{filter:brightness(1.5)}}
+.bud-sp{height:7px;background:rgba(0,0,0,.6);border:1px solid #9ad7ff;overflow:hidden;margin:1px 14px;width:62%}.bud-side.r .bud-sp{margin-left:auto}.bud-sp i{display:block;height:100%;background:#5ab8ff;transition:width .12s}.bud-sp.full i{background:#fff;box-shadow:0 0 8px #9ad7ff}
+.bud-pips{display:flex;gap:5px;margin:3px 16px;height:14px}.bud-side.r .bud-pips{justify-content:flex-end}.bud-pips b{width:14px;height:14px;border-radius:50%;border:2px solid #cfd6de;background:radial-gradient(circle at 35% 30%,#445,#0a0c12)}.bud-pips b.on{background:radial-gradient(circle at 35% 30%,#fff7c0,#f2a81a);box-shadow:0 0 8px #ffc531}
+#bud-tm{width:92px;text-align:center;font:italic 900 46px Orbitron,sans-serif;text-shadow:0 0 14px rgba(255,255,255,.7),0 3px 6px #000;color:#fff;margin-top:-8px}
 #bud-ct{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);text-align:center;font:900 clamp(34px,8vw,84px) Orbitron,sans-serif;color:#ffd24a;text-shadow:0 0 18px rgba(255,140,40,.8),4px 4px 0 #000;letter-spacing:.06em;white-space:nowrap}#bud-ct small{display:block;font-size:clamp(13px,2.4vw,22px);color:#fff;letter-spacing:.12em;text-shadow:0 2px 4px #000}
 #bud-cb{position:absolute;left:3vw;top:38%;font:900 22px Orbitron,sans-serif;color:#fff;text-shadow:0 0 8px #000,2px 2px 0 #000;display:none;line-height:1.1}#bud-cb b{font-size:54px;color:#ffd24a}#bud-cb small{display:block;font-size:12px;color:#9ad7ff}
 #bud-mn{position:absolute;right:10px;top:76px;width:min(86vw,270px);max-height:calc(100% - 200px);overflow:auto;background:rgba(14,10,20,.9);border:2px solid #f2c14a;border-radius:10px;padding:10px;pointer-events:auto;font:700 12px Nunito,sans-serif}
@@ -23642,7 +23736,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             h.querySelector('#bud-mt').addEventListener('click', () => { BUD.menuOpen = !BUD.menuOpen; BUD.lastHud = ''; });
             h.querySelector('#bud-mn').addEventListener('click', (e) => {
                 const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, v = b.dataset.v;
-                if (a === 'prac') budPractice(v); else if (a === 'quit') budQuitPractice(); else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
+                if (a === 'stage') { BUD.stagePick = v; } else if (a === 'prac') budPractice(v); else if (a === 'quit') budQuitPractice(); else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
                 else if (a === 'moves') { try { openAnimations(); } catch (er) { sysChat('Open your Animations panel to set Budokai moves.'); } } else if (a === 'leave') { try { openLobby(); } catch (er) { /* none */ } }
                 else if (a === 'help') { BUD.help = !BUD.help; } BUD.lastHud = '';
             });
@@ -23688,6 +23782,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             if (BUD.P) h += `<h4>PRACTICE</h4><div class="bud-r"><button class="bud-b dng" data-a="quit">Quit practice</button></div>`;
             else if (inM) h += `<h4>${S.mode === 'tour' ? 'TOURNAMENT' : 'VERSUS'}</h4><div class="bud-q">Match in progress — best of 3.</div>`;
             else {
+                h += `<h4>STAGE</h4><div class="bud-r">${Object.keys(BUD_STAGES).map((k) => `<button class="bud-b${BUD.stagePick === k ? ' on' : ''}" data-a="stage" data-v="${k}">${BUD_STAGES[k].n}</button>`).join('')}</div><div class="bud-q">${budIsRef() ? 'You pick the stage for online matches.' : 'The room host picks the stage for online matches.'}</div>`;
                 h += `<h4>PRACTICE (CPU)</h4><div class="bud-r">${Object.keys(BUD_LV).map((k) => `<button class="bud-b${on(k)}" data-a="prac" data-v="${k}">${BUD_LV[k].n}</button>`).join('')}</div>`;
                 h += `<h4>ONLINE VERSUS</h4><div class="bud-r"><button class="bud-b${BUD.inQ ? ' on' : ''}" data-a="q">${BUD.inQ ? 'Leave queue' : 'Join queue'}</button></div><div class="bud-q">${q.length ? 'Queue: ' + q.map((x, i) => (i + 1) + '. ' + String(x.name).replace(/[<>&]/g, '')).join('  ') : 'Queue empty — winner stays on'}</div>`;
                 const mineT = T && T.p && T.p.some((x) => x.id === me.id);
@@ -23709,7 +23804,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             if (show) {
                 let L = S.a, R = S.b, wl = S.w[0], wr = S.w[1]; if (S.b.id === me.id) { L = S.b; R = S.a; wl = S.w[1]; wr = S.w[0]; }
                 const hl = budHpOf(L.id), hr = budHpOf(R.id); $('bud-n1').textContent = L.name; $('bud-n2').textContent = R.name;
-                for (const [id, h] of [['bud-h1', hl], ['bud-h2', hr]]) { const e = $(id); e.style.width = Math.max(0, h) + '%'; e.classList.toggle('low', h < 28); }
+                for (const [id, h] of [['bud-h1', hl], ['bud-h2', hr]]) { const e = $(id); e.style.width = Math.max(0, h) + '%'; e.classList.toggle('low', h < 25); e.classList.toggle('mid', h >= 25 && h < 50); }
                 const pips = (w) => `<b class="${w >= 1 ? 'on' : ''}"></b><b class="${w >= 2 ? 'on' : ''}"></b>`; $('bud-p1').innerHTML = pips(wl); $('bud-p2').innerHTML = pips(wr);
                 const sp = BUD.me ? BUD.me.sp : 0, se = $('bud-s1'); se.style.display = BUD.me ? '' : 'none'; se.firstChild.style.width = sp + '%'; se.classList.toggle('full', sp >= 50);
                 const tl = S.ph === 'round' ? Math.max(0, (BUD.tlBase !== undefined ? BUD.tlBase : S.tl) - (BUD.P ? 0 : now - BUD.tlT)) : S.ph === 'ready' ? 60 : Math.max(0, S.tl); $('bud-tm').textContent = BUD.P && S.ph === 'round' ? Math.ceil(S.pt) : Math.ceil(tl);
@@ -23718,7 +23813,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             const cb = $('bud-cb'), cs = BUD.comboShow; if (cs && cs.n >= 2 && cs.t > 0) { cb.style.display = 'block'; cb.innerHTML = `<b>${cs.n}</b> HITS<small>${cs.d} damage</small>`; } else cb.style.display = 'none';
             $('bud-pad').classList.toggle('on', !!BUD.me); $('bud-mt').textContent = BUD.menuOpen ? 'HIDE' : 'MENU';
             const mn = $('bud-mn'); mn.style.display = BUD.menuOpen ? '' : 'none';
-            if (BUD.menuOpen) { const sig2 = JSON.stringify([BUD.S && BUD.S.n, BUD.S && BUD.S.q, BUD.S && BUD.S.tour && BUD.S.tour.t | 0, !!BUD.P, BUD.inQ, BUD.help, BUD.me && 1, BUD.stats, BUD.S && BUD.S.ph, peers.size]) + BUD.lastHud; if (sig2 !== BUD.lastMn) { BUD.lastMn = sig2; mn.innerHTML = budMenuHtml(); } }
+            if (BUD.menuOpen) { const sig2 = JSON.stringify([BUD.stagePick, BUD.S && BUD.S.n, BUD.S && BUD.S.q, BUD.S && BUD.S.tour && BUD.S.tour.t | 0, !!BUD.P, BUD.inQ, BUD.help, BUD.me && 1, BUD.stats, BUD.S && BUD.S.ph, peers.size]) + BUD.lastHud; if (sig2 !== BUD.lastMn) { BUD.lastMn = sig2; mn.innerHTML = budMenuHtml(); } }
             if (BUD.lastHud === '') BUD.lastMn = '';
             BUD.lastHud = BUD.lastHud === '' ? ' ' : BUD.lastHud;
         }
@@ -23726,29 +23821,29 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
         function budKeepCam() {
             const now = nowS(), dt = clamp(now - (BUD.rigT || now), 0, 0.1); BUD.rigT = now;
             if (BUD.me && BUD.foe && !fpOn) {
-                if (!BUD.rigWas) { BUD.rigWas = true; controls.enableRotate = false; controls.enableZoom = false; BUD.camP = null; }
-                const a = BUD.me.actor.group.position, b = BUD.foe.actor.group.position, mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
-                const D = clamp(d * 1.15 + 4.8, 6, 10), cx = mx - uz * D, cz = mz + ux * D, cy = 2.5 + d * 0.12, k = 1 - Math.exp(-dt * 6), sh = BUD.shake; BUD.shake = Math.max(0, sh - dt * 1.4);
+                if (!BUD.rigWas) { BUD.rigWas = true; BUD.fov0 = camera.fov; controls.enableRotate = false; controls.enableZoom = false; BUD.camP = null; } if (Math.abs(camera.fov - 42) > 0.05) { camera.fov += (42 - camera.fov) * 0.2; camera.updateProjectionMatrix(); }
+                for (const F of [BUD.me, BUD.foe]) if (F.actor.label) F.actor.label.visible = false; const a = BUD.me.actor.group.position, b = BUD.foe.actor.group.position, mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+                const D = clamp(d * 0.8 + 2.9, 4.0, 6.0), cx = mx - uz * D, cz = mz + ux * D, cy = 1.35 + d * 0.06, k = 1 - Math.exp(-dt * 6), sh = BUD.shake; BUD.shake = Math.max(0, sh - dt * 1.4);
                 const T = { x: cx + (Math.random() - 0.5) * sh * 0.25, y: cy + (Math.random() - 0.5) * sh * 0.25, z: cz + (Math.random() - 0.5) * sh * 0.25 };
                 if (!BUD.camP) BUD.camP = { x: cx, y: cy, z: cz, tx: mx, tz: mz }; const P = BUD.camP; P.x += (cx - P.x) * k; P.y += (cy - P.y) * k; P.z += (cz - P.z) * k; P.tx += (mx - P.tx) * k; P.tz += (mz - P.tz) * k;
-                camera.position.set(P.x + (T.x - cx), P.y + (T.y - cy), P.z + (T.z - cz)); controls.target.set(P.tx, 1.15, P.tz); camera.lookAt(P.tx, 1.15, P.tz); return;
+                camera.position.set(P.x + (T.x - cx), P.y + (T.y - cy), P.z + (T.z - cz)); controls.target.set(P.tx, 1.05, P.tz); camera.lookAt(P.tx, 1.05, P.tz); return;
             }
-            if (BUD.rigWas) { BUD.rigWas = false; controls.enableRotate = true; controls.enableZoom = true; }
+            if (BUD.rigWas) { BUD.rigWas = false; controls.enableRotate = true; controls.enableZoom = true; if (BUD.fov0) { camera.fov = BUD.fov0; camera.updateProjectionMatrix(); } }
             const c = camera.position, r = Math.hypot(c.x, c.z); if (r > BUD.hall - 1) { c.x *= (BUD.hall - 1) / r; c.z *= (BUD.hall - 1) / r; } if (c.y > 12) c.y = 12;
         }
         const budLock = () => activeMap === 'budokai' && !!BUD.me;
         function budMapChanged(id) {
             if (id === 'budokai') {
-                ensureBudokai(); budHudBuild(); BUD.group.visible = true; BUD.S = budNewS(); BUD.P = null; BUD.seen = -1; BUD.hp = {}; BUD.inQ = false; BUD.k = {}; BUD.me = BUD.foe = null; BUD.live = false; BUD.menuOpen = true; BUD.help = false; BUD.wasRef = true; BUD.hbT = 0; BUD.text = ''; BUD.lastMn = ''; BUD.bgT = nowS(); try { budBotGet(); } catch (e) { /* later */ }
+                ensureBudokai(); budHudBuild(); BUD.group.visible = true; BUD.stageId = 'hall'; BUD.stagePick = BUD.stagePick || 'hall'; BUD.S = budNewS(); BUD.P = null; BUD.seen = -1; BUD.hp = {}; BUD.inQ = false; BUD.k = {}; BUD.me = BUD.foe = null; BUD.live = false; BUD.menuOpen = true; BUD.help = false; BUD.wasRef = true; BUD.hbT = 0; BUD.text = ''; BUD.lastMn = ''; BUD.bgT = nowS(); try { budBotGet(); } catch (e) { /* later */ }
                 setTimeout(() => { if (activeMap === 'budokai' && BUD.S && BUD.S.n === 0 && !budIsRef()) budSend({ k: 'ask' }); }, 1500);
             } else if (BUD.ready) {
-                BUD.group.visible = false; if (BUD.me || BUD.foe) budEndBout(); BUD.P = null; BUD.S = null; if (BUD.rigWas) { BUD.rigWas = false; try { controls.enableRotate = true; controls.enableZoom = true; } catch (e) { /* none */ } }
+                budStageSet('hall'); BUD.group.visible = false; if (BUD.me || BUD.foe) budEndBout(); BUD.P = null; BUD.S = null; if (BUD.rigWas) { BUD.rigWas = false; try { controls.enableRotate = true; controls.enableZoom = true; if (BUD.fov0) { camera.fov = BUD.fov0; camera.updateProjectionMatrix(); } } catch (e) { /* none */ } }
                 for (const n of BUD.nums) n.el.remove(); BUD.nums = []; if (BUD.bot && BUD.bot.actor) BUD.bot.actor.group.visible = false; BUD.hudOn = true; budHud();
             }
         }
         function budUpdate(g, dt) {
             if (!BUD.ready || activeMap !== 'budokai') return; dt = Math.min(dt, 0.05); BUD.t += dt;
-            budCrowd(dt); budNums(dt); if (BUD.comboShow) { BUD.comboShow.t -= dt; }
+            budCrowd(dt); budNums(dt); budStageTick(dt); if (BUD.comboShow) { BUD.comboShow.t -= dt; }
             const ref = budIsRef(); if (BUD.S && !BUD.P) {
                 if (ref && !BUD.wasRef) { if (BUD.S.ph !== 'idle') { BUD.S.a = BUD.S.b = null; BUD.S.tour = null; BUD.S.msg = 'Referee changed — match reset'; budPh(BUD.S, 'idle', 0); } }
                 BUD.wasRef = ref;
@@ -23757,8 +23852,9 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             if (BUD.P) budRefTick(BUD.P, dt);
             if (BUD.me && BUD.foe) {
                 const k = BUD.k, inp = { x: (k.d ? 1 : 0) - (k.a ? 1 : 0), z: (k.w ? 1 : 0) - (k.s ? 1 : 0), guard: !!k.g };
-                if (BUD.live || BUD.me.st === 'stun' || BUD.me.st === 'down' || BUD.me.st === 'getup' || BUD.me.st === 'act') budTickF(BUD.me, dt, BUD.live ? inp : { x: 0, z: 0, guard: false });
-                if (BUD.foe.bot) { const ai = budAI(BUD.foe, dt); budTickF(BUD.foe, dt, ai); try { BUD.foe.actor.update(dt); } catch (e) { /* model */ } }
+                if (BUD.hs > 0) { BUD.hs -= dt; if (BUD.hs <= 0) { BUD.hs = 0; for (const F of [BUD.me, BUD.foe]) if (F && F.sr !== undefined) { if (!F.remote) F.actor.emoteRate = F.sr; F.sr = undefined; } } dt = 0; }
+                if (dt > 0 && (BUD.live || BUD.me.st === 'stun' || BUD.me.st === 'down' || BUD.me.st === 'getup' || BUD.me.st === 'act')) budTickF(BUD.me, dt, BUD.live ? inp : { x: 0, z: 0, guard: false });
+                if (BUD.foe.bot) { if (dt > 0) { const ai = budAI(BUD.foe, dt); budTickF(BUD.foe, dt, ai); } try { BUD.foe.actor.update(BUD.hs > 0 || dt > 0 ? (dt || 0.016) : 0.016); } catch (e) { /* model */ } }
                 if (BUD.live) { if (BUD.me.hp > 0 && BUD.foe.bot && BUD.foe.hp <= 0) { /* ref reads hp */ } budReport(false); } else if (BUD.me.st === 'idle') { /* keep the pose */ }
                 if (BUD.me.comboT > 0 && nowS() - BUD.me.comboT > 1.9) BUD.me.combo = 0;
                 BUD.hp[BUD.me.id] = BUD.me.hp; if (BUD.foe.bot) BUD.hp[BUD.foe.id] = BUD.foe.hp;
@@ -23766,7 +23862,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             }
             budHud();
         }
-        window.__bud = { budPadAct, BUD, budQueue, budTour, budPractice, budPress, budOpen, HERO_ACTS, get map() { return activeMap; }, get MD() { return MAP_DEFS.budokai; }, lg: () => localActor.group };
+        window.__bud = { get cam() { return camera; }, budPadAct, BUD, budQueue, budTour, budPractice, budPress, budOpen, HERO_ACTS, get map() { return activeMap; }, get MD() { return MAP_DEFS.budokai; }, lg: () => localActor.group };
         MAP_DEFS.budokai = { id: 'budokai', ground: budGround, clamp: budClamp, collide: budCollide, spawn: budSpawn, update: budUpdate };
         /* ------------------------------------------------------------------ *
          *  THE CONSTRUCT: the Hero class training area (white void, code rain, Agents to spar with, style meter)
