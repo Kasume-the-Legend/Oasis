@@ -3214,14 +3214,14 @@ lnk('c17_dock', 'E', 0, 'c18_bridge', 'W', 0);
         const yC = sky ? 3.8 : Math.min(H - 0.3, 3.5), yM = sky ? 3.2 : Math.min(H - 0.35, 2.7), out = [];
         const doors = def.doors || [];
         const nearDoor = (x, z) => !sky && doors.some((q) => { const px = q.side === 'E' ? hw : q.side === 'W' ? -hw : q.at, pz = q.side === 'N' ? -hd : q.side === 'S' ? hd : q.at; return Math.hypot(px - x, pz - z) < 1.9; });
-        const spot = (x, z, y, fov, auth) => {
+        const spot = (x, z, y, fov, auth, tgt) => {
             if (!sky && (Math.abs(x) > hw - 0.2 || Math.abs(z) > hd - 0.2)) return;
             if (nearDoor(x, z) || hitOcc(def, x, 0.2, z, 0.1)) return;
             for (const p of def.props || []) { if (p.nc || p.shape || p.h < y - 0.6) continue; if (Math.abs(x - p.x) < p.w / 2 + 0.12 && Math.abs(z - p.z) < p.d / 2 + 0.12) return; }
             for (const c of out) if (Math.hypot(c.p[0] - x, c.p[2] - z) < 1.2) return;
-            out.push({ p: [x, y, z], t: [0, 0.9, 0], fov: fov || 50, auth: !!auth });
+            out.push({ p: [x, y, z], t: tgt ? tgt.slice() : [0, 0.9, 0], fov: fov || 50, auth: !!auth, fixed: !!tgt });
         };
-        for (const c of (def._camsOrig || def.cams || [])) { const k = (c.p || [0, 0, 0]); spot(k[0], k[2], Math.min(k[1], yC), c.fov, 1); }
+        for (const c of (def._camsOrig || def.cams || [])) { const k = (c.p || [0, 0, 0]); spot(k[0], k[2], Math.min(k[1], yC), c.fov, 1, c.t); }
         if (sky) {   // no walls to hide behind: stand just outside the playfield and look in from above
             const ox = hw + 0.9, oz = hd + 0.9; for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) spot(sx * ox, sz * oz, 4.4, 52);
             for (const f of [-0.5, 0, 0.5]) { spot(f * w, oz, 4.0, 52); spot(f * w, -oz, 4.0, 52); spot(ox, f * d, 4.0, 52); spot(-ox, f * d, 4.0, 52); }
@@ -3230,7 +3230,19 @@ lnk('c17_dock', 'E', 0, 'c18_bridge', 'W', 0);
         for (const sx of [-1, 1]) for (const f of [0, -0.5, 0.5, -0.25, 0.25]) spot(sx * (hw - m), f * d * 0.9, f === 0 ? yM : (f % 0.5 ? yC : yM));
         for (const sz of [-1, 1]) for (const f of [0, -0.5, 0.5, -0.25, 0.25]) spot(f * w * 0.9, sz * (hd - m), f === 0 ? yM : (f % 0.5 ? yC : yM));
         if (!out.length) out.push({ p: [-(hw - m), yC, hd - m], t: [0, 0.9, 0], fov: 52 });
+        for (const c of out) if (!c.fixed) fitCam(def, c);
         def._camsOrig = def._camsOrig || def.cams; def._nxCams = out; return out;
+    };
+    // each generated camera is FIXED: aimed at the room centre once, with a lens wide enough to hold the whole room. No panning, no zooming while you play.
+    const fitCam = (def, c) => {
+        const hw = def.w / 2, hd = def.d / 2, tmp = new THREE.PerspectiveCamera(50, 4 / 3, 0.1, 70);
+        tmp.position.set(...c.p); tmp.lookAt(...c.t); tmp.updateMatrixWorld(true);
+        let need = 0, v = new THREE.Vector3();
+        for (const [x, z] of [[-hw, -hd], [hw, -hd], [-hw, hd], [hw, hd], [0, -hd], [0, hd], [-hw, 0], [hw, 0]]) for (const y of [0, 1.8]) {
+            v.set(x, y, z).applyMatrix4(tmp.matrixWorldInverse); const dz = -v.z; if (dz < 0.8) continue;
+            need = Math.max(need, Math.abs(v.y) / dz, Math.abs(v.x) / dz / (4 / 3));
+        }
+        c.fov = Math.max(40, Math.min(64, 2 * Math.atan(Math.max(need, 0.3) * 1.06) * 57.3));
     };
     const score = (def, c, px, pz, hd, hw) => {
         const dx = px - c.p[0], dz = pz - c.p[2], dd = Math.hypot(dx, dz, c.p[1] - 1.1);
@@ -3239,44 +3251,78 @@ lnk('c17_dock', 'E', 0, 'c18_bridge', 'W', 0);
         const pitch = Math.atan2(c.p[1] - 1.1, Math.hypot(dx, dz)) * 57.3; s -= Math.abs(pitch - 20) * 0.04;
         // keep the player away from the edge of the frame: prefer when they are in front of the camera and not hugging a wall behind them
         const wallBehind = Math.min(hw - Math.abs(px), hd - Math.abs(pz)); if (wallBehind < 0.8) s -= 0.3;
-        if (c.auth) s += 0.25;
+        if (c.auth) s += 1.5;   // the hand-placed cameras are the ones the rooms were designed around: prefer them, use generated spots only when they are blocked
         return s;
     };
-    const apply = (def, c, snap, dt) => {
-        const dx = PL.x - c.p[0], dz = PL.z - c.p[2], dd = Math.hypot(dx, dz, c.p[1] - 1.1);
-        const gx = PL.x * 0.93, gz = PL.z * 0.93, wantFov = Math.max(36, Math.min(62, 2 * Math.atan(2.5 / Math.max(2, dd)) * 57.3));
-        const k = snap ? 1 : 1 - Math.exp(-dt * 8);
-        CAM.tx += (gx - CAM.tx) * k; CAM.ty += (0.95 - CAM.ty) * k; CAM.tz += (gz - CAM.tz) * k; CAM.fov += (wantFov - CAM.fov) * k;
-        c.t[0] = CAM.tx; c.t[1] = CAM.ty; c.t[2] = CAM.tz;
-        if (Math.abs(camera.fov - CAM.fov) > 0.15) { camera.fov = CAM.fov; camera.updateProjectionMatrix(); }
+    const dirOf = (c) => { const fx = c.t[0] - c.p[0], fz = c.t[2] - c.p[2], L = Math.hypot(fx, fz) || 1; return [fx / L, fz / L]; };
+    const heldDir = () => !!(KEYS.ArrowUp || KEYS.KeyW || KEYS.ArrowDown || KEYS.KeyS || KEYS.ArrowLeft || KEYS.KeyA || KEYS.ArrowRight || KEYS.KeyD);
+    // the player must actually be ON SCREEN (and above the HUD strip) for a camera to count as seeing him
+    const framed = (c) => {
+        if (!c._mi) { const k = new THREE.PerspectiveCamera(c.fov, 4 / 3, 0.1, 70); k.position.set(...c.p); k.lookAt(...c.t); k.updateMatrixWorld(true); c._mi = k.matrixWorldInverse.clone(); c._th = Math.tan(c.fov * Math.PI / 360); }
+        const ar = camera.aspect || 4 / 3, v = new THREE.Vector3();
+        for (const [y, lo, hi] of [[0.15, -0.62, 0.9], [1.7, -0.9, 0.88]]) {
+            v.set(PL.x, y, PL.z).applyMatrix4(c._mi); const dz = -v.z; if (dz < 0.6) return false;
+            const nx = v.x / dz / (c._th * ar), ny = v.y / dz / c._th;
+            if (Math.abs(nx) > 0.86 || ny < lo || ny > hi) return false;
+        }
+        return true;
     };
-    camPick = function (force) {
+    // does anything in the real scene sit between this camera and you? (ray test both ways, so a camera tucked inside a snow bank or behind a tree is rejected too)
+    const ray = new THREE.Raycaster(); ray.camera = camera;
+    const meshVis = (c) => {
+        const t = now(); if (c._vt !== undefined && t - c._vt < 0.25 && Math.hypot(c._vx - PL.x, c._vz - PL.z) < 0.6) return c._vok;
+        let ok = true; const root = RM && RM.group;
+        if (root && !CAM.rayOff) try {
+            const own = new Set([PL.g]); for (const E of RM.enemies || []) if (E.mdl && E.mdl.root) own.add(E.mdl.root);
+            for (const it of (RM.inter || []).concat(RM.items || [])) if (it && it.mesh) own.add(it.mesh);
+            const isOwn = (o) => { for (let q = o; q; q = q.parent) if (own.has(q)) return true; return false; };
+            root.updateMatrixWorld(true);
+            const A = new THREE.Vector3(...c.p);
+            outer: for (const yy of [1.0, 1.6]) {
+                const B = new THREE.Vector3(PL.x, yy, PL.z), fw = B.clone().sub(A), L = fw.length(); fw.normalize();
+                for (const [o, dir, far] of [[A, fw, L - 0.4], [B, fw.clone().negate(), L - 0.3]]) {
+                    ray.set(o, dir); ray.near = 0.05; ray.far = Math.max(0.1, far);
+                    for (const h of ray.intersectObject(root, true)) {
+                        const m = h.object; if (!m.isMesh || !m.visible || isOwn(m)) continue;
+                        const mt = Array.isArray(m.material) ? m.material[0] : m.material;
+                        if (mt && ((mt.transparent && mt.opacity < 0.6) || mt.colorWrite === false)) continue;
+                        ok = false; break outer;
+                    }
+                }
+            }
+        } catch (e) { CAM.rayOff = 1; ok = true; console.warn('camera ray check disabled', e); }
+        c._vt = t; c._vx = PL.x; c._vz = PL.z; c._vok = ok; return ok;
+    };
+    const camPickInner = function (force) {
         const def = RM && RM.def; if (!def || def.id === undefined && !def.w) return;
         const cs = build(def); if (def.cams !== cs) def.cams = cs;
         const t = now(), dt = Math.min(0.1, t - CAM.last || 0.016); CAM.last = t;
         const reset = force || CAM.def !== def || CAM.cur < 0 || CAM.cur >= cs.length;
-        let best = -1, bs = -1e9, curOk = false, curS = -1e9;
-        for (let i = 0; i < cs.length; i++) {
-            const ok = los(def, cs[i].p, PL.x, PL.z), sc = ok ? score(def, cs[i], PL.x, PL.z, def.d / 2, def.w / 2) : -1e6;
-            if (i === CAM.cur) { curOk = ok; curS = sc; }
-            if (sc > bs) { bs = sc; best = i; }
-        }
-        if (best < 0) best = 0;
+        const scs = cs.map((c) => los(def, c.p, PL.x, PL.z) && framed(c) ? score(def, c, PL.x, PL.z, def.d / 2, def.w / 2) : -1e6);
+        const curMath = !reset && scs[CAM.cur] > -1e5, curOk = curMath && meshVis(cs[CAM.cur]), curS = curOk ? scs[CAM.cur] : -1e6;
+        // the best camera that really sees you, checked against the actual scenery (trees, snow banks, walls), not just the prop list
+        const findBest = () => { const idx = cs.map((_, i) => i).sort((x, y) => scs[y] - scs[x]); let tries = 0; for (const i of idx) { if (scs[i] <= -1e5 || tries++ > 8) break; if (meshVis(cs[i])) return i; } return idx[0]; };
         let pick = CAM.cur;
-        if (reset) { pick = best; CAM.blockedT = 0; }
-        else {
+        if (CAM.req && !reset) { CAM.req = 0; pick = (CAM.cur + 1) % cs.length; CAM.hold = t + 10; }   // V: switch to the next camera by hand
+        else if (reset) { pick = findBest(); CAM.blockedT = 0; CAM.dirVec = null; CAM.warm = t + 2; for (const k of cs) k._vt = undefined; }
+        else if (t >= (CAM.hold || 0)) {
             if (!curOk) CAM.blockedT += dt; else CAM.blockedT = 0;
             const dwell = t - CAM.since;
-            if ((!curOk && CAM.blockedT > 0.18 && best !== CAM.cur) || (curOk && dwell > 1.4 && bs > curS + 1.6)) pick = best;
+            if (!curOk && (t < (CAM.warm || 0) || (CAM.blockedT > 0.3 && dwell > 0.8))) { const b = findBest(); if (b !== CAM.cur) pick = b; }
+            else if (curOk && dwell > 3 && t - (CAM.lastEval || 0) > 0.3) { CAM.lastEval = t; const b = findBest(); if (b !== CAM.cur && scs[b] > curS + 3.5) pick = b; }
         }
         const cut = pick !== CAM.cur || reset;
         if (cut) { CAM.cur = pick; CAM.since = t; CAM.def = def; RM.cam = pick; }
         RM.cam = CAM.cur;
-        const c = cs[CAM.cur]; if (cut) { camera.position.set(...c.p); }
-        apply(def, c, cut && (reset || true), dt);
-        if (cut) camera.lookAt(...c.t);
+        const c = cs[CAM.cur];
+        if (cut) { try { console.warn('[cam] room', def.id || '', 'cam', CAM.cur + '/' + cs.length, 'pos', c.p.map((n) => +n.toFixed(1)).join(','), 'look', c.t.map((n) => +n.toFixed(1)).join(','), 'fov', Math.round(c.fov), c.auth ? 'authored' : 'generated'); } catch (e) { /* log */ } camera.position.set(...c.p); camera.fov = c.fov; camera.updateProjectionMatrix(); camera.lookAt(...c.t); }
+        if (!heldDir()) CAM.dirVec = dirOf(c);   // no direction held: remember which way "up" points on this camera
         CAM.dbg = true;
     };
+    camPick = function (force) { try { camPickInner(force); } catch (e) { if (!CAM.errLogged) { CAM.errLogged = 1; console.warn('camera director', e); } } };
+    addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && !UI.mode && G.started) CAM.req = 1; });
+    // controls stay put through a camera cut: keep running the way you were going until you let go (classic fixed-camera behaviour)
+    camDir = function () { const c = RM.def.cams[RM.cam], cur = dirOf(c); return heldDir() && CAM.dirVec ? CAM.dirVec : cur; };
     window.__nxNdc = () => { camera.updateMatrixWorld(true); const v = new THREE.Vector3(PL.x, 1.1, PL.z).project(camera); return [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; };
     window.__nxCam = CAM; window.__nxCamPick = camPick;
 }
@@ -4271,6 +4317,7 @@ function frame(now) {
         const c = RM.dbgCam || RM.def.cams[RM.cam]; camera.position.set(...c.p); if (RM.shake > 0) { RM.shake -= dt; camera.position.x += (Math.random() - 0.5) * RM.shake * 0.5; camera.position.y += (Math.random() - 0.5) * RM.shake * 0.5; } camera.lookAt(...c.t);
         PL.light.intensity = RM.flash > 0 ? 3 : 0; if (RM.flash > 0) RM.flash -= dt;
     }
+    if (RM.def && (!G.started || RM.busy)) { try { camPick(false); } catch (e) { /* cam */ } }
     bgSync(); if (window.NXPost) NXPost.render(scene, camera); else R.render(scene, camera);
 }
 /* ---------- input ---------- */
@@ -4641,7 +4688,7 @@ function doorCut(door, done) {
 }
 function dcEnd() { if (DC.rp) { const r = DC.rp; DC.scene.remove(r.g); scene.add(r.g); r.g.visible = false; DC.rp = null; } DC.on = false; $('hud').classList.remove('hide'); if (DC.msgVis) $('msg').classList.remove('hide'); AV.cut = null; DC.scene.remove(PL.g); scene.add(PL.g); const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; const cb = DC.cb; DC.cb = null; if (cb) cb(); }
 function dcUpdate(dt) {
-    DC.t += dt; const t = DC.t; if (DC.skip && t < 2.9) DC.t = t = 2.9;
+    DC.t += dt; let t = DC.t; if (DC.skip && t < 2.9) DC.t = t = 2.9;
     const ST = 1.15, PUSH = 1.3, OPEN = 1.5, THRU = 2.25, END = 3.3;
     let mv = 0, spd = 0;
     if (t < ST) { spd = 2.7; mv = 1; PL.z = 2.5 - spd * t; if (!DC.sfxd || DC.sfxd < t) { /* steps */ } }
