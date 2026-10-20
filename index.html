@@ -539,7 +539,7 @@
         <!-- Hidden File Input for Native File Browser Selection -->
         <input type="file" id="model-file-input" accept=".vrm,.gltf,.glb,.obj,.zip,.bbmodel" class="hidden">
 
-        <div class="xmb pointer-events-none"><div class="xmb-row pointer-events-auto" role="menubar"><div class="xmb-col" data-k="0"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-user"></i></span><span class="xl">Avatar</span></button><div class="xmb-list" role="menu"><button id="btn-character" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-user"></i></span><span class="xt"><b>Character</b><small>Pick or upload your look</small></span></button><button id="btn-equip" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment</b><small>Wear clothes and items</small></span></button><button id="btn-inventory" type="button" class="xmb-item"><span class="xi">🎒</span><span class="xt"><b>Inventory</b><small>Your bag, files and trading</small></span></button><a id="xmb-booth" class="xmb-item" href="https://booth.pm/en/search/VRoid%20clothes" target="_blank" rel="noopener noreferrer"><span class="xi"><i class="fa-solid fa-bag-shopping"></i></span><span class="xt"><b>Booth Shop</b><small>Find VRoid clothes (opens Booth)</small></span></a><button id="btn-companions" type="button" class="xmb-item"><span class="xi">👥</span><span class="xt"><b>Companions</b><small>Import NPCs, give them a VRM, talk</small></span></button><button id="btn-animations" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-person-running"></i></span><span class="xt"><b>Animations</b><small>Walk, run and idle clips</small></span></button><button id="btn-upload" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-file-arrow-up"></i></span><span class="xt"><b>Upload VRM</b><small>Use your own avatar</small></span></button></div></div><div class="xmb-col" data-k="1"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-comments"></i></span><span class="xl">Social</span></button><div class="xmb-list" role="menu"><button id="btn-emotes" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-icons"></i></span><span class="xt"><b>Emotes</b><small>Dances and poses</small></span></button><button id="btn-friends" type="button" class="xmb-item"><span class="xi">💚</span><span class="xt"><b>Friends</b><small>Add friends, see who is online</small></span></button><button id="btn-party" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Party</b><small>Friends, invites, codes (J)</small></span></button><button id="btn-lobbies" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-door-open"></i></span><span class="xt"><b>Lobbies</b><small>Change room or invite friends</small></span></button><button id="btn-chat" type="button" class="xmb-item lg:hidden"><span class="xi"><i class="fa-solid fa-comment-dots"></i></span><span class="xt"><b>Chat</b><small>Open the chat log</small></span></button></div></div><div class="xmb-col" data-k="2"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-house"></i></span><span class="xl">Home</span></button><div class="xmb-list" role="menu"><button id="btn-decorate" type="button" class="xmb-item"><span class="xi">🛋️</span><span class="xt"><b>Decorate</b><small>Furnish your Harbor Studio</small></span></button><button id="btn-mapedit" type="button" class="xmb-item"><span class="xi">🧰</span><span class="xt"><b>Edit Map</b><small>Delete, move or build in your own rooms</small></span></button><button id="btn-charimp" type="button" class="xmb-item"><span class="xi">🧍</span><span class="xt"><b>Character Importer</b><small>Turn an FBX / GLB into a .vrm avatar</small></span></button><button id="btn-ship" type="button" class="xmb-item"><span class="xi">🚀</span><span class="xt"><b>Your Ship</b><small>Board it, fly it, dock anywhere</small></span></button><button id="btn-theater" type="button" class="xmb-item"><span class="xi">🎬</span><span class="xt"><b>Your Theater</b><small>IMAX screen, watch together</small></span></button><button id="btn-diner" type="button" class="xmb-item"><span class="xi">🍔</span><span class="xt"><b>Key's Diner</b><small>Cooking rush game</small></span></button><button id="btn-bowl" type="button" class="xmb-item"><span class="xi">🎳</span><span class="xt"><b>Zen Bowl</b><small>Multiplayer bowling</small></span></button><button id="btn-btl" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Warriors of Light</b><small>Co-op turn-based fights</small></span></button><button id="btn-surv" type="button" class="xmb-item"><span class="xi">🧟</span><span class="xt"><b>Harbor Inn: Survivor</b><small>Fixed-camera survival horror</small></span></button><button id="btn-gear" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment Shop</b><small>FF7 / FF8 / FF9 gear for Gil</small></span></button><button id="btn-blitz" type="button" class="xmb-item"><span class="xi">🌊</span><span class="xt"><b>Blitzball</b><small>Underwater ball, vs CPU or a friend</small></span></button><button id="btn-tag" type="button" class="xmb-item"><span class="xi">🔫</span><span class="xt"><b>Laser Tag</b><small>Guns, bows and blades</small></span></button><button id="btn-construct" type="button" class="xmb-item"><span class="xi">🕶</span><span class="xt"><b>The Construct</b><small>Hero class training</small></span></button><button id="btn-industries" type="button" class="xmb-item"><span class="xi">🛹</span><span class="xt"><b>Oasis Industries</b><small>Build your hoverboard</small></span></button><button id="btn-weather" type="button" class="xmb-item"><span class="xi">🌦️</span><span class="xt"><b>Weather</b><small>Seasons, radar, forecast (U)</small></span></button><button id="btn-inspector" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-cubes"></i></span><span class="xt"><b>Inspector</b><small>Props in this room</small></span></button></div></div><div class="xmb-col" data-k="3"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-tv"></i></span><span class="xl">Media</span></button><div class="xmb-list" role="menu"><button id="btn-tv" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-tv"></i></span><span class="xt"><b>Central TV</b><small>Videos and retro games</small></span></button></div></div><div class="xmb-col" data-k="4"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-circle-info"></i></span><span class="xl">Info</span></button><div class="xmb-list" role="menu"><button id="btn-space" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-circle-info"></i></span><span class="xt"><b>Space Info</b><small>Network, help and about</small></span></button><button id="btn-fit" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-expand"></i></span><span class="xt"><b>Screen Fit</b><small>16:9 console frame</small></span></button><button id="btn-fullscreen" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-maximize"></i></span><span class="xt"><b>Fullscreen</b><small>Hide the browser bars</small></span></button><button id="btn-settings" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-gear"></i></span><span class="xt"><b>Settings</b><small>Frame counter</small></span></button></div></div></div></div>
+        <div class="xmb pointer-events-none"><div class="xmb-row pointer-events-auto" role="menubar"><div class="xmb-col" data-k="0"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-user"></i></span><span class="xl">Avatar</span></button><div class="xmb-list" role="menu"><button id="btn-character" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-user"></i></span><span class="xt"><b>Character</b><small>Pick or upload your look</small></span></button><button id="btn-equip" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment</b><small>Wear clothes and items</small></span></button><button id="btn-inventory" type="button" class="xmb-item"><span class="xi">🎒</span><span class="xt"><b>Inventory</b><small>Your bag, files and trading</small></span></button><a id="xmb-booth" class="xmb-item" href="https://booth.pm/en/search/VRoid%20clothes" target="_blank" rel="noopener noreferrer"><span class="xi"><i class="fa-solid fa-bag-shopping"></i></span><span class="xt"><b>Booth Shop</b><small>Find VRoid clothes (opens Booth)</small></span></a><button id="btn-companions" type="button" class="xmb-item"><span class="xi">👥</span><span class="xt"><b>Companions</b><small>Import NPCs, give them a VRM, talk</small></span></button><button id="btn-animations" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-person-running"></i></span><span class="xt"><b>Animations</b><small>Walk, run and idle clips</small></span></button><button id="btn-upload" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-file-arrow-up"></i></span><span class="xt"><b>Upload VRM</b><small>Use your own avatar</small></span></button></div></div><div class="xmb-col" data-k="1"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-comments"></i></span><span class="xl">Social</span></button><div class="xmb-list" role="menu"><button id="btn-emotes" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-icons"></i></span><span class="xt"><b>Emotes</b><small>Dances and poses</small></span></button><button id="btn-friends" type="button" class="xmb-item"><span class="xi">💚</span><span class="xt"><b>Friends</b><small>Add friends, see who is online</small></span></button><button id="btn-party" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Party</b><small>Friends, invites, codes (J)</small></span></button><button id="btn-lobbies" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-door-open"></i></span><span class="xt"><b>Lobbies</b><small>Change room or invite friends</small></span></button><button id="btn-chat" type="button" class="xmb-item lg:hidden"><span class="xi"><i class="fa-solid fa-comment-dots"></i></span><span class="xt"><b>Chat</b><small>Open the chat log</small></span></button></div></div><div class="xmb-col" data-k="2"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-house"></i></span><span class="xl">Home</span></button><div class="xmb-list" role="menu"><button id="btn-decorate" type="button" class="xmb-item"><span class="xi">🛋️</span><span class="xt"><b>Decorate</b><small>Furnish your Harbor Studio</small></span></button><button id="btn-mapedit" type="button" class="xmb-item"><span class="xi">🧰</span><span class="xt"><b>Edit Map</b><small>Delete, move or build in your own rooms</small></span></button><button id="btn-charimp" type="button" class="xmb-item"><span class="xi">🧍</span><span class="xt"><b>Character Importer</b><small>Turn an FBX / GLB into a .vrm avatar</small></span></button><button id="btn-ship" type="button" class="xmb-item"><span class="xi">🚀</span><span class="xt"><b>Your Ship</b><small>Board it, fly it, dock anywhere</small></span></button><button id="btn-theater" type="button" class="xmb-item"><span class="xi">🎬</span><span class="xt"><b>Your Theater</b><small>IMAX screen, watch together</small></span></button><button id="btn-diner" type="button" class="xmb-item"><span class="xi">🍔</span><span class="xt"><b>Key's Diner</b><small>Cooking rush game</small></span></button><button id="btn-bowl" type="button" class="xmb-item"><span class="xi">🎳</span><span class="xt"><b>Zen Bowl</b><small>Multiplayer bowling</small></span></button><button id="btn-btl" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Warriors of Light</b><small>Co-op turn-based fights</small></span></button><button id="btn-surv" type="button" class="xmb-item"><span class="xi">🧟</span><span class="xt"><b>Harbor Inn: Survivor</b><small>Fixed-camera survival horror</small></span></button><button id="btn-gear" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment Shop</b><small>FF7 / FF8 / FF9 gear for Gil</small></span></button><button id="btn-blitz" type="button" class="xmb-item"><span class="xi">🌊</span><span class="xt"><b>Blitzball</b><small>Underwater ball, vs CPU or a friend</small></span></button><button id="btn-tag" type="button" class="xmb-item"><span class="xi">🔫</span><span class="xt"><b>Laser Tag</b><small>Guns, bows and blades</small></span></button><button id="btn-budokai" type="button" class="xmb-item"><span class="xi">🥋</span><span class="xt"><b>Budokai</b><small>3D fighting: VS, practice, tournament</small></span></button><button id="btn-construct" type="button" class="xmb-item"><span class="xi">🕶</span><span class="xt"><b>The Construct</b><small>Hero class training</small></span></button><button id="btn-industries" type="button" class="xmb-item"><span class="xi">🛹</span><span class="xt"><b>Oasis Industries</b><small>Build your hoverboard</small></span></button><button id="btn-weather" type="button" class="xmb-item"><span class="xi">🌦️</span><span class="xt"><b>Weather</b><small>Seasons, radar, forecast (U)</small></span></button><button id="btn-inspector" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-cubes"></i></span><span class="xt"><b>Inspector</b><small>Props in this room</small></span></button></div></div><div class="xmb-col" data-k="3"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-tv"></i></span><span class="xl">Media</span></button><div class="xmb-list" role="menu"><button id="btn-tv" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-tv"></i></span><span class="xt"><b>Central TV</b><small>Videos and retro games</small></span></button></div></div><div class="xmb-col" data-k="4"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-circle-info"></i></span><span class="xl">Info</span></button><div class="xmb-list" role="menu"><button id="btn-space" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-circle-info"></i></span><span class="xt"><b>Space Info</b><small>Network, help and about</small></span></button><button id="btn-fit" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-expand"></i></span><span class="xt"><b>Screen Fit</b><small>16:9 console frame</small></span></button><button id="btn-fullscreen" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-maximize"></i></span><span class="xt"><b>Fullscreen</b><small>Hide the browser bars</small></span></button><button id="btn-settings" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-gear"></i></span><span class="xt"><b>Settings</b><small>Frame counter</small></span></button></div></div></div></div>
     </nav>
 
     <!-- Lobby Browser -->
@@ -1637,6 +1637,11 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             ANIM_EMOTES.groll = { loop: false, frames: N, duration: 0.8, hipsHeight: base.hipsHeight, bones, hipsY: hy };
             EMOTES.groll = { dur: 0.8, move: true, hero: true };
         } catch (e) { console.warn('roll clip', e); }
+        // ---- BUDOKAI (fighting mode): every move has a slot in the Animations panel under "Budokai". Fill one with your own clip and it replaces the stock clip for you;
+        // until then the stock Fighter / Hero clips are combined into the combos (see BUD_DEF below). ----
+        const BUD_MOVES = [['p1', 'Punch 1'], ['p2', 'Punch 2'], ['p3', 'Punch 3 (finisher)'], ['k1', 'Kick 1'], ['k2', 'Kick 2'], ['k3', 'Kick 3 (finisher)'], ['pk', 'Launcher (punch, punch, kick)'], ['kp', 'Heavy finisher (kick, kick, punch)'], ['th', 'Throw'], ['hd', 'Hold (counter)'], ['gd', 'Guard (held)'], ['sl', 'Sidestep left'], ['sr', 'Sidestep right'], ['sp', 'Special (burst)'], ['blk', 'Block'], ['hit1', 'Hit (light) 1'], ['hit2', 'Hit (light) 2'], ['kb', 'Knocked back'], ['kd', 'Knocked down'], ['up', 'Get up'], ['ko', 'Knocked out (stays down)'], ['win', 'Victory'], ['lose', 'Defeat'], ['taunt', 'Taunt']];
+        const BUD_DEF = { p1: 'f_hatk1', p2: 'f_hatk2', p3: 'f_hatk3', k1: 'f_hcB1', k2: 'f_hcB2', k3: 'f_hcB3', pk: 'f_hcA3', kp: 'f_hcC3', th: 'f_hcA5', hd: 'f_hpary', gd: 'f_hguard', sl: 'f_hevl', sr: 'f_hevr', sp: 'f_hsk1', blk: 'f_hblock', hit1: 'f_hhit1', hit2: 'f_hhit2', kb: 'f_hhitkb', kd: 'f_hhitkd', up: 'f_hgetup', ko: 'f_hdie1', win: 'cheer', lose: 'f_hstun', taunt: 'cheer' };
+        for (const [k, L] of BUD_MOVES) { SLOTS.push({ key: 'bu_' + k, label: 'Budokai: ' + L, grp: 'Budokai (fighting mode)', act: true }); EMOTES['bu_' + k] = { dur: 1.2, move: true, hero: true }; }
         const SLOT_KEYS = SLOTS.map((x) => x.key);
         const slotLabel = (k) => (SLOTS.find((x) => x.key === k) || { label: k }).label;
 
@@ -1696,6 +1701,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             if (!ANIM_EMOTES.board && !ANIM_EMOTES.__boardTried) { ANIM_EMOTES.__boardTried = true; try { const bin = atob(document.getElementById('anim-board-fbx').textContent.trim()), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); ANIM_EMOTES.board = bakeFbxClip(u8.buffer, 'idle').data; window.__animBoard = ANIM_EMOTES.board; } catch (e) { console.warn('board animation', e); } }
             for (const [k, d] of Object.entries(ANIM_EMOTES)) if (d && d.bones) emotes[k] = buildClip('emote:' + k, d);
             for (const [en, sk] of Object.entries(TG_CLIP)) if (clips[sk]) emotes[en] = clips[sk];     // laser tag action clips play as emotes
+            for (const [k] of BUD_MOVES) if (clips['bu_' + k]) emotes['bu_' + k] = clips['bu_' + k];     // Budokai moves
             for (const w of [...TG_WPS, ...HERO_WPS]) if (clips[w + '_idle'] && !clips[w + '_walkB'] && clips[w + '_walkF']) clips[w + '_walkB'] = { ...clips[w + '_walkF'], id: w + '_walkB', reverse: true };
             for (const w of [...TG_WPS, ...HERO_WPS]) if (clips[w + '_idle'] && !clips[w + '_runB'] && clips[w + '_runF']) clips[w + '_runB'] = { ...clips[w + '_runF'], id: w + '_runB', reverse: true };
             // No backward clips? Play the forward ones in reverse: the feet still plant correctly against a backward move.
@@ -1926,6 +1932,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             { id: 'tbs-01', name: 'Toy Box Smash', tag: 'Platform fighter', map: 'toysmash' },
             { id: 'diner-01', name: "Key's Kitchen Clash", tag: 'Channel 1', map: 'diner' },
             { id: 'tag-01', name: 'Laser Tag Arena', tag: 'Channel 1', map: 'tag' },
+            { id: 'budokai-01', name: 'Budokai Arena', tag: 'Channel 1', map: 'budokai' },
             { id: 'construct-01', name: 'The Construct (Hero class)', tag: 'Channel 1', map: 'construct' }
         ];
 
@@ -4249,6 +4256,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 case 'afk': { const ap = peers.get(from); if (ap && ap.actor) afkSet(ap.actor, m.on === 1 || m.on === true); break; }
                 case 'bt': { try { btOnMsg(from, m); } catch (e) { console.warn('battle message', e); } break; }
                 case 'bw': { try { bwOnMsg(from, m); } catch (e) { console.warn('bowling message', e); } break; }
+                case 'bud': { try { if (m.to === undefined || m.to === me.id) budOnMsg(from, m); } catch (e) { console.warn('budokai message', e); } break; }
                 case 'tg': { try { tgOnMsg(from, m); } catch (e) { console.warn('laser tag message', e); } break; }
                 case 'hbd': { const p = peers.get(from); if (p) { p.hbd = hbdClean(m.d); p.hbdJ = p.hbd ? JSON.stringify(p.hbd) : ''; } break; }
                 case 'state': {
@@ -4320,7 +4328,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 case 'blz': { const p = peers.get(from); if (p && p.actor) { p.actor.blitz = m.on ? 1 : 0; p.actor.blitzSeen = Date.now(); } break; }
                 case 'emote': {
                     const p = peers.get(from);
-                    if (p && typeof m.name === 'string') { if (m.u) p.actor.playUpper(m.name, typeof m.r === 'number' ? clamp(m.r, 0.5, 3) : 1); else { p.actor.playEmote(m.name); if (typeof m.r === 'number') p.actor.emoteRate = clamp(m.r, 0.5, 2); } }
+                    if (p && typeof m.name === 'string') { if (m.u) p.actor.playUpper(m.name, typeof m.r === 'number' ? clamp(m.r, 0.5, 3) : 1); else { p.actor.playEmote(m.name); if (typeof m.r === 'number') p.actor.emoteRate = clamp(m.r, 0.5, 2); if (m.h) p.actor.emoteDur = Infinity; } }
                     break;
                 }
                 case 'want': {
@@ -4535,7 +4543,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const pc = presCounts(), pm = presNet ? presNet.describe() : null;
             $('lobby-online').textContent = pm && pm.mode === 'online' || pc.total > 1 ? `${pc.total} player${pc.total === 1 ? '' : 's'} online right now` : pm && (pm.mode === 'connecting' || pm.mode === 'waiting') ? (pm.mode === 'waiting' ? 'You are the only one online right now' : 'Looking for other players...') : 'Online count unavailable (peer-to-peer is blocked here)';
             for (const d of DISTRICTS) {
-                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
+                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'budokai' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
                 const seen = dirSeen.get(d.id);
                 let count = Math.max(seen && Date.now() - seen.ts < 6000 ? seen.count : 0, pc.byRoom[d.id] || 0);      // tabs of this browser, and what other players report
                 if (room && room.id === d.id) count = Math.max(count, peers.size + 1);
@@ -10457,6 +10465,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         // so it keeps the angle you chose and just gets closer when a wall is behind it. On the deck or in the garden it is free.
         function keepCameraInRoom() {
             if (activeMap === 'tag') { try { tgKeepCam(); } catch (e) { /* not ready */ } return; }
+            if (activeMap === 'budokai') { try { budKeepCam(); } catch (e) { /* not ready */ } return; }
             if (activeMap === 'diner') { try { kcKeepCam(); } catch (e) { /* not ready */ } return; }
             if (activeMap === 'bowl') { try { bwKeepCam(); } catch (e) { /* not ready */ } return; }
             if (activeMap === 'btl') { try { btKeepCam(); } catch (e) { /* not ready */ } return; }
@@ -15453,7 +15462,7 @@ function btMusicStop() {
          * ==================================================================================================== */
         const SHIP_X = 4.4, SHIP_ZN = -8.2, SHIP_ZS = 8.0;
         const SHIP = { ready: false, group: null, dock: null, rects: [], stars: null, glow: [], near: null, btn: null, t: 0 };
-        const SHIP_NO = ['btl', 'tag', 'diner', 'bowl', 'blitz', 'survivor', 'survivor2', 'ryderx', 'construct'];
+        const SHIP_NO = ['btl', 'tag', 'budokai', 'diner', 'bowl', 'blitz', 'survivor', 'survivor2', 'ryderx', 'construct'];
         try { SHIP.dock = JSON.parse(localStorage.getItem('oasis.ship') || 'null'); } catch (e) { SHIP.dock = null; }
         function myShipCode() { let c = null; try { c = localStorage.getItem('oasis.shipcode'); } catch (e) { /* storage */ } if (!c || !/^H[A-Z0-9]{11}$/.test(c)) { c = makeCode('ship'); try { localStorage.setItem('oasis.shipcode', c); } catch (e) { /* storage */ } } return c; }
         function shipGround() { return 0; }
@@ -17777,7 +17786,7 @@ function lsExportHM() { const D = LS.data; if (!D) return; const n1 = D.n + 1, c
  * loads that file, so it exists for everybody even when you are offline. "Publish on this device" lists it in your own lobby straight
  * away; to make it public for everyone, put the exported file in the maps folder and add its line to maps/index.json (see NOTES.md).
  * Players see it in the Lobby next to Destiny City and the rest; nobody but you can change it. */
-const PUB_BASES = new Set(['mall', 'loft', 'city', 'galleria', 'school', 'raimon', 'bowl', 'btl', 'diner', 'tag', 'plot', 'ship', 'theater', 'construct']);
+const PUB_BASES = new Set(['mall', 'loft', 'city', 'galleria', 'school', 'raimon', 'bowl', 'btl', 'diner', 'tag', 'budokai', 'plot', 'ship', 'theater', 'construct']);
 const PUB = { cache: new Map(), local: [] };
 const pubSlug = (n) => String(n || 'room').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) || 'room';
 async function pubGather(name) {
@@ -17863,6 +17872,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             try { if (id === 'theater') ensureTheater(); if (THEATER.ready && THEATER.group) THEATER.group.visible = id === 'theater'; } catch (e) { console.error('Theater failed to build', e); }
             try { if (id === 'ship') ensureShip(); if (SHIP.ready && SHIP.group) SHIP.group.visible = id === 'ship'; } catch (e) { console.error('Ship failed to build', e); }
             try { if (id === 'tag') ensureTagArena(); if (TG.ready && TG.group) TG.group.visible = id === 'tag'; } catch (e) { console.error('Laser tag arena failed to build', e); }
+            try { if (id === 'budokai') ensureBudokai(); if (BUD.ready && BUD.group) BUD.group.visible = id === 'budokai'; } catch (e) { console.error('Budokai arena failed to build', e); }
             { const host = id === 'plot' ? PLOT.group : loftGroup; if (DC.root && host && DC.root.parent !== host) host.add(DC.root); if (DC.wallG) DC.wallG.visible = id !== 'plot'; BP.dirty = true; }
             if (camera) { camera.far = id === 'loft' ? 1000 : id === 'city' ? 1900 : id === 'plot' ? 3400 : id === 'raimon' ? 900 : (id === 'galleria' || id === 'school') ? 2000 : 400; camera.updateProjectionMatrix(); }
             if (id === 'loft') { scene.background = new THREE.Color(0xe9dcc0); scene.fog = new THREE.FogExp2(0xcfe8f0, 0.0021); }
@@ -17875,16 +17885,18 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             else if (id === 'plot') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.00085); }
             else if (id === 'diner') { scene.background = new THREE.Color(0x2a1a1c); scene.fog = new THREE.FogExp2(0x2a1a1c, 0.004); }
             else if (id === 'tag') { scene.background = new THREE.Color(0x070a1c); scene.fog = new THREE.FogExp2(0x070a1c, 0.005); }
+            else if (id === 'budokai') { scene.background = new THREE.Color(0x0c0a14); scene.fog = new THREE.FogExp2(0x0c0a14, 0.006); }
             else if (id === 'theater') { scene.background = new THREE.Color(0x050308); scene.fog = new THREE.FogExp2(0x050308, 0.003); }
             else if (id === 'ship') { scene.background = new THREE.Color(0x02030a); scene.fog = new THREE.FogExp2(0x02030a, 0.004); }
             else if (id === 'construct') { scene.background = new THREE.Color(0xf4f6f8); scene.fog = new THREE.FogExp2(0xf4f6f8, 0.011); }
             else { scene.background = new THREE.Color(0x030712); scene.fog = new THREE.FogExp2(0x030712, 0.011); }
-            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'construct' ? 15 : id === 'ship' ? 9 : id === 'theater' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
+            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'budokai' ? 14 : id === 'construct' ? 15 : id === 'ship' ? 9 : id === 'theater' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
             if (typeof fpOn !== 'undefined' && fpOn && controls) { if (fpSaved) fpSaved.polar = controls.maxPolarAngle; controls.maxPolarAngle = Math.PI - 0.05; controls.minPolarAngle = 0.05; }
             if ((id === 'loft' || id === 'diner' || id === 'tag' || id === 'construct' || id === 'bowl' || id === 'btl' || id === 'ship' || id === 'theater') && typeof hbSet === 'function' && hbOn) hbSet(false, true);
             if (typeof BK !== 'undefined' && BK.on && !BK_OUT.includes(id)) bkSet(false, true);
             try { kcMapChanged(id); } catch (e) { /* kitchen not loaded yet */ }
             try { tgMapChanged(id); } catch (e) { console.error('laser tag map', e); }
+            try { budMapChanged(id); } catch (e) { console.error('budokai map', e); }
             try { bwMapChanged(id); } catch (e) { console.error('bowling map', e); }
             try { btMapChanged(id); } catch (e) { console.error('battle map', e); }
             try { wxMapChanged(id); } catch (e) { console.error('weather map', e); }
@@ -18146,6 +18158,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 PAD.prev = b; padBarDraw(false, ''); return;
             }
             if (typing) { PAD.auto = false; PAD.rx = PAD.ry = PAD.zoom = 0; if (hit(1) || hit(9)) press('Escape'); PAD.prev = b; padBarDraw(false, ''); return; }
+            try { if (activeMap === 'budokai' && budPadAct(b, hit, lx, ly)) { PAD.auto = false; PAD.rx = PAD.ry = PAD.zoom = 0; PAD.prev = b; padBarDraw(false, ''); return; } } catch (e) { console.warn('budokai pad', e); }
 
             // ---- the world ----
             const mag = Math.hypot(lx, ly);
@@ -18649,7 +18662,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (keys.left) _mv.x -= 1;
             if (keys.right) _mv.x += 1;
             if (_mv.lengthSq() === 0 && (padMove.x || padMove.z)) _mv.set(padMove.x, 0, padMove.z);   // controller left stick
-            if (TG.lockMove() || (hcMine() && HC.act) || gnRolling() || bwLockMove() || btLockMove()) _mv.set(0, 0, 0);   // laser tag: knocked out / countdown
+            if (TG.lockMove() || budLock() || (hcMine() && HC.act) || gnRolling() || bwLockMove() || btLockMove()) _mv.set(0, 0, 0);   // laser tag: knocked out / countdown
 
             if (_mv.lengthSq() > 0) {
                 _mv.normalize();
@@ -21383,7 +21396,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             panel.addEventListener('pointerdown', (e) => e.stopPropagation()); panel.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
             WX.ui = { chip, panel, body, built: false };
             const open = $('btn-weather'); if (open) open.addEventListener('click', () => wxToggle(true));
-            { const bg = $('btn-tag'); if (bg) bg.addEventListener('click', () => tgOpen()); const bcn = $('btn-construct'); if (bcn) bcn.addEventListener('click', () => constructOpen()); const bd = $('btn-diner'); if (bd) bd.addEventListener('click', () => dinerOpen()); const bbw = $('btn-bowl'); if (bbw) bbw.addEventListener('click', () => bowlOpen()); const bbt = $('btn-btl'); if (bbt) bbt.addEventListener('click', () => btlOpen()); const bbz = $('btn-blitz'); if (bbz) bbz.addEventListener('click', () => bzOpen({})); const bge = $('btn-gear'); if (bge) bge.addEventListener('click', () => eqpOpen()); const bsv = $('btn-surv'); if (bsv) bsv.addEventListener('click', () => svOpen()); const bi = $('btn-industries'); if (bi) bi.addEventListener('click', () => { if (typeof industriesOpen === 'function') industriesOpen(); }); }
+            { const bbu = $('btn-budokai'); if (bbu) bbu.addEventListener('click', () => budOpen()); const bg = $('btn-tag'); if (bg) bg.addEventListener('click', () => tgOpen()); const bcn = $('btn-construct'); if (bcn) bcn.addEventListener('click', () => constructOpen()); const bd = $('btn-diner'); if (bd) bd.addEventListener('click', () => dinerOpen()); const bbw = $('btn-bowl'); if (bbw) bbw.addEventListener('click', () => bowlOpen()); const bbt = $('btn-btl'); if (bbt) bbt.addEventListener('click', () => btlOpen()); const bbz = $('btn-blitz'); if (bbz) bbz.addEventListener('click', () => bzOpen({})); const bge = $('btn-gear'); if (bge) bge.addEventListener('click', () => eqpOpen()); const bsv = $('btn-surv'); if (bsv) bsv.addEventListener('click', () => svOpen()); const bi = $('btn-industries'); if (bi) bi.addEventListener('click', () => { if (typeof industriesOpen === 'function') industriesOpen(); }); }
             window.addEventListener('keydown', (e) => { if (e.code === 'KeyU' && !e.repeat && !isTyping(e) && !lobbyOpen() && !charModalOpen() && !equipOpen() && !e.ctrlKey && !e.metaKey) { e.preventDefault(); wxToggle(); } else if (e.code === 'Escape' && WX.open) wxToggle(false); });
             setInterval(() => { chip.firstChild.textContent = wxIcon(); chip.lastChild.textContent = wxTempStr(WX.temp); chip.style.display = (activeMap === 'city' || activeMap === 'plot' || activeMap === 'loft' || activeMap === 'galleria' || activeMap === 'school' || activeMap === 'raimon' || activeMap === 'raimonN' || activeMap === 'raimonT') ? '' : 'none'; if (WX.open) wxRenderPanel(); }, 1500);
             wxLiveRefresh(true);
@@ -23181,6 +23194,580 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (pk.emotes.tgdownBase) pk.emotes.tgdown = k === 'tgdown' ? pk.emotes.tgdownBase : pk.emotes[k];
         }
         MAP_DEFS.tag = { id: 'tag', ground: tgGround, clamp: tgClamp, collide: tgCollide, spawn: tgSpawn, update: tgUpdate };
+        /* ------------------------------------------------------------------ *
+         *  BUDOKAI: a Dead-or-Alive style 3D fighting room. Your own character fights in a ring; punches and kicks chain into combos, throws beat guards,
+         *  holds beat strikes, strikes beat throws. Modes: Practice (CPU opponents), Versus (online queue, winner stays on) and Tournament (4 or 8 fighters,
+         *  CPU fighters fill the bracket). The moves are the stock Fighter / Hero clips combined into combos; any of them can be replaced from the Animations panel.
+         *  Hits use the Warriors of Light effects: sparks, rings and floating damage numbers. Each player's own device decides what happens to their own fighter;
+         *  the lowest player id in the room is the referee that runs the rounds, the queue and the bracket.
+         * ------------------------------------------------------------------ */
+        const BUD = {
+            ready: false, group: null, ringR: 7, ringH: 0.2, hall: 26, stand: 12.2, hud: null, hudOn: false, t: 0, S: null, RR: null, RP: null, me: null, foe: null, bot: null, hp: {}, sendT: 0, msgs: [], nums: [], fx: [], crowd: null,
+            shake: 0, camP: null, camWas: false, camSide: 1, key: '', tourJoined: false, inQ: false, level: 'normal', menuOpen: true, popT: 0, buf: null, stats: { w: 0, l: 0, ko: 0, tour: 0 }, lastHud: '', textT: 0, text: '', textSub: '', ghost: new Map(), bots: 0
+        };
+        try { Object.assign(BUD.stats, JSON.parse(localStorage.getItem('oasis.bud') || '{}')); } catch (e) { /* storage */ }
+        const budSaveStats = () => { try { localStorage.setItem('oasis.bud', JSON.stringify(BUD.stats)); } catch (e) { /* storage */ } };
+        const BUD_RT = 60, BUD_NAMES = ['Kenji', 'Mika', 'Tetsu', 'Aiko', 'Ren', 'Sora', 'Daichi', 'Yuna', 'Haru', 'Itsuki'];
+        const BUD_LV = { dummy: { n: 'Dummy', think: 9, atk: 0, grd: 0, thr: 0 }, easy: { n: 'Easy', think: 0.7, atk: 0.35, grd: 0.15, thr: 0.1 }, normal: { n: 'Normal', think: 0.42, atk: 0.55, grd: 0.35, thr: 0.2 }, hard: { n: 'Hard', think: 0.24, atk: 0.8, grd: 0.55, thr: 0.3 } };
+        // move table: dmg, playback rate, kind (strike / throw / special / hold), reach, knockback, flags; hit windows come from the clip ( * 1 / rate ) when it has one
+        const BUD_MV = {
+            p1: { dmg: 5, rate: 1.9, kind: 'strike', reach: 1.9, stun: 0.42, step: 0.5, ch: { P: 'p2', K: 'k2' }, cn: 0.5 },
+            p2: { dmg: 6, rate: 1.9, kind: 'strike', reach: 1.9, stun: 0.44, step: 0.4, ch: { P: 'p3', K: 'pk' }, cn: 0.5 },
+            p3: { dmg: 9, rate: 1.7, kind: 'strike', reach: 2.0, stun: 0.6, kb: 2.4, big: true, step: 0.2 },
+            k1: { dmg: 6, rate: 1.8, kind: 'strike', reach: 2.0, stun: 0.42, step: 0.3, ch: { K: 'k2', P: 'p2' }, cn: 0.5 },
+            k2: { dmg: 7, rate: 1.8, kind: 'strike', reach: 2.1, stun: 0.46, step: 0.7, ch: { K: 'k3', P: 'kp' }, cn: 0.5 },
+            k3: { dmg: 10, rate: 1.7, kind: 'strike', reach: 2.1, stun: 0.6, kb: 2.6, big: true, step: 0.4 },
+            pk: { dmg: 13, rate: 1.7, kind: 'strike', reach: 2.1, kd: true, big: true, step: 0.5 },
+            kp: { dmg: 15, rate: 1.9, kind: 'strike', reach: 2.2, kd: true, big: true, step: 0.4 },
+            th: { dmg: 18, rate: 1.45, kind: 'throw', reach: 1.45, kd: true, big: true, step: 0.2, hit: [0.4, 0.55] },
+            sp: { dmg: 26, rate: 1.5, kind: 'special', reach: 2.3, kd: true, big: true, step: 0.8, cost: 50, hit: [0.3, 0.5] },
+            hd: { dmg: 0, rate: 1.6, kind: 'hold', hold: [0.04, 0.42] }
+        };
+        const BUD_CH = { Q: 'sl', E: 'sr' };
+        const budHasClip = (a, key) => !!(a.pack && a.pack.emotes && a.pack.emotes['bu_' + key]);
+        function budClip(a, key) {
+            const pe = a.pack && a.pack.emotes, cn = 'bu_' + key;
+            if (pe && pe[cn]) return { name: cn, dur: Math.max(0.2, pe[cn].duration || 1), custom: true, send: BUD_DEF[key] };
+            const d = BUD_DEF[key], c = HERO_ACTS[d];
+            return { name: d, dur: c ? c.duration : (EMOTES[d] ? EMOTES[d].dur : 1.2), custom: false, send: d, hit: c && c.hit, travel: c && c.travel };
+        }
+        const budMe = () => localActor.group.position;
+        const budSend = (m, to) => { try { net && net.send(to ? { t: 'bud', to, ...m } : { t: 'bud', ...m }); } catch (e) { /* offline */ } };
+        const budNum = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d);
+        const budIsRef = () => { const id = String(me.id); for (const k of peers.keys()) if (String(k) < id) return false; return true; };
+        const budPeerName = (id) => { if (id === me.id) return me.name; const p = peers.get(id); return p ? (p.name || 'Player') : String(id).startsWith('cpu:') ? ((BUD.S && [BUD.S.a, BUD.S.b].find((x) => x && x.id === id)) || {}).name || 'CPU' : 'Player'; };
+        function budNewF(id, name, actor, o) { return Object.assign({ id, name, actor, hp: 100, max: 100, sp: 0, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, holdT: 0, kv: { x: 0, z: 0 }, buf: null, bufT: -9, combo: 0, comboT: -9, comboDmg: 0, hurtN: 0, armor: 0, bot: false, remote: false, aiT: 0, aiG: 0, aiLv: BUD_LV.normal, opp: null, down: 0, ko: false, lastKey: '', juggle: 0 }, o || {}); }
+        /* ---- the room: a round hall, a raised ring, stands with a crowd ---- */
+        function ensureBudokai() {
+            if (BUD.ready) return; BUD.ready = true;
+            const root = new THREE.Group(); root.visible = false; scene.add(root); BUD.group = root;
+            const P = Math.PI, S = [], N = [];
+            const col = (geo, c) => { const n = geo.attributes.position.count, a = new Float32Array(n * 3), k = new THREE.Color(c); for (let i = 0; i < n; i++) { a[i * 3] = k.r; a[i * 3 + 1] = k.g; a[i * 3 + 2] = k.b; } geo.setAttribute('color', new THREE.BufferAttribute(a, 3)); if (geo.index) geo = geo.toNonIndexed(); return geo; };
+            const bx = (L, w, h, d, x, y, z, c, ry) => { let g = col(new THREE.BoxGeometry(w, h, d), c); if (ry) g.rotateY(ry); g.translate(x, y, z); L.push(g); };
+            root.add(new THREE.HemisphereLight(0xffe7c8, 0x2a1830, 1.2), new THREE.AmbientLight(0x8a7a9a, 0.55));
+            const key = new THREE.DirectionalLight(0xfff0dd, 0.8); key.position.set(-6, 24, 10); root.add(key);
+            for (const [x, z, c, i] of [[-7, -6, 0xff5a4a, 22], [7, -6, 0x4a8aff, 22], [0, 9, 0xffd27a, 14]]) { const l = new THREE.PointLight(c, i, 26, 1.5); l.position.set(x, 7.5, z); root.add(l); }
+            // concourse floor
+            const fl = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#26232e'; g.fillRect(0, 0, w, h); g.strokeStyle = '#3a3646'; g.lineWidth = 3; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, h); g.moveTo(0, i * 128); g.lineTo(w, i * 128); g.stroke(); } g.fillStyle = 'rgba(255,255,255,.035)'; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if ((i + j) % 2) g.fillRect(i * 128, j * 128, 128, 128); });
+            fl.wrapS = fl.wrapT = THREE.RepeatWrapping; fl.repeat.set(8, 8); fl.anisotropy = 4;
+            const floor = new THREE.Mesh(new THREE.CircleGeometry(BUD.hall, 64).rotateX(-P / 2), new THREE.MeshStandardMaterial({ map: fl, roughness: 0.5, metalness: 0.25 })); floor.userData.noOutline = true; root.add(floor);
+            // the ring: a platform with a painted mat
+            const mat = canvasTex(1024, 1024, (g, w, h) => {
+                g.fillStyle = '#1a1620'; g.fillRect(0, 0, w, h); const c = w / 2;
+                g.fillStyle = '#b3202c'; g.beginPath(); g.arc(c, c, c - 6, 0, 7); g.fill(); g.fillStyle = '#f4efe2'; g.beginPath(); g.arc(c, c, c - 70, 0, 7); g.fill(); g.fillStyle = '#15121c'; g.beginPath(); g.arc(c, c, c - 90, 0, 7); g.fill();
+                g.strokeStyle = '#f2c14a'; g.lineWidth = 8; g.beginPath(); g.arc(c, c, c - 120, 0, 7); g.stroke(); g.strokeStyle = 'rgba(244,239,226,.55)'; g.lineWidth = 5; for (let i = 0; i < 8; i++) { const a = i * P / 4 + P / 8; g.beginPath(); g.moveTo(c + Math.cos(a) * 130, c + Math.sin(a) * 130); g.lineTo(c + Math.cos(a) * (c - 130), c + Math.sin(a) * (c - 130)); g.stroke(); }
+                g.fillStyle = '#f2c14a'; g.font = '900 150px Orbitron, Arial Black, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BUDOKAI', c, c - 20); g.font = '900 64px Orbitron, Arial, sans-serif'; g.fillStyle = '#f4efe2'; g.fillText('武 道 会', c, c + 100);
+                g.strokeStyle = '#f2c14a'; g.lineWidth = 6; g.beginPath(); g.arc(c, c, 230, 0, 7); g.stroke();
+            });
+            mat.anisotropy = 8;
+            const ring = new THREE.Mesh(new THREE.CylinderGeometry(BUD.ringR, BUD.ringR + 0.25, BUD.ringH, 64), [new THREE.MeshStandardMaterial({ color: 0x2a2433, roughness: 0.5 }), new THREE.MeshStandardMaterial({ map: mat, roughness: 0.6 }), new THREE.MeshStandardMaterial({ color: 0x1a1620 })]);
+            ring.position.y = BUD.ringH / 2; ring.receiveShadow = true; ring.userData.noOutline = true; root.add(ring);
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(BUD.ringR + 0.05, 0.09, 10, 96).rotateX(P / 2), new THREE.MeshBasicMaterial({ color: 0xffc04a, toneMapped: false })); rim.position.y = BUD.ringH + 0.02; rim.userData.noOutline = true; root.add(rim);
+            // walls, stands, truss
+            const wall = new THREE.Mesh(new THREE.CylinderGeometry(BUD.hall + 0.4, BUD.hall + 0.4, 15, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0x1b1824, roughness: 0.8, side: THREE.BackSide })); wall.position.y = 7.5; wall.userData.noOutline = true; root.add(wall);
+            for (const [y, c] of [[3.2, 0xb3202c], [14.7, 0xf2c14a]]) { const st = new THREE.Mesh(new THREE.TorusGeometry(BUD.hall + 0.3, 0.12, 6, 96).rotateX(P / 2), new THREE.MeshBasicMaterial({ color: c, toneMapped: false })); st.position.y = y; st.userData.noOutline = true; root.add(st); }
+            const seats = [], gap = 0.78;                          // the south side (spawn) stays open
+            for (let k = 0; k < 4; k++) {
+                const r = 13.2 + k * 2.2, h = 0.55 + k * 0.55, da = 0.13;
+                for (let a = gap; a <= 2 * P - gap + 1e-6; a += da) bx(S, 2.3, h, r * da * 1.02, Math.sin(a) * (r + 1.1), h / 2, Math.cos(a) * (r + 1.1), k % 2 ? 0x3a3446 : 0x2e2a3a, a - P / 2);
+            }
+            for (let k = 0; k < 4; k++) { const r = 13.2 + k * 2.2 + 0.9, h = 0.55 + k * 0.55; for (let a = gap + 0.05; a <= 2 * P - gap - 0.05; a += 0.085) { if (Math.random() < 0.28) continue; seats.push([Math.sin(a) * r, h, Math.cos(a) * r, a]); } }
+            const sm = new THREE.Mesh(mergeGeometries(S, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 })); sm.userData.noOutline = true; sm.frustumCulled = false; root.add(sm);
+            // crowd: instanced bodies and heads that bounce when something big lands
+            { const n = seats.length, bg = new THREE.CapsuleGeometry(0.2, 0.42, 3, 8), hg = new THREE.SphereGeometry(0.17, 10, 8), bm = new THREE.InstancedMesh(bg, new THREE.MeshStandardMaterial({ roughness: 0.8 }), n), hm = new THREE.InstancedMesh(hg, new THREE.MeshStandardMaterial({ roughness: 0.7 }), n), c = new THREE.Color(), pal = [0xe94b4b, 0x4b8be9, 0xf2c14a, 0x6bd16b, 0xc56be9, 0xf2f2f2, 0x2a2a35, 0xff8a3d], skin = [0xf2c9a0, 0xd9a273, 0xa8744d, 0x6b4a30, 0xf6d7bd];
+              seats.forEach((s, i) => { bm.setColorAt(i, c.setHex(pal[(Math.random() * pal.length) | 0])); hm.setColorAt(i, c.setHex(skin[(Math.random() * skin.length) | 0])); });
+              bm.userData.noOutline = hm.userData.noOutline = true; bm.frustumCulled = hm.frustumCulled = false; root.add(bm, hm); BUD.crowd = { seats, bm, hm, m: new THREE.Matrix4(), q: new THREE.Quaternion(), p: new THREE.Vector3(), s: new THREE.Vector3(1, 1, 1), e: new THREE.Euler(), cheer: 0, ph: seats.map(() => Math.random() * 6.28), t: 0 }; budCrowd(0); }
+            // light rig and banners
+            for (let i = 0; i < 8; i++) { const a = i * P / 4; bx(N, 0.5, 0.25, 2.2, Math.sin(a) * 9, 11.2, Math.cos(a) * 9, 0xffffff, a - P / 2); }
+            const ringLamp = new THREE.Mesh(new THREE.TorusGeometry(9, 0.1, 8, 64).rotateX(P / 2), new THREE.MeshBasicMaterial({ color: 0xfff2d0, toneMapped: false })); ringLamp.position.y = 11.2; ringLamp.userData.noOutline = true; root.add(ringLamp);
+            const nm = new THREE.Mesh(mergeGeometries(N, false), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); nm.userData.noOutline = true; nm.frustumCulled = false; root.add(nm);
+            for (const [txt, c, a] of [['BUDOKAI', '#f2c14a', P], ['BUDOKAI', '#ff5a4a', P / 2], ['BUDOKAI', '#4a8aff', -P / 2], ['武道会', '#f2c14a', P * 0.72], ['武道会', '#f2c14a', -P * 0.72]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(11, 3.4), new THREE.MeshBasicMaterial({ map: signTexture(txt, c), toneMapped: false, transparent: true })); m.position.set(Math.sin(a) * (BUD.hall - 0.3), 9.6, Math.cos(a) * (BUD.hall - 0.3)); m.rotation.y = a + P; m.userData.noOutline = true; root.add(m); }
+            const ex = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.1), new THREE.MeshBasicMaterial({ map: signTexture('ENTRANCE', '#9ad7ff'), toneMapped: false, transparent: true })); ex.position.set(0, 4.4, BUD.hall - 0.3); ex.rotation.y = P; ex.userData.noOutline = true; root.add(ex);
+        }
+        function budCrowd(dt) {
+            const C = BUD.crowd; if (!C) return; C.t += dt; C.cheer = Math.max(0, C.cheer - dt * 0.8);
+            const up = 0.06 + C.cheer * 0.22, sp = 3 + C.cheer * 6;
+            for (let i = 0; i < C.seats.length; i++) { const s = C.seats[i], hop = Math.abs(Math.sin(C.t * sp + C.ph[i])) * up; C.p.set(s[0], s[1] + 0.52 + hop, s[2]); C.q.setFromAxisAngle(UP, s[3] + Math.PI); C.m.compose(C.p, C.q, C.s); C.bm.setMatrixAt(i, C.m); C.p.y += 0.52; C.m.compose(C.p, C.q, C.s); C.hm.setMatrixAt(i, C.m); }
+            C.bm.instanceMatrix.needsUpdate = true; C.hm.instanceMatrix.needsUpdate = true;
+        }
+        const budGround = (x, z) => (x * x + z * z < (BUD.ringR + 0.1) ** 2 ? BUD.ringH : 0);
+        const budInRing = (pos) => pos.x * pos.x + pos.z * pos.z < (BUD.ringR + 0.2) ** 2;
+        function budClamp(pos) { const r = Math.hypot(pos.x, pos.z); if (r > BUD.hall - 1.2) { pos.x *= (BUD.hall - 1.2) / r; pos.z *= (BUD.hall - 1.2) / r; } }
+        function budCollide(pos) {
+            const r = Math.hypot(pos.x, pos.z) || 1e-6, a = Math.atan2(pos.x, pos.z);                     // a = 0 at the open south side
+            if (r > BUD.stand && Math.abs(a) > 0.8) { pos.x *= BUD.stand / r; pos.z *= BUD.stand / r; }
+            if (BUD.S && BUD.S.ph !== 'idle' && !BUD.me && r < BUD.ringR + 0.9) { const k = (BUD.ringR + 0.9) / r; pos.x *= k; pos.z *= k; }      // spectators stay out of the ring while others fight
+        }
+        const budSpawn = () => ({ x: (Math.random() - 0.5) * 7, y: 0, z: 19 + Math.random() * 2, ry: Math.PI });
+        Object.assign(BUD, { k: {}, sp: [], live: false, nl: null, comboShow: null, seen: -1, text: '', textSub: '', textT: 0, P: null });
+        /* ---- fighters: moves, hits, reactions ---- */
+        BUD_MV.sl = { rate: 1.5, kind: 'dodge', side: -1, inv: 0.5, dist: 1.7 }; BUD_MV.sr = { rate: 1.5, kind: 'dodge', side: 1, inv: 0.5, dist: 1.7 };
+        const budPosOf = (F) => F.actor.group.position;
+        const budDist = (A, B) => { const a = budPosOf(A), b = budPosOf(B); return Math.hypot(a.x - b.x, a.z - b.z); };
+        function budSetStance(a, on) { if (!a) return; if (on) { a.heroW = 'hf'; a.bdOn = true; } else if (a.bdOn) { if (a.heroW === 'hf') a.heroW = null; a.bdOn = false; } }
+        function budPlay(F, key, rate, hold) {
+            const a = F.actor; if (!a || !a.playEmote) return null; const c = budClip(a, key);
+            try { a.playEmote(c.name); a.emoteRate = rate || 1; a.emoteDur = hold ? Infinity : c.dur; } catch (e) { return c; }
+            if (F === BUD.me) { try { net && net.send({ t: 'emote', name: c.send, r: rate || 1, h: hold ? 1 : 0 }); } catch (e) { /* offline */ } }
+            return c;
+        }
+        function budStand(F) { try { F.actor.playEmote('stand'); } catch (e) { /* none */ } if (F === BUD.me) { try { net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } } }
+        function budReset(F, x, face) {
+            Object.assign(F, { hp: 100, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, buf: null, combo: 0, comboDmg: 0, hurtN: 0, armor: 0, down: 0, ko: false, juggle: 0, aiT: 0, aiG: 0 }); F.kv.x = F.kv.z = 0;
+            const g = F.actor.group; g.position.set(x, BUD.ringH, 0); g.rotation.y = face; if (F === BUD.me) playerVelocity.y = 0; F.actor.firstFrame = true; budStand(F);
+        }
+        function budStart(F, key) {
+            const mv = BUD_MV[key]; if (!mv) return false; const c = budClip(F.actor, key), rate = mv.rate, dur = c.dur / rate;
+            if (mv.cost) { if (F.sp < mv.cost) return false; F.sp -= mv.cost; }
+            let hit = null;
+            if (mv.hit) hit = [mv.hit[0] * dur, mv.hit[1] * dur]; else if (c.hit && !c.custom) hit = [c.hit[0] / rate, c.hit[1] / rate]; else if (mv.kind === 'strike' || mv.kind === 'special') hit = [0.3 * dur, 0.55 * dur];
+            const hold = mv.kind === 'hold' ? [mv.hold[0] * dur, mv.hold[1] * dur] : null;
+            F.act = { key, mv, c, t: 0, dur, hit, hold, done: false }; F.st = 'act'; F.guard = false; if (mv.inv) F.inv = Math.max(F.inv, mv.inv);
+            budPlay(F, key, rate); if (mv.kind !== 'hold' && mv.kind !== 'dodge') hcSfx('swish');
+            const g = F.actor.group, p = g.position; F.act.from = { x: p.x, z: p.z }; return true;
+        }
+        function budLetter(F, L) {
+            if (F.ko || F.st === 'stun' || F.st === 'down' || F.st === 'getup' || F.st === 'win' || F.st === 'lose' || !BUD.live) return;
+            const now = nowS();
+            if (F.st === 'act') { if (F.act && F.act.mv.kind !== 'hold' && F.act.mv.kind !== 'dodge' && F.act.mv.ch && F.act.mv.ch[L]) { F.buf = L; F.bufT = now; } return; }
+            const key = ({ P: 'p1', K: 'k1', T: 'th', H: 'hd', S: 'sp', Q: 'sl', E: 'sr' })[L]; if (!key) return;
+            if ((key === 'p1' || key === 'k1') && now - (F.lastChain || -9) < 0.12) return; budStart(F, key);
+        }
+        function budHitInfo(F, A) {
+            const mv = A.mv, p = budPosOf(F); return { a: F.id, key: A.key, kind: mv.kind, dmg: mv.dmg, big: mv.big ? 1 : 0, kd: mv.kd ? 1 : 0, kb: mv.kb || 0, stun: mv.stun || 0.4, fx: p.x, fz: p.z, cb: F.combo || 0 };
+        }
+        function budCheckHit(F, dt) {
+            const A = F.act, O = F.opp; if (!A || A.done || !A.hit || !O || O.ko) return;
+            if (A.t < A.hit[0] || A.t > A.hit[1] || A.hitDone) return;
+            const p = budPosOf(F), q = budPosOf(O), dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz), fy = F.actor.group.rotation.y;
+            if (d > A.mv.reach + 0.2 || Math.abs(angDiff(Math.atan2(dx, dz), fy)) > 1.15) return;
+            A.hitDone = true; const info = budHitInfo(F, A);
+            if (O.remote) budSend({ k: 'hit', ...info }, O.id); else budResolve(O, info, F);
+        }
+        function budFace(F, O, rate, dt) { const p = budPosOf(F), q = budPosOf(O), g = F.actor.group; g.rotation.y = lerpAngle(g.rotation.y, Math.atan2(q.x - p.x, q.z - p.z), 1 - Math.exp(-dt * rate)); }
+        function budReact(D, dmg, info, kd) {
+            D.hp = Math.max(0, D.hp - dmg); D.sp = Math.min(100, D.sp + dmg * 0.8); D.comboT = -9; D.combo = 0; const now = nowS();
+            if (D.hp <= 0) return budKO(D);
+            const fx = info.fx !== undefined ? info.fx : budPosOf(D).x - 1, fz = info.fz !== undefined ? info.fz : budPosOf(D).z, p = budPosOf(D), ax = p.x - fx, az = p.z - fz, al = Math.hypot(ax, az) || 1;
+            D.act = null; D.buf = null; D.guard = false;
+            if (now - (D.hurtT || -9) > 2) D.juggle = 0; D.hurtT = now; D.juggle++;
+            if (kd || info.kd || info.kind === 'throw') { D.st = 'down'; const c = budClip(D.actor, 'kd'); D.down = c.dur / 1.15 * 0.85; D.kv.x = ax / al * 2.6; D.kv.z = az / al * 2.6; D.inv = 0; budPlay(D, 'kd', 1.15); return; }
+            if (D.armor > now) { D.kv.x = ax / al * 0.8; D.kv.z = az / al * 0.8; return; }
+            if (D.juggle >= 5) D.armor = now + 1.2;
+            if (info.big) { D.st = 'stun'; D.stun = 0.75; D.kv.x = ax / al * (info.kb || 2.2) * 1.5; D.kv.z = az / al * (info.kb || 2.2) * 1.5; budPlay(D, 'kb', 1.4); return; }
+            D.st = 'stun'; D.stun = Math.max(0.2, (info.stun || 0.4) - 0.04 * D.juggle); D.kv.x = ax / al * 0.9; D.kv.z = az / al * 0.9; D.hurtN = (D.hurtN + 1) % 2; budPlay(D, D.hurtN ? 'hit1' : 'hit2', 1.5);
+        }
+        function budKO(D) {
+            D.hp = 0; D.ko = true; D.st = 'ko'; D.act = null; D.guard = false;
+            const a = D.actor, cc = budClip(a, 'ko'); if (!cc.custom && Math.random() < 0.5) { try { a.playEmote('f_hdie2'); a.emoteRate = 1.1; a.emoteDur = Infinity; if (D === BUD.me) net && net.send({ t: 'emote', name: 'f_hdie2', r: 1.1, h: 1 }); } catch (e) { budPlay(D, 'ko', 1.1, true); } } else budPlay(D, 'ko', 1.1, true);
+            BUD.shake = 0.5; if (BUD.crowd) BUD.crowd.cheer = 1; budReport(true);
+        }
+        function budResolve(D, info, A) {      // D (a fighter on this device) is hit by info; A is the attacker if it is also on this device
+            if (!D || D.ko || D.st === 'down' || D.st === 'getup' || D.st === 'win' || D.st === 'lose' || !BUD.live) return;
+            const p = budPosOf(D), ax = info.fx - p.x, az = info.fz - p.z, fromYaw = Math.atan2(ax, az), kind = info.kind;
+            let out = 'hit', dmg = info.dmg, cd = 0; const cb = info.cb || 0; dmg = Math.max(1, Math.round(dmg * Math.max(0.55, 1 - 0.07 * cb)));
+            const actv = D.st === 'act' && D.act ? D.act : null;
+            if (D.inv > 0) { out = 'evade'; dmg = 0; }
+            else if (actv && actv.mv.kind === 'hold' && actv.hold && actv.t >= actv.hold[0] && actv.t <= actv.hold[1] && kind === 'strike') { out = 'counter'; dmg = 0; cd = 15; D.inv = 0.5; }
+            else if (kind === 'throw') { if (actv && (actv.mv.kind === 'strike' || actv.mv.kind === 'special') && actv.hit && actv.t >= actv.hit[0] - 0.05) { out = 'stuff'; dmg = 0; } else out = 'throw'; }
+            else if (D.guard && Math.abs(angDiff(fromYaw, D.actor.group.rotation.y)) < 1.5) { out = 'block'; dmg = Math.max(1, Math.round(dmg * (kind === 'special' ? 0.35 : 0.12))); }
+            const cp = { x: p.x, y: p.y + 1.15, z: p.z };
+            if (out === 'hit' || out === 'throw') budReact(D, dmg, info, out === 'throw');
+            else if (out === 'block') { D.hp = Math.max(1, D.hp - dmg); D.st = 'stun'; D.stun = 0.24; D.act = null; D.kv.x = -ax / (Math.hypot(ax, az) || 1) * 1.2; D.kv.z = -az / (Math.hypot(ax, az) || 1) * 1.2; D.sp = Math.min(100, D.sp + 2); budPlay(D, 'blk', 1.5); }
+            else if (out === 'counter') { D.sp = Math.min(100, D.sp + 6); }
+            const m = { k: 'res', a: info.a, d: D.id, out, dmg, big: info.big, cd, x: cp.x, y: cp.y, z: cp.z, hp: D.hp, sp: Math.round(D.sp), fx: p.x, fz: p.z };
+            budSend(m); budOnRes(D.id === BUD.me.id ? me.id : D.id, m);
+        }
+        function budLocalF(id) { return BUD.me && BUD.me.id === id ? BUD.me : BUD.foe && !BUD.foe.remote && BUD.foe.id === id ? BUD.foe : null; }
+        function budOnRes(from, m) {
+            if (!m || typeof m.out !== 'string') return; const out = String(m.out).slice(0, 8), dmg = budNum(m.dmg, 0, 60, 0), big = m.big ? 1 : 0, x = budNum(m.x, -60, 60, 0), y = budNum(m.y, 0, 6, 1), z = budNum(m.z, -60, 60, 0), meD = m.d === me.id;
+            if (typeof m.d === 'string') { BUD.hp[m.d] = budNum(m.hp, 0, 100, 100); BUD.hpT = nowS(); }
+            if (!BUD.group || !BUD.group.visible) return;
+            if (out === 'evade') { budPop(x, y + 0.4, z, 'EVADE', 'eva'); return; }
+            if (out === 'stuff') { budPop(x, y + 0.4, z, 'STUFFED', 'blk'); } else if (out === 'block') { budPop(x, y + 0.2, z, 'BLOCK', 'blk'); budFx(x, y, z, 'block', 0); dnBeep(380, 0.07, 'square', 0.05, 220); }
+            else if (out === 'counter') { budPop(x, y + 0.5, z, 'COUNTER!', 'crit'); budFx(x, y, z, 'counter', 1); hcSfx('hit'); }
+            else { budPop(x, y + 0.3, z, String(dmg), meD ? 'hurt' : big ? 'crit' : ''); budFx(x, y, z, out, big); hcSfx('hit'); if (out === 'throw') budPop(x, y + 0.9, z, 'THROW!', 'crit'); }
+            if (big || out === 'counter') { BUD.shake = Math.max(BUD.shake, big ? 0.3 : 0.2); if (BUD.crowd) BUD.crowd.cheer = Math.min(1, BUD.crowd.cheer + 0.45); } else if (BUD.crowd) BUD.crowd.cheer = Math.min(1, BUD.crowd.cheer + 0.12);
+            const A = budLocalF(m.a); if (!A) return; const now = nowS();
+            if (out === 'hit' || out === 'throw') { A.combo = now - A.comboT < 1.8 ? A.combo + 1 : 1; A.comboT = now; A.comboDmg = (A.combo > 1 ? A.comboDmg : 0) + dmg; A.sp = Math.min(100, A.sp + dmg * 1.2); if (A === BUD.me) BUD.comboShow = { n: A.combo, d: A.comboDmg, t: 1.8 }; }
+            else if (out === 'block') A.sp = Math.min(100, A.sp + 1);
+            else if (out === 'counter') { const cd = budNum(m.cd, 0, 40, 15); budReact(A, cd, { fx: budNum(m.fx, -60, 60, 0), fz: budNum(m.fz, -60, 60, 0), kd: 1, big: 1 }, true); budPop(x, y + 0.2, z, String(cd), A === BUD.me ? 'hurt' : 'crit'); }
+            else if (out === 'stuff') { A.st = 'stun'; A.stun = 0.5; A.act = null; budPlay(A, 'hit1', 1.4); }
+        }
+        function budOnHit(from, m) {
+            const F = BUD.me, O = BUD.foe; if (!F || !O || !O.remote || O.id !== from || !BUD.live || !m) return;
+            const kind = ['strike', 'throw', 'special'].includes(m.kind) ? m.kind : 'strike', pa = peers.get(from); if (!pa) return; const q = pa.actor.group.position, p = budPosOf(F);
+            if (Math.hypot(q.x - p.x, q.z - p.z) > 4.2) return;           // too far away to have reached
+            const info = { a: from, key: String(m.key || '').slice(0, 4), kind, dmg: budNum(m.dmg, 1, 30, 5), big: m.big ? 1 : 0, kd: m.kd ? 1 : 0, kb: budNum(m.kb, 0, 4, 0), stun: budNum(m.stun, 0.1, 1, 0.4), fx: q.x, fz: q.z, cb: budNum(m.cb, 0, 12, 0) };
+            budResolve(F, info, null);
+        }
+        /* ---- per-frame fighter simulation (for the fighters whose body is on this device: you, and the CPU) ---- */
+        function budTickF(F, dt, inp) {
+            const O = F.opp, g = F.actor.group, p = g.position, now = nowS(); if (!O) return;
+            if (F.inv > 0) F.inv -= dt;
+            const op = budPosOf(O);
+            if (F.kv.x * F.kv.x + F.kv.z * F.kv.z > 1e-4) { p.x += F.kv.x * dt; p.z += F.kv.z * dt; const k = Math.exp(-dt * 5); F.kv.x *= k; F.kv.z *= k; }
+            if (F.st === 'stun') { F.stun -= dt; if (F.stun <= 0) { F.st = 'idle'; budStand(F); } }
+            else if (F.st === 'down') { F.down -= dt; if (F.down <= 0) { F.st = 'getup'; const c = budClip(F.actor, 'up'); F.down = c.dur / 1.2; F.inv = F.down + 0.2; budPlay(F, 'up', 1.2); } }
+            else if (F.st === 'getup') { F.down -= dt; if (F.down <= 0) { F.st = 'idle'; budStand(F); } }
+            else if (F.st === 'act') {
+                const A = F.act; if (!A) { F.st = 'idle'; } else {
+                    A.t += dt; const u = Math.min(1, A.t / Math.max(0.01, A.dur * 0.6)); const stepNow = (A.mv.step || 0) * u, stepPrev = (A.mv.step || 0) * Math.min(1, (A.t - dt) / Math.max(0.01, A.dur * 0.6));
+                    if (A.mv.kind === 'dodge') { const dd = (A.mv.dist) * (Math.min(1, A.t / A.dur) - Math.min(1, (A.t - dt) / A.dur)), ux = op.x - p.x, uz = op.z - p.z, l = Math.hypot(ux, uz) || 1, fx = uz / l, fz = -ux / l; p.x += fx * dd * A.mv.side * -1; p.z += fz * dd * A.mv.side * -1; }
+                    else if (A.mv.step) { const ux = op.x - p.x, uz = op.z - p.z, l = Math.hypot(ux, uz) || 1, ds = stepNow - stepPrev; if (l > 0.95) { p.x += ux / l * ds; p.z += uz / l * ds; } }
+                    if (A.hit) budCheckHit(F, dt);
+                    if (A.mv.ch && F.buf && now - F.bufT < 0.5 && A.t >= A.dur * (A.mv.cn || 0.5)) { const nk = A.mv.ch[F.buf]; F.buf = null; F.lastChain = now; if (nk) { budStart(F, nk); F.act.chained = true; } }
+                    else if (A.t >= A.dur) { F.act = null; F.st = 'idle'; F.buf = null; budStand(F); }
+                }
+            }
+            if (F.st !== 'down' && F.st !== 'ko' && F.st !== 'getup') budFace(F, O, F.st === 'act' ? 6 : 14, dt);
+            // movement and guard
+            if ((F.st === 'idle' || F.st === 'guard') && BUD.live) {
+                const dx = op.x - p.x, dz = op.z - p.z, d = Math.hypot(dx, dz) || 1e-6, ux = dx / d, uz = dz / d, fx = uz, fz = -ux;
+                const wantG = !!inp.guard;
+                if (wantG && F.st === 'idle') { F.st = 'guard'; F.guard = true; budPlay(F, 'gd', 1.2, true); } else if (!wantG && F.st === 'guard') { F.st = 'idle'; F.guard = false; budStand(F); }
+                const sp = F.guard ? 1.1 : (inp.x > 0 ? 2.7 : 2.1), mx = ux * inp.x * (inp.x > 0 ? 2.7 : 2.1) + fx * inp.z * 2.4, mz = uz * inp.x * (inp.x > 0 ? 2.7 : 2.1) + fz * inp.z * 2.4, k = F.guard ? 0.45 : 1;
+                p.x += mx * dt * k; p.z += mz * dt * k;
+            }
+            // keep apart, keep inside the ring
+            { const dx = p.x - op.x, dz = p.z - op.z, d = Math.hypot(dx, dz); if (d < 0.9 && d > 1e-5) { const k = (0.9 - d); p.x += dx / d * k * 0.5; p.z += dz / d * k * 0.5; if (!O.remote && O.st !== 'down') { op.x -= dx / d * k * 0.5; op.z -= dz / d * k * 0.5; } } }
+            { const r = Math.hypot(p.x, p.z), R = BUD.ringR - 0.55; if (r > R) { p.x *= R / r; p.z *= R / r; } p.y = BUD.ringH; }
+        }
+        /* ---- the CPU opponent ---- */
+        function budAI(F, dt) {
+            const O = F.opp, lv = F.aiLv, inp = { x: 0, z: 0, guard: false }; if (!O || !BUD.live || F.ko) return inp;
+            if (lv.think >= 9) return inp;
+            const d = budDist(F, O), now = nowS(); F.aiT -= dt;
+            if (F.st === 'idle' || F.st === 'guard') {
+                if (d > 2.3) inp.x = 1; else if (d < 1.05) inp.x = -0.7;
+                if (F.aiZ && now < F.aiZT) inp.z = F.aiZ;
+                if (F.aiT <= 0) {
+                    F.aiT = lv.think * (0.7 + Math.random() * 0.7); const oa = O.st === 'act' && O.act && O.act.mv.kind !== 'hold' && O.act.mv.kind !== 'dodge' && O.act.t < O.act.dur * 0.55;
+                    if (oa && d < 2.6 && Math.random() < lv.grd) { if (Math.random() < 0.3) budLetter(F, Math.random() < 0.5 ? 'Q' : 'E'); else F.aiG = 0.55; }
+                    else if (d < 2.1 && Math.random() < lv.atk) { if (O.guard && Math.random() < 0.55 + lv.thr) budLetter(F, 'T'); else if (F.sp >= 50 && Math.random() < 0.3) budLetter(F, 'S'); else { budLetter(F, Math.random() < 0.5 ? 'P' : 'K'); F.aiChain = Math.random() < 0.6 ? 1 + ((Math.random() * 2) | 0) : 0; } }
+                    else if (Math.random() < 0.3) { F.aiZ = Math.random() < 0.5 ? -1 : 1; F.aiZT = now + 0.5; }
+                }
+                if (F.aiG > 0) { inp.guard = true; F.aiG -= dt; }
+            } else if (F.st === 'act' && F.aiChain > 0 && F.act && F.act.t > F.act.dur * 0.25 && !F.buf && F.act.mv.ch) { F.buf = Math.random() < 0.6 ? 'P' : 'K'; F.bufT = now; F.aiChain--; }
+            return inp;
+        }
+        /* ---- Warriors-of-Light style hit effects and floating damage numbers ---- */
+        function budFx(x, y, z, out, big) {
+            const col = out === 'block' ? 0x9ad7ff : out === 'counter' ? 0xffe14a : out === 'throw' ? 0xff8a4a : 0xffd27a;
+            try { btFxBurst(x, y, z, col, big ? 26 : 14, big ? 6 : 4, 0.45, 0.07); btFxRing(x, y, z, col, big ? 1.5 : out === 'block' ? 0.7 : 0.95, 0.35); if (big && out !== 'block') fxPlay('hit', { x, y, z }, { big: true, color: col }); } catch (e) { /* effects not ready */ }
+        }
+        function budPop(x, y, z, text, cls) {
+            if (!BUD.nl) return; if (BUD.nums.length > 22) { const o = BUD.nums.shift(); o.el.remove(); }
+            const el = document.createElement('div'); el.className = 'bud-n ' + (cls || ''); el.style.visibility = 'hidden'; el.textContent = text; BUD.nl.appendChild(el);
+            BUD.nums.push({ el, x: x + (Math.random() - 0.5) * 0.3, y, z, t: 0, vx: (Math.random() - 0.5) * 0.5 });
+        }
+        const _bv = new THREE.Vector3();
+        function budNums(dt) {
+            for (let i = BUD.nums.length - 1; i >= 0; i--) {
+                const n = BUD.nums[i]; n.t += dt; if (n.t > 1.15) { n.el.remove(); BUD.nums.splice(i, 1); continue; }
+                _bv.set(n.x + n.vx * n.t, n.y + n.t * 0.9 - n.t * n.t * 0.2, n.z).project(camera);
+                if (_bv.z > 1) { n.el.style.display = 'none'; continue; }
+                const s = n.t < 0.12 ? 0.5 + n.t / 0.12 * 0.9 : n.t < 0.2 ? 1.4 - (n.t - 0.12) / 0.08 * 0.4 : 1;
+                n.el.style.visibility = 'visible'; n.el.style.display = ''; n.el.style.opacity = n.t > 0.8 ? Math.max(0, 1 - (n.t - 0.8) / 0.35) : 1;
+                n.el.style.transform = `translate(-50%,-50%) translate(${(_bv.x * 0.5 + 0.5) * innerWidth}px,${(-_bv.y * 0.5 + 0.5) * innerHeight}px) scale(${s})`;
+            }
+        }
+        /* ---- fighters ---- */
+        const budBotAvail = () => BUD.bot && BUD.bot.actor;
+        function budBotGet() {
+            if (BUD.bot && BUD.bot.actor) return Promise.resolve(BUD.bot.actor); if (BUD.bot && BUD.bot.p) return BUD.bot.p;
+            const pr = (async () => { try { const g = Math.random() < 0.5 ? 'male' : 'female', { root, vrm } = await buildModel(getBaseBuffer(g), 'gltf', { asAvatar: true }); const a = new Actor('budbot', 'CPU'); a.gender = g; a.setModel(root, vrm); a.group.visible = false; scene.add(a.group); BUD.bot = { actor: a }; return a; } catch (e) { console.warn('budokai cpu', e); BUD.bot = null; return null; } })();
+            BUD.bot = { p: pr }; return pr;
+        }
+        const budAmIn = (S) => !!S && ((S.a && S.a.id === me.id) || (S.b && S.b.id === me.id));
+        function budMakeF(S) {
+            const mine = S.a.id === me.id ? S.a : S.b, oth = S.a.id === me.id ? S.b : S.a, left = S.a.id === me.id;
+            BUD.me = budNewF(me.id, me.name, localActor, {}); BUD.me.lvl = left;
+            if (oth.bot) { const a = BUD.bot && BUD.bot.actor; if (!a) { BUD.me = null; return false; } a.name = oth.name; a.group.visible = true; BUD.foe = budNewF(oth.id, oth.name, a, { bot: true, aiLv: BUD_LV[S.lv] || BUD_LV.normal }); }
+            else { const p = peers.get(oth.id); if (!p) { BUD.me = null; return false; } BUD.foe = budNewF(oth.id, oth.name, p.actor, { remote: true }); }
+            BUD.me.opp = BUD.foe; BUD.foe.opp = BUD.me; budSetStance(localActor, true); budSetStance(BUD.foe.actor, true); return true;
+        }
+        function budEndBout() {
+            if (BUD.me) { budStand(BUD.me); budSetStance(localActor, false); }
+            if (BUD.foe) { try { BUD.foe.actor.playEmote('stand'); } catch (e) { /* none */ } budSetStance(BUD.foe.actor, false); if (BUD.foe.bot) BUD.foe.actor.group.visible = false; }
+            BUD.me = null; BUD.foe = null; BUD.live = false; BUD.k = {}; BUD.text = ''; BUD.seen = -1; for (const s of BUD.sp) { const p = peers.get(s); if (p) budSetStance(p.actor, false); } BUD.sp = [];
+        }
+        function budReport(force) {
+            const now = nowS(); if (!force && now - BUD.sendT < 0.4) return; BUD.sendT = now; const hs = [];
+            for (const F of [BUD.me, BUD.foe]) if (F && !F.remote) { hs.push([F.id, Math.round(F.hp)]); BUD.hp[F.id] = F.hp; }
+            if (hs.length && !BUD.P) budSend({ k: 'hp', h: hs });
+        }
+        const budHpOf = (id) => { const F = budLocalF(id); return F ? F.hp : BUD.hp[id] === undefined ? 100 : BUD.hp[id]; };
+        function budPhase(S) {                 // every device: the session just moved to a new phase
+            const inM = budAmIn(S), now = nowS();
+            if (S.ph === 'idle') { if (BUD.me) budEndBout(); BUD.text = S.msg || ''; BUD.textT = now + 5; return; }
+            if (!S.a || !S.b) return;
+            if (inM && !BUD.me) { if (!budMakeF(S)) return; }
+            if (!inM && BUD.me) budEndBout();
+            for (const s of BUD.sp) { const p = peers.get(s); if (p) budSetStance(p.actor, false); } BUD.sp = [];
+            if (!inM) for (const f of [S.a, S.b]) { const p = !f.bot && peers.get(f.id); if (p) { budSetStance(p.actor, true); BUD.sp.push(f.id); } }
+            if (S.ph === 'ready') {
+                BUD.hp[S.a.id] = BUD.hp[S.b.id] = 100; BUD.live = false;
+                if (BUD.me) { const L = S.a.id === me.id; budReset(BUD.me, L ? -1.8 : 1.8, L ? Math.PI / 2 : -Math.PI / 2); BUD.me.sp = BUD.me.sp || 0; if (!BUD.foe.remote) { budReset(BUD.foe, L ? 1.8 : -1.8, L ? -Math.PI / 2 : Math.PI / 2); } else { BUD.foe.hp = 100; BUD.foe.ko = false; } BUD.me.sp = Math.min(100, BUD.me.sp); }
+                BUD.text = 'ROUND ' + S.rd; BUD.textSub = S.a.name + '  VS  ' + S.b.name; BUD.textT = now + 2.3; dnBeep(520, 0.12, 'square', 0.05);
+            } else if (S.ph === 'round') { BUD.live = true; BUD.text = 'FIGHT!'; BUD.textSub = ''; BUD.textT = now + 1; dnBeep(880, 0.2, 'square', 0.06); BUD.tlBase = S.tl; BUD.tlT = now; }
+            else if (S.ph === 'between' || S.ph === 'result') {
+                BUD.live = false; const ha = budHpOf(S.a.id), hb = budHpOf(S.b.id), ko = ha <= 0 || hb <= 0; const wid = ha === hb ? null : ha > hb ? S.a.id : S.b.id, last = S.ph === 'result';
+                BUD.text = last ? ((wid === S.a.id ? S.a.name : S.b.name) + ' WINS!') : ko ? 'K.O.!' : 'TIME UP'; BUD.textSub = last ? '' : ''; BUD.textT = now + 3;
+                if (BUD.me) { const W = wid && budLocalF(wid); if (W && !W.ko) { budPlay(W, 'win', 1, true); } const Lz = BUD.me.id !== wid ? BUD.me : (BUD.foe && !BUD.foe.remote ? BUD.foe : null); if (Lz && !Lz.ko && wid) budPlay(Lz, 'lose', 1, true); }
+                if (last && !S.prac) { if (wid === me.id) { BUD.stats.w++; try { gilAdd(40, true); lvAward('win', 40, 20); } catch (e) { /* none */ } } else if (inM) BUD.stats.l++; if (inM) budSaveStats(); }
+                if (ko && wid === me.id) { BUD.stats.ko++; budSaveStats(); }
+                hcSfx('hit');
+            } else if (S.ph === 'sim') { BUD.text = S.a.name + ' vs ' + S.b.name; BUD.textSub = 'CPU match…'; BUD.textT = now + 3; }
+        }
+        function budSync(S) { if (!S) return; if (S.n !== BUD.seen) { BUD.seen = S.n; try { budPhase(S); } catch (e) { console.warn('budokai phase', e); } } }
+        /* ---- the referee: rounds, queue, tournament ---- */
+        const budHere = (id) => id === me.id || peers.has(id);
+        const budPh = (S, ph, pt) => { S.ph = ph; S.pt = pt; S.n++; if (!S.prac) budBroadcast(S); budSync(S); };
+        function budBroadcast(S) {
+            const o = { n: S.n, ph: S.ph, mode: S.mode, a: S.a, b: S.b, w: S.w, rd: S.rd, tl: Math.round((S.tl || 0) * 10) / 10, lv: S.lv, q: S.q, tour: S.tour, msg: S.msg || '' };
+            budSend({ k: 'st', s: o });
+        }
+        function budNewS() { return { n: 0, ph: 'idle', pt: 0, mode: 'vs', a: null, b: null, w: [0, 0], rd: 1, tl: 60, lv: 'normal', q: [], tour: null, msg: '' }; }
+        function budMatch(S, a, b, mode, lv) { S.a = a; S.b = b; S.mode = mode; S.lv = lv || 'normal'; S.w = [0, 0]; S.rd = 1; S.msg = ''; S.tl = 60; budPh(S, 'ready', 3); }
+        function budRoundEnd(S, side, why) {
+            if (side === 0 || side === 1) S.w[side]++; else S.w[Math.random() < 0.5 ? 0 : 1]++;
+            S.tl = 0; const done = S.w[0] >= 2 || S.w[1] >= 2; budPh(S, done ? 'result' : 'between', done ? 4.5 : 3.2);
+        }
+        function budMatchDone(S) {
+            const ws = S.w[0] >= S.w[1] ? 0 : 1, W = ws ? S.b : S.a, L = ws ? S.a : S.b;
+            if (S.prac) { S.msg = ''; budPh(S, 'idle', 0); BUD.P = null; BUD.menuOpen = true; return; }
+            if (S.mode === 'tour' && S.tour) { const pr = S.tour.br[S.tour.r][S.tour.m]; if (pr) { pr.w = W.id; } S.tour.m++; }
+            else { S.q = S.q.filter((x) => x.id !== W.id && x.id !== L.id); if (!W.bot) S.q.unshift({ id: W.id, name: W.name }); if (!L.bot) S.q.push({ id: L.id, name: L.name }); }
+            S.a = S.b = null; S.msg = ''; budPh(S, 'idle', 0);
+        }
+        function budTourNext(S) {
+            const T = S.tour; if (!T || T.ph !== 'run') return;
+            let pr = T.br[T.r][T.m];
+            if (!pr) {
+                const win = T.br[T.r].map((p) => ({ id: p.w, name: p.a.id === p.w ? p.a.name : p.b.name, bot: p.a.id === p.w ? p.a.bot : p.b.bot }));
+                if (win.length <= 1) { const c = win[0]; S.msg = '🏆 ' + c.name + ' is the BUDOKAI CHAMPION!'; S.tour = null; S.n++; budBroadcast(S); budSync(S); budSend({ k: 'champ', id: c.id, name: c.name }); budOnChamp(c.id, c.name); return; }
+                const nx = []; for (let i = 0; i < win.length; i += 2) nx.push({ a: win[i], b: win[i + 1], w: null }); T.br.push(nx); T.r++; T.m = 0; S.n++; budBroadcast(S); return;
+            }
+            const hb = (x) => x.bot || budHere(x.id);
+            if (!hb(pr.a) || !hb(pr.b)) { pr.w = hb(pr.a) ? pr.a.id : pr.b.id; T.m++; S.n++; budBroadcast(S); return; }
+            const lv = T.r === 0 ? 'normal' : 'hard';
+            if (pr.a.bot && pr.b.bot) { S.a = pr.a; S.b = pr.b; S.mode = 'tour'; S.w = [0, 0]; S.simW = Math.random() < 0.5 ? 0 : 1; budPh(S, 'sim', 3.4); }
+            else budMatch(S, pr.a, pr.b, 'tour', lv);
+        }
+        function budTourStart(S) {
+            const T = S.tour; if (!T) return; const hum = T.p.filter((x) => budHere(x.id)); if (!hum.length) { S.tour = null; S.msg = 'Tournament cancelled'; S.n++; budBroadcast(S); return; }
+            const size = hum.length <= 4 ? 4 : 8, names = BUD_NAMES.slice().sort(() => Math.random() - 0.5), ent = hum.map((x) => ({ id: x.id, name: x.name, bot: 0 }));
+            for (let i = 0; ent.length < size; i++) ent.push({ id: 'cpu:' + i, name: names[i % names.length], bot: 1 });
+            ent.sort(() => Math.random() - 0.5); const r0 = []; for (let i = 0; i < size; i += 2) r0.push({ a: ent[i], b: ent[i + 1], w: null });
+            T.ph = 'run'; T.br = [r0]; T.r = 0; T.m = 0; S.n++; budBroadcast(S);
+        }
+        function budOnChamp(id, name) { BUD.text = '🏆 ' + name + ' wins the tournament!'; BUD.textSub = ''; BUD.textT = nowS() + 6; if (id === me.id) { BUD.stats.tour++; budSaveStats(); try { gilAdd(400, true); lvAward('win', 150, 30); } catch (e) { /* none */ } } hcSfx('hit'); if (BUD.crowd) BUD.crowd.cheer = 1; }
+        function budRefTick(S, dt) {
+            if (!S.prac) S.q = S.q.filter((x) => budHere(x.id));
+            if (S.ph === 'idle') {
+                if (S.tour) { const T = S.tour; if (T.ph === 'reg') { T.p = T.p.filter((x) => budHere(x.id)); T.t -= dt; if (T.t <= 0 || T.p.length >= 8) budTourStart(S); else { BUD.regB = (BUD.regB || 0) + dt; if (BUD.regB > 1) { BUD.regB = 0; budBroadcast(S); } } } else { S.pt -= dt; if (S.pt < 0) { S.pt = 1.5; budTourNext(S); } } }
+                else if (S.q.length >= 2 && !S.prac) { const [x, y] = S.q.splice(0, 2); budMatch(S, { id: x.id, name: x.name, bot: 0 }, { id: y.id, name: y.name, bot: 0 }, 'vs', 'normal'); }
+                return;
+            }
+            S.pt -= dt;
+            const away = (f) => !f.bot && !S.prac && !budHere(f.id);
+            if (S.ph === 'sim') { if (S.pt <= 0) { S.w = S.simW ? [0, 2] : [2, 0]; const pr = S.tour && S.tour.br[S.tour.r][S.tour.m]; if (pr) pr.w = S.simW ? S.b.id : S.a.id; S.tour.m++; S.a = S.b = null; budPh(S, 'idle', 1.5); } return; }
+            if (S.a && S.b && (away(S.a) || away(S.b)) && S.ph !== 'result') { S.w = away(S.a) ? [0, 2] : [2, 0]; budPh(S, 'result', 3); return; }
+            if (S.ph === 'ready') { if (S.pt <= 0) { S.tl = 60; BUD.tlBase = 60; budPh(S, 'round', 60); } }
+            else if (S.ph === 'round') {
+                S.tl = Math.max(0, S.pt); const ha = budHpOf(S.a.id), hb = budHpOf(S.b.id);
+                if (ha <= 0 || hb <= 0) { if (ha <= 0 && hb <= 0) budRoundEnd(S, null); else budRoundEnd(S, ha <= 0 ? 1 : 0); }
+                else if (S.pt <= 0) budRoundEnd(S, ha === hb ? null : ha > hb ? 0 : 1);
+                else { BUD.stB = (BUD.stB || 0) + dt; if (!S.prac && BUD.stB > 0.5) { BUD.stB = 0; budBroadcast(S); } }
+            } else if (S.ph === 'between') { if (S.pt <= 0) { S.rd++; S.tl = 60; budPh(S, 'ready', 2.6); } }
+            else if (S.ph === 'result') { if (S.pt <= 0) budMatchDone(S); }
+        }
+        function budOnMsg(from, m) {
+            if (!m || typeof m.k !== 'string') return;
+            switch (m.k) {
+                case 'st': { if (budIsRef() || String(from) !== BUD.refId() || BUD.P) break; const s = m.s; if (!s || typeof s.n !== 'number' || (s.ph !== 'idle' && (!s.a || !s.b))) break; BUD.S = s; if (s.ph === 'round') { BUD.tlBase = s.tl; BUD.tlT = nowS(); } budSync(s); break; }
+                case 'ask': if (budIsRef() && BUD.S) budBroadcast(BUD.S); break;
+                case 'hp': { if (!Array.isArray(m.h)) break; for (const e of m.h.slice(0, 2)) if (Array.isArray(e) && typeof e[0] === 'string') BUD.hp[e[0]] = budNum(e[1], 0, 100, 100); break; }
+                case 'res': { if (m.d === me.id || (BUD.foe && BUD.foe.id === m.d && !BUD.foe.remote)) break; budOnRes(from, m); break; }
+                case 'hit': if (m.to === undefined || m.to === me.id) budOnHit(from, m); break;
+                case 'q': if (budIsRef() && BUD.S) { const S = BUD.S, nm = budPeerName(from); S.q = S.q.filter((x) => x.id !== from); if (m.on && !budInMatch(S, from)) S.q.push({ id: from, name: nm }); S.n++; budBroadcast(S); } break;
+                case 'tj': if (budIsRef() && BUD.S && BUD.S.tour && BUD.S.tour.ph === 'reg') { const T = BUD.S.tour; T.p = T.p.filter((x) => x.id !== from); if (m.on && T.p.length < 8) T.p.push({ id: from, name: budPeerName(from) }); BUD.S.n++; budBroadcast(BUD.S); } break;
+                case 'tnew': if (budIsRef() && BUD.S && !BUD.S.tour && BUD.S.ph === 'idle') { BUD.S.tour = { ph: 'reg', t: 25, p: [{ id: from, name: budPeerName(from) }], br: null, r: 0, m: 0 }; BUD.S.msg = ''; BUD.S.n++; budBroadcast(BUD.S); } break;
+                case 'champ': if (typeof m.id === 'string' && String(from) === BUD.refId()) budOnChamp(m.id, String(m.name || '').slice(0, 20)); break;
+            }
+        }
+        const budInMatch = (S, id) => !!S.a && !!S.b && S.ph !== 'idle' && (S.a.id === id || S.b.id === id);
+        BUD.refId = () => { let best = String(me.id); for (const k of peers.keys()) if (String(k) < best) best = String(k); return best; };
+        /* ---- actions from the menu ---- */
+        async function budPractice(lv) {
+            if (BUD.P || (BUD.S && BUD.S.ph !== 'idle' && budAmIn(BUD.S))) return;
+            const a = await budBotGet(); if (!a) { sysChat('The CPU fighter could not load.'); return; }
+            const S = budNewS(); S.prac = 1; S.mode = 'prac'; S.lv = lv; S.a = { id: me.id, name: me.name, bot: 0 }; S.b = { id: 'cpu:p', name: 'CPU ' + (BUD_LV[lv] || BUD_LV.normal).n, bot: 1 }; BUD.P = S; BUD.seen = -1; BUD.menuOpen = false; BUD.hp = {}; S.w = [0, 0]; S.rd = 1; budPh(S, 'ready', 3);
+        }
+        function budQuitPractice() { const S = BUD.P; if (!S) return; BUD.P = null; budEndBout(); BUD.menuOpen = true; BUD.text = ''; BUD.seen = -1; }
+        function budQueue(on) { const S = BUD.S; if (!S) return; if (budIsRef()) { S.q = S.q.filter((x) => x.id !== me.id); if (on && !budInMatch(S, me.id)) S.q.push({ id: me.id, name: me.name }); S.n++; budBroadcast(S); } else budSend({ k: 'q', on: on ? 1 : 0 }); BUD.inQ = !!on; }
+        function budTour(on) { const S = BUD.S; if (!S) return; if (!S.tour) { if (!on) return; if (S.ph !== 'idle') { sysChat('A match is in progress. Try again when it ends.'); return; } if (budIsRef()) { S.tour = { ph: 'reg', t: 25, p: [{ id: me.id, name: me.name }], br: null, r: 0, m: 0 }; S.msg = ''; S.n++; budBroadcast(S); } else budSend({ k: 'tnew' }); return; } if (S.tour.ph !== 'reg') return; if (budIsRef()) { S.tour.p = S.tour.p.filter((x) => x.id !== me.id); if (on && S.tour.p.length < 8) S.tour.p.push({ id: me.id, name: me.name }); S.n++; budBroadcast(S); } else budSend({ k: 'tj', on: on ? 1 : 0 }); }
+        function budOpen() { try { joinRoom('budokai-01', { label: 'Budokai Arena • Channel 1', map: 'budokai' }); } catch (e) { sysChat('Could not open the Budokai arena.'); } }
+        /* ---- HUD, menu, controls, camera ---- */
+        function budCss() {
+            if (document.getElementById('bud-css')) return; const st = document.createElement('style'); st.id = 'bud-css';
+            st.textContent = `#bud-hud{position:fixed;inset:0;z-index:40;pointer-events:none;display:none;font-family:Orbitron,Nunito,sans-serif;color:#fff}#bud-hud.on{display:block}
+#bud-nl{position:fixed;inset:0;z-index:41;pointer-events:none;overflow:hidden}.bud-n{position:absolute;left:0;top:0;font:900 26px Orbitron,Arial Black,sans-serif;color:#fff;text-shadow:0 0 6px #000,2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000;white-space:nowrap;will-change:transform}
+.bud-n.hurt{color:#ff6b6b}.bud-n.crit{color:#ffd24a;font-size:36px}.bud-n.blk{color:#9ad7ff;font-size:18px}.bud-n.eva{color:#b8ffc4;font-size:18px}
+#bud-top{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:min(94vw,820px);display:flex;align-items:flex-start;gap:10px}
+.bud-side{flex:1;min-width:0}.bud-side.r{text-align:right}.bud-nm{font-weight:800;font-size:13px;letter-spacing:.06em;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bud-bar{height:16px;background:rgba(0,0,0,.6);border:2px solid #f2c14a;border-radius:3px;overflow:hidden;transform:skewX(-14deg);margin:3px 4px}.bud-bar i{display:block;height:100%;background:linear-gradient(#ffe36a,#e8a21a);transition:width .12s}.bud-side.r .bud-bar i{margin-left:auto}.bud-bar i.low{background:linear-gradient(#ff8a7a,#d0342c)}
+.bud-sp{height:7px;background:rgba(0,0,0,.55);border:1px solid #9ad7ff;border-radius:2px;overflow:hidden;transform:skewX(-14deg);margin:0 4px;width:70%}.bud-side.r .bud-sp{margin-left:auto}.bud-sp i{display:block;height:100%;background:#5ab8ff;transition:width .12s}.bud-sp.full i{background:#fff;box-shadow:0 0 8px #9ad7ff}
+.bud-pips{display:flex;gap:4px;margin:2px 4px;height:12px}.bud-side.r .bud-pips{justify-content:flex-end}.bud-pips b{width:12px;height:12px;border-radius:50%;border:2px solid #f2c14a;background:rgba(0,0,0,.5)}.bud-pips b.on{background:#f2c14a}
+#bud-tm{width:64px;text-align:center;font:900 28px Orbitron,sans-serif;text-shadow:0 2px 4px #000;color:#f4efe2;padding-top:6px}
+#bud-ct{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);text-align:center;font:900 clamp(34px,8vw,84px) Orbitron,sans-serif;color:#ffd24a;text-shadow:0 0 18px rgba(255,140,40,.8),4px 4px 0 #000;letter-spacing:.06em;white-space:nowrap}#bud-ct small{display:block;font-size:clamp(13px,2.4vw,22px);color:#fff;letter-spacing:.12em;text-shadow:0 2px 4px #000}
+#bud-cb{position:absolute;left:3vw;top:38%;font:900 22px Orbitron,sans-serif;color:#fff;text-shadow:0 0 8px #000,2px 2px 0 #000;display:none;line-height:1.1}#bud-cb b{font-size:54px;color:#ffd24a}#bud-cb small{display:block;font-size:12px;color:#9ad7ff}
+#bud-mn{position:absolute;right:10px;top:76px;width:min(86vw,270px);max-height:calc(100% - 200px);overflow:auto;background:rgba(14,10,20,.9);border:2px solid #f2c14a;border-radius:10px;padding:10px;pointer-events:auto;font:700 12px Nunito,sans-serif}
+#bud-mn h4{margin:6px 0 4px;font:900 12px Orbitron,sans-serif;color:#f2c14a;letter-spacing:.1em}.bud-r{display:flex;flex-wrap:wrap;gap:5px}.bud-b{pointer-events:auto;cursor:pointer;border:1px solid #f2c14a;background:rgba(242,193,74,.12);color:#fff;border-radius:6px;padding:6px 9px;font:800 12px Nunito,sans-serif}.bud-b:hover,.bud-b.on{background:#f2c14a;color:#201400}.bud-b.dng{border-color:#ff7a7a}
+#bud-mt{position:absolute;right:10px;top:46px;pointer-events:auto;cursor:pointer;border:1px solid #f2c14a;background:rgba(14,10,20,.85);color:#f2c14a;border-radius:6px;padding:4px 10px;font:900 11px Orbitron,sans-serif}
+#bud-br{margin-top:4px;font:700 11px Nunito,sans-serif;color:#ddd}.bud-q{font-size:11px;color:#cfd;margin:2px 0}
+#bud-pad{position:absolute;left:0;right:0;bottom:10px;display:none;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 8px;pointer-events:none}#bud-pad.on{display:flex}
+#bud-pad button{pointer-events:auto;touch-action:none;width:52px;height:52px;border-radius:50%;border:2px solid #f2c14a;background:rgba(14,10,20,.7);color:#fff;font:900 14px Orbitron,sans-serif}#bud-pad button:active{background:#f2c14a;color:#201400}
+body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff}.bud-b.pf{outline:2px solid #fff}@media (min-width:900px) and (pointer:fine){#bud-pad{display:none!important}}`;
+            document.head.appendChild(st);
+        }
+        function budHudBuild() {
+            if (BUD.hud) return; budCss();
+            const h = document.createElement('div'); h.id = 'bud-hud';
+            h.innerHTML = `<div id="bud-top"><div class="bud-side"><div class="bud-nm" id="bud-n1"></div><div class="bud-bar"><i id="bud-h1"></i></div><div class="bud-sp" id="bud-s1"><i></i></div><div class="bud-pips" id="bud-p1"></div></div><div id="bud-tm">60</div><div class="bud-side r"><div class="bud-nm" id="bud-n2"></div><div class="bud-bar"><i id="bud-h2"></i></div><div class="bud-pips" id="bud-p2"></div></div></div>
+<div id="bud-ct"></div><div id="bud-cb"></div><button id="bud-mt" type="button">MENU</button><div id="bud-mn"></div>
+<div id="bud-pad"><button class="mv" data-m="a">◀</button><button class="mv" data-m="d">▶</button><button class="mv" data-m="w">▲</button><button class="mv" data-m="s">▼</button><button data-l="P">P</button><button data-l="K">K</button><button data-l="T">T</button><button data-g="H" data-l="H">H</button><button data-gd="1">G</button><button data-l="S">SP</button></div>`;
+            document.body.appendChild(h); BUD.hud = h; const nl = document.createElement('div'); nl.id = 'bud-nl'; document.body.appendChild(nl); BUD.nl = nl;
+            h.querySelector('#bud-mt').addEventListener('click', () => { BUD.menuOpen = !BUD.menuOpen; BUD.lastHud = ''; });
+            h.querySelector('#bud-mn').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, v = b.dataset.v;
+                if (a === 'prac') budPractice(v); else if (a === 'quit') budQuitPractice(); else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
+                else if (a === 'moves') { try { openAnimations(); } catch (er) { sysChat('Open your Animations panel to set Budokai moves.'); } } else if (a === 'leave') { try { openLobby(); } catch (er) { /* none */ } }
+                else if (a === 'help') { BUD.help = !BUD.help; } BUD.lastHud = '';
+            });
+            const pad = h.querySelector('#bud-pad');
+            pad.addEventListener('pointerdown', (e) => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); if (b.dataset.m) BUD.k[b.dataset.m] = 1; else if (b.dataset.gd) BUD.k.g = 1; else if (b.dataset.l) { BUD.touchL = b.dataset.l; budPress(b.dataset.l); if (b.dataset.g) BUD.k.h = 1; } });
+            const up = (e) => { for (const b of pad.querySelectorAll('button')) { if (b.dataset.m) BUD.k[b.dataset.m] = 0; if (b.dataset.gd) BUD.k.g = 0; } };
+            pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up); pad.addEventListener('pointerleave', up);
+            const KM = { j: 'P', k: 'K', l: 'T', h: 'H', u: 'S', q: 'Q', e: 'E' };
+            const act = () => activeMap === 'budokai' && BUD.me && BUD.hudOn;
+            window.addEventListener('keydown', (e) => {
+                if (!act()) return; const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+                const k = e.key.toLowerCase(); let used = true;
+                if (k in KM) { if (!e.repeat) budPress(KM[k]); } else if (k === 'a' || k === 'arrowleft') BUD.k.a = 1; else if (k === 'd' || k === 'arrowright') BUD.k.d = 1; else if (k === 'w' || k === 'arrowup') BUD.k.w = 1; else if (k === 's' || k === 'arrowdown') BUD.k.s = 1; else if (k === ' ' || k === 'shift' || k === 'g') BUD.k.g = 1; else used = false;
+                if (used) { e.preventDefault(); e.stopPropagation(); }
+            }, true);
+            window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (k === 'a' || k === 'arrowleft') BUD.k.a = 0; else if (k === 'd' || k === 'arrowright') BUD.k.d = 0; else if (k === 'w' || k === 'arrowup') BUD.k.w = 0; else if (k === 's' || k === 'arrowdown') BUD.k.s = 0; else if (k === ' ' || k === 'shift' || k === 'g') BUD.k.g = 0; if (!act()) return; if (k in KM || k === ' ' || k === 'shift') { e.preventDefault(); e.stopPropagation(); } }, true);
+            window.addEventListener('blur', () => { BUD.k = {}; });
+        }
+
+        /* ---- gamepad (called from padUpdate; returns true when Budokai owns the controller this frame) ---- */
+        function budPadAct(b, hit, lx, ly) {
+            if (activeMap !== 'budokai' || !BUD.hudOn) return false;
+            if (!BUD.me) {
+                if (hit(9)) { BUD.menuOpen = !BUD.menuOpen; BUD.lastMn = ''; }
+                if (!BUD.menuOpen) return false;
+                const bs = Array.from(document.querySelectorAll('#bud-mn .bud-b')); if (!bs.length) return false;
+                if (hit(12) || hit(13) || hit(14) || hit(15)) { BUD.padI = ((BUD.padI | 0) + (hit(13) || hit(15) ? 1 : -1) + bs.length) % bs.length; }
+                BUD.padI = Math.min(BUD.padI | 0, bs.length - 1); bs.forEach((x, i) => x.classList.toggle('pf', i === BUD.padI));
+                if (hit(0)) bs[BUD.padI].click(); if (hit(1) && BUD.help) { BUD.help = false; BUD.lastMn = ''; }
+                return false;
+            }
+            const k = BUD.k, T = 0.35; BUD.pk = true;
+            k.d = (lx > T || b[15]) ? 1 : 0; k.a = (lx < -T || b[14]) ? 1 : 0; k.w = (ly < -0.5 || b[12]) ? 1 : 0; k.s = (ly > 0.5 || b[13]) ? 1 : 0; k.g = (b[4] || b[6]) ? 1 : 0;
+            if (hit(2)) budPress('P'); if (hit(0)) budPress('K'); if (hit(3)) budPress('T'); if (hit(1)) budPress('H'); if (hit(5)) budPress('S');
+            if (hit(7)) budPress(lx < -T ? 'Q' : 'E'); if (hit(9)) { BUD.menuOpen = !BUD.menuOpen; BUD.lastMn = ''; }
+            return true;
+        }
+        function budPress(L) { if (BUD.me && BUD.live) budLetter(BUD.me, L); }
+        function budMenuHtml() {
+            const S = BUD.P || BUD.S, inM = budAmIn(S) && S.ph !== 'idle', T = BUD.S && BUD.S.tour, q = BUD.S ? BUD.S.q : [], on = (x) => (BUD.level === x ? ' on' : '');
+            let h = '';
+            if (BUD.help) return `<h4>CONTROLS</h4><div style="line-height:1.55">A / D move away / toward<br>W / S sidestep in / out<br><b>J</b> punch · <b>K</b> kick · <b>L</b> throw · <b>H</b> hold<br><b>Space / Shift / G</b> guard (hold)<br><b>Q / E</b> dodge left / right<br><b>U</b> special (needs 50 SP)<br><br><b>Combos:</b> J J J · K K K · J J K · K K J · J then K · K then J (press the next button as the move lands).<br><b>Triangle:</b> strikes beat throws, throws beat guards, holds catch strikes (counter).<br><b>Gamepad:</b> stick/D-pad move &amp; sidestep · X punch · A kick · Y throw · B hold · LT/LB guard · RB special · RT+stick dodge · Start menu.<br>Your own animations: open <i>My moves</i> and set the “Budokai” slots.</div><div class="bud-r" style="margin-top:8px"><button class="bud-b" data-a="help">Back</button></div>`;
+            if (BUD.P) h += `<h4>PRACTICE</h4><div class="bud-r"><button class="bud-b dng" data-a="quit">Quit practice</button></div>`;
+            else if (inM) h += `<h4>${S.mode === 'tour' ? 'TOURNAMENT' : 'VERSUS'}</h4><div class="bud-q">Match in progress — best of 3.</div>`;
+            else {
+                h += `<h4>PRACTICE (CPU)</h4><div class="bud-r">${Object.keys(BUD_LV).map((k) => `<button class="bud-b${on(k)}" data-a="prac" data-v="${k}">${BUD_LV[k].n}</button>`).join('')}</div>`;
+                h += `<h4>ONLINE VERSUS</h4><div class="bud-r"><button class="bud-b${BUD.inQ ? ' on' : ''}" data-a="q">${BUD.inQ ? 'Leave queue' : 'Join queue'}</button></div><div class="bud-q">${q.length ? 'Queue: ' + q.map((x, i) => (i + 1) + '. ' + String(x.name).replace(/[<>&]/g, '')).join('  ') : 'Queue empty — winner stays on'}</div>`;
+                const mineT = T && T.p && T.p.some((x) => x.id === me.id);
+                h += `<h4>TOURNAMENT</h4><div class="bud-r"><button class="bud-b${mineT ? ' on' : ''}" data-a="tour">${!T ? 'Start a tournament' : T.ph !== 'reg' ? 'In progress' : mineT ? 'Leave tournament' : 'Join tournament'}</button></div>`;
+                if (T && T.ph === 'reg') h += `<div class="bud-q">Sign-up ${Math.max(0, Math.ceil(T.t))}s · ${T.p.length}/8 fighters (CPU fills the bracket)</div>`;
+            }
+            if (S && S.mode === 'tour' || T) h += budBracketHtml(T);
+            h += `<h4>YOU</h4><div class="bud-q">Wins ${BUD.stats.w} · Losses ${BUD.stats.l} · KOs ${BUD.stats.ko} · Titles ${BUD.stats.tour}</div><div class="bud-r"><button class="bud-b" data-a="moves">My moves</button><button class="bud-b" data-a="help">Controls</button><button class="bud-b dng" data-a="leave">Leave arena</button></div>`;
+            return h;
+        }
+        function budBracketHtml(T) {
+            if (!T || !T.br) return ''; const nm = (x) => String(x.name).replace(/[<>&]/g, '').slice(0, 10), rows = T.br.map((r, i) => `<div>R${i + 1}: ${r.map((p) => `<span style="${p.w ? '' : 'opacity:.8'}">${p.w === p.a.id ? '<b>' + nm(p.a) + '</b>' : nm(p.a)} v ${p.w === p.b.id ? '<b>' + nm(p.b) + '</b>' : nm(p.b)}</span>`).join(' · ')}</div>`).join('');
+            return `<h4>BRACKET</h4><div id="bud-br">${rows}</div>`;
+        }
+        function budHud() {
+            if (!BUD.hud) return; const on = activeMap === 'budokai'; if (BUD.hudOn !== on) { BUD.hudOn = on; document.body.classList.toggle('bud-on', on); BUD.hud.classList.toggle('on', on); BUD.nl.style.display = on ? '' : 'none'; } if (!on) return;
+            const S = BUD.P || BUD.S, $ = (i) => document.getElementById(i), now = nowS(), show = !!(S && S.ph !== 'idle' && S.a && S.b);
+            $('bud-top').style.display = show ? 'flex' : 'none';
+            if (show) {
+                let L = S.a, R = S.b, wl = S.w[0], wr = S.w[1]; if (S.b.id === me.id) { L = S.b; R = S.a; wl = S.w[1]; wr = S.w[0]; }
+                const hl = budHpOf(L.id), hr = budHpOf(R.id); $('bud-n1').textContent = L.name; $('bud-n2').textContent = R.name;
+                for (const [id, h] of [['bud-h1', hl], ['bud-h2', hr]]) { const e = $(id); e.style.width = Math.max(0, h) + '%'; e.classList.toggle('low', h < 28); }
+                const pips = (w) => `<b class="${w >= 1 ? 'on' : ''}"></b><b class="${w >= 2 ? 'on' : ''}"></b>`; $('bud-p1').innerHTML = pips(wl); $('bud-p2').innerHTML = pips(wr);
+                const sp = BUD.me ? BUD.me.sp : 0, se = $('bud-s1'); se.style.display = BUD.me ? '' : 'none'; se.firstChild.style.width = sp + '%'; se.classList.toggle('full', sp >= 50);
+                const tl = S.ph === 'round' ? Math.max(0, (BUD.tlBase !== undefined ? BUD.tlBase : S.tl) - (BUD.P ? 0 : now - BUD.tlT)) : S.ph === 'ready' ? 60 : Math.max(0, S.tl); $('bud-tm').textContent = BUD.P && S.ph === 'round' ? Math.ceil(S.pt) : Math.ceil(tl);
+            }
+            const ct = $('bud-ct'), tx = now < BUD.textT ? BUD.text : (S && S.msg && now < BUD.textT ? S.msg : ''); const sig = tx + '|' + BUD.textSub; if (BUD.lastCt !== sig) { BUD.lastCt = sig; ct.innerHTML = tx ? `${tx.replace(/[<>&]/g, '')}${BUD.textSub ? '<small>' + BUD.textSub.replace(/[<>&]/g, '') + '</small>' : ''}` : ''; }
+            const cb = $('bud-cb'), cs = BUD.comboShow; if (cs && cs.n >= 2 && cs.t > 0) { cb.style.display = 'block'; cb.innerHTML = `<b>${cs.n}</b> HITS<small>${cs.d} damage</small>`; } else cb.style.display = 'none';
+            $('bud-pad').classList.toggle('on', !!BUD.me); $('bud-mt').textContent = BUD.menuOpen ? 'HIDE' : 'MENU';
+            const mn = $('bud-mn'); mn.style.display = BUD.menuOpen ? '' : 'none';
+            if (BUD.menuOpen) { const sig2 = JSON.stringify([BUD.S && BUD.S.n, BUD.S && BUD.S.q, BUD.S && BUD.S.tour && BUD.S.tour.t | 0, !!BUD.P, BUD.inQ, BUD.help, BUD.me && 1, BUD.stats, BUD.S && BUD.S.ph, peers.size]) + BUD.lastHud; if (sig2 !== BUD.lastMn) { BUD.lastMn = sig2; mn.innerHTML = budMenuHtml(); } }
+            if (BUD.lastHud === '') BUD.lastMn = '';
+            BUD.lastHud = BUD.lastHud === '' ? ' ' : BUD.lastHud;
+        }
+        /* ---- camera: side-on view of the two fighters, you on the left ---- */
+        function budKeepCam() {
+            const now = nowS(), dt = clamp(now - (BUD.rigT || now), 0, 0.1); BUD.rigT = now;
+            if (BUD.me && BUD.foe && !fpOn) {
+                if (!BUD.rigWas) { BUD.rigWas = true; controls.enableRotate = false; controls.enableZoom = false; BUD.camP = null; }
+                const a = BUD.me.actor.group.position, b = BUD.foe.actor.group.position, mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+                const D = clamp(d * 1.15 + 4.8, 6, 10), cx = mx - uz * D, cz = mz + ux * D, cy = 2.5 + d * 0.12, k = 1 - Math.exp(-dt * 6), sh = BUD.shake; BUD.shake = Math.max(0, sh - dt * 1.4);
+                const T = { x: cx + (Math.random() - 0.5) * sh * 0.25, y: cy + (Math.random() - 0.5) * sh * 0.25, z: cz + (Math.random() - 0.5) * sh * 0.25 };
+                if (!BUD.camP) BUD.camP = { x: cx, y: cy, z: cz, tx: mx, tz: mz }; const P = BUD.camP; P.x += (cx - P.x) * k; P.y += (cy - P.y) * k; P.z += (cz - P.z) * k; P.tx += (mx - P.tx) * k; P.tz += (mz - P.tz) * k;
+                camera.position.set(P.x + (T.x - cx), P.y + (T.y - cy), P.z + (T.z - cz)); controls.target.set(P.tx, 1.15, P.tz); camera.lookAt(P.tx, 1.15, P.tz); return;
+            }
+            if (BUD.rigWas) { BUD.rigWas = false; controls.enableRotate = true; controls.enableZoom = true; }
+            const c = camera.position, r = Math.hypot(c.x, c.z); if (r > BUD.hall - 1) { c.x *= (BUD.hall - 1) / r; c.z *= (BUD.hall - 1) / r; } if (c.y > 12) c.y = 12;
+        }
+        const budLock = () => activeMap === 'budokai' && !!BUD.me;
+        function budMapChanged(id) {
+            if (id === 'budokai') {
+                ensureBudokai(); budHudBuild(); BUD.group.visible = true; BUD.S = budNewS(); BUD.P = null; BUD.seen = -1; BUD.hp = {}; BUD.inQ = false; BUD.k = {}; BUD.me = BUD.foe = null; BUD.live = false; BUD.menuOpen = true; BUD.help = false; BUD.wasRef = true; BUD.hbT = 0; BUD.text = ''; BUD.lastMn = ''; BUD.bgT = nowS(); try { budBotGet(); } catch (e) { /* later */ }
+                setTimeout(() => { if (activeMap === 'budokai' && BUD.S && BUD.S.n === 0 && !budIsRef()) budSend({ k: 'ask' }); }, 1500);
+            } else if (BUD.ready) {
+                BUD.group.visible = false; if (BUD.me || BUD.foe) budEndBout(); BUD.P = null; BUD.S = null; if (BUD.rigWas) { BUD.rigWas = false; try { controls.enableRotate = true; controls.enableZoom = true; } catch (e) { /* none */ } }
+                for (const n of BUD.nums) n.el.remove(); BUD.nums = []; if (BUD.bot && BUD.bot.actor) BUD.bot.actor.group.visible = false; BUD.hudOn = true; budHud();
+            }
+        }
+        function budUpdate(g, dt) {
+            if (!BUD.ready || activeMap !== 'budokai') return; dt = Math.min(dt, 0.05); BUD.t += dt;
+            budCrowd(dt); budNums(dt); if (BUD.comboShow) { BUD.comboShow.t -= dt; }
+            const ref = budIsRef(); if (BUD.S && !BUD.P) {
+                if (ref && !BUD.wasRef) { if (BUD.S.ph !== 'idle') { BUD.S.a = BUD.S.b = null; BUD.S.tour = null; BUD.S.msg = 'Referee changed — match reset'; budPh(BUD.S, 'idle', 0); } }
+                BUD.wasRef = ref;
+                if (ref) { BUD.hbT += dt; if (BUD.hbT > 2.5) { BUD.hbT = 0; budBroadcast(BUD.S); } budRefTick(BUD.S, dt); }
+            }
+            if (BUD.P) budRefTick(BUD.P, dt);
+            if (BUD.me && BUD.foe) {
+                const k = BUD.k, inp = { x: (k.d ? 1 : 0) - (k.a ? 1 : 0), z: (k.w ? 1 : 0) - (k.s ? 1 : 0), guard: !!k.g };
+                if (BUD.live || BUD.me.st === 'stun' || BUD.me.st === 'down' || BUD.me.st === 'getup' || BUD.me.st === 'act') budTickF(BUD.me, dt, BUD.live ? inp : { x: 0, z: 0, guard: false });
+                if (BUD.foe.bot) { const ai = budAI(BUD.foe, dt); budTickF(BUD.foe, dt, ai); try { BUD.foe.actor.update(dt); } catch (e) { /* model */ } }
+                if (BUD.live) { if (BUD.me.hp > 0 && BUD.foe.bot && BUD.foe.hp <= 0) { /* ref reads hp */ } budReport(false); } else if (BUD.me.st === 'idle') { /* keep the pose */ }
+                if (BUD.me.comboT > 0 && nowS() - BUD.me.comboT > 1.9) BUD.me.combo = 0;
+                BUD.hp[BUD.me.id] = BUD.me.hp; if (BUD.foe.bot) BUD.hp[BUD.foe.id] = BUD.foe.hp;
+                g.position.y = BUD.ringH;
+            }
+            budHud();
+        }
+        window.__bud = { budPadAct, BUD, budQueue, budTour, budPractice, budPress, budOpen, HERO_ACTS, get map() { return activeMap; }, get MD() { return MAP_DEFS.budokai; }, lg: () => localActor.group };
+        MAP_DEFS.budokai = { id: 'budokai', ground: budGround, clamp: budClamp, collide: budCollide, spawn: budSpawn, update: budUpdate };
         /* ------------------------------------------------------------------ *
          *  THE CONSTRUCT: the Hero class training area (white void, code rain, Agents to spar with, style meter)
          *  Controls follow Devil May Cry: Square = sword (tap to chain, forward + Square = Stinger dash), Triangle = gun, Cross = jump (twice for a double jump),
