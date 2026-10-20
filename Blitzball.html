@@ -59,7 +59,7 @@ button{font-family:inherit;color:var(--ink)}
 #carrier .nm{font-size:18px;font-weight:700}
 .stats{display:flex;gap:8px;font-size:12px;color:#9fdcff;margin-top:2px}
 .stats b{color:#fff}
-.chip{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;border:1px solid #2a86c0;background:#08324f;color:#7fdcff;letter-spacing:1px}
+.chip{display:inline-block;margin-left:3px;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;border:1px solid #2a86c0;background:#08324f;color:#7fdcff;letter-spacing:1px}
 .chip.bad{border-color:#ff6a5a;background:#4a1410;color:#ffb0a0}
 #banner{position:fixed;left:0;right:0;top:34%;text-align:center;z-index:8;pointer-events:none;font-family:Orbitron;font-weight:900;letter-spacing:6px;font-size:clamp(34px,8vw,92px);color:#ffe27a;text-shadow:0 0 18px #00d8ff,0 0 38px #0090ff,3px 3px 0 #000;opacity:0}
 #banner.show{animation:pop var(--d,2.2s) ease-out forwards}
@@ -128,6 +128,7 @@ button{font-family:inherit;color:var(--ink)}
  #title{gap:12px}
 }
 @media (pointer:fine){#touch{display:none}}
+#tcopy{position:fixed;left:50%;top:24%;transform:translateX(-50%);z-index:12;background:rgba(40,20,0,.88);border:2px solid var(--g);color:var(--g);padding:8px 20px;border-radius:10px;font-weight:900;font-size:22px;letter-spacing:3px;text-align:center;cursor:pointer;animation:tcp .45s infinite alternate}#tcopy small{display:block;font-size:11px;letter-spacing:1px;color:#fff}@keyframes tcp{to{transform:translateX(-50%) scale(1.1)}}
 </style>
 </head>
 <body>
@@ -136,7 +137,7 @@ button{font-family:inherit;color:var(--ink)}
  <div id="top">
   <div>
    <div class="panel team" id="tA"><div class="sc" id="scA">0</div><div><div class="tn" id="nA">AUROCHS</div><div class="ts" id="sA">Human</div></div></div>
-   <div class="panel" id="carrier"><div class="nm" id="cName">Tidus</div><div class="row" style="justify-content:space-between"><span class="stats">HP <b id="cHp">450</b>/<b id="cMax">450</b></span><span class="chip" id="cMode">MANUAL</span></div><div class="bar"><i id="cBar"></i></div><div class="stats"><span>EN <b id="cEn">0</b></span><span>PA <b id="cPa">0</b></span><span>SH <b id="cSh">0</b></span><span>AT <b id="cAt">0</b></span></div></div>
+   <div class="panel" id="carrier"><div class="nm" id="cName">Tidus</div><div class="row" style="justify-content:space-between"><span class="stats">HP <b id="cHp">450</b>/<b id="cMax">450</b></span><span class="chip" id="cMode">MANUAL</span><span class="chip" id="cForm">NORMAL</span></div><div class="bar"><i id="cBar"></i></div><div class="stats"><span>EN <b id="cEn">0</b></span><span>PA <b id="cPa">0</b></span><span>SH <b id="cSh">0</b></span><span>AT <b id="cAt">0</b></span><span>BL <b id="cBl">0</b></span></div></div>
   </div>
   <div class="panel o" id="clock"><div id="half">1ST HALF</div><div id="time">02:00</div><div id="poss">POSSESSION</div></div>
   <div class="panel team r" id="tB"><div class="sc" id="scB">0</div><div><div class="tn" id="nB">GOERS</div><div class="ts" id="sB">CPU</div></div></div>
@@ -147,7 +148,7 @@ button{font-family:inherit;color:var(--ink)}
   <div class="panel" id="hints"><b>WASD</b> swim · <b>Q/E</b> up/down<br><b>SHIFT</b> boost · <b>SPACE</b> command / tackle<br><b>C</b> camera · <b>TAB</b> switch · <b>T</b> auto · <b>P</b> pause</div>
  </div>
 </div>
-<div id="banner"></div><div id="cd"></div>
+<div id="tcopy" class="hide"></div><div id="banner"></div><div id="cd"></div>
 <div id="enc" class="panel gold hide"></div>
 <div id="meter" class="panel gold hide"><div class="o" style="color:var(--g);letter-spacing:3px;font-size:13px">POWER TIMING</div><div class="tr"><div class="z1" id="mz1"></div><div class="z2" id="mz2"></div><div class="nd" id="mnd"></div></div><div style="font-size:12px;color:#bfeaff">Press <span class="kb">SPACE</span> / tap in the green</div></div>
 <div id="touch" class="hide"><div id="joy"><i id="joyk"></i></div>
@@ -169,15 +170,7 @@ const fmt = (s) => { s = Math.max(0, Math.ceil(s)); return String(Math.floor(s /
 
 /* ------------------------------------------------------------------ DATA */
 const R = 72, GX = 60, GR = 9.5, ENG = 10.5;          // sphere radius, goal x, goal ring radius, encounter radius
-const TECH = {
-    jecht:   { n: 'Jecht Shot',   k: 'shoot', sh: 6, ignore: 2, hp: 0.22, d: '+6 SH · ignores 2 blockers' },
-    sphere:  { n: 'Sphere Shot',  k: 'shoot', sh: 3, shr: 5, hp: 0.10, d: '+3 to +8 SH (random)' },
-    reels:   { n: 'Attack Reels', k: 'shoot', sh: 4, ignore: 1, hp: 0.14, d: '+4 SH · ignores 1 blocker' },
-    venomS:  { n: 'Venom Shot',   k: 'shoot', sh: 2, venom: 0.65, hp: 0.14, d: '+2 SH · weakens the keeper' },
-    venomP:  { n: 'Venom Pass',   k: 'pass',  pa: 5, ignore: 9, hp: 0.12, d: '+5 PA · ignores blockers' },
-    supertackle: { n: 'Super Tackle', k: 'tackle', at: 5, hp: 0.08, d: '+5 AT' },
-    supercatch:  { n: 'Super Catch',  k: 'catch',  ca: 4, hp: 0, d: '+4 CA' }
-};
+const TECH = {};   // filled in below (FFX guide list)
 const TEAMS = [
     { id: 'aur', name: 'Besaid Aurochs', short: 'AUROCHS', blurb: 'Tidus and Wakka up front. Underdogs with special shots.', col: 0x1b9bff, col2: 0xffd23a, css: '#38b6ff', mul: 1,
       p: [
@@ -234,7 +227,7 @@ const AU = {
             this.vol(); this.ambient();
         } catch (e) { this.ctx = null; }
     },
-    vol() { if (!this.ctx) return; this.sfx.gain.value = SET.sfx; this.mus.gain.value = SET.music * 0.55; this.amb.gain.value = 0.35 * (0.4 + SET.sfx * 0.6); },
+    vol() { musVol(); if (!this.ctx) return; this.sfx.gain.value = SET.sfx; this.mus.gain.value = SET.music * 0.55; this.amb.gain.value = 0.35 * (0.4 + SET.sfx * 0.6); },
     tone(f, d = 0.12, type = 'sine', v = 0.2, to = 0, at = 0, bus = 'sfx') {
         if (!this.ctx) return; const t = this.ctx.currentTime + at, o = this.ctx.createOscillator(), g = this.ctx.createGain();
         o.type = type; o.frequency.setValueAtTime(f, t); if (to) o.frequency.exponentialRampToValueAtTime(to, t + d);
@@ -272,6 +265,7 @@ const AU = {
     tick() { this.tone(980, 0.06, 'square', 0.1); }, go() { this.tone(1500, 0.5, 'square', 0.14); this.whistle(1); },
     /* a calm, slightly heroic loop made of a pad, a bass and a pluck line */
     musicOn() {
+        if (musHas('match')) { this.started = false; if (this.timer) clearInterval(this.timer); this.timer = null; musPlay('match'); return; }
         if (!this.ctx || this.started) return; this.started = true; this.mt = this.ctx.currentTime + 0.2; this.mi = 0;
         const chords = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]], pent = [0, 2, 4, 7, 9, 12, 14], bpm = 86, beat = 60 / bpm, hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
         const sched = () => {
@@ -284,8 +278,230 @@ const AU = {
         };
         sched(); this.timer = setInterval(sched, 300);
     },
-    musicOff() { this.started = false; if (this.timer) clearInterval(this.timer); this.timer = null; }
+    musicOff() { this.started = false; if (this.timer) clearInterval(this.timer); this.timer = null; MUS.pend = null; musStop(); }
 };
+
+/* ---------- custom music: a file or a YouTube link per slot, kept on this device ---------- */
+const MSLOTS = [['title', 'Title screen', 'loop'], ['match', 'During the match', 'loop'], ['goal', 'Goal scored', 'sting'], ['win', 'Victory', 'end'], ['lose', 'Defeat', 'end']];
+const MUS = { cur: null, el: null, yf: null, files: {}, yt: (() => { try { return JSON.parse(localStorage.getItem('blitz.mus') || '{}'); } catch (e) { return {}; } })(), tm: 0, pend: null, back: null };
+const musSave = () => { try { localStorage.setItem('blitz.mus', JSON.stringify(MUS.yt)); } catch (e) { /* storage */ } };
+const IDB = { p: null };
+function idb() { return IDB.p || (IDB.p = new Promise((res, rej) => { try { const q = indexedDB.open('oasis-bz', 1); q.onupgradeneeded = () => q.result.createObjectStore('a'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); } catch (e) { rej(e); } })); }
+async function idbPut(k, v) { try { const d = await idb(); return await new Promise((res) => { const t = d.transaction('a', 'readwrite'); t.objectStore('a').put(v, k); t.oncomplete = () => res(true); t.onerror = () => res(false); }); } catch (e) { return false; } }
+async function idbGet(k) { try { const d = await idb(); return await new Promise((res) => { const q = d.transaction('a').objectStore('a').get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (e) { return null; } }
+async function idbDel(k) { try { const d = await idb(); return await new Promise((res) => { const t = d.transaction('a', 'readwrite'); t.objectStore('a').delete(k); t.oncomplete = () => res(true); t.onerror = () => res(false); }); } catch (e) { return false; } }
+function ytParse(s) {
+    s = String(s || '').trim(); let v = null, l = null; const m1 = /[?&]v=([\w-]{11})/.exec(s) || /youtu\.be\/([\w-]{11})/.exec(s) || /(?:shorts|embed|live)\/([\w-]{11})/.exec(s) || (/^[\w-]{11}$/.test(s) ? [0, s] : null);
+    const m2 = /[?&]list=([\w-]{10,60})/.exec(s); if (m1) v = m1[1]; if (m2) l = m2[1]; return v || l ? { v, l } : null;
+}
+async function musLoadStore() { for (const [k] of MSLOTS) { const b = await idbGet('m_' + k); if (b) MUS.files[k] = { url: URL.createObjectURL(b), name: b.name || 'file' }; } if (MUS.pend) musPlay(MUS.pend); }
+const musHas = (s) => !!(MUS.files[s] || MUS.yt[s]);
+function musStop() {
+    clearTimeout(MUS.tm); if (MUS.el) { try { MUS.el.pause(); } catch (e) { /* ok */ } MUS.el = null; } if (MUS.yf) { MUS.yf.remove(); MUS.yf = null; } MUS.cur = null;
+}
+function musYtVol(fr) { try { fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [Math.round(SET.music * 100)] }), '*'); } catch (e) { /* ok */ } }
+function musVol() { if (MUS.el) MUS.el.volume = Math.max(0, Math.min(1, SET.music)); if (MUS.yf) musYtVol(MUS.yf); }
+/* play a slot. kind: loop plays forever, sting plays once (and brings the match music back), end plays once. returns false if the slot is empty. */
+function musPlay(slot, opt) {
+    opt = opt || {}; const def = MSLOTS.find((x) => x[0] === slot); if (!def || !musHas(slot)) { if (opt.test) return false; return false; }
+    if (MUS.cur === slot && (MUS.el || MUS.yf) && !opt.restart) return true; musStop(); MUS.cur = slot; MUS.pend = def[2] === 'loop' ? slot : null;
+    const f = MUS.files[slot], y = MUS.yt[slot], kind = opt.test ? 'loop' : def[2], after = () => { if (kind === 'sting' && M.mode !== 'title' && M.mode !== 'end' && musHas('match')) musPlay('match'); else if (kind === 'sting') musStop(); };
+    if (f) { try { const el = new Audio(f.url); el.loop = kind === 'loop'; el.volume = Math.max(0, Math.min(1, SET.music)); el.onended = after; MUS.el = el; const p = el.play(); if (p && p.catch) p.catch(() => { MUS.pend = slot; }); if (kind === 'sting') MUS.tm = setTimeout(after, 14000); return true; } catch (e) { return false; } }
+    if (y) {
+        try {
+            const fr = document.createElement('iframe'), par = new URLSearchParams({ autoplay: '1', controls: '0', enablejsapi: '1', playsinline: '1', rel: '0' });
+            if (kind === 'loop') par.set('loop', '1'); if (y.l) { par.set('listType', 'playlist'); par.set('list', y.l); } else if (kind === 'loop') par.set('playlist', y.v);
+            fr.src = 'https://www.youtube.com/embed/' + (y.v || '') + '?' + par.toString(); fr.allow = 'autoplay; encrypted-media'; fr.title = 'music'; fr.style.cssText = 'position:fixed;width:2px;height:2px;left:-10px;top:-10px;border:0;opacity:0;pointer-events:none';
+            fr.addEventListener('load', () => setTimeout(() => musYtVol(fr), 1500)); document.body.appendChild(fr); MUS.yf = fr;
+            if (kind === 'sting') MUS.tm = setTimeout(after, 9000); else if (kind === 'end') MUS.tm = setTimeout(() => { if (MUS.cur === slot) musStop(); }, 90000);
+            return true;
+        } catch (e) { return false; }
+    }
+    return false;
+}
+addEventListener('pointerdown', () => { if (MUS.pend && !MUS.el && !MUS.yf) musPlay(MUS.pend); }, { passive: true });
+addEventListener('keydown', () => { if (MUS.pend && !MUS.el && !MUS.yf) musPlay(MUS.pend); });
+function showMusic(from) {
+    const p = $('pause'); show('pause', true);
+    const rows = MSLOTS.map(([k, nm, kind]) => { const f = MUS.files[k], y = MUS.yt[k], st = f ? '🎵 ' + f.name : y ? '▶ YouTube ' + (y.v || 'playlist') : 'built-in'; return `<div style="padding:7px 0;border-top:1px solid rgba(120,200,255,.2)"><div class="row" style="justify-content:space-between"><b>${nm}</b><span class="lab" style="margin:0;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${st}</span></div>
+    <div class="row" style="gap:6px;margin-top:4px"><input data-yi="${k}" placeholder="Paste a YouTube link" style="flex:1;min-width:0;background:#031428;color:#fff;border:1px solid #2a6a9a;border-radius:6px;padding:5px 8px"><button class="btn" data-ys="${k}">Set</button><button class="btn" data-up="${k}">File</button><button class="btn" data-ts="${k}">Test</button><button class="btn" data-cl="${k}">Clear</button></div></div>`; }).join('');
+    p.innerHTML = `<div class="panel gold card" style="width:min(620px,94vw)"><h2>CUSTOM MUSIC</h2><div class="lab" style="margin:0 0 4px;text-transform:none">Load your own track for each moment. Files and links are kept on this device.</div>${rows}<div class="row" style="margin-top:10px"><button class="btn gold" id="mB">Back</button></div></div>`;
+    p.querySelectorAll('[data-ys]').forEach((b) => b.onclick = () => { const k = b.dataset.ys, v = ytParse(p.querySelector(`[data-yi="${k}"]`).value); if (!v) { banner('NOT A YOUTUBE LINK', '', 'red', 1.6); return; } MUS.yt[k] = v; musSave(); delete MUS.files[k]; idbDel('m_' + k); musStop(); AU.ok(); showMusic(from); });
+    p.querySelectorAll('[data-up]').forEach((b) => b.onclick = () => { const k = b.dataset.up, fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'audio/*'; fi.onchange = async () => { const fl = fi.files[0]; if (!fl) return; await idbPut('m_' + k, fl); MUS.files[k] = { url: URL.createObjectURL(fl), name: fl.name }; delete MUS.yt[k]; musSave(); musStop(); showMusic(from); }; fi.click(); });
+    p.querySelectorAll('[data-ts]').forEach((b) => b.onclick = () => { const k = b.dataset.ts; if (MUS.cur === k) { musStop(); b.textContent = 'Test'; return; } if (!musPlay(k, { test: true, restart: true })) banner('NOTHING LOADED', 'Using the built-in sound', '', 1.6); else b.textContent = 'Stop'; });
+    p.querySelectorAll('[data-cl]').forEach((b) => b.onclick = () => { const k = b.dataset.cl; delete MUS.files[k]; delete MUS.yt[k]; musSave(); idbDel('m_' + k); musStop(); AU.back(); showMusic(from); });
+    $('mB').onclick = () => { musStop(); AU.back(); showSettings(from); }; $('mB').focus();
+}
+musLoadStore();
+/* ================================================================== FFX RULES: techniques, status, levels, marks, formations
+   (numbers follow the BradyGames FFX guide: costs are a share of max HP, tiers 1-3 unlock at levels 3 / 6 / 9) */
+function fam(id, nm, k, st, bonus, stp, cost, extra) {
+    [0, 1, 2].forEach((i) => {
+        const key = i ? id + (i + 1) : id;
+        TECH[key] = { n: nm + (i ? ' ' + (i + 1) : ''), k, st, stp: stp[i], hp: cost[i], min: [3, 6, 9][i], tier: i + 1, ...(k === 'shoot' ? { sh: bonus[i] } : k === 'pass' ? { pa: bonus[i] } : { at: bonus[i] }), ignore: 0, ...(extra || {}) };
+    });
+}
+TECH.jecht = { n: 'Jecht Shot', k: 'shoot', sh: 6, ignore: 2, hp: 0.2, min: 3, d: '+6 SH · knocks away 2 blockers' };
+TECH.jecht2 = { n: 'Jecht Shot 2', k: 'shoot', sh: 10, ignore: 3, hp: 0.92, min: 9, d: '+10 SH · knocks away 3 blockers · needs nearly full HP' };
+TECH.sphere = { n: 'Sphere Shot', k: 'shoot', sh: 3, shr: 5, hp: 0.15, min: 3, ignore: 0, d: '+3 to +8 SH (random)' };
+TECH.reels = { n: 'Attack Reels', k: 'shoot', sh: 4, ignore: 1, hp: 0.14, min: 3, d: '+4 SH · knocks away 1 blocker' };
+TECH.invis = { n: 'Invisible Shot', k: 'shoot', sh: 3, inv: 0.6, ignore: 0, hp: 0.35, min: 6, d: '+3 SH · 60% to slip past every blocker' };
+fam('venomS', 'Venom Shot', 'shoot', 'venom', [3, 5, 7], [0.4, 0.7, 1], [0.04, 0.07, 0.17]);
+fam('napS', 'Nap Shot', 'shoot', 'nap', [3, 5, 7], [0.4, 0.7, 1], [0.08, 0.14, 0.58]);
+fam('witherS', 'Wither Shot', 'shoot', 'wither', [3, 5, 7], [0.4, 0.7, 1], [0.06, 0.3, 0.65]);
+fam('venomP', 'Venom Pass', 'pass', 'venom', [3, 5, 7], [0.3, 0.6, 1], [0.07, 0.2, 0.42]);
+fam('napP', 'Nap Pass', 'pass', 'nap', [3, 5, 7], [0.3, 0.6, 1], [0.07, 0.33, 0.85]);
+fam('witherP', 'Wither Pass', 'pass', 'wither', [3, 5, 7], [0.3, 0.6, 1], [0.07, 0.3, 0.73]);
+fam('venomT', 'Venom Tackle', 'tackle', 'venom', [3, 5, 7], [0.4, 0.7, 1], [0.05, 0.12, 0.27]);
+fam('napT', 'Nap Tackle', 'tackle', 'nap', [3, 5, 7], [1, 1, 1], [0.07, 0.15, 0.3]);
+fam('witherT', 'Wither Tackle', 'tackle', 'wither', [3, 5, 7], [0.4, 0.7, 1], [0.02, 0.13, 0.42]);
+fam('drainT', 'Drain Tackle', 'tackle', 'drain', [0, 0, 0], [0.4, 0.7, 1], [0.05, 0.25, 0.83]);
+TECH.supertackle = { n: 'Super Tackle', k: 'tackle', at: 5, hp: 0.08, min: 3, d: '+5 AT' };
+TECH.supercatch = { n: 'Super Goalie', k: 'catch', ca: 4, hp: 0, min: 3, d: 'Goalkeeper: stronger catches' };
+[['antiNap', 'Anti-Nap', 'nap'], ['antiVenom', 'Anti-Venom', 'venom'], ['antiWither', 'Anti-Wither', 'wither']].forEach(([id, n, st]) => { TECH[id] = { n, k: 'anti', st, stp: 0.5, min: 3, hp: 0, d: '50% to block the status' }; TECH[id + '2'] = { n: n + ' 2', k: 'anti', st, stp: 1, min: 6, hp: 0, d: 'Always blocks the status' }; });
+TECH.slip = { n: 'Tackle Slip', k: 'slip', stp: 0.4, min: 3, hp: 0, d: '40% to slip a tackle' };
+TECH.slip2 = { n: 'Tackle Slip 2', k: 'slip', stp: 0.8, min: 6, hp: 0, d: '80% to slip a tackle' };
+TECH.regen = { n: 'Regen', k: 'regen', min: 3, hp: 0, d: 'HP comes back twice as fast off the ball' };
+TECH.spin = { n: 'Spin Ball', k: 'spin', min: 3, hp: 0, d: 'Shots are harder to catch' };
+TECH.gold = { n: 'Golden Arm', k: 'gold', min: 3, hp: 0, d: 'Passes and shots lose less power over distance' };
+TECH.brawler = { n: 'Brawler', k: 'reach', r: 2.5, min: 3, hp: 0, d: 'Joins encounters from further away' };
+TECH.elite = { n: 'Elite Defense', k: 'reach', r: 3.5, min: 6, hp: 0, d: 'Intercepts the ball carrier from much further' };
+const STTXT = { venom: ' · may poison', nap: ' · may put to sleep', wither: ' · may halve a stat', drain: ' · steals HP' };
+for (const k in TECH) { const t = TECH[k]; t.id = k; if (!t.d) { const b = t.sh || t.pa || t.at || 0, who = t.k === 'shoot' ? 'the keeper' : t.k === 'pass' ? 'blockers' : 'the carrier'; t.d = (b ? '+' + b + (t.k === 'shoot' ? ' SH' : t.k === 'pass' ? ' PA' : ' AT') : '') + (STTXT[t.st] ? STTXT[t.st] + ' ' + who + ' (' + Math.round(t.stp * 100) + '%)' : ''); } }
+const techsOf = (p, k) => p.d.tech.map((id) => TECH[id]).filter((t) => t && t.k === k);
+const reachOf = (p) => Math.max(0, ...techsOf(p, 'reach').map((t) => t.r));
+const FORMS = { normal: ['Normal', 'Zone defence: the nearest players go after the carrier.'], mark: ['Mark Mode', 'Everyone shadows the man assigned to him (Team → Marks).'], right: ['Right Side', 'Zone on the right: the left is left open.'], left: ['Left Side', 'Zone on the left: the right is left open.'], center: ['Center Attack', 'Everyone packs the middle, the sides are open.'], allout: ['All-Out Defense', 'The whole team sits in its own half.'], flat: ['Flat Line', 'All-out attack: nobody stays back.'], counter: ['Counter', 'Defenders and the midfielder hold the goal, forwards wait up front.'], double: ['Double Sides', 'Everyone but the midfielder hugs the walls: a pincer.'] };
+const MIRROR = { LF: 'RD', RF: 'LD', MF: 'MF', LD: 'RF', RD: 'LF', GL: 'GL' };
+
+/* ---- progress: levels, XP, learned and equipped techniques, marks (kept on this device) ---- */
+const PK = 'blitz.prog';
+let PROG = (() => { try { return JSON.parse(localStorage.getItem(PK) || '{}'); } catch (e) { return {}; } })();
+const saveProg = () => { try { localStorage.setItem(PK, JSON.stringify(PROG)); } catch (e) { /* storage */ } };
+const pkey = (tdef, d) => tdef.id + ':' + d.n;
+const pr = (tdef, d) => { const k = pkey(tdef, d); if (!PROG[k]) PROG[k] = { lv: 3, xp: 0, learned: [...d.tech], eq: [...d.tech] }; return PROG[k]; };
+const xpNeed = (lv) => 60 + 40 * (lv - 2);
+const slotsAt = (lv) => (lv < 3 ? 0 : lv < 5 ? 2 : lv < 7 ? 3 : lv < 9 ? 4 : 5);
+const GAIN = { LF: { sh: 0.55, pa: 0.3, en: 0.25 }, RF: { sh: 0.55, pa: 0.3, en: 0.25 }, MF: { pa: 0.5, at: 0.3, bl: 0.3, en: 0.3, sh: 0.2 }, LD: { at: 0.55, bl: 0.5, en: 0.3, pa: 0.2 }, RD: { at: 0.55, bl: 0.5, en: 0.3, pa: 0.2 }, GL: { ca: 0.7, en: 0.2 } };
+function lvData(d, lv) { const g = GAIN[d.pos] || {}, L = Math.max(0, lv - 3), o = { ...d, hp: d.hp + 22 * L }; for (const k in g) o[k] = +(d[k] + g[k] * L).toFixed(2); return o; }
+function mdata(t, i, d) {
+    if (!M.progOn) return d; const tdef = M.teams[t];
+    if (humanTeam(t)) { const r = pr(tdef, d); r.eq = r.eq.filter((id) => TECH[id] && r.learned.includes(id)).slice(0, slotsAt(r.lv)); const o = lvData(d, r.lv); o.tech = [...r.eq]; o.pk = pkey(tdef, d); o.lv = r.lv; return o; }
+    const mt = M.teams[M.myTeam], avg = mt.p.reduce((s, x) => s + pr(mt, x).lv, 0) / mt.p.length, lv = clamp(Math.round(avg), 3, 14), o = lvData(d, lv); o.lv = lv; return o;
+}
+function xpGive(p, n) { if (M.progOn && p && p.d.pk && humanTeam(p.team)) p.mxp = (p.mxp || 0) + n; }
+function commitXp(bonus) {
+    if (!M.progOn) return []; const out = [];
+    for (const p of M.players) { if (!p.d.pk || !humanTeam(p.team)) continue; const r = PROG[p.d.pk]; if (!r) continue; const gain = Math.round((p.mxp || 0) + 12 + (bonus || 0)); p.mxp = 0; r.xp += gain; let up = 0; while (r.lv < 15 && r.xp >= xpNeed(r.lv)) { r.xp -= xpNeed(r.lv); r.lv++; up++; } if (r.lv >= 15) r.xp = Math.min(r.xp, xpNeed(14)); out.push({ p, lv: r.lv, up, gain }); if (up) say(`<b style="color:#ffd24a">${p.name}</b> reaches level ${r.lv}!`); }
+    saveProg(); return out;
+}
+function refreshLevels() { if (!M.progOn) return; M.players.forEach((p) => { if (!p.d.pk || !humanTeam(p.team)) return; const r = PROG[p.d.pk]; if (!r) return; const o = lvData(p.base, r.lv); o.tech = [...r.eq]; o.pk = p.d.pk; o.lv = r.lv; p.d = o; p.max = o.hp; p.hp = p.max; }); }
+function applyEq() { M.players.forEach((p) => { if (p.d.pk && humanTeam(p.team) && PROG[p.d.pk]) p.d.tech = [...PROG[p.d.pk].eq]; }); }
+const markRole = (t, role) => ((M.progOn && t === M.myTeam ? (PROG['__m:' + M.teams[t].id] || {})[role] : null) || MIRROR[role]);
+const markedFoe = (p) => { const r = markRole(p.team, p.role); return r === 'GL' ? null : M.players.find((e) => e.team !== p.team && e.role === r); };
+
+/* ---- status: poison, sleep, wither ---- */
+const STN = { venom: { n: 'POISON', c: 0x7bff6a, t: 30 }, nap: { n: 'SLEEP', c: 0x8fb8ff, t: 8 }, wither: { n: 'WITHER', c: 0xc58bff, t: 40 } };
+function applyStatus(src, tgt, st) {
+    if (!tgt || !STN[st] || tgt.team === src.team) return false;
+    const anti = techsOf(tgt, 'anti').find((t) => t.st === st); if (anti && Math.random() < anti.stp) { say(`${tn(tgt)}'s <b>${anti.n}</b> shrugs it off!`); return false; }
+    const S = STN[st]; tgt.ail = tgt.ail || {}; tgt.wth = tgt.wth || {};
+    if (st === 'venom') tgt.ail.venom = S.t;
+    else if (st === 'nap') { tgt.ail.nap = S.t; tgt.stun = Math.max(tgt.stun, S.t); tgt.vel.multiplyScalar(0.2); }
+    else { const ks = tgt.gk ? ['bl', 'ca'] : ['en', 'at', 'bl', 'pa', 'sh']; const k = pick(ks); tgt.wth[k] = S.t; say(`${tn(tgt)}'s <b>${k.toUpperCase()}</b> is halved!`); }
+    say(`${tn(tgt)} is hit by <b style="color:#${S.c.toString(16)}">${S.n}</b>.`); burst(tgt.pos, 18, S.c, 7, 0.9); return true;
+}
+function statusFx(dt) {
+    M.fxT = (M.fxT || 0) + dt; if (M.fxT < 0.4) return; M.fxT = 0;
+    for (const p of M.players) { if (!p.ail && !p.wth) continue; if (p.ail && p.ail.venom > 0) burst(p.pos, 3, 0x7bff6a, 3, 0.9); if (p.ail && p.ail.nap > 0) burst(p.pos, 3, 0x8fb8ff, 2, 1.2); if (p.wth && Object.values(p.wth).some((v) => v > 0)) burst(p.pos, 3, 0xc58bff, 3, 0.9); }
+}
+const ailTxt = (p) => (p.ail && p.ail.nap > 0 ? 'ASLEEP' : p.ail && p.ail.venom > 0 ? 'POISONED' : p.wth && Object.values(p.wth).some((v) => v > 0) ? 'WITHERED' : '');
+function tackleTech(d, prob = 0.45) {
+    const l = techsOf(d, 'tackle').filter((t) => d.hp > d.max * (t.hp + 0.06)); if (!l.length || Math.random() > prob) return null;
+    l.sort((a, b) => (b.at || 0) - (a.at || 0)); return Math.random() < 0.6 ? l[0] : pick(l);
+}
+const slipTech = (c) => techsOf(c, 'slip').sort((a, b) => b.stp - a.stp)[0];
+function tackleFx(d, c, tt, won) {
+    if (tt.st === 'drain') { const a = d.max * tt.hp; c.hp = Math.max(0, c.hp - a); d.hp = Math.min(d.max, d.hp + a * 2); say(`${tn(d)} drains ${tn(c)}!`); return; }
+    if (tt.st === 'nap') { if (won) applyStatus(d, c, 'nap'); return; }
+    if (tt.st && Math.random() < tt.stp) applyStatus(d, c, tt.st);
+}
+
+/* ---- techcopy: mark an opponent, and when he uses a technique press X to learn it ---- */
+function techUsed(u, tech) {
+    if (!M.progOn || !tech || !tech.k || !tech.id) return; xpGive(u, 4);
+    if (humanTeam(u.team) || tech.k === 'anti' || tech.k === 'catch') return;
+    const mk = M.players.find((p) => p.team === M.myTeam && p.d.pk && markRole(p.team, p.role) === u.role); if (!mk) return;
+    const r = PROG[mk.d.pk]; if (!r || r.lv < 3 || r.learned.includes(tech.id)) return;
+    M.tcp = { tech, mk, t: 1.8 }; const e = $('tcopy'); e.innerHTML = `TECHCOPY! <b>X</b><small>${esc(mk.name)} · ${esc(tech.n)}</small>`; e.classList.remove('hide');
+}
+function actTechcopy() {
+    const c = M.tcp; if (!c) return; M.tcp = null; $('tcopy').classList.add('hide'); const r = PROG[c.mk.d.pk]; if (!r) return;
+    const ok = Math.random() < (r.lv >= c.tech.min ? 0.8 : 0.12);
+    if (ok) { r.learned.push(c.tech.id); saveProg(); AU.win && AU.tech(); banner('TECH LEARNED!', `${c.mk.name} · ${c.tech.n}`, '', 2.2); say(`<b>${c.mk.name}</b> learns <b>${c.tech.n}</b>! Equip it in the Team screen.`); }
+    else { AU.back(); say(`${c.mk.name} could not copy ${c.tech.n}${r.lv < c.tech.min ? ' (needs level ' + c.tech.min + ')' : ''}.`); }
+}
+function actAutoSwim() { const s = localSeat(); if (!s) return; s.auto = !s.auto; AU.ui(); say(s.auto ? 'Auto swim: the ball carrier swims by himself, you pick the moves.' : 'Manual swim.'); }
+
+/* ---- formations ---- */
+function cpuForm(t, half) {
+    const mine = M.score[t], opp = M.score[1 - t];
+    if (half && mine < opp) return pick(['flat', 'double', 'right', 'left', 'center']); if (half && mine > opp) return pick(['counter', 'allout', 'normal']);
+    return pick(['normal', 'normal', 'normal', 'mark', 'counter', 'double', 'center', 'right', 'left']);
+}
+function formAdj(p) {
+    const f = M.form && M.form[p.team]; if (!f || f === 'normal' || p.gk) return;
+    const B = M.B, c = B.carrier, d = p.dir, tg = p.target; if (p === c || (B.flight && (B.flight.pull === p || B.flight.follow === p))) return;
+    const poss = c ? c.team : B.lastTeam, has = poss === p.team, ref = c ? c.pos : B.pos, role = p.role, xd = tg.x * d, lane = role === 'LF' || role === 'LD' ? -1 : role === 'MF' ? 0 : 1;
+    switch (f) {
+        case 'allout': if (xd > -8) tg.x = -8 * d; break;
+        case 'flat': if (!has) tg.x = Math.max(xd, ref.x * d + 6) * d; break;
+        case 'counter': if (role === 'LD' || role === 'RD' || role === 'MF') { if (xd > -4) tg.x = -4 * d; } else if (!has && xd < 8) tg.x = 8 * d; break;
+        case 'double': if (role !== 'MF') { tg.z = lane * 14 * d; tg.y *= 0.3; } break;
+        case 'center': tg.z *= 0.25; tg.y *= 0.25; break;
+        case 'right': case 'left': { const sd = (f === 'right' ? 1 : -1) * d; if (tg.z * sd < 2) tg.z = sd * (2 + Math.abs(tg.z) * 0.3); break; }
+        case 'mark': { const foe = markedFoe(p); if (foe) { const og = new V3(-d * GX, 0, 0); tg.copy(foe.pos).addScaledVector(og.sub(foe.pos).normalize(), 4); p.sp = 0.95; } break; }
+    }
+}
+
+/* ---- screens: team, formation, half time ---- */
+const backFrom = (from) => { if (from === 'title') show('pause', false); else if (from === 'pause') togglePause(false); else if (from === 'half') showHalf(M.xr); else if (from === 'result') { show('pause', false); showResult(); } else show('pause', false); };
+function showTeam(from, sel) {
+    sel = sel || 0; const tdef = TEAMS[ST.team], d = tdef.p[sel], r = pr(tdef, d), nd = lvData(d, r.lv), slots = slotsAt(r.lv), mk = (PROG['__m:' + tdef.id] || {}), p = $('pause'); show('pause', true);
+    const st = (k, l) => `<span>${l} <b>${Math.round(nd[k])}</b></span>`;
+    p.innerHTML = `<div class="panel gold card" style="width:min(720px,96vw)"><h2>TEAM · ${esc(tdef.name)}</h2>
+    <div class="row" style="gap:5px;flex-wrap:wrap;margin-bottom:8px">${tdef.p.map((x, i) => `<button class="btn ${i === sel ? 'gold' : ''}" data-ps="${i}">${x.pos} ${esc(x.n)}<small>Lv ${pr(tdef, x).lv}</small></button>`).join('')}</div>
+    <div class="row" style="justify-content:space-between"><b style="font-size:20px">${esc(d.n)} <span class="chip">${d.pos}</span></b><span class="lab" style="margin:0">Level <b>${r.lv}</b> · ${r.lv >= 15 ? 'MAX' : r.xp + ' / ' + xpNeed(r.lv) + ' XP'}</span></div>
+    <div class="bar"><i style="width:${r.lv >= 15 ? 100 : Math.round(100 * r.xp / xpNeed(r.lv))}%"></i></div>
+    <div class="stats" style="display:flex;gap:12px;flex-wrap:wrap;margin:6px 0">${st('hp', 'HP')}${st('spd', 'SP')}${st('en', 'EN')}${st('at', 'AT')}${st('pa', 'PA')}${st('sh', 'SH')}${st('bl', 'BL')}${st('ca', 'CA')}</div>
+    <div class="lab">Techniques equipped ${r.eq.length} / ${slots} <span style="opacity:.6;text-transform:none">· more slots at levels 5, 7 and 9</span></div>
+    <div class="opts g2">${r.learned.map((id) => { const t = TECH[id]; if (!t) return ''; const on = r.eq.includes(id); return `<button class="btn ${on ? 'gold' : ''}" data-te="${id}">${on ? '✔ ' : ''}${esc(t.n)}<small>${esc(t.d)}${t.hp ? ' · ' + Math.round(t.hp * 100) + '% HP' : ''}</small></button>`; }).join('') || '<div class="lab">Nothing learned yet. Mark an opponent and press X when he uses a technique.</div>'}</div>
+    <div class="lab">Marks: who ${esc(d.n)} shadows in Mark Mode and copies techniques from</div>
+    <div class="row" style="gap:5px">${['LF', 'RF', 'MF', 'LD', 'RD', 'GL'].map((o) => `<button class="btn ${(mk[d.pos] || MIRROR[d.pos]) === o ? 'gold' : ''}" data-mk="${o}">${o}</button>`).join('')}</div>
+    <div class="row" style="margin-top:10px;gap:6px"><button class="btn" id="tFm">Formation: ${FORMS[(M.form && M.progOn ? M.form[M.myTeam] : SET.form) || 'normal'][0]}</button><button class="btn" id="tRs">Reset progress</button><button class="btn gold" id="tBack">Back</button></div></div>`;
+    p.querySelectorAll('[data-ps]').forEach((b) => b.onclick = () => { AU.ui(); showTeam(from, +b.dataset.ps); });
+    p.querySelectorAll('[data-te]').forEach((b) => b.onclick = () => { const id = b.dataset.te; if (r.eq.includes(id)) r.eq = r.eq.filter((x) => x !== id); else if (r.eq.length < slots) r.eq.push(id); else { banner('NO FREE SLOT', 'Unequip something first', 'red', 1.4); return; } AU.ok(); saveProg(); applyEq(); showTeam(from, sel); });
+    p.querySelectorAll('[data-mk]').forEach((b) => b.onclick = () => { const m = PROG['__m:' + tdef.id] = PROG['__m:' + tdef.id] || {}; m[d.pos] = b.dataset.mk; saveProg(); AU.ok(); showTeam(from, sel); });
+    $('tFm').onclick = () => { AU.ok(); showFormation('team:' + from + ':' + sel); };
+    $('tRs').onclick = () => { if (!confirm('Reset levels, learned techniques and marks for ' + tdef.name + '?')) return; for (const k of Object.keys(PROG)) if (k.startsWith(tdef.id + ':') || k === '__m:' + tdef.id) delete PROG[k]; saveProg(); if (M.progOn) refreshLevels(); showTeam(from, sel); };
+    $('tBack').onclick = () => { AU.back(); backFrom(from); }; $('tBack').focus();
+}
+function showFormation(from) {
+    const p = $('pause'); show('pause', true); const cur = (M.progOn && M.form ? M.form[M.myTeam] : SET.form) || 'normal';
+    p.innerHTML = `<div class="panel gold card" style="width:min(560px,94vw)"><h2>FORMATION</h2><div class="opts">${Object.entries(FORMS).map(([k, v]) => `<button class="btn ${k === cur ? 'gold' : ''}" data-f="${k}">${k === cur ? '✔ ' : ''}${v[0]}<small>${v[1]}</small></button>`).join('')}</div><div class="row" style="margin-top:10px"><button class="btn gold" id="fB">Back</button></div></div>`;
+    p.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { SET.form = b.dataset.f; saveSet(); if (M.progOn && M.form) M.form[M.myTeam] = b.dataset.f; AU.ok(); say('Formation: <b>' + FORMS[b.dataset.f][0] + '</b>.'); showFormation(from); });
+    $('fB').onclick = () => { AU.back(); if (from.startsWith('team:')) { const [, f, s] = from.split(':'); showTeam(f, +s); } else backFrom(from); }; $('fB').focus();
+}
+function actFormKey() { if (!M.progOn || M.net || M.mode === 'title' || M.mode === 'end' || M.halfWait) return; togglePause(false); showFormation('pause'); }
+function xpHtml(xr) { if (!xr || !xr.length) return ''; return `<div class="rec" style="margin:8px 0 2px">EXPERIENCE</div><table>${xr.map((o) => `<tr><td>${esc(o.p.name)}</td><td>Lv ${o.lv}${o.up ? ` <b style="color:#ffd24a">▲ +${o.up}</b>` : ''}</td><td>+${o.gain} XP</td></tr>`).join('')}</table>`; }
+function showHalf(xr) {
+    const p = $('pause'); show('pause', true); M.xr = xr;
+    p.innerHTML = `<div class="panel gold card" style="width:min(560px,94vw)"><h2>HALF TIME</h2><div class="o" style="font-size:30px;font-weight:900;margin:2px 0 4px"><span style="color:${M.teams[0].css}">${M.teams[0].short} ${M.score[0]}</span> – <span style="color:${M.teams[1].css}">${M.score[1]} ${M.teams[1].short}</span></div>${xpHtml(xr)}<div class="rec" style="margin:6px 0">Your players are rested. Check techniques and formation before the second half.</div>
+    <div class="row" style="gap:6px"><button class="btn" id="hT">Team & techniques</button><button class="btn" id="hF">Formation</button><button class="btn gold" id="hC">Second half</button></div></div>`;
+    $('hT').onclick = () => { AU.ok(); showTeam('half'); }; $('hF').onclick = () => { AU.ok(); showFormation('half'); };
+    $('hC').onclick = () => { AU.ok(); M.halfWait = false; show('pause', false); M.modeT = 1.2; }; $('hC').focus();
+}
+
+
 
 /* ------------------------------------------------------------------ THREE */
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -532,14 +748,14 @@ Object.defineProperty(M, 'assist', { get() { const s = localSeat(); return s ? s
 const newStats = () => ({ shots: 0, goals: 0, pass: 0, passOk: 0, tackles: 0, steals: 0, poss: 0 });
 
 class Player {
-    constructor(team, d, tdef, idx) {
-        this.team = team; this.d = d; this.def = tdef; this.name = d.n; this.role = d.pos; this.id = team * 6 + idx; this.dir = team === 0 ? 1 : -1;
+    constructor(team, d, tdef, idx, base) {
+        this.team = team; this.d = d; this.base = base || d; this.ail = {}; this.wth = {}; this.mxp = 0; this.def = tdef; this.name = d.n; this.role = d.pos; this.id = team * 6 + idx; this.dir = team === 0 ? 1 : -1;
         this.pos = new V3(); this.vel = new V3(); this.fwd = new V3(this.dir, 0, 0); this.hp = d.hp; this.max = d.hp; this.stun = 0; this.cool = 0; this.tcd = 0; this.exh = false;
         this.ph = rnd(0, 6); this.boost = false; this.hold = 0; this.techCd = 0; this.target = new V3(); this.sp = 0.9; this.think = rnd(0, 0.2); this.yaw = 0; this.pitch = 0; this.tumble = 0; this.m = makeSwimmer(tdef, d); this.act = 0;
     }
     get gk() { return this.role === 'GL'; }
     fat() { return this.exh ? 0.6 : 0.55 + 0.45 * this.hp / this.max; }
-    stat(k) { return this.d[k] * this.fat(); }
+    stat(k) { if (k === 'ca' && this.ail && this.ail.nap > 0) return 0; let v = this.d[k] * this.fat(); if (this.wth && this.wth[k] > 0) v *= 0.5; return v; }
 }
 const field = (t) => M.players.filter((p) => p.team === t && !p.gk);
 const keeper = (t) => M.players.find((p) => p.team === t && p.gk);
@@ -548,8 +764,8 @@ const skillOf = (t) => (cpu(t) ? M.diff.f : 1);
 function disposePlayers() { M.players.forEach((p) => scene.remove(p.m.root)); M.players = []; }
 function setupMatch(o) {
     disposePlayers(); M.teams = [TEAMS[o.team], TEAMS[o.opp]]; M.diff = DIFF[o.diff] || DIFF.pro;
-    M.seats = (o.seats || []).map((s) => ({ team: s.team, kind: s.kind, assist: !!s.assist, ctrl: null, lock: 0, in: { dir: new V3(), boost: false }, seen: 0, name: s.name || '' })); M.myTeam = localSeat() ? localSeat().team : 0; M.lockT = 0;
-    for (let t = 0; t < 2; t++) M.teams[t].p.forEach((d, i) => M.players.push(new Player(t, d, M.teams[t], i)));
+    M.seats = (o.seats || []).map((s) => ({ team: s.team, kind: s.kind, assist: !!s.assist, ctrl: null, lock: 0, in: { dir: new V3(), boost: false }, seen: 0, name: s.name || '' })); M.myTeam = localSeat() ? localSeat().team : 0; M.lockT = 0; M.progOn = !M.noProg && M.seats.length > 0; M.tcp = null; M.halfWait = false; M.xr = null; { const e = $('tcopy'); if (e) e.classList.add('hide'); }
+    for (let t = 0; t < 2; t++) M.teams[t].p.forEach((d, i) => M.players.push(new Player(t, mdata(t, i, d), M.teams[t], i, d)));
     M.score = [0, 0]; M.half = 1; M.halfLen = o.len; M.time = o.len; M.golden = false; M.stats = [newStats(), newStats()]; M.over = false; M.kick = Math.random() < 0.5 ? 0 : 1; M.firstKick = M.kick;
     goals[0].em.color.setHex(M.teams[0].col); goals[0].em.emissive.setHex(M.teams[0].col); goals[1].em.color.setHex(M.teams[1].col); goals[1].em.emissive.setHex(M.teams[1].col);
     goals.forEach((g, i) => { g.g.children.forEach((c) => { if (c.isPointLight) c.color.setHex(M.teams[i].col); if (c.material && c.material.color && c !== g.ring && c.material !== g.em) c.material.color.setHex(M.teams[i].col); }); });
@@ -557,6 +773,7 @@ function setupMatch(o) {
     if (M.teams[0].id === M.teams[1].id) M.players.filter((p) => p.team === 1).forEach((p) => p.m.jersey.color.setHex(0xaa2233));
     $('nA').textContent = M.teams[0].short; $('nB').textContent = M.teams[1].short; const lab = (t) => { const ss = M.seats.filter((s) => s.team === t); return ss.length ? ss.map((s) => (s.kind === 'local' ? 'YOU' : (s.name || 'FRIEND'))).join(' + ') : 'CPU · ' + M.diff.n; }; $('sA').textContent = lab(0); $('sB').textContent = lab(1);
     $('scA').style.color = M.teams[0].css; $('scB').style.color = M.teams[1].css; $('tA').style.borderLeft = '5px solid ' + M.teams[0].css; $('tB').style.borderRight = '5px solid ' + M.teams[1].css;
+    M.form = [0, 1].map((t) => (humanTeam(t) ? (SET.form || 'normal') : cpuForm(t, false)));
     updScore(); $('logb').innerHTML = '';
 }
 function placeKickoff(kt) {
@@ -592,19 +809,19 @@ function distSeg(p, a, b) { const ab = b.clone().sub(a), t = clamp(p.clone().sub
 /* a pass ---------------------------------------------------------------- */
 function calcPass(c, r, tech, blockers) {
     let pa = c.stat('pa') * skillOf(c.team) + (tech ? tech.pa : 0) + rnd(-1, 2);
-    if (!tech || tech.ignore < 9) blockers.forEach((b) => { pa -= b.stat('bl') * rnd(0.35, 1) * 0.5 * skillOf(b.team); });
-    pa -= c.pos.distanceTo(r.pos) / 16;
+    if (!tech || (tech.ignore || 0) < 9) blockers.forEach((b) => { pa -= b.stat('bl') * rnd(0.35, 1) * 0.5 * skillOf(b.team); });
+    pa -= c.pos.distanceTo(r.pos) / (techsOf(c, 'gold').length ? 22 : 16);
     const line = [];
     M.players.forEach((e) => { if (e.team === c.team || e.gk || e.stun > 0 || blockers.includes(e)) return; const d = distSeg(e.pos, c.pos, r.pos); if (d < 5) { pa -= e.stat('bl') * 0.34 * (1 - d / 5) * 1.4; line.push(e); } });
-    return { pa, ok: pa > 2.2 };
+    return { pa, ok: pa > 2.2, victims: blockers.concat(line) };
 }
 function doPass(c, r, tech, blockers) {
     const t = c.team; M.stats[t].pass++; if (tech) c.hp = Math.max(0, c.hp - c.max * tech.hp); AU.pass(); if (tech) { AU.tech(); banner(tech.n.toUpperCase() + '!', c.name, '', 1.6); }
-    const res = calcPass(c, r, tech, blockers); c.cool = 1.4; gest(c, 'strike'); const from = c.pos.clone().addScaledVector(c.fwd, 1.5);
+    const res = calcPass(c, r, tech, blockers); c.cool = 1.4; gest(c, 'strike'); if (tech) { techUsed(c, tech); if (tech.st && res.victims) res.victims.slice(0, 3).forEach((v) => { if (Math.random() < tech.stp) applyStatus(c, v, tech.st); }); } const from = c.pos.clone().addScaledVector(c.fwd, 1.5);
     cinema('pass', { from: c });
     if (res.ok) {
         say(`${tn(c)} passes to ${tn(r)}…`);
-        launch(from, r.pos, clamp(c.pos.distanceTo(r.pos) / 46, 0.35, 1.3), 3, () => { M.stats[t].passOk++; takeBall(r); AU.catchSnd(); say(`${tn(r)} receives it.`); }, r);
+        launch(from, r.pos, clamp(c.pos.distanceTo(r.pos) / 46, 0.35, 1.3), 3, () => { M.stats[t].passOk++; xpGive(c, 4); xpGive(r, 2); takeBall(r); AU.catchSnd(); say(`${tn(r)} receives it.`); }, r);
     } else {
         const foes = M.players.filter((e) => e.team !== t && !e.gk && e.stun <= 0), mid = from.clone().lerp(r.pos, 0.62);
         let ic = foes.sort((a, b) => a.pos.distanceTo(mid) - b.pos.distanceTo(mid))[0] || keeper(1 - t);
@@ -614,18 +831,19 @@ function doPass(c, r, tech, blockers) {
 }
 
 /* a shot ---------------------------------------------------------------- */
-function calcShot(c, tech, q, blockers) {
+function calcShot(c, tech, q, blockers, real) {
     const t = c.team, G = keeper(1 - t), diffS = skillOf(t), diffG = skillOf(1 - t);
-    let sh = c.stat('sh') * diffS + tech.sh + (tech.shr ? rnd(0, tech.shr) : 0) + q + rnd(-1, 1.5);
-    const bl = blockers.slice(tech.ignore || 0); bl.forEach((b) => { sh -= b.stat('bl') * rnd(0.3, 1) * 0.42 * skillOf(b.team); });
-    const dist = c.pos.distanceTo(goalPos(t)); sh -= Math.max(0, dist - 10) / 6;
-    let ca = G.stat('ca') * rnd(0.9, 1.6) * diffG + 4.6; if (tech.venom) ca *= tech.venom; if (!tech.venom && Math.random() < 0.28 && G.d.tech.includes('supercatch')) ca += 3;
+    let sh = c.stat('sh') * diffS + (tech.sh || 0) + (tech.shr ? rnd(0, tech.shr) : 0) + q + rnd(-1, 1.5);
+    const ign = tech.inv ? (Math.random() < tech.inv ? 9 : 0) : (tech.ignore || 0), bl = blockers.slice(ign); bl.forEach((b) => { sh -= b.stat('bl') * rnd(0.3, 1) * 0.42 * skillOf(b.team); });
+    const dist = c.pos.distanceTo(goalPos(t)); sh -= Math.max(0, dist - 10) / (techsOf(c, 'gold').length ? 8 : 6);
+    let ca = G.stat('ca') * rnd(0.9, 1.6) * diffG + 4.6;
+    if (G.ail && G.ail.nap > 0) ca = 0; else { if (!real && tech.st) ca *= tech.st === 'nap' ? 1 - tech.stp : tech.st === 'wither' ? 1 - 0.35 * tech.stp : 1 - 0.12 * tech.stp; if (G.ail && G.ail.venom > 0) ca *= 0.9; if (techsOf(c, 'spin').length) ca *= 0.88; if (Math.random() < 0.28 && G.d.tech.includes('supercatch')) ca += 3; }
     const blocked = bl.length && Math.random() < 0.1 * bl.length;
     return { sh, ca, blocked, bl, dist, goal: !blocked && sh > ca, wide: sh < ca - 5.5 };
 }
 function doShoot(c, tech, q, blockers) {
     const t = c.team, G = keeper(1 - t); M.stats[t].shots++; if (tech.hp) c.hp = Math.max(0, c.hp - c.max * tech.hp);
-    const res = calcShot(c, tech, q, blockers); AU.shot(); const gp = goalPos(t), from = c.pos.clone().addScaledVector(c.fwd, 1.5); c.cool = 1.5; gest(c, 'strike');
+    xpGive(c, 5); if (tech.st && Math.random() < tech.stp) applyStatus(c, G, tech.st); if (tech.k) techUsed(c, tech); const res = calcShot(c, tech, q, blockers, true); AU.shot(); const gp = goalPos(t), from = c.pos.clone().addScaledVector(c.fwd, 1.5); c.cool = 1.5; gest(c, 'strike');
     if (tech.n) { if (tech.k) { AU.tech(); banner(tech.n.toUpperCase() + '!', c.name, '', 1.6); say(`${tn(c)} unleashes <b>${tech.n}</b>!`); } }
     cinema('shot', { from: c, t });
     if (res.goal) {
@@ -633,16 +851,16 @@ function doShoot(c, tech, q, blockers) {
         say(`${tn(c)} shoots… ${res.bl.length ? `(${res.bl.length} blocker${res.bl.length > 1 ? 's' : ''} in the way) ` : ''}`);
         launch(from, aim, clamp(res.dist / 52, 0.55, 1.5), 1.5, () => onGoal(t, c, tech), null); M.B.flight.dive = G; M.B.flight.miss = true;
     } else if (res.blocked) {
-        const b = res.bl[Math.floor(Math.random() * res.bl.length)]; say(`${tn(c)} shoots but <b style="color:#ff8a8a">${b.name}</b> blocks it!`); M.stats[1 - t].steals++;
+        const b = res.bl[Math.floor(Math.random() * res.bl.length)]; xpGive(b, 8); say(`${tn(c)} shoots but <b style="color:#ff8a8a">${b.name}</b> blocks it!`); M.stats[1 - t].steals++;
         const mid = from.clone().lerp(b.pos, 0.9); launch(from, mid, 0.4, 1, () => { takeBall(b); AU.tackle(); burst(M.B.pos, 12, 0xff8a8a, 9, 0.6); });
     } else {
         const aim = res.wide ? gp.clone().add(new V3(0, rnd(-1, 1) * GR * 1.5, rnd(-1, 1) * GR * 1.5)) : gp.clone().add(new V3(0, rnd(-1, 1), rnd(-1, 1)).multiplyScalar(GR * 0.4));
-        say(`${tn(c)} shoots…`); launch(from, aim, clamp(res.dist / 52, 0.55, 1.5), 1.5, () => { AU.catchSnd(); takeBall(G); G.hold = 1.15; say(res.wide ? `${tn(G)} gathers the wayward shot.` : `<b style="color:#8fe0ff">${G.name}</b> makes the save!`); burst(M.B.pos, 12, 0x8fe0ff, 9, 0.7); M.stats[1 - t].steals++; }, null); M.B.flight.dive = G;
+        say(`${tn(c)} shoots…`); launch(from, aim, clamp(res.dist / 52, 0.55, 1.5), 1.5, () => { AU.catchSnd(); xpGive(G, 14); takeBall(G); G.hold = 1.15; say(res.wide ? `${tn(G)} gathers the wayward shot.` : `<b style="color:#8fe0ff">${G.name}</b> makes the save!`); burst(M.B.pos, 12, 0x8fe0ff, 9, 0.7); M.stats[1 - t].steals++; }, null); M.B.flight.dive = G;
     }
 }
 function onGoal(t, c, tech) {
-    M.score[t]++; M.stats[t].goals++; updScore(); M.mode = 'goal'; M.modeT = 4; M.B.flight = null; M.B.carrier = null; M.B.pos.copy(goalPos(t)).x += t === 0 ? 4 : -4; M.lock = null; M.holdT = 0; M.holdFn = null;
-    AU.goal(); AU.crowd(); flash(); banner('GOAL!', c.name + ' · ' + M.teams[t].name, side(t), 3.2, t);
+    M.score[t]++; M.stats[t].goals++; xpGive(c, 28); M.players.forEach((q) => { if (q.ail && q.ail.nap > 0) { q.ail.nap = 0; q.stun = 0; } }); updScore(); M.mode = 'goal'; M.modeT = 4; M.B.flight = null; M.B.carrier = null; M.B.pos.copy(goalPos(t)).x += t === 0 ? 4 : -4; M.lock = null; M.holdT = 0; M.holdFn = null;
+    AU.goal(); AU.crowd(); if (musHas('goal')) musPlay('goal', { restart: true }); flash(); banner('GOAL!', c.name + ' · ' + M.teams[t].name, side(t), 3.2, t);
     const gl = goals[t === 0 ? 1 : 0]; gl.flash = 1; burst(M.B.pos, 90, M.teams[t].col, 22, 1.8); burst(M.B.pos, 50, 0xffffff, 16, 1.4);
     say(`<b style="color:#ffd24a">GOAL!</b> ${tn(c)} scores! ${M.teams[0].short} ${M.score[0]} – ${M.score[1]} ${M.teams[1].short}`); M.shake = 1;
     cinema('goal', { from: c, t }); M.kick = 1 - t; evt(['gl', t]);
@@ -650,9 +868,9 @@ function onGoal(t, c, tech) {
 
 /* a tackle by someone defending ---------------------------------------- */
 function tackle(a, c) { gest(a, 'strike');
-    a.tcd = 2.4; const at = a.stat('at') * rnd(0.55, 1.25) * skillOf(a.team) + (a.d.tech.includes('supertackle') && a.hp > a.max * 0.15 ? 3 : 0), en = c.stat('en') * rnd(0.5, 1.15) * skillOf(c.team);
-    AU.tackle(); burst(c.pos, 16, 0xffffff, 10, 0.7);
-    if (at > en * 0.95) { M.stats[a.team].tackles++; M.stats[a.team].steals++; c.stun = 1.4; c.vel.addScaledVector(a.fwd, 6); c.hp = Math.max(0, c.hp - at * 2); takeBall(a); a.cool = 0.8; say(`${tn(a)} tackles ${tn(c)} and wins the ball!`); banner('TACKLE!', '', side(a.team), 1.1, a.team); cinema('enc', { a: c, b: a }); M.holdT = 0.7; M.holdFn = null; return true; }
+    a.tcd = 2.4; const tt = tackleTech(a, 0.7), at = a.stat('at') * rnd(0.55, 1.25) * skillOf(a.team) + (tt ? tt.at || 0 : 0), en = c.stat('en') * rnd(0.5, 1.15) * skillOf(c.team);
+    AU.tackle(); burst(c.pos, 16, 0xffffff, 10, 0.7); if (tt) { a.hp = Math.max(0, a.hp - a.max * tt.hp); techUsed(a, tt); banner(tt.n.toUpperCase() + '!', a.name, side(a.team), 1.1, a.team); tackleFx(a, c, tt, at > en * 0.95); }
+    if (at > en * 0.95) { xpGive(a, 10); M.stats[a.team].tackles++; M.stats[a.team].steals++; c.stun = 1.4; c.vel.addScaledVector(a.fwd, 6); c.hp = Math.max(0, c.hp - at * 2); takeBall(a); a.cool = 0.8; say(`${tn(a)} tackles ${tn(c)} and wins the ball!`); banner('TACKLE!', '', side(a.team), 1.1, a.team); cinema('enc', { a: c, b: a }); M.holdT = 0.7; M.holdFn = null; return true; }
     a.stun = 1.0; a.vel.multiplyScalar(0.2); say(`${tn(c)} shrugs off ${tn(a)}!`); return false;
 }
 
@@ -660,15 +878,18 @@ function tackle(a, c) { gest(a, 'strike');
 function breakthrough(c, defs, k) {
     let en = c.stat('en') * 1.1 * skillOf(c.team); const lines = [];
     for (let i = 0; i < k; i++) {
-        const d = defs[i]; let at = d.stat('at') * rnd(0.55, 1.25) * skillOf(d.team); if (d.d.tech.includes('supertackle') && d.team !== c.team && Math.random() < 0.3 && d.hp > d.max * 0.15) { at += 4; lines.push(`${d.name} uses <b>Super Tackle</b>!`); }
+        const d = defs[i]; let at = d.stat('at') * rnd(0.55, 1.25) * skillOf(d.team); const tt = d.team !== c.team ? tackleTech(d) : null;
+        if (tt) { at += tt.at || 0; d.hp = Math.max(0, d.hp - d.max * tt.hp); lines.push(`${d.name} uses <b>${tt.n}</b>!`); techUsed(d, tt); }
         en -= at * 0.9; c.hp = Math.max(0, c.hp - at * 2.2); lines.push(`${d.name} tackles (${Math.round(at)}) → EN ${Math.max(0, Math.round(en))}`);
-        if (en <= 0) { M.stats[d.team].tackles++; M.stats[d.team].steals++; return { ok: false, lost: d, lines, at: i }; }
+        if (en <= 0) { const sl = slipTech(c); if (sl && c.hp > c.max * 0.05 && Math.random() < sl.stp) { en = 1; c.hp -= c.max * 0.04; lines.push(`${c.name} <b>${sl.n}</b>s free!`); } }
+        if (tt) tackleFx(d, c, tt, en <= 0);
+        if (en <= 0) { M.stats[d.team].tackles++; M.stats[d.team].steals++; xpGive(d, 8); return { ok: false, lost: d, lines, at: i }; }
     }
     for (let i = 0; i < k; i++) { const d = defs[i]; d.stun = 3.2; d.vel.addScaledVector(d.pos.clone().sub(c.pos).normalize(), 8); }
-    c.cool = 3.8; return { ok: true, lines };
+    xpGive(c, 5 * k); c.cool = 3.8; return { ok: true, lines };
 }
 function lostBall(c, res) {
-    AU.tackle(); burst(c.pos, 24, 0xff8a8a, 12, 0.8); c.stun = 1.6; c.cool = 1; takeBall(res.lost); res.lost.cool = 0.8;
+    AU.tackle(); burst(c.pos, 24, 0xff8a8a, 12, 0.8); c.stun = Math.max(c.stun, 1.6); c.cool = 1; takeBall(res.lost); res.lost.cool = 0.8;
     say(`${tn(c)} is tackled by ${tn(res.lost)} and loses the ball!`); banner(['STOLEN!', 'TACKLED!'], '', side(res.lost.team), 1.2, res.lost.team); cinema('enc', { a: c, b: res.lost }); M.holdT = 0.8; M.holdFn = null;
 }
 let RE = null;
@@ -707,7 +928,7 @@ function aiEncounter(c, defs) {
         c.cool = hold > 3 ? 1.2 : 2.4; return;
     }
     if (sh && shootP >= thr) { shoot(); return; }
-    if (tm.length) { const r = tm[0], pt = c.d.tech.map((id) => TECH[id]).find((x) => x && x.k === 'pass' && c.hp > c.max * 0.2); doPass(c, r, rem.length > 1 ? pt : null, rem); return; }
+    if (tm.length) { const r = tm[0], pt = techsOf(c, 'pass').filter((x) => c.hp > c.max * (x.hp + 0.12)).sort((a, b) => b.pa - a.pa)[0]; doPass(c, r, rem.length > 0 && Math.random() < 0.6 ? pt : null, rem); return; }
     if (sh) { shoot(); return; } c.cool = 4;
 }
 
@@ -725,7 +946,8 @@ function defPlan(t, ref, c) {
     for (const f of foes) { let best = null, bd = 1e9; for (const q of rest) { if (mark.has(q)) continue; const dd = q.pos.distanceTo(f.pos) - (old && old.mark.get(q) === f ? 6 : 0); if (dd < bd) { bd = dd; best = q; } } if (best) mark.set(best, f); }
     pl = { t: M.clock, c, chase, mark }; M.plan[t] = pl; return pl;
 }
-function aiThink(p) {
+function aiThink(p) { aiThink0(p); try { formAdj(p); } catch (e) { /* formation */ } }
+function aiThink0(p) {
     const t = p.team, o = 1 - t, B = M.B, c = B.carrier, d = p.dir, tg = p.target; p.sp = 0.92;
     if (p.gk) {
         const ox = -d * (GX - 4); let fy = B.pos.y * 0.5, fz = B.pos.z * 0.5; if (B.flight && B.flight.dive === p) { const e = flightEnd(); fy = e.y; fz = e.z; }
@@ -763,10 +985,11 @@ function stepPlayers(dt) {
     const c = M.B.carrier;
     for (const p of M.players) {
         p.stun = Math.max(0, p.stun - dt); p.cool -= dt; p.tcd -= dt; p.techCd -= dt;
-        if (p.stun > 0) { p.vel.multiplyScalar(Math.pow(0.06, dt)); p.pos.addScaledVector(p.vel, dt); p.tumble += dt * 9; continue; }
+        if (p.ail) for (const k in p.ail) if (p.ail[k] > 0) p.ail[k] -= dt; if (p.wth) for (const k in p.wth) if (p.wth[k] > 0) p.wth[k] -= dt;
+        if (p.stun > 0) { p.vel.multiplyScalar(Math.pow(0.06, dt)); p.pos.addScaledVector(p.vel, dt); if (!(p.ail && p.ail.nap > 0)) p.tumble += dt * 9; continue; }
         p.tumble *= Math.pow(0.02, dt); let want = new V3(), sp = 1, boost = false;
         const sc = seatOf(p);
-        if (sc && M.mode === 'play' && !M.simAI) { if (sc.kind === 'remote' && M.clock - sc.seen > 1.2) sc.in.dir.set(0, 0, 0); want.copy(sc.in.dir); boost = sc.in.boost && p.hp > 0; }
+        if (sc && M.mode === 'play' && !M.simAI && !(sc.auto && p === c)) { if (sc.kind === 'remote' && M.clock - sc.seen > 1.2) sc.in.dir.set(0, 0, 0); want.copy(sc.in.dir); boost = sc.in.boost && p.hp > 0; }
         else { p.think -= dt; if (p.think <= 0) { p.think = 0.1 + Math.random() * 0.06; try { aiThink(p); } catch (e) { console.warn('ai', e); } } want.copy(p.target).sub(p.pos); const dist = want.length(); want.normalize().multiplyScalar(Math.min(1, dist / 3.5)); sp = p.sp; }
         if (M.mode !== 'play') want.multiplyScalar(0.0);
         let mx = p.d.spd * 0.3 * (p.exh ? 0.55 : 1) * (p === c ? 0.9 : 1) * (boost ? 1.38 : 1) * sp * (cpu(p.team) ? M.diff.sp : 1);
@@ -775,7 +998,8 @@ function stepPlayers(dt) {
         const lim = R - 5; if (p.pos.length() > lim) { p.pos.setLength(lim); p.vel.multiplyScalar(0.5); }
         if (p.gk) { const ox = -p.dir * (GX - 4); p.pos.x = clamp(p.pos.x, ox - 6, ox + 9 * 0); p.pos.x = p.dir === 1 ? clamp(p.pos.x, -GX + 1, -GX + 12) : clamp(p.pos.x, GX - 12, GX - 1); }
         if (p.vel.lengthSq() > 1) p.fwd.lerp(p.vel.clone().normalize(), Math.min(1, 7 * dt)).normalize();
-        if (p === c) { p.hp = Math.max(0, p.hp - p.max * 0.011 * dt); } else if (!boost) p.hp = Math.min(p.max, p.hp + p.max * 0.006 * dt);
+        if (p === c) { p.hp = Math.max(0, p.hp - p.max * 0.011 * dt); } else if (!boost && !(p.ail && p.ail.venom > 0)) p.hp = Math.min(p.max, p.hp + p.max * (techsOf(p, 'regen').length ? 0.012 : 0.006) * dt);
+        if (p.ail && p.ail.venom > 0) p.hp = Math.max(0, p.hp - p.max * 0.012 * dt * (p === c ? 2 : 1));
         if (p.hp <= 0) p.exh = true; else if (p.exh && p.hp > p.max * 0.18) p.exh = false;
     }
     for (let i = 0; i < M.players.length; i++) for (let j = i + 1; j < M.players.length; j++) { const a = M.players[i], b = M.players[j], d = a.pos.distanceTo(b.pos); if (d < 2.8 && d > 1e-3) { const push = a.pos.clone().sub(b.pos).multiplyScalar((2.8 - d) / d * 0.5); a.pos.add(push); b.pos.sub(push); } }
@@ -805,7 +1029,7 @@ function stepPlay(dt) {
         const c = B.carrier; B.ct = (B.ct || 0) + dt; M.stats[c.team].poss += dt; B.lastTeam = c.team; carryBall();
         if (c.gk) { c.hold -= dt; if (c.hold <= 0) { const r = openTeammates(c).sort((a, b) => passScore(c, b) - passScore(c, a))[0]; if (r) { say(`${tn(c)} throws it out.`); doPass(c, r, null, []); } else c.hold = 0.5; } }
         else if (c.cool <= 0 && c.stun <= 0 && !M.lock) {
-            const defs = field(1 - c.team).filter((e) => e.stun <= 0 && e.pos.distanceTo(c.pos) < ENG).sort((a, b) => a.pos.distanceTo(c.pos) - b.pos.distanceTo(c.pos));
+            const defs = field(1 - c.team).filter((e) => e.stun <= 0 && e.pos.distanceTo(c.pos) < ENG + reachOf(e)).sort((a, b) => a.pos.distanceTo(c.pos) - b.pos.distanceTo(c.pos));
             if (defs.length) startEncounter(c, defs);
         }
     }
@@ -821,7 +1045,7 @@ function startKickoff(kt) {
 }
 function endHalf() {
     if (M.golden) { endMatch(); return; }
-    if (M.half === 1) { M.mode = 'half'; M.modeT = 3.8; M.B.flight = null; banner('HALF TIME', `${M.teams[0].short} ${M.score[0]} – ${M.score[1]} ${M.teams[1].short}`, '', 3.4); AU.whistle(3); AU.crowd(2.2, 0.18); say('<b>Half time.</b>'); M.cin = null; }
+    if (M.half === 1) { M.players.forEach((q) => { q.ail = {}; q.wth = {}; }); M.mode = 'half'; M.modeT = 3.8; M.B.flight = null; if (M.progOn) { const xr = commitXp(); refreshLevels(); M.form = M.form.map((f, t) => (humanTeam(t) ? f : cpuForm(t, true))); M.halfWait = true; M.xr = xr; setTimeout(() => { if (M.halfWait) showHalf(xr); }, 1800); } banner('HALF TIME', `${M.teams[0].short} ${M.score[0]} – ${M.score[1]} ${M.teams[1].short}`, '', 3.4); AU.whistle(3); AU.crowd(2.2, 0.18); say('<b>Half time.</b>'); M.cin = null; }
     else if (M.score[0] === M.score[1]) { M.mode = 'half'; M.modeT = 3.8; M.golden = true; banner('GOLDEN GOAL', 'Tied! Next goal wins', '', 3.4); AU.whistle(3); say('<b>Full time: tied.</b> Golden goal period!'); M.cin = null; }
     else endMatch();
 }
@@ -829,7 +1053,8 @@ function endMatch() {
     M.mode = 'end'; M.modeT = 0; M.lock = null; M.cin = null; closeMeter(); encClose(); const a = M.score[0], b = M.score[1]; let res = a > b ? 'w' : a < b ? 'l' : 'd', tie = '';
     if (res === 'd' && (M.cup || M.tiebreak)) { const sa = M.stats[0].shots, sb = M.stats[1].shots; res = sa > sb ? 'w' : sb > sa ? 'l' : (Math.random() < 0.5 ? 'w' : 'l'); tie = sa !== sb ? 'Decided on shots after a draw' : 'Decided by the sphere lottery after a draw'; }
     M.result = res; M.tie = tie; oasisPost({ blitz: 'end', res, a, b, net: !!M.net }); REC[res === 'w' ? 'w' : res === 'l' ? 'l' : 'd']++; REC.gf += a; REC.ga += b; if (M.cup) { if (res === 'w') { M.cup.round++; if (M.cup.round >= M.cup.opps.length) REC.cups++; } else M.cup.out = true; } saveRec(); if (M.sea) seasonRecord(a, b, res); evt(['end', { sc: [a, b], st: M.stats, res, tie }]);
-    banner(res === 'w' ? 'VICTORY!' : res === 'l' ? 'DEFEAT' : 'DRAW', `${M.teams[0].short} ${a} – ${b} ${M.teams[1].short}`, res === 'l' ? 'red' : '', 3.2); AU.whistle(3); res === 'w' ? AU.win() : res === 'l' ? AU.lose() : AU.crowd(2, 0.2);
+    M.xr = M.progOn ? commitXp(res === 'w' ? 25 : 0) : null;
+    banner(res === 'w' ? 'VICTORY!' : res === 'l' ? 'DEFEAT' : 'DRAW', `${M.teams[0].short} ${a} – ${b} ${M.teams[1].short}`, res === 'l' ? 'red' : '', 3.2); AU.whistle(3); { const ck = res === 'w' ? 'win' : res === 'l' ? 'lose' : null; if (ck && musHas(ck)) { AU.musicOff(); musPlay(ck, { restart: true }); } else res === 'w' ? AU.win() : res === 'l' ? AU.lose() : AU.crowd(2, 0.2); }
     if (res === 'w') { flash(); burst(M.B.pos, 80, M.teams[0].col, 20, 2); } setTimeout(showResult, 2600);
 }
 function stepFlow(dt) {
@@ -839,14 +1064,14 @@ function stepFlow(dt) {
     } else if (M.mode === 'goal') {
         M.modeT -= dt; if (M.modeT <= 0) { if (M.golden) endMatch(); else startKickoff(M.kick); }
     } else if (M.mode === 'half') {
-        M.modeT -= dt; if (M.modeT <= 0) { if (M.golden && M.half === 2) { M.half = 3; M.time = 90; startKickoff(Math.random() < 0.5 ? 0 : 1); } else { M.half = 2; M.time = M.halfLen; startKickoff(1 - M.firstKick); } }
+        if (M.halfWait) return; M.modeT -= dt; if (M.modeT <= 0) { if (M.golden && M.half === 2) { M.half = 3; M.time = 90; startKickoff(Math.random() < 0.5 ? 0 : 1); } else { M.half = 2; M.time = M.halfLen; startKickoff(1 - M.firstKick); } }
     } else if (M.mode === 'play') stepPlay(dt);
 }
 
 /* ------------------------------------------------------------------ ENCOUNTER MENU */
 let E = null;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-function simBreak(c, defs, k) { let ok = 0; for (let n = 0; n < 50; n++) { let en = c.stat('en') * 1.1 * skillOf(c.team), alive = true; for (let i = 0; i < k; i++) { en -= defs[i].stat('at') * rnd(0.55, 1.25) * skillOf(defs[i].team) * 0.9 + (Math.random() < 0.3 && defs[i].d.tech.includes('supertackle') ? 3.6 : 0); if (en <= 0) { alive = false; break; } } if (alive) ok++; } return ok / 50; }
+function simBreak(c, defs, k) { let ok = 0; for (let n = 0; n < 50; n++) { let en = c.stat('en') * 1.1 * skillOf(c.team), alive = true; for (let i = 0; i < k; i++) { en -= defs[i].stat('at') * rnd(0.55, 1.25) * skillOf(defs[i].team) * 0.9 + (Math.random() < 0.45 ? Math.max(0, ...techsOf(defs[i], 'tackle').map((t) => (t.at || 0) * 0.9)) : 0); if (en <= 0) { alive = false; break; } } if (alive) ok++; } return ok / 50; }
 const pct = (v) => Math.round(v * 100) + '%';
 const col = (v) => (v > 0.66 ? '#7ee08f' : v > 0.38 ? '#ffd24a' : '#ff8f8f');
 function encOpen(c, defs, free, remote) { E = { c, defs, free, k: 0, remote: !!remote }; $('enc').classList.remove('hide'); AU.ui(); free ? encCmd() : encBreak(); }
@@ -874,11 +1099,12 @@ function encCmd(log) {
     h += `<button class="btn" data-a="drib" ${canDrib ? '' : 'disabled'} style="grid-column:span 2">${kbn(3)}${E.free ? 'Keep dribbling' : 'Dribble on'}<small>${canDrib ? 'carry the ball forward' : 'defenders are still on you: pass or shoot'}</small></button></div>`; encSet(h, log || (left ? `${left} defender${left > 1 ? 's' : ''} will try to block.` : 'Nobody is in your way.'));
 }
 function encPass() {
-    const c = E.c, rem = E.defs.slice(E.k), list = openTeammates(c).sort((a, b) => passScore(c, b) - passScore(c, a)), pt = c.d.tech.map((id) => TECH[id]).find((x) => x && x.k === 'pass');
+    const c = E.c, rem = E.defs.slice(E.k), list = openTeammates(c).sort((a, b) => passScore(c, b) - passScore(c, a)), pts = techsOf(c, 'pass').filter((x) => c.hp > c.max * (x.hp + 0.02));
     let h = encHead('PASS', '') + '<div class="sub">Pick a receiver</div><div class="opts">';
-    list.forEach((r, i) => { let ok = 0; for (let n = 0; n < 40; n++) if (calcPass(c, r, null, rem).ok) ok++; ok /= 40; let ok2 = 0; if (pt) { for (let n = 0; n < 40; n++) if (calcPass(c, r, pt, rem).ok) ok2++; ok2 /= 40; }
-        h += `<div class="row"><button class="btn" style="flex:1" data-a="doPass" data-v="${r.id}">${kbn(i + 1)}${esc(r.name)} <span style="opacity:.7">${r.role}</span><small>${Math.round(c.pos.distanceTo(r.pos))} m · <b style="color:${col(ok)}">${pct(ok)}</b> to connect</small></button>${pt && c.hp > c.max * 0.14 ? `<button class="btn gold" data-a="doPassT" data-v="${r.id}" title="${pt.d}">✦<small><b style="color:${col(ok2)}">${pct(ok2)}</b></small></button>` : ''}</div>`; });
-    h += `<button class="btn" data-a="back" data-back="1">${kbn('Esc')}Back</button></div>`; encSet(h, pt ? '✦ = Venom Pass (+5 PA, ignores blockers, costs HP)' : 'Choose a teammate.');
+    list.forEach((r, i) => { let ok = 0; for (let n = 0; n < 40; n++) if (calcPass(c, r, null, rem).ok) ok++; ok /= 40;
+        const tb = pts.map((pt) => { let o2 = 0; for (let n = 0; n < 40; n++) if (calcPass(c, r, pt, rem).ok) o2++; o2 /= 40; return `<button class="btn gold" data-a="doPassT" data-v="${r.id}|${pt.id}" title="${esc(pt.d)}">✦ ${esc(pt.n)}<small><b style="color:${col(o2)}">${pct(o2)}</b></small></button>`; }).join('');
+        h += `<div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1;min-width:150px" data-a="doPass" data-v="${r.id}">${kbn(i + 1)}${esc(r.name)} <span style="opacity:.7">${r.role}</span><small>${Math.round(c.pos.distanceTo(r.pos))} m · <b style="color:${col(ok)}">${pct(ok)}</b> to connect</small></button>${tb}</div>`; });
+    h += `<button class="btn" data-a="back" data-back="1">${kbn('Esc')}Back</button></div>`; encSet(h, pts.length ? '✦ = pass techniques (extra PA, may poison, sleep or wither the blockers; cost HP)' : 'Choose a teammate.');
 }
 function encShoot() {
     const c = E.c, rem = E.defs.slice(E.k), opts = shootOpts(c);
@@ -891,7 +1117,7 @@ function shootOpts(c) { const o = [{ ...NORMAL, n: 'Normal shot', d: 'SH ' + Mat
 function endEnc(st) { if (E === st) encClose(); if (RE === st) { RE = null; if (M.lock === 'menu') M.lock = null; netSend({ t: 'encEnd' }); } }
 function opBrk(st, k) { const c = st.c, defs = st.defs; if (k === 0) { st.k = 0; return { ok: true, k: 0, lines: [] }; } const res = breakthrough(c, defs, k); if (!res.ok) { endEnc(st); lostBall(c, res); return { ok: false }; } st.k = k; say(`${tn(c)} breaks through ${k}!`); return { ok: true, k, lines: res.lines }; }
 function opAuto(st) { const c = st.c, defs = st.defs; endEnc(st); M.holdT = 0.25; M.holdFn = () => aiEncounter(c, defs); }
-function opPass(st, r, tech) { const c = st.c, rem = st.defs.slice(st.k), pt = tech ? c.d.tech.map((id) => TECH[id]).find((x) => x && x.k === 'pass') : null; endEnc(st); doPass(c, r, pt, rem); }
+function opPass(st, r, tech) { const c = st.c, rem = st.defs.slice(st.k), pt = tech ? (TECH[tech] && TECH[tech].k === 'pass' && c.d.tech.includes(tech) ? TECH[tech] : techsOf(c, 'pass')[0]) : null; endEnc(st); doPass(c, r, pt, rem); }
 function opDrib(st) { const c = st.c; c.cool = 4; endEnc(st); say(`${tn(c)} keeps dribbling.`); }
 function opShoot(st, i, q) { const c = st.c, rem = st.defs.slice(st.k), t = { ...NORMAL, ...shootOpts(c)[i] }; endEnc(st); doShoot(c, t, q, rem); }
 function remoteTimeout() { const st = RE; M.lockT = 0; if (!st) { M.lock = null; return; } say('<i>No answer in time: the AI plays this one.</i>'); opAuto(st); }
@@ -900,7 +1126,7 @@ function hostOp(s, m) {
     if (m.op === 'brk') { const r = opBrk(st, clamp(m.v | 0, 0, st.defs.length)); netSend({ t: 'brkRes', ...r }); }
     else if (m.op === 'auto') opAuto(st);
     else if (m.op === 'drib') { if (st.free || st.defs.length - st.k === 0) opDrib(st); }
-    else if (m.op === 'pass') { const r = M.players.find((p) => p.id === m.r); if (r && r.team === c.team && r !== c && !r.gk) opPass(st, r, !!m.tech); }
+    else if (m.op === 'pass') { const r = M.players.find((p) => p.id === m.r); if (r && r.team === c.team && r !== c && !r.gk) opPass(st, r, m.tech || null); }
     else if (m.op === 'shoot') { const n = shootOpts(c).length; opShoot(st, clamp(m.i | 0, 0, n - 1), clamp(+m.q || 0, -1, 3)); }
 }
 const ACT = {
@@ -908,8 +1134,8 @@ const ACT = {
     auto() { if (E.remote) { netOp({ op: 'auto' }); encClose(); return; } opAuto(E); },
     pass() { encPass(); }, shoot() { encShoot(); }, back() { encCmd(); },
     drib() { if (E.remote) { netOp({ op: 'drib' }); encClose(); return; } opDrib(E); },
-    doPass(v, tech) { const r = M.players.find((p) => p.id === +v); if (E.remote) { netOp({ op: 'pass', r: r.id, tech: tech ? 1 : 0 }); encClose(); return; } opPass(E, r, tech); },
-    doPassT(v) { ACT.doPass(v, true); },
+    doPass(v, tech) { const r = M.players.find((p) => p.id === +v); if (E.remote) { netOp({ op: 'pass', r: r.id, tech: tech || 0 }); encClose(); return; } opPass(E, r, tech); },
+    doPassT(v) { const [id, t] = String(v).split('|'); ACT.doPass(id, t || true); },
     doShoot(v) { const st = E, i = +v, manual = SET.meter && !M.assist; encClose(); const go = st.remote ? (q) => netOp({ op: 'shoot', i, q }) : (q) => opShoot(st, i, q); if (manual) meterStart(go); else go(0); }
 };
 function encKey(e) {
@@ -1004,14 +1230,15 @@ function drawRadar() {
     rx.strokeStyle = 'rgba(80,190,255,.25)'; rx.lineWidth = 2; rx.beginPath(); rx.arc(cx, cx, w / 2 - 12, 0, 7); rx.stroke(); rx.beginPath(); rx.moveTo(cx, 10); rx.lineTo(cx, w - 10); rx.stroke();
     const dd = myDir(); for (const [i, g] of [[0, -GX], [1, GX]]) { rx.fillStyle = M.teams[i].css; rx.fillRect(cx + dd * g * sc - (dd * g < 0 ? 6 : 0), cx - GR * sc, 6, GR * 2 * sc); }
     for (const p of M.players) {
-        const x = cx + dd * p.pos.x * sc, y = cx + dd * p.pos.z * sc, r = 7 + (p.pos.y / R) * 3.5; rx.fillStyle = M.teams[p.team].css; rx.globalAlpha = p.stun > 0 ? 0.4 : 1; rx.beginPath(); rx.arc(x, y, r, 0, 7); rx.fill(); rx.globalAlpha = 1;
+        const x = cx + dd * p.pos.x * sc, y = cx + dd * p.pos.z * sc, r = 7 + (p.pos.y / R) * 3.5; rx.fillStyle = M.teams[p.team].css; rx.globalAlpha = p.stun > 0 ? 0.4 : 1; rx.beginPath(); rx.arc(x, y, r, 0, 7); rx.fill(); rx.globalAlpha = 1; if (p.ail && p.ail.nap > 0) { rx.fillStyle = '#000'; rx.beginPath(); rx.arc(x, y, r * 0.55, 0, 7); rx.fill(); } else if (p.ail && p.ail.venom > 0) { rx.strokeStyle = '#7bff6a'; rx.lineWidth = 2; rx.beginPath(); rx.arc(x, y, r + 1, 0, 7); rx.stroke(); }
         if (p === M.ctrl) { rx.strokeStyle = '#ffd24a'; rx.lineWidth = 3; rx.beginPath(); rx.arc(x, y, r + 4, 0, 7); rx.stroke(); } if (p.gk) { rx.strokeStyle = '#fff'; rx.lineWidth = 2; rx.beginPath(); rx.arc(x, y, r - 3, 0, 7); rx.stroke(); }
     }
     const b = M.B.pos; rx.fillStyle = '#fff'; rx.shadowColor = '#7fe'; rx.shadowBlur = 10; rx.beginPath(); rx.arc(cx + dd * b.x * sc, cx + dd * b.z * sc, 5, 0, 7); rx.fill(); rx.shadowBlur = 0;
 }
 function updHud(dt) {
     $('time').textContent = fmt(M.time); const c = M.ctrl; $('poss').textContent = M.B.carrier ? 'POSSESSION · ' + M.teams[M.B.carrier.team].short : M.B.flight ? 'BALL IN FLIGHT' : '';
-    if (c) { $('cName').textContent = c.name + ' · ' + c.role; $('cHp').textContent = Math.round(c.hp); $('cMax').textContent = c.max; const b = $('cBar'); b.style.width = (100 * c.hp / c.max) + '%'; b.className = c.hp < c.max * 0.25 ? 'low' : ''; $('cEn').textContent = Math.round(c.stat('en')); $('cPa').textContent = Math.round(c.stat('pa')); $('cSh').textContent = Math.round(c.stat('sh')); $('cAt').textContent = Math.round(c.stat('at')); $('cMode').textContent = M.assist ? 'AUTO' : c.exh ? 'TIRED' : 'MANUAL'; $('cMode').className = 'chip' + (c.exh ? ' bad' : ''); }
+    if (c) { $('cName').textContent = c.name + ' · ' + c.role; $('cHp').textContent = Math.round(c.hp); $('cMax').textContent = c.max; const b = $('cBar'); b.style.width = (100 * c.hp / c.max) + '%'; b.className = c.hp < c.max * 0.25 ? 'low' : ''; $('cEn').textContent = Math.round(c.stat('en')); $('cPa').textContent = Math.round(c.stat('pa')); $('cSh').textContent = Math.round(c.stat('sh')); $('cAt').textContent = Math.round(c.stat('at')); $('cMode').textContent = M.assist ? 'AUTO' : c.exh ? 'TIRED' : 'MANUAL'; $('cMode').className = 'chip' + (c.exh ? ' bad' : ''); $('cBl').textContent = Math.round(c.stat('bl')); const sa = ailTxt(c); if (sa) { $('cMode').textContent = sa; $('cMode').className = 'chip bad'; } else if (localSeat() && localSeat().auto && M.B.carrier === c) $('cMode').textContent = 'AUTO SWIM'; }
+    $('cForm').textContent = FORMS[(M.form && M.form[M.myTeam]) || 'normal'][0].toUpperCase(); statusFx(dt); if (M.tcp) { M.tcp.t -= dt; if (M.tcp.t <= 0) { M.tcp = null; $('tcopy').classList.add('hide'); } }
     radarT += dt; if (radarT > 0.045) { radarT = 0; drawRadar(); }
 }
 
@@ -1032,7 +1259,7 @@ function pollPad() {
     const root = !$('result').classList.contains('hide') ? $('result') : !$('pause').classList.contains('hide') ? $('pause') : !$('title').classList.contains('hide') ? $('title') : E ? $('enc') : null;
     if (root) { const btns = [...root.querySelectorAll('.btn:not(:disabled), .tcard')].filter((b) => b.offsetParent), i = btns.indexOf(document.activeElement);
         if (edge(13) || edge(15)) (btns[(i + 1) % btns.length] || btns[0]).focus(); if (edge(12) || edge(14)) (btns[(i - 1 + btns.length) % btns.length] || btns[0]).focus(); if (edge(0) && document.activeElement && btns.includes(document.activeElement)) document.activeElement.click(); if (edge(1)) { const b = root.querySelector('[data-back]'); if (b) b.click(); } }
-    else { if (edge(0)) { if (M.meter) meterHit(); else actCommand(); } if (edge(3)) actCam(); if (edge(8)) actSwitch(); if (edge(9)) togglePause(); }
+    else { if (edge(0)) { if (M.meter) meterHit(); else actCommand(); } if (edge(3)) actCam(); if (edge(8)) actSwitch(); if (edge(1)) actTechcopy(); if (edge(9)) togglePause(); }
     if (edge(9) && menuOpen && !$('pause').classList.contains('hide')) togglePause(); padPrev = now;
 }
 window.addEventListener('keydown', (e) => {
@@ -1041,7 +1268,7 @@ window.addEventListener('keydown', (e) => {
     if (E && encKey(e)) { e.preventDefault(); return; }
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].includes(e.key)) e.preventDefault(); KEYS[k] = true; if (e.key === 'Shift') KEYS.Shift = true;
     if (M.mode === 'title' || !$('hud') || $('hud').classList.contains('hide')) return;
-    if (k === ' ') { if (M.meter) meterHit(); else actCommand(); } else if (k === 'c') actCam(); else if (k === 'Tab') actSwitch(); else if (k === 't') actAssist(); else if (k === 'p' || k === 'Escape') togglePause(); else if (k === 'm') { SET.music = SET.music > 0 ? 0 : 0.55; AU.vol(); saveSet(); say('Music ' + (SET.music ? 'on' : 'off')); }
+    if (k === ' ') { if (M.meter) meterHit(); else actCommand(); } else if (k === 'c') actCam(); else if (k === 'Tab') actSwitch(); else if (k === 't') actAssist(); else if (k === 'x') actTechcopy(); else if (k === 'j') actAutoSwim(); else if (k === 'f') actFormKey(); else if (k === 'p' || k === 'Escape') togglePause(); else if (k === 'm') { SET.music = SET.music > 0 ? 0 : 0.55; AU.vol(); saveSet(); say('Music ' + (SET.music ? 'on' : 'off')); }
 });
 window.addEventListener('keyup', (e) => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; KEYS[k] = false; if (e.key === 'Shift') KEYS.Shift = false; });
 window.addEventListener('blur', () => { for (const k in KEYS) KEYS[k] = false; });
@@ -1403,17 +1630,17 @@ function seg(items, cur, attr) { return `<div class="seg">${items.map(([v, l]) =
 function showTitle() {
     M.mode = 'title'; closeMeter(); encClose(); show('hud', false); show('pause', false); show('result', false); show('enc', false); $('cd').innerHTML = ''; show('pbtn', false);
     setupMatch({ team: ST.team, opp: ST.opp, diff: ST.diff, len: ST.len, seats: [] }); placeKickoff(0); M.mode = 'title'; M.B.pos.set(0, 0, 0); M.B.carrier = null;
-    const t = $('title'); show('title', true);
+    AU.musicOff(); musPlay('title'); const t = $('title'); show('title', true);
     t.innerHTML = `<div class="l"><div class="tag">Final Fantasy X style</div><div class="logo">BLITZ<br>BALL</div>
     <div class="row" style="margin-top:6px"><div class="rec">Record <b>${REC.w}</b>W · <b>${REC.l}</b>L · <b>${REC.d}</b>D · goals ${REC.gf}–${REC.ga}${REC.cups ? ' · 🏆 ' + REC.cups : ''}</div></div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px"><button class="btn gold" data-m="ex">Exhibition<small>One match against any team</small></button><button class="btn gold" data-m="cup">Sphere Cup<small>Beat all three other teams in a row</small></button><button class="btn gold" data-m="sea">Season${SEA && SEA.phase !== 'done' ? ' (week ' + (SEA.phase === 'final' ? 'final' : SEA.week + 1) + ')' : ''}<small>6 weeks, one match a week, then the final</small></button><button class="btn gold" data-m="net">Multiplayer<small>Co-op, PvP or a co-op season with a friend</small></button><div class="row"><button class="btn" data-m="help">How to play</button><button class="btn" data-m="set">Settings</button></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px"><button class="btn gold" data-m="ex">Exhibition<small>One match against any team</small></button><button class="btn gold" data-m="cup">Sphere Cup<small>Beat all three other teams in a row</small></button><button class="btn gold" data-m="sea">Season${SEA && SEA.phase !== 'done' ? ' (week ' + (SEA.phase === 'final' ? 'final' : SEA.week + 1) + ')' : ''}<small>6 weeks, one match a week, then the final</small></button><button class="btn gold" data-m="net">Multiplayer<small>Co-op, PvP or a co-op season with a friend</small></button><div class="row"><button class="btn" data-m="team">Team</button><button class="btn" data-m="help">How to play</button><button class="btn" data-m="set">Settings</button></div></div></div>
     <div class="r"><div class="lab">Your team</div><div class="teams">${TEAMS.map((x, i) => `<button type="button" class="tcard ${ST.team === i ? 'sel' : ''}" data-team="${i}"><i style="background:${x.css};color:${x.css}"></i><div><b>${x.name}</b><span>${x.blurb}</span></div></button>`).join('')}</div>
     <div class="lab">Opponent (Exhibition)</div>${seg(TEAMS.map((x, i) => [i, x.short]), ST.opp, 'opp')}<div class="lab">Difficulty</div>${seg(Object.entries(DIFF).map(([k, v]) => [k, v.n]), ST.diff, 'diff')}<div class="lab">Half length</div>${seg(Object.entries(LEN), ST.len, 'len')}</div>`;
     t.querySelectorAll('[data-team]').forEach((b) => b.onclick = () => { AU.init(); AU.ui(); ST.team = +b.dataset.team; if (ST.opp === ST.team) ST.opp = (ST.team + 1) % TEAMS.length; savest(); showTitle(); });
     t.querySelectorAll('[data-opp]').forEach((b) => b.onclick = () => { AU.ui(); ST.opp = +b.dataset.opp; if (ST.opp === ST.team) ST.team = (ST.opp + 1) % TEAMS.length; savest(); showTitle(); });
     t.querySelectorAll('[data-diff]').forEach((b) => b.onclick = () => { AU.ui(); ST.diff = b.dataset.diff; savest(); showTitle(); });
     t.querySelectorAll('[data-len]').forEach((b) => b.onclick = () => { AU.ui(); ST.len = +b.dataset.len; savest(); showTitle(); });
-    t.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => { AU.init(); AU.ok(); const m = b.dataset.m; if (m === 'ex') startMatch({ team: ST.team, opp: ST.opp }); else if (m === 'cup') startCup(); else if (m === 'sea') showSeason(); else if (m === 'net') showLobby(); else if (m === 'help') showHelp(); else showSettings('title'); });
+    t.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => { AU.init(); AU.ok(); const m = b.dataset.m; if (m === 'ex') startMatch({ team: ST.team, opp: ST.opp }); else if (m === 'cup') startCup(); else if (m === 'sea') showSeason(); else if (m === 'net') showLobby(); else if (m === 'team') showTeam('title'); else if (m === 'help') showHelp(); else showSettings('title'); });
     const f = t.querySelector('[data-m="ex"]'); if (f) f.focus({ preventScroll: true });
 }
 function savest() { SET.team = ST.team; SET.opp = ST.opp; SET.diff = ST.diff; SET.len = ST.len; saveSet(); }
@@ -1421,6 +1648,7 @@ function startCup() {
     const opps = TEAMS.map((_, i) => i).filter((i) => i !== ST.team).sort(() => Math.random() - 0.5); M.cup = { opps, round: 0, out: false }; startMatch({ team: ST.team, opp: opps[0] });
 }
 function startMatch(o) {
+    M.noProg = !!o.net;
     AU.init(); AU.musicOn(); show('title', false); show('result', false); show('pause', false); show('hud', true); show('pbtn', true);
     setupMatch({ team: o.team, opp: o.opp, diff: o.diff || ST.diff, len: o.len || ST.len, seats: o.seats || [{ team: 0, kind: 'local', assist: SET.assist }] }); M.paused = false; M.pOn = false; M.matchOpts = o; M.cin = null; M.sea = !!o.sea; M.tiebreak = !!o.tiebreak; M.net = o.net ? { role: o.net } : null; if (!o.net) { NETC.evq.length = 0; } M.B.spin = 0; trailPos.length = 0; $('camname').textContent = 'CAM · ' + CAMN[camMode];
     const cup = o.label || (M.cup && !M.cup.out ? `Sphere Cup · match ${M.cup.round + 1} of ${M.cup.opps.length}` : 'Exhibition'); banner(M.teams[0].short + ' vs ' + M.teams[1].short, cup, '', 2.6);
@@ -1432,7 +1660,7 @@ function showHelp() {
     <li>With the ball, <b>get near a defender</b> to start an <b>encounter</b>: choose how many defenders to <b>break through</b> (your <b>EN</b> against their <b>AT</b>), then <b>Pass</b>, <b>Shoot</b> or <b>Dribble</b>. Blockers cut your <b>PA</b> and <b>SH</b> (their <b>BL</b>).</li>
     <li><b>Space / CMD</b> opens the command menu at any time when you are free. Shots can use special techniques (Jecht Shot…) and a <b>power timing meter</b>: stop it in the green.</li>
     <li>Defending: swim into the carrier and press <b>Space</b> to tackle. <b>Tab</b> switches player. The ball carrier loses HP; at zero HP he gets tired and slow.</li>
-    <li><b>C</b> camera · <b>T</b> auto-assist (the AI plays encounters for you) · <b>P</b> pause · <b>M</b> music.</li></ul>
+    <li><b>C</b> camera · <b>T</b> auto-assist (the AI plays encounters for you) · <b>J</b> auto swim · <b>P</b> pause · <b>M</b> music.</li><li><b>Techcopy:</b> in the Team screen each player marks an opponent. When that opponent uses a technique, press <b>X</b> (pad <b>B</b>) quickly to learn it. Players level up after each half, unlocking technique slots (Team screen). <b>F</b> opens the formation list.</li></ul>
     <div class="row"><button class="btn gold" id="hb">Back</button></div></div>`; $('hb').onclick = () => { AU.back(); show('pause', false); if (M.mode === 'title') showTitle(); else togglePause(true); }; $('hb').focus();
 }
 function showSettings(from) {
@@ -1442,16 +1670,17 @@ function showSettings(from) {
     <div class="sl"><label>Effects</label><input type="range" id="sS" min="0" max="100" value="${Math.round(SET.sfx * 100)}"></div>
     <div class="row" style="margin:8px 0"><button class="btn ${SET.meter ? 'on' : ''}" id="sT">Shot timing meter: ${SET.meter ? 'ON' : 'OFF'}</button><button class="btn ${SET.assist ? 'on' : ''}" id="sA">Auto-assist: ${SET.assist ? 'ON' : 'OFF'}</button></div>
     <div class="row" style="margin-bottom:8px"><span class="lab" style="margin:0">Camera</span>${seg(CAMN.map((n, i) => [i, n]), camMode, 'cam')}</div>
-    <div class="row"><button class="btn gold" id="sB">Back</button></div></div>`;
+    <div class="row" style="margin-bottom:8px"><button class="btn" id="sMu">Custom music…</button></div><div class="row"><button class="btn gold" id="sB">Back</button></div></div>`;
     $('sM').oninput = (e) => { SET.music = e.target.value / 100; AU.vol(); saveSet(); }; $('sS').oninput = (e) => { SET.sfx = e.target.value / 100; AU.vol(); saveSet(); }; $('sS').onchange = () => AU.ok();
     $('sT').onclick = () => { SET.meter = !SET.meter; saveSet(); showSettings(from); }; $('sA').onclick = () => { SET.assist = !SET.assist; M.assist = SET.assist; saveSet(); showSettings(from); };
     p.querySelectorAll('[data-cam]').forEach((b) => b.onclick = () => { camMode = +b.dataset.cam; SET.cam = camMode; saveSet(); $('camname').textContent = 'CAM · ' + CAMN[camMode]; showSettings(from); });
+    $('sMu').onclick = () => { AU.ok(); showMusic(from); };
     $('sB').onclick = () => { AU.back(); show('pause', false); if (from === 'pause') togglePause(true); }; $('sB').focus();
 }
 function togglePause(force) {
-    if (M.mode === 'title' || M.mode === 'end') return; const on = force === undefined ? !M.pOn : !force; if (on === M.pOn && force === undefined) return; M.pOn = on; M.paused = on && !M.net;
-    if (on) { AU.ui(); show('pause', true); $('pause').innerHTML = `<div class="panel gold card" style="min-width:280px"><h2>PAUSED</h2><div style="display:flex;flex-direction:column;gap:8px"><button class="btn gold" id="pR">Resume</button><button class="btn" id="pS">Settings</button><button class="btn" id="pH">How to play</button>${M.net ? '' : '<button class="btn" id="pX">Restart match</button>'}<button class="btn" id="pQ">Quit to title</button></div></div>`;
-        $('pR').onclick = () => togglePause(true); $('pS').onclick = () => showSettings('pause'); $('pH').onclick = () => showHelp(); if ($('pX')) $('pX').onclick = () => { show('pause', false); M.paused = false; startMatch(M.matchOpts); }; $('pQ').onclick = () => { M.paused = false; M.cup = null; M.sea = false; if (M.net) netLeave(); AU.musicOff(); showTitle(); }; $('pR').focus(); }
+    if (M.mode === 'title' || M.mode === 'end' || M.halfWait) return; const on = force === undefined ? !M.pOn : !force; if (on === M.pOn && force === undefined) return; M.pOn = on; M.paused = on && !M.net;
+    if (on) { AU.ui(); show('pause', true); $('pause').innerHTML = `<div class="panel gold card" style="min-width:280px"><h2>PAUSED</h2><div style="display:flex;flex-direction:column;gap:8px"><button class="btn gold" id="pR">Resume</button>${M.progOn ? '<button class="btn" id="pT">Team & formation</button>' : ''}<button class="btn" id="pS">Settings</button><button class="btn" id="pH">How to play</button>${M.net ? '' : '<button class="btn" id="pX">Restart match</button>'}<button class="btn" id="pQ">Quit to title</button></div></div>`;
+        $('pR').onclick = () => togglePause(true); $('pS').onclick = () => showSettings('pause'); if ($('pT')) $('pT').onclick = () => showTeam('pause'); $('pH').onclick = () => showHelp(); if ($('pX')) $('pX').onclick = () => { show('pause', false); M.paused = false; startMatch(M.matchOpts); }; $('pQ').onclick = () => { M.paused = false; M.cup = null; M.sea = false; if (M.net) netLeave(); AU.musicOff(); showTitle(); }; $('pR').focus(); }
     else { show('pause', false); }
 }
 $('pbtn').onclick = () => togglePause();
@@ -1465,9 +1694,9 @@ function showResult() {
     const row = (n, a, b) => `<tr><td>${n}</td><td>${a}</td><td>${b}</td></tr>`;
     show('result', true); r.innerHTML = `<div class="panel gold card"><h2 class="o">${title}</h2><div class="o" style="font-size:34px;font-weight:900;margin:2px 0 4px"><span style="color:${M.teams[0].css}">${M.teams[0].short} ${M.score[0]}</span> – <span style="color:${M.teams[1].css}">${M.score[1]} ${M.teams[1].short}</span></div><div class="rec" style="margin-bottom:6px">${sub || ''}</div>
     <table><tr><th></th><th>${M.teams[0].short}</th><th>${M.teams[1].short}</th></tr>${row('Goals', s0.goals, s1.goals)}${row('Shots', s0.shots, s1.shots)}${row('Passes', s0.passOk + '/' + s0.pass, s1.passOk + '/' + s1.pass)}${row('Steals & tackles', s0.steals, s1.steals)}${row('Possession', Math.round(100 * s0.poss / tp) + '%', Math.round(100 * s1.poss / tp) + '%')}</table>
-    <div class="row">${resBtns}</div></div>`;
+    ${xpHtml(M.xr)}<div class="row">${resBtns}${M.progOn ? '<button class="btn" id="rTm">Team & techniques</button>' : ''}</div></div>`;
     const b = (id, fn) => { const e = $(id); if (e) e.onclick = () => { AU.ok(); fn(); }; };
-    b('rN', () => startMatch({ team: ST.team, opp: cup.opps[cup.round] })); b('rC', () => startCup()); b('rR', () => { show('result', false); startMatch(M.matchOpts); }); b('rT', () => { M.cup = null; M.sea = false; if (M.net) netLeave(); show('result', false); AU.musicOff(); showTitle(); });
+    b('rTm', () => { show('result', false); showTeam('result'); }); b('rN', () => startMatch({ team: ST.team, opp: cup.opps[cup.round] })); b('rC', () => startCup()); b('rR', () => { show('result', false); startMatch(M.matchOpts); }); b('rT', () => { M.cup = null; M.sea = false; if (M.net) netLeave(); show('result', false); AU.musicOff(); showTitle(); });
     b('rS', () => { show('result', false); M.net ? (AU.musicOff(), showSeason()) : (AU.musicOff(), showSeason()); }); b('rH', () => { show('result', false); hostStart(); });
     const f = r.querySelector('.btn.gold') || r.querySelector('.btn'); if (f) f.focus();
 }
@@ -1479,7 +1708,7 @@ function frame(now) {
     try { pollPad(); computeInput(); if (M.mode === 'title') { for (const p of M.players) { p.ph += dt; } } else if (isGuest()) viewStep(dt); else stepFlow(dt); netTick(dt); meterStep(dt); syncWorld(dt); updCamera(dt); if (M.mode !== 'title') updHud(dt); } catch (e) { console.error('frame', e); }
     renderer.render(scene, camera);
 }
-window.__bz = { M, THREE, step: (dt) => { stepFlow(dt); }, startMatch, setupMatch, startKickoff, camera, scene, SET, ST, Player, calcShot, calcPass, aiEncounter, doShoot, doPass, TEAMS, keeper, field, goalPos, DIFF, REC, encOpen, showTitle, showResult, togglePause, IN, KEYS, actCommand, tackle, flightEnd, takeBall, E: () => E, AU, setCam: (m) => { camMode = m; }, NETC, localSeat, seatOf, seasonNew, seasonRecord, seasonFixture, showSeason, showLobby, netHost, netJoin, hostStart, buildSnap, applySnap, viewStep, hostOp, simScore, SEA: () => SEA, RE: () => RE, startSeasonMatch, endMatch, actSwitch, actAssist, ACT, beginNetMatch };
+window.__bz = { PROG, TECH, FORMS, applyStatus, showTeam, showFormation, commitXp, techUsed, showHalf, M, THREE, step: (dt) => { stepFlow(dt); }, startMatch, setupMatch, startKickoff, camera, scene, SET, ST, Player, calcShot, calcPass, aiEncounter, doShoot, doPass, TEAMS, keeper, field, goalPos, DIFF, REC, encOpen, showTitle, showResult, togglePause, IN, KEYS, actCommand, tackle, flightEnd, takeBall, E: () => E, AU, setCam: (m) => { camMode = m; }, NETC, localSeat, seatOf, seasonNew, seasonRecord, seasonFixture, showSeason, showLobby, netHost, netJoin, hostStart, buildSnap, applySnap, viewStep, hostOp, simScore, SEA: () => SEA, RE: () => RE, startSeasonMatch, endMatch, actSwitch, actAssist, ACT, beginNetMatch };
 window.__bzReady = true;
 document.addEventListener('pointerdown', () => AU.init(), { once: true });
 showTitle(); requestAnimationFrame(frame);
