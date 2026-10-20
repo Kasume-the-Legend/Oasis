@@ -14026,7 +14026,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             if (c.kind === 'atk') { const t = btUnit(c.tgt); if (!t || t.dead || (!t.isFoe && !btHas(u, 'confuse'))) return; ev.name = 'Attack'; ev.tgt = [t.id]; ev.res = [btHit(u, t, 1)]; ev.dur = 1.55; }
             else if (c.kind === 'art') { if (!btJobOf(u) || !btArtEv(u, c, ev, foes)) return; }
             else if (c.kind === 'def') { ev.name = 'Defend'; ev.dur = 0.9; ev.imp = [0.3]; }
-            else if (c.kind === 'limit') { if (u.limit < 1) return; const t = btUnit(c.tgt); if (!t || !t.isFoe || t.dead) return; const jl = btJobOf(u) ? btJobOf(u).lm : null; Object.assign(ev, btLimitEv(u, t, jl || (BT_LIMITS[c.lm] ? c.lm : 'radiant'), foes, c.q)); if (jl === 'holylight') for (const p of btAlive(BT.party)) ev.res.push({ id: p.id, d: -Math.round(p.hpMax * 0.35) }); }
+            else if (c.kind === 'limit') { if (u.limit < 1) return; const t = btUnit(c.tgt); if (!t || !t.isFoe || t.dead) return; const jl = btJobOf(u) ? btJobOf(u).lm : null; Object.assign(ev, btLimitEv(u, t, jl || (BT_LIMITS[c.lm] ? c.lm : 'radiant'), foes, c.q)); if (jl === 'holylight' || jl === 'megamix') for (const p of btAlive(BT.party)) ev.res.push({ id: p.id, d: -Math.round(p.hpMax * (jl === 'megamix' ? 0.25 : 0.35)) }); }
             else if (c.kind === 'mag') {
                 const sp = BT_SPELLS[c.spell]; if (!sp || u.mp < sp.mp || (BT_LV[c.spell] || 1) > btLvl() || btHas(u, 'silence') || !btSpOk(u, c.spell)) return; ev.name = sp.n; ev.spell = c.spell; ev.mp = sp.mp; ev.fx = 'spell'; ev.dur = 2.0; ev.imp = [1.05];
                 if (sp.esuna || sp.buff) { const t = btUnit(c.tgt); if (!t || t.isFoe || t.dead) return; ev.tgt = [t.id]; ev.res = [sp.esuna ? { id: t.id, d: 0, cl: BT_BAD.slice() } : { id: t.id, d: 0, st: [sp.buff] }]; }
@@ -14040,7 +14040,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 const it = c.item, fx = BT_IFX[it]; if (!BT_ITEMS[it] || !fx || (BT.inv[it] | 0) < 1) return; const t = btUnit(c.tgt); if (!t || t.isFoe) return; ev.name = BT_ITEMS[it].n; ev.item = it; ev.fx = 'item'; ev.dur = 1.6; ev.imp = [0.8];
                 const one = (x) => { const r = { id: x.id, d: 0 }; if (fx.rev) { r.rev = 1; r.d = -Math.round(x.hpMax * fx.rev); return r; } if (fx.hp) r.d = -(fx.hp === 'full' ? Math.max(0, Math.round(x.hpMax - x.hp)) : fx.hp); if (fx.hpPct) r.d = -Math.round(x.hpMax * fx.hpPct); if (fx.mp) r.mp = fx.mp === 'full' ? 99 : fx.mp; if (fx.mpPct) r.mp = Math.round(x.mpMax * fx.mpPct); if (fx.cure) r.cl = fx.cure === 'all' ? BT_BAD.slice() : fx.cure.slice(); if (fx.st) r.st = fx.st.slice(); return r; };
                 const pool = fx.party ? BT.party.filter((p) => (fx.rev ? p.dead : !p.dead)) : [t]; if (!pool.length) return; if (!fx.party && (fx.rev ? !t.dead : t.dead)) return;
-                ev.tgt = pool.map((p) => p.id); ev.res = pool.map(one);
+                ev.tgt = pool.map((p) => p.id); ev.res = pool.map(one); if (u.job === 'chemist') for (const r of ev.res) { if (r.d < 0) r.d = Math.round(r.d * 1.5); if (r.mp > 0 && r.mp < 99) r.mp = Math.round(r.mp * 1.5); }
             } else return;
             if (!u.isFoe) { let sm = 0; for (const r of ev.res) { const tt = btUnit(r.id); if (tt && tt.isFoe && r.d > 0) sm += r.d; } if (sm) { BT.dmg[who] = (BT.dmg[who] | 0) + sm; BT.dmgName[who] = u.name; } }
             btExec(ev);
@@ -14211,7 +14211,9 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             masterthief: { n: 'Master Thief', who: 'sword', hits: [0.9, 0.9, 0.9, 0.9, 1.9], t0: 0.9, gap: 0.26, dur: 3.0, melee: true, col: 0xd8c8ff, cam: 'orbit', mode: 'one', sure: true },
             ultima: { n: 'Ultima', who: 'sword', hits: [2.6, 2.6], t0: 1.3, gap: 0.5, dur: 3.7, stay: true, col: 0xb08aff, cam: 'orbit', mode: 'all' },
             holylight: { n: 'Holy Light', who: 'sword', hits: [2.4], t0: 1.4, gap: 0.3, dur: 3.2, stay: true, col: 0xffffff, cam: 'orbit', mode: 'all' },
-            eternalrage: { n: 'Eternal Rage', who: 'sword', hits: [1.4, 1.4, 1.4, 3.2], t0: 1.1, gap: 0.45, dur: 3.9, stay: true, col: 0xff7a5a, cam: 'orbit', mode: 'all' }
+            eternalrage: { n: 'Eternal Rage', who: 'sword', hits: [1.4, 1.4, 1.4, 3.2], t0: 1.1, gap: 0.45, dur: 3.9, stay: true, col: 0xff7a5a, cam: 'orbit', mode: 'all' },
+            azurestorm: { n: 'Azure Storm', who: 'sword', hits: [1.1, 1.1, 1.1, 2.4], t0: 1.1, gap: 0.42, dur: 3.8, stay: true, col: 0x5aa8ff, cam: 'orbit', mode: 'all' },
+            megamix: { n: 'Mega Mix', who: 'sword', hits: [1.7], t0: 1.3, gap: 0.3, dur: 3.1, stay: true, col: 0x7dffa0, cam: 'orbit', mode: 'all' }
         });
         const BT_ARTS = {
             shock: { job: 'knight', n: 'Shock', mp: 8, tgt: 'foe', mul: 1.9 }, powbreak: { job: 'knight', n: 'Power Break', mp: 6, tgt: 'foe', mul: 1.1, st: 'slow' },
@@ -14224,7 +14226,13 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             pray: { job: 'whitemage', n: 'Pray', mp: 0, tgt: 'party', hpPct: 0.15 }, aura: { job: 'whitemage', n: 'Holy Aura', mp: 18, tgt: 'party', st: ['protect', 'shell'] },
             ifrit: { job: 'summoner', n: 'Ifrit', mp: 14, tgt: 'sall', el: 'fire', vis: 'fire', pw: 1.3 }, shiva: { job: 'summoner', n: 'Shiva', mp: 14, tgt: 'sall', el: 'ice', vis: 'ice', pw: 1.3 },
             ramuh: { job: 'summoner', n: 'Ramuh', mp: 16, tgt: 'sall', el: 'bolt', vis: 'bolt', pw: 1.3 }, carbuncle: { job: 'summoner', n: 'Carbuncle', mp: 18, tgt: 'sparty', vis: 'curaga', st: ['regen', 'protect'] },
-            bahamut: { job: 'summoner', n: 'Bahamut', mp: 34, tgt: 'sall', el: 'holy', vis: 'flare', pw: 2.7 }
+            bahamut: { job: 'summoner', n: 'Bahamut', mp: 34, tgt: 'sall', el: 'holy', vis: 'flare', pw: 2.7 },
+            goblinpunch: { job: 'bluemage', n: 'Goblin Punch', mp: 4, tgt: 'foe', mul: 1.5 }, whitewind: { job: 'bluemage', n: 'White Wind', mp: 14, tgt: 'party', hpPct: 0.22, lv: 2 },
+            aquabreath: { job: 'bluemage', n: 'Aqua Breath', mp: 12, tgt: 'all', mul: 1.0, lv: 3 }, badbreath: { job: 'bluemage', n: 'Bad Breath', mp: 16, tgt: 'foe', mul: 0.9, st: 'poison', lv: 4 },
+            mightyguard: { job: 'bluemage', n: 'Mighty Guard', mp: 26, tgt: 'party', st: ['protect', 'shell', 'haste'], lv: 5 }, needles: { job: 'bluemage', n: '1000 Needles', mp: 18, tgt: 'foe', mul: 2.6, lv: 6 },
+            potmix: { job: 'chemist', n: 'Potion Mix', mp: 0, tgt: 'party', hpPct: 0.12 }, acid: { job: 'chemist', n: 'Acid Flask', mp: 6, tgt: 'foe', mul: 1.3, st: 'poison' },
+            bombtoss: { job: 'chemist', n: 'Bomb Toss', mp: 12, tgt: 'all', mul: 0.9 }, tonic: { job: 'chemist', n: 'Speed Tonic', mp: 14, tgt: 'party', st: ['haste'] },
+            himix: { job: 'chemist', n: 'Hi-Mix', mp: 16, tgt: 'party', hpPct: 0.3 }
         };
         const BT_JOBS = {
             knight: { n: 'Knight', ic: '⚔️', hp: 1.3, mp: 0.55, atk: 1.12, mag: 0.6, cmd: 'Sword Arts', lm: 'shockwave', sp: null },
@@ -14232,7 +14240,9 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             thief: { n: 'Thief', ic: '🗡️', hp: 1.0, mp: 0.8, atk: 1.0, mag: 0.8, cmd: 'Skills', lm: 'masterthief', sp: null },
             blackmage: { n: 'Black Mage', ic: '🔥', hp: 0.8, mp: 1.7, atk: 0.7, mag: 1.45, cmd: 'Focus', lm: 'ultima', sp: (s) => s.el !== 'heal' },
             whitemage: { n: 'White Mage', ic: '✨', hp: 0.85, mp: 1.7, atk: 0.7, mag: 1.3, cmd: 'White Aura', lm: 'holylight', sp: (s) => s.el === 'heal' },
-            summoner: { n: 'Summoner', ic: '🔮', hp: 0.85, mp: 1.9, atk: 0.7, mag: 1.35, cmd: 'Summon', lm: 'eternalrage', sp: null }
+            summoner: { n: 'Summoner', ic: '🔮', hp: 0.85, mp: 1.9, atk: 0.7, mag: 1.35, cmd: 'Summon', lm: 'eternalrage', sp: null },
+            bluemage: { n: 'Blue Mage', ic: '🌀', hp: 1.0, mp: 1.4, atk: 0.9, mag: 1.2, cmd: 'Blue Magic', lm: 'azurestorm', sp: (s) => s.mp <= 12 },
+            chemist: { n: 'Chemist', ic: '⚗️', hp: 1.0, mp: 0.9, atk: 0.85, mag: 0.9, cmd: 'Mix', lm: 'megamix', sp: null }
         };
         const btJobOf = (u) => (u && u.job && BT_JOBS[u.job]) || null;
         const btMyJob = () => { const u = btMine(); return btJobOf(u) ? u.job : ''; };
@@ -14243,7 +14253,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             const u = btMine(); if (u && !btActive()) { u.job = j; btJobStats(u); btSend({ a: 'job', job: j }); } BT.hudDirty = true;
         }
         function btArtEv(u, c, ev, foes) {
-            const A = BT_ARTS[c.art]; if (!A || A.job !== u.job || u.mp < A.mp || btHas(u, 'silence') && (A.tgt === 'sall' || A.tgt === 'sparty')) return false;
+            const A = BT_ARTS[c.art]; if (!A || A.job !== u.job || (A.lv || 0) > btLvl() || u.mp < A.mp || btHas(u, 'silence') && (A.tgt === 'sall' || A.tgt === 'sparty')) return false;
             ev.name = A.n; ev.mp = A.mp; ev.art = c.art;
             if (A.tgt === 'foe' || A.tgt === 'all') {
                 const list = A.tgt === 'all' ? foes : [btUnit(c.tgt)]; if (!list.length || !list[0] || list[0].dead || !list[0].isFoe) return false;
@@ -14674,7 +14684,7 @@ function btMusicStop() {
             const M = BT.menu, u = btMine(); if (!u) return [];
             if (M.mode === 'root') { const J = btJobOf(u), a = [{ k: 'atk', n: 'Attack', ok: true }]; if (J) a.push({ k: 'art', n: J.cmd, ok: true }); if (!J || Object.keys(BT_SPELLS).some((k) => (BT_SPELLS[k].cat || 'mag') === 'mag' && btSpOk(u, k) && (BT_LV[k] || 1) <= btLvl())) a.push({ k: 'mag', n: 'Magic', ok: true }); for (const [ck, cn] of [['sup', 'Support'], ['hex', 'Hex']]) if (Object.keys(BT_SPELLS).some((k) => BT_SPELLS[k].cat === ck && btSpOk(u, k) && (BT_LV[k] || 1) <= btLvl())) a.push({ k: ck, n: cn, ok: true }); a.push({ k: 'item', n: 'Item', ok: true }, { k: 'def', n: 'Defend', ok: true }); if (u.limit >= 1) a.unshift({ k: 'limit', n: 'Limit', ok: true, sub: btLimitName() }); return a; }
             if (M.mode === 'mag' || M.mode === 'sup' || M.mode === 'hex') return Object.keys(BT_SPELLS).filter((k) => (BT_SPELLS[k].cat || 'mag') === M.mode && btSpOk(u, k) && (BT_LV[k] || 1) <= btLvl()).map((k) => ({ k, n: BT_SPELLS[k].n, sub: btHas(u, 'silence') ? 'Silenced' : BT_SPELLS[k].mp + ' MP', ok: !btHas(u, 'silence') && u.mp >= BT_SPELLS[k].mp && (k !== 'raise' || BT.party.some((p) => p.dead)) }));
-            if (M.mode === 'art') return Object.keys(BT_ARTS).filter((k) => BT_ARTS[k].job === u.job).map((k) => ({ k, n: BT_ARTS[k].n, sub: btHas(u, 'silence') && /^s/.test(BT_ARTS[k].tgt) ? 'Silenced' : (BT_ARTS[k].mp ? BT_ARTS[k].mp + ' MP' : 'Free'), ok: u.mp >= BT_ARTS[k].mp && !(btHas(u, 'silence') && /^s/.test(BT_ARTS[k].tgt)) }));
+            if (M.mode === 'art') return Object.keys(BT_ARTS).filter((k) => BT_ARTS[k].job === u.job && (BT_ARTS[k].lv || 0) <= btLvl()).map((k) => ({ k, n: BT_ARTS[k].n, sub: btHas(u, 'silence') && /^s/.test(BT_ARTS[k].tgt) ? 'Silenced' : (BT_ARTS[k].mp ? BT_ARTS[k].mp + ' MP' : 'Free'), ok: u.mp >= BT_ARTS[k].mp && !(btHas(u, 'silence') && /^s/.test(BT_ARTS[k].tgt)) }));
             if (M.mode === 'item') return (Object.keys(BT_ITEMS).some((k) => (BT.inv[k] | 0) > 0) ? Object.keys(BT_ITEMS).filter((k) => (BT.inv[k] | 0) > 0) : ['potion']).map((k) => ({ k, n: BT_ITEMS[k].n, sub: '×' + (BT.inv[k] | 0), ok: (BT.inv[k] | 0) > 0 && (!(BT_IFX[k] && BT_IFX[k].rev) || BT.party.some((p) => p.dead)) }));
             return [];
         }
@@ -25994,8 +26004,8 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         }
         const cmpUnit = (c) => BT.party.find((u) => u.cmpId === c.id);
         function cmpBtApplyGear(u, c) {
-            u.gear = btGearClean(cmpGearStats(c)); const s = btStats(btLvl()), gh = u.gear ? u.gear.hp : 0, gm = u.gear ? u.gear.mp : 0;
-            const r = u.hpMax ? u.hp / u.hpMax : 1; u.hpMax = s.hpMax + gh; u.mpMax = s.mpMax + gm; u.hp = Math.max(1, Math.min(u.hpMax, Math.round(u.hpMax * r))); u.mp = Math.min(u.mp, u.mpMax);
+            u.gear = btGearClean(cmpGearStats(c)); u.job = BT_JOBS[c.job] ? c.job : ''; const J = btJobOf(u), s = btStats(btLvl()), gh = u.gear ? u.gear.hp : 0, gm = u.gear ? u.gear.mp : 0;
+            const r = u.hpMax ? u.hp / u.hpMax : 1; u.hpMax = Math.round(s.hpMax * (J ? J.hp : 1)) + gh; u.mpMax = Math.round(s.mpMax * (J ? J.mp : 1)) + gm; u.hp = Math.max(1, Math.min(u.hpMax, Math.round(u.hpMax * r))); u.mp = Math.min(u.mp, u.mpMax);
         }
         function cmpBtSync() {   // put every companion that is set to "in the party" into the battle roster (host or idle only)
             if (!btMine()) return; if (btActive() && !btIsHost()) return; let ch = false;
@@ -26015,8 +26025,34 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         }
         function cmpGearXp(c, n) { const g = gearLoad(); let ch = false; for (const s of GEAR_SL) { const id = c.worn && c.worn[s], o = id && g.own[id]; if (o) { o.xp = Math.min(CLS_START[99], (o.xp | 0) + n); ch = true; } } if (ch) try { localStorage.setItem(GEAR_KEY, JSON.stringify(g)); } catch (e) { /* storage */ } }
         /* the brain in battle: roles shape what they pick; anything not decided here falls back to the stock ally AI */
+        /* a companion with a job plays it: each job uses its own arts, spells and items; the limit break is the job's own */
+        function cmpJobCmd(u, c) {
+            const foes = btAlive(BT.foes); if (!foes.length) return false;
+            if (u.limit >= 1) { btHandle(u.id, { kind: 'limit', tgt: foes.slice().sort((a, b) => b.hp - a.hp)[0].id }); return true; }
+            const sil = btHas(u, 'silence'), lvl = btLvl(), ok = BT.party.filter((p) => !p.dead), dead = BT.party.filter((p) => p.dead);
+            const hurt = ok.filter((p) => p.hp < p.hpMax * 0.5).sort((a, b) => a.hp / a.hpMax - b.hp / b.hpMax), many = foes.length > 2, rnd = Math.random;
+            const big = foes.slice().sort((a, b) => b.hp - a.hp)[0], weakest = foes.slice().sort((a, b) => a.hp - b.hp)[0], boss = !!(BT_FOES[big.type] && BT_FOES[big.type].boss), weak = (BT_FOES[big.type] || {}).weak;
+            const art = (k, tgt) => { const A = BT_ARTS[k]; if (!A || A.job !== u.job || u.mp < A.mp || (A.lv || 0) > lvl || (sil && /^s/.test(A.tgt))) return false; btHandle(u.id, { kind: 'art', art: k, tgt }); return true; };
+            const spell = (k, tgt) => { const S = BT_SPELLS[k]; if (!S || sil || u.mp < S.mp || (BT_LV[k] || 1) > lvl || !btSpOk(u, k)) return false; btHandle(u.id, { kind: 'mag', spell: k, tgt }); return true; };
+            const item = (k, tgt) => { if ((BT.inv[k] | 0) < 1) return false; btHandle(u.id, { kind: 'item', item: k, tgt }); return true; };
+            const potion = (t) => item((BT.inv.hipotion | 0) > 0 && t.hpMax - t.hp > 500 ? 'hipotion' : 'potion', t.id) || item('hipotion', t.id);
+            const buffed = (k) => ok.some((p) => !btHas(p, k));
+            const J = u.job, done = (() => {
+                if (J === 'whitemage') return (dead.length && spell('raise', dead[0].id)) || (hurt.length > 1 && spell('curaga')) || (hurt.length && (spell('cure', hurt[0].id) || art('pray'))) || (!hurt.length && buffed('protect') && rnd() < 0.3 && art('aura')) || (hurt.length && potion(hurt[0]));
+                if (J === 'blackmage') return (u.mp < 8 && art('focus')) || (lvl >= 5 && (boss || many) && spell('flare', big.id)) || (many && spell('bolt')) || (weak === 'ice' && spell('ice', big.id)) || (weak === 'bolt' && spell('bolt')) || spell('fire', big.id) || art('focus');
+                if (J === 'knight') return (hurt.length && hurt[0].hp < hurt[0].hpMax * 0.35 && potion(hurt[0])) || (boss && art('climhazzard', big.id)) || (rnd() < 0.35 && art('powbreak', big.id)) || (rnd() < 0.7 && art('shock', big.id));
+                if (J === 'dragoon') return (many && rnd() < 0.5 && art('dragonbreath')) || (u.hp < u.hpMax * 0.6 && art('lancer', big.id)) || art('jump', big.id);
+                if (J === 'thief') return (rnd() < 0.3 && art('steal', big.id)) || (many && art('daggerstorm')) || (rnd() < 0.3 && art('mug', big.id));
+                if (J === 'summoner') return (hurt.length > 1 && art('carbuncle')) || ((boss || many) && art('bahamut')) || (weak === 'ice' && art('shiva')) || (weak === 'bolt' && art('ramuh')) || art('ifrit') || art('shiva') || art('ramuh');
+                if (J === 'bluemage') return (hurt.length > 1 && art('whitewind')) || (hurt.length && spell('cure', hurt[0].id)) || (buffed('protect') && rnd() < 0.2 && art('mightyguard')) || art('needles', big.id) || (many && art('aquabreath')) || (!btHas(big, 'poison') && rnd() < 0.3 && art('badbreath', big.id)) || art('goblinpunch', big.id);
+                if (J === 'chemist') return (dead.length && item('phoenix', dead[0].id)) || (hurt.length > 1 && art('himix')) || (hurt.length && (art('potmix') || potion(hurt[0]))) || (buffed('haste') && rnd() < 0.2 && art('tonic')) || (many && art('bombtoss')) || (rnd() < 0.5 && art('acid', big.id));
+                return false;
+            })();
+            if (!done) btHandle(u.id, { kind: 'atk', tgt: (J === 'knight' || J === 'dragoon' || J === 'thief' ? weakest : big).id });
+            return true;
+        }
         function cmpBotCmd(u) {
-            const c = cmpFind(u.cmpId), role = (c && c.role) || 'balanced'; if (role === 'balanced') return false;
+            const c = cmpFind(u.cmpId), role = (c && c.role) || 'balanced'; if (u.job && btJobOf(u)) { try { if (cmpJobCmd(u, c)) return true; } catch (e) { console.warn('companion job', e); } } if (role === 'balanced') return false;
             const foes = btAlive(BT.foes); if (!foes.length || u.limit >= 1) return false; const lvl = btLvl(), sil = btHas(u, 'silence');
             const hurt = BT.party.filter((p) => !p.dead && p.hp < p.hpMax * (role === 'healer' ? 0.65 : 0.35)).sort((a, b) => a.hp / a.hpMax - b.hp / b.hpMax), dead = BT.party.filter((p) => p.dead);
             if (hurt.length) {
@@ -26110,7 +26146,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             const c = cmpFind(CMP.editId); if (!c) { CMP.view = 'list'; return cmpPanelRender(); } c.worn = c.worn || {}; c.gil = c.gil | 0; const g = gearLoad(), st = cmpGearStats(c), mine = window.oasisGil ? window.oasisGil.get() : 0;
             const wornBy = (id) => CMP.list.find((x) => x.id !== c.id && x.worn && Object.values(x.worn).includes(id));
             let h = '<h3>⚔ ' + cmpEsc(c.name) + ' — party and gear</h3><div class="sub">Like a party member in a Final Fantasy game: they join Warriors of Light as a fighter you do not have to control. They keep their own Gil, and they wear gear from your Equipment inventory. Buy gear in the Equipment shop, then hand it out here.</div>';
-            h += '<div class="row"><button data-g="party" class="' + (c.party ? 'on' : 'pri') + '">' + (c.party ? '✓ In the Warriors of Light party' : '＋ Add to the Warriors of Light party') + '</button><span>Class</span><select data-g="cls">' + Object.keys(CMP_CLASSES).map((k) => '<option value="' + k + '"' + ((c.cls || 'hero') === k ? ' selected' : '') + '>' + CMP_CLASSES[k] + '</option>').join('') + '</select><span>Battle role</span><select data-g="role">' + Object.keys(CMP_ROLES).map((k) => '<option value="' + k + '"' + ((c.role || 'balanced') === k ? ' selected' : '') + '>' + CMP_ROLES[k] + '</option>').join('') + '</select></div>';
+            h += '<div class="row"><button data-g="party" class="' + (c.party ? 'on' : 'pri') + '">' + (c.party ? '✓ In the Warriors of Light party' : '＋ Add to the Warriors of Light party') + '</button><span>Class</span><select data-g="cls">' + Object.keys(CMP_CLASSES).map((k) => '<option value="' + k + '"' + ((c.cls || 'hero') === k ? ' selected' : '') + '>' + CMP_CLASSES[k] + '</option>').join('') + '</select><span>Job</span><select data-g="job"><option value="">— none (class and role) —</option>' + Object.keys(BT_JOBS).map((k) => '<option value="' + k + '"' + (c.job === k ? ' selected' : '') + '>' + BT_JOBS[k].ic + ' ' + BT_JOBS[k].n + '</option>').join('') + '</select><span>Battle role</span><select data-g="role">' + Object.keys(CMP_ROLES).map((k) => '<option value="' + k + '"' + ((c.role || 'balanced') === k ? ' selected' : '') + '>' + CMP_ROLES[k] + '</option>').join('') + '</select></div>';
             h += '<div class="row"><b>💰 ' + c.gil.toLocaleString('en-US') + ' Gil</b><span class="sub" style="margin:0">(you have ' + mine.toLocaleString('en-US') + ')</span><button data-g="give" data-n="100">Give 100</button><button data-g="give" data-n="1000">Give 1,000</button><button data-g="take">Take it all back</button><button data-g="shop" style="margin-left:auto">Open the Equipment shop</button></div>';
             for (const s of GEAR_SL) {
                 const opts = Object.keys(g.own).filter((id) => g.own[id].s === s).map((id) => { const o = g.own[id], b = o.b || {}, lv = gearProg(o.xp).lv, by = wornBy(id); const bits = ['atk', 'def', 'mag', 'hp', 'mp', 'spd'].filter((k) => b[k]).map((k) => k.toUpperCase() + '+' + b[k]).join(' '); return '<option value="' + cmpEsc(id) + '"' + (c.worn[s] === id ? ' selected' : '') + '>' + cmpEsc(o.n || id) + ' Lv' + lv + ' · ' + bits + (by ? ' (on ' + cmpEsc(by.name) + ')' : '') + '</option>'; }).join('');
@@ -26129,7 +26165,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         });
         document.addEventListener('change', (e) => {
             const t = e.target; if (!t.closest || !t.closest('#cmp-box') || !t.dataset.g) return; const c = cmpFind(CMP.editId); if (!c) return; c.worn = c.worn || {};
-            if (t.dataset.g === 'role') c.role = t.value; else if (t.dataset.g === 'cls') c.cls = CMP_CLASSES[t.value] ? t.value : 'hero'; else if (t.dataset.g === 'slot') { const s = t.dataset.s; if (t.value) { for (const x of CMP.list) if (x !== c && x.worn && x.worn[s] === t.value) { delete x.worn[s]; const xu = cmpUnit(x); if (xu) cmpBtApplyGear(xu, x); } c.worn[s] = t.value; } else delete c.worn[s]; }
+            if (t.dataset.g === 'role') c.role = t.value; else if (t.dataset.g === 'job') c.job = BT_JOBS[t.value] ? t.value : ''; else if (t.dataset.g === 'cls') c.cls = CMP_CLASSES[t.value] ? t.value : 'hero'; else if (t.dataset.g === 'slot') { const s = t.dataset.s; if (t.value) { for (const x of CMP.list) if (x !== c && x.worn && x.worn[s] === t.value) { delete x.worn[s]; const xu = cmpUnit(x); if (xu) cmpBtApplyGear(xu, x); } c.worn[s] = t.value; } else delete c.worn[s]; }
             cmpSave(true); const u = cmpUnit(c); if (u && (!btActive() || BT.phase === 'over' || btIsHost())) { cmpBtApplyGear(u, c); BT.hudDirty = true; } cmpPanelRender();
         });
         /* ---- CUSTOM EMOTES: import Mixamo-style FBX dances and poses once; you and every companion can play them ---- */
