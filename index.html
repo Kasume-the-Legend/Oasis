@@ -1637,6 +1637,23 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             ANIM_EMOTES.groll = { loop: false, frames: N, duration: 0.8, hipsHeight: base.hipsHeight, bones, hipsY: hy };
             EMOTES.groll = { dur: 0.8, move: true, hero: true };
         } catch (e) { console.warn('roll clip', e); }
+        // Budokai jump flips: a front flip (jump toward / sideways) and a back flip (jump away), built from numbers like the roll above: hips pitch through 360 degrees, knees tucked, on top of the Fighter stance for the arms
+        try {
+            const base = TG_DEF.hf_idle || TG_DEF.hr_idle || TG_DEF.gp_idle, N = 32, fq = new THREE.Quaternion(), fax = new THREE.Vector3(1, 0, 0);
+            const frx = (a) => { fq.setFromAxisAngle(fax, a); return [fq.x, fq.y, fq.z, fq.w]; };
+            const mkFlip = (dir) => {
+                const bones = {}, track = (f) => { const o = []; for (let i = 0; i < N; i++) o.push(...f(i / (N - 1))); return o; };
+                for (const [n, a] of Object.entries(base.bones)) bones[n] = a.slice(0, 4);
+                const ease = (u) => u < 0.08 ? 0 : u > 0.9 ? 1 : (u - 0.08) / 0.82, curl = (u) => Math.sin(Math.min(1, Math.max(0, (u - 0.03) / 0.9)) * Math.PI);
+                bones.hips = track((u) => frx(dir * ease(u) * Math.PI * 2 * 0.985));
+                bones.spine = track((u) => frx(0.6 * curl(u))); bones.chest = track((u) => frx(0.4 * curl(u)));
+                for (const side of ['left', 'right']) { bones[side + 'UpperLeg'] = track((u) => frx(-1.5 * curl(u))); bones[side + 'LowerLeg'] = track((u) => frx(1.8 * curl(u))); }
+                const hy = []; for (let i = 0; i < N; i++) { const u = i / (N - 1); hy.push(1 - 0.35 * Math.pow(curl(u), 0.7)); }
+                return { loop: false, frames: N, duration: 0.6, hipsHeight: base.hipsHeight, bones, hipsY: hy };
+            };
+            ANIM_EMOTES.bud_flipF = mkFlip(1); ANIM_EMOTES.bud_flipB = mkFlip(-1);
+            EMOTES.bud_flipF = { dur: 0.6, move: true, hero: true }; EMOTES.bud_flipB = { dur: 0.6, move: true, hero: true };
+        } catch (e) { console.warn('budokai flip clips', e); }
         // ---- BUDOKAI (fighting mode): every move has a slot in the Animations panel under "Budokai". Fill one with your own clip and it replaces the stock clip for you;
         // until then the stock Fighter / Hero clips are combined into the combos (see BUD_DEF below). ----
         const BUD_MOVES = [['p1', 'Punch 1'], ['p2', 'Punch 2'], ['p3', 'Punch 3 (finisher)'], ['k1', 'Kick 1'], ['k2', 'Kick 2'], ['k3', 'Kick 3 (finisher)'], ['pk', 'Launcher (punch, punch, kick)'], ['kp', 'Heavy finisher (kick, kick, punch)'], ['th', 'Throw'], ['hd', 'Hold (counter)'], ['gd', 'Guard (held)'], ['sl', 'Sidestep left'], ['sr', 'Sidestep right'], ['sp', 'Special (burst)'], ['blk', 'Block'], ['hit1', 'Hit (light) 1'], ['hit2', 'Hit (light) 2'], ['kb', 'Knocked back'], ['kd', 'Knocked down'], ['up', 'Get up'], ['ko', 'Knocked out (stays down)'], ['win', 'Victory'], ['lose', 'Defeat'], ['taunt', 'Taunt']];
@@ -23319,7 +23336,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         }
         function budStand(F) { try { F.actor.playEmote('stand'); } catch (e) { /* none */ } if (F === BUD.me) { try { net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } } }
         function budReset(F, x, face) {
-            Object.assign(F, { hp: 100, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, buf: null, combo: 0, comboDmg: 0, hurtN: 0, armor: 0, down: 0, ko: false, juggle: 0, aiT: 0, aiG: 0 }); F.kv.x = F.kv.z = 0;
+            Object.assign(F, { hp: 100, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, buf: null, combo: 0, comboDmg: 0, hurtN: 0, armor: 0, down: 0, ko: false, juggle: 0, aiT: 0, aiG: 0, jy: 0, jv: 0 }); F.kv.x = F.kv.z = 0;
             const g = F.actor.group; g.position.set(x, BUD.ringH, 0); g.rotation.y = face; if (F === BUD.me) playerVelocity.y = 0; F.actor.firstFrame = true; budStand(F);
         }
         function budStart(F, key) {
@@ -23338,10 +23355,21 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             budPlay(F, key, rate); if (mv.kind !== 'hold' && mv.kind !== 'dodge') hcSfx('swish');
             const g = F.actor.group, p = g.position; F.act.from = { x: p.x, z: p.z }; return true;
         }
+        /* ---- JUMP: neutral = straight up; holding toward / away / sideways makes it a diagonal jump with a front flip or back flip. Airborne fighters dodge everything but a special. ---- */
+        const BUD_G = 21;
+        function budJump(F) {
+            const now = nowS(); if (now - (F.jumpAt || -9) < 0.3) return;
+            const inp = F.jin || { x: 0, z: 0 }, hx = Math.abs(inp.x) > 0.3 ? Math.sign(inp.x) : 0, hz = Math.abs(inp.z) > 0.3 ? Math.sign(inp.z) : 0, v0 = 6.3, T = 2 * v0 / BUD_G;
+            F.st = 'air'; F.guard = false; F.act = null; F.buf = null; F.jy = 0.001; F.jv = v0; F.jn = { x: hx, z: hz }; F.jumpAt = now; if (F.mvv) { F.mvv.x = 0; F.mvv.z = 0; }
+            if (hx || hz) { const nm = hx < 0 ? 'bud_flipB' : 'bud_flipF'; try { F.actor.playEmote(nm); F.actor.emoteRate = 0.6 / T; F.actor.emoteDur = T; if (F === BUD.me) net && net.send({ t: 'emote', name: nm, r: 0.6 / T, h: 0 }); } catch (e) { /* none */ } }
+            else budStand(F);
+            hcSfx('swish');
+        }
         function budLetter(F, L) {
-            if (F.ko || F.st === 'stun' || F.st === 'down' || F.st === 'getup' || F.st === 'win' || F.st === 'lose' || !BUD.live) return;
+            if (F.ko || F.st === 'stun' || F.st === 'down' || F.st === 'getup' || F.st === 'win' || F.st === 'lose' || F.st === 'air' || !BUD.live) return;
             const now = nowS();
             if (F.st === 'act') { F.buf = L; F.bufT = now; return; }
+            if (L === 'V') { budJump(F); return; }
             const key = ({ P: 'p1', K: 'k1', T: 'th', H: 'hd', S: 'sp', Q: 'sl', E: 'sr', F: 'df', B: 'db' })[L]; if (!key) return;
             if ((key === 'df' || key === 'db') && now - (F.dashAt || -9) < 0.42) return;      // no dash spam
             if ((key === 'p1' || key === 'k1') && now - (F.lastChain || -9) < 0.05) return; budStart(F, key);
@@ -23359,7 +23387,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         }
         function budFace(F, O, rate, dt) { const p = budPosOf(F), q = budPosOf(O), g = F.actor.group; g.rotation.y = lerpAngle(g.rotation.y, Math.atan2(q.x - p.x, q.z - p.z), 1 - Math.exp(-dt * rate)); }
         function budReact(D, dmg, info, kd) {
-            D.hp = Math.max(0, D.hp - dmg); D.sp = Math.min(100, D.sp + dmg * 0.8); D.comboT = -9; D.combo = 0; const now = nowS();
+            D.jy = 0; D.jv = 0; D.hp = Math.max(0, D.hp - dmg); D.sp = Math.min(100, D.sp + dmg * 0.8); D.comboT = -9; D.combo = 0; const now = nowS();
             if (D.hp <= 0) return budKO(D);
             const fx = info.fx !== undefined ? info.fx : budPosOf(D).x - 1, fz = info.fz !== undefined ? info.fz : budPosOf(D).z, p = budPosOf(D), ax = p.x - fx, az = p.z - fz, al = Math.hypot(ax, az) || 1;
             D.act = null; D.buf = null; D.guard = false;
@@ -23380,7 +23408,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const p = budPosOf(D), ax = info.fx - p.x, az = info.fz - p.z, fromYaw = Math.atan2(ax, az), kind = info.kind;
             let out = 'hit', dmg = info.dmg, cd = 0; const cb = info.cb || 0; dmg = Math.max(1, Math.round(dmg * Math.max(0.55, 1 - 0.07 * cb)));
             const actv = D.st === 'act' && D.act ? D.act : null;
-            if (D.inv > 0) { out = 'evade'; dmg = 0; }
+            if (D.inv > 0 || (D.st === 'air' && D.jy > 0.2 && kind !== 'special')) { out = 'evade'; dmg = 0; }
             else if (actv && actv.mv.kind === 'hold' && actv.hold && actv.t >= actv.hold[0] && actv.t <= actv.hold[1] && kind === 'strike') { out = 'counter'; dmg = 0; cd = 15; D.inv = 0.5; }
             else if (kind === 'throw') { if (actv && (actv.mv.kind === 'strike' || actv.mv.kind === 'special') && actv.hit && actv.t >= actv.hit[0] - 0.05) { out = 'stuff'; dmg = 0; } else out = 'throw'; }
             else if (D.guard && Math.abs(angDiff(fromYaw, D.actor.group.rotation.y)) < 1.5) { out = 'block'; dmg = Math.max(1, Math.round(dmg * (kind === 'special' ? 0.35 : 0.12))); }
@@ -23418,10 +23446,16 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         /* ---- per-frame fighter simulation (for the fighters whose body is on this device: you, and the CPU) ---- */
         function budTickF(F, dt, inp) {
             const O = F.opp, g = F.actor.group, p = g.position, now = nowS(); if (!O) return;
-            if (F.inv > 0) F.inv -= dt;
+            if (F.inv > 0) F.inv -= dt; F.jin = inp;
             const op = budPosOf(O);
             if (F.kv.x * F.kv.x + F.kv.z * F.kv.z > 1e-4) { p.x += F.kv.x * dt; p.z += F.kv.z * dt; const k = Math.exp(-dt * 5); F.kv.x *= k; F.kv.z *= k; }
             if (F.st === 'stun') { F.stun -= dt; if (F.stun <= 0) { F.st = 'idle'; budStand(F); } }
+            else if (F.st === 'air') {
+                const hs = F.jn || { x: 0, z: 0 }; F.jv -= BUD_G * dt; F.jy += F.jv * dt; if (F === BUD.me) playerVelocity.y = 0;
+                { const ex = op.x - p.x, ez = op.z - p.z, el = Math.hypot(ex, ez) || 1e-6, ux = ex / el, uz = ez / el, fx = uz, fz = -ux, sx = hs.x * (hs.x > 0 ? 4.6 : 3.8);
+                  let vx = ux * sx + fx * hs.z * 3.4, vz = uz * sx + fz * hs.z * 3.4; const dot = vx * ux + vz * uz; if (hs.x > 0 && el < 1.15 && dot > 0) { vx -= ux * dot; vz -= uz * dot; } p.x += vx * dt; p.z += vz * dt; }
+                if (F.jy <= 0 && F.jv < 0) { F.jy = 0; F.jv = 0; F.st = 'stun'; F.stun = 0.08; budStand(F); }
+            }
             else if (F.st === 'down') { F.down -= dt; if (F.down <= 0) { F.st = 'getup'; const c = budClip(F.actor, 'up'); F.down = c.dur / 1.7; F.inv = F.down + 0.2; budPlay(F, 'up', 1.7); } }
             else if (F.st === 'getup') { F.down -= dt; if (F.down <= 0) { F.st = 'idle'; budStand(F); } }
             else if (F.st === 'act') {
@@ -23447,8 +23481,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             }
             if (F.st !== 'idle' && F.st !== 'guard' && F.mvv) { const dk = Math.exp(-dt * 9); F.mvv.x *= dk; F.mvv.z *= dk; }
             // keep apart, keep inside the ring
-            { const dx = p.x - op.x, dz = p.z - op.z, d = Math.hypot(dx, dz); if (d < 0.9 && d > 1e-5) { const k = (0.9 - d); p.x += dx / d * k * 0.5; p.z += dz / d * k * 0.5; if (!O.remote && O.st !== 'down') { op.x -= dx / d * k * 0.5; op.z -= dz / d * k * 0.5; } } }
-            { const r = Math.hypot(p.x, p.z), R = BUD.ringR - 0.55; if (r > R) { p.x *= R / r; p.z *= R / r; } p.y = BUD.ringH; }
+            { const dx = p.x - op.x, dz = p.z - op.z, d = Math.hypot(dx, dz); if (d < 0.9 && d > 1e-5 && !(F.jy > 0.35)) { const k = (0.9 - d); p.x += dx / d * k * 0.5; p.z += dz / d * k * 0.5; if (!O.remote && O.st !== 'down') { op.x -= dx / d * k * 0.5; op.z -= dz / d * k * 0.5; } } }
+            { const r = Math.hypot(p.x, p.z), R = BUD.ringR - 0.55; if (r > R) { p.x *= R / r; p.z *= R / r; } p.y = BUD.ringH + (F.jy || 0); }
         }
         /* ---- the CPU opponent ---- */
         function budAI(F, dt) {
@@ -23458,10 +23492,11 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (F.st === 'idle' || F.st === 'guard') {
                 if (d > 2.3) inp.x = 1; else if (d < 1.05) inp.x = -0.7;
                 if (d > 3.4 && F.st === 'idle' && Math.random() < 0.012 + 0.012 * lv.atk) budLetter(F, 'F');
+                if (F.st === 'idle' && d > 2.6 && Math.random() < 0.004 + 0.008 * lv.atk) { F.jin = { x: 1, z: 0 }; budLetter(F, 'V'); }
                 if (F.aiZ && now < F.aiZT) inp.z = F.aiZ;
                 if (F.aiT <= 0) {
                     F.aiT = lv.think * (0.7 + Math.random() * 0.7); const oa = O.st === 'act' && O.act && O.act.mv.kind !== 'hold' && O.act.mv.kind !== 'dodge' && O.act.t < O.act.dur * 0.55;
-                    if (oa && d < 2.6 && Math.random() < lv.grd) { if (Math.random() < 0.18) budLetter(F, 'B'); else if (Math.random() < 0.3) budLetter(F, Math.random() < 0.5 ? 'Q' : 'E'); else F.aiG = 0.55; }
+                    if (oa && d < 2.6 && Math.random() < lv.grd) { if (Math.random() < 0.12) budLetter(F, 'B'); else if (Math.random() < 0.12) { F.jin = { x: -1, z: 0 }; budLetter(F, 'V'); } else if (Math.random() < 0.3) budLetter(F, Math.random() < 0.5 ? 'Q' : 'E'); else F.aiG = 0.55; }
                     else if (d < 2.1 && Math.random() < lv.atk) { if (O.guard && Math.random() < 0.55 + lv.thr) budLetter(F, 'T'); else if (F.sp >= 50 && Math.random() < 0.3) budLetter(F, 'S'); else { budLetter(F, Math.random() < 0.5 ? 'P' : 'K'); F.aiChain = Math.random() < 0.6 ? 1 + ((Math.random() * 2) | 0) : 0; } }
                     else if (Math.random() < 0.3) { F.aiZ = Math.random() < 0.5 ? -1 : 1; F.aiZT = now + 0.5; }
                 }
@@ -23748,7 +23783,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             const h = document.createElement('div'); h.id = 'bud-hud';
             h.innerHTML = `<div id="bud-top"><div class="bud-side"><div class="bud-nm" id="bud-n1"></div><div class="bud-bar"><i id="bud-h1"></i></div><div class="bud-sp" id="bud-s1"><i></i></div><div class="bud-pips" id="bud-p1"></div></div><div id="bud-tm">60</div><div class="bud-side r"><div class="bud-nm" id="bud-n2"></div><div class="bud-bar"><i id="bud-h2"></i></div><div class="bud-pips" id="bud-p2"></div></div></div>
 <div id="bud-ct"></div><div id="bud-cb"></div><button id="bud-mt" type="button">MENU</button><div id="bud-mn"></div>
-<div id="bud-pad"><button class="mv" data-m="a">◀</button><button class="mv" data-m="d">▶</button><button class="mv" data-m="w">▲</button><button class="mv" data-m="s">▼</button><button data-l="P">P</button><button data-l="K">K</button><button data-l="T">T</button><button data-g="H" data-l="H">H</button><button data-gd="1">G</button><button data-l="S">SP</button><button data-l="B">&laquo;</button><button data-l="F">&raquo;</button></div>`;
+<div id="bud-pad"><button class="mv" data-m="a">◀</button><button class="mv" data-m="d">▶</button><button class="mv" data-m="w">▲</button><button class="mv" data-m="s">▼</button><button data-l="P">P</button><button data-l="K">K</button><button data-l="T">T</button><button data-g="H" data-l="H">H</button><button data-gd="1">G</button><button data-l="S">SP</button><button data-l="V">&uarr;</button><button data-l="B">&laquo;</button><button data-l="F">&raquo;</button></div>`;
             document.body.appendChild(h); BUD.hud = h; const nl = document.createElement('div'); nl.id = 'bud-nl'; document.body.appendChild(nl); BUD.nl = nl;
             h.querySelector('#bud-mt').addEventListener('click', () => { BUD.menuOpen = !BUD.menuOpen; BUD.lastHud = ''; });
             h.querySelector('#bud-mn').addEventListener('click', (e) => {
@@ -23762,7 +23797,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             pad.addEventListener('pointerdown', (e) => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); if (b.dataset.m) BUD.k[b.dataset.m] = 1; else if (b.dataset.gd) BUD.k.g = 1; else if (b.dataset.l) { BUD.touchL = b.dataset.l; budPress(b.dataset.l); if (b.dataset.g) BUD.k.h = 1; } });
             const up = (e) => { for (const b of pad.querySelectorAll('button')) { if (b.dataset.m) BUD.k[b.dataset.m] = 0; if (b.dataset.gd) BUD.k.g = 0; } };
             pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up); pad.addEventListener('pointerleave', up);
-            const KM = { j: 'P', k: 'K', l: 'T', h: 'H', u: 'S', q: 'Q', e: 'E', x: 'F', z: 'B' };
+            const KM = { j: 'P', k: 'K', l: 'T', h: 'H', u: 'S', q: 'Q', e: 'E', x: 'F', z: 'B', c: 'V' };
             const act = () => activeMap === 'budokai' && BUD.me && BUD.hudOn;
             window.addEventListener('keydown', (e) => {
                 if (!act()) return; const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
@@ -23789,7 +23824,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             const k = BUD.k, T = 0.35; BUD.pk = true;
             k.d = (lx > T || b[15]) ? 1 : 0; k.a = (lx < -T || b[14]) ? 1 : 0; k.w = (ly < -0.5 || b[12]) ? 1 : 0; k.s = (ly > 0.5 || b[13]) ? 1 : 0; k.g = (b[4] || b[6]) ? 1 : 0;
             if (hit(2)) budPress('P'); if (hit(0)) budPress('K'); if (hit(3)) budPress('T'); if (hit(1)) budPress('H'); if (hit(5)) budPress('S');
-            if (hit(11)) budPress('F'); if (hit(10)) budPress('B'); if (hit(7)) budPress(lx < -T ? 'Q' : 'E'); if (hit(9)) { BUD.menuOpen = !BUD.menuOpen; BUD.lastMn = ''; }
+            if (hit(11)) budPress('F'); if (hit(10)) budPress('B'); if (hit(8)) budPress('V'); if (hit(7)) budPress(lx < -T ? 'Q' : 'E'); if (hit(9)) { BUD.menuOpen = !BUD.menuOpen; BUD.lastMn = ''; }
             return true;
         }
         /* ---- FIGHTER SELECT: every model you have loaded. Play = wear it as your fighter (this session only, your saved avatar is untouched); CPU = the practice opponent ---- */
@@ -23851,7 +23886,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
         function budMenuHtml() {
             const S = BUD.P || BUD.S, inM = budAmIn(S) && S.ph !== 'idle', T = BUD.S && BUD.S.tour, q = BUD.S ? BUD.S.q : [], on = (x) => (BUD.level === x ? ' on' : '');
             let h = '';
-            if (BUD.help) return `<h4>CONTROLS</h4><div style="line-height:1.55">A / D move away / toward<br>W / S sidestep in / out<br><b>J</b> punch · <b>K</b> kick · <b>L</b> throw · <b>H</b> hold<br><b>Space / Shift / G</b> guard (hold)<br><b>Q / E</b> dodge left / right<br><b>X</b> or double-tap D = forward dash · <b>Z</b> or double-tap A = back dash (dash then press an attack to cancel into it)<br><b>U</b> special (needs 50 SP)<br><br><b>Combos:</b> J J J · K K K · J J K · K K J · J then K · K then J (press the next button as the move lands).<br><b>Triangle:</b> strikes beat throws, throws beat guards, holds catch strikes (counter).<br><b>Gamepad:</b> stick/D-pad move &amp; sidestep · X punch · A kick · Y throw · B hold · LT/LB guard · RB special · RT+stick dodge · L3 back dash · R3 forward dash (or flick the stick twice) · Start menu.<br>Your own animations: open <i>My moves</i> and set the “Budokai” slots.</div><div class="bud-r" style="margin-top:8px"><button class="bud-b" data-a="help">Back</button></div>`;
+            if (BUD.help) return `<h4>CONTROLS</h4><div style="line-height:1.55">A / D move away / toward<br>W / S sidestep in / out<br><b>J</b> punch · <b>K</b> kick · <b>L</b> throw · <b>H</b> hold<br><b>Space / Shift / G</b> guard (hold)<br><b>Q / E</b> dodge left / right<br><b>X</b> or double-tap D = forward dash · <b>Z</b> or double-tap A = back dash (dash then press an attack to cancel into it)<br><b>C</b> jump: hold D / A / W / S with it for a diagonal jump with a front flip or back flip (you dodge everything but a special while airborne)<br><b>U</b> special (needs 50 SP)<br><br><b>Combos:</b> J J J · K K K · J J K · K K J · J then K · K then J (press the next button as the move lands).<br><b>Triangle:</b> strikes beat throws, throws beat guards, holds catch strikes (counter).<br><b>Gamepad:</b> stick/D-pad move &amp; sidestep · X punch · A kick · Y throw · B hold · LT/LB guard · RB special · RT+stick dodge · Select jump · L3 back dash · R3 forward dash (or flick the stick twice) · Start menu.<br>Your own animations: open <i>My moves</i> and set the “Budokai” slots.</div><div class="bud-r" style="margin-top:8px"><button class="bud-b" data-a="help">Back</button></div>`;
             if (BUD.sel && !BUD.P && !inM) return budFightersHtml();
             if (BUD.P) h += `<h4>PRACTICE</h4><div class="bud-r"><button class="bud-b dng" data-a="quit">Quit practice</button></div>`;
             else if (inM) h += `<h4>${S.mode === 'tour' ? 'TOURNAMENT' : 'VERSUS'}</h4><div class="bud-q">Match in progress — best of 3.</div>`;
@@ -23937,7 +23972,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 if (BUD.live) { if (BUD.me.hp > 0 && BUD.foe.bot && BUD.foe.hp <= 0) { /* ref reads hp */ } budReport(false); } else if (BUD.me.st === 'idle') { /* keep the pose */ }
                 if (BUD.me.comboT > 0 && nowS() - BUD.me.comboT > 1.9) BUD.me.combo = 0;
                 BUD.hp[BUD.me.id] = BUD.me.hp; if (BUD.foe.bot) BUD.hp[BUD.foe.id] = BUD.foe.hp;
-                g.position.y = BUD.ringH;
+                g.position.y = BUD.ringH + (BUD.me.jy || 0);
             }
             budHud();
         }
