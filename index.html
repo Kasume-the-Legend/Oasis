@@ -3272,6 +3272,8 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         let myAvatar = null;               // { id, kind, buffer, name }
         let room = null;                   // { id, label, isPrivate, code }
         let net = null;
+        /* names that arrive from other players are stripped of anything that could be read as HTML before they are stored or shown */
+        const nmClean = (v, n) => String(v == null ? '' : v).replace(/[<>&"'`\u0000-\u001f\u007f]/g, '').slice(0, n || 16);
         const peers = new Map();           // id -> { id, name, actor, last, target, avatarId }
         window.__peerInfo = () => [...peers.values()].map((p) => ({ id: p.id, name: p.name, avatarId: p.avatarId, kind: p.actor.kind, height: p.actor.height }));   // read-only, for debugging
         window.__peerScreen = (id) => { const p = peers.get(id); if (!p) return null; const v = p.actor.group.getWorldPosition(new THREE.Vector3()); v.y += (p.actor.height || 1.6) * 0.5; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; };   // debugging: where a player is on screen
@@ -4224,7 +4226,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 }
                 case 'hello': {
                     let p = peers.get(from);
-                    const name = String(m.name || 'Guest').slice(0, 16);
+                    const name = nmClean(m.name, 16) || 'Guest';
                     if (!p) { p = addPeer(from, name); sysChat(`${name} joined the room.`); announceRoom(); }
                     else if (p.name !== name) { p.name = name; p.actor.setName(name); renderPlayers(); }
                     p.last = Date.now();
@@ -7847,7 +7849,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const slots = (Array.isArray(m.slots) ? m.slots : []).slice(0, 4).map((id) => (typeof id === 'string' && id.length < 40 && (id === me.id || peers.has(id)) ? id : ''));
             while (slots.length < 4) slots.push('');
             const fresh = !EMU.on, prev = EMU.mine;
-            Object.assign(EMU, { on: true, isHost: false, host: from, hostName: p.name, sys, name: String(m.name || 'Game').slice(0, 60), slots, mine: slots.indexOf(me.id) });
+            Object.assign(EMU, { on: true, isHost: false, host: from, hostName: p.name, sys, name: nmClean(m.name, 60) || 'Game', slots, mine: slots.indexOf(me.id) });
             if (fresh) { EMU.stream = EMU.streams.get(from) || null; emuShowOnTv(p.name); sysChat(`${p.name} put "${EMU.name}" (${EMU_SYS[sys]}) on the TV. Open the TV panel (F) to plug in as a player.`); emuAttach(); }
             if (EMU.mine >= 0 && prev < 0 && EMU.wantPlay) { EMU.wantPlay = false; emuSetPlaying(true); }
             if (EMU.mine < 0 && prev >= 0) emuSetPlaying(false);
@@ -20713,7 +20715,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             switch (m.t) {
                 case 'pm': {
                     if (!cur && PARTY.members.size >= PARTY_MAX) return;
-                    const name = String(m.name || 'Guest').slice(0, 16), e = { id, name, lv: Number.isFinite(+m.lv) ? clamp(Math.floor(+m.lv), 1, 999) : 1, jt: Number.isFinite(+m.jt) ? +m.jt : 0, lead: !!m.lead, era: Number.isFinite(+m.era) ? clamp(Math.floor(+m.era), 0, 1e6) : 0, rm: partyRmOk(m.rm), rd: [0, 1, 2, 3].includes(m.rd) ? m.rd : 0, ts: Date.now() };
+                    const name = nmClean(m.name, 16) || 'Guest', e = { id, name, lv: Number.isFinite(+m.lv) ? clamp(Math.floor(+m.lv), 1, 999) : 1, jt: Number.isFinite(+m.jt) ? +m.jt : 0, lead: !!m.lead, era: Number.isFinite(+m.era) ? clamp(Math.floor(+m.era), 0, 1e6) : 0, rm: partyRmOk(m.rm), rd: [0, 1, 2, 3].includes(m.rd) ? m.rd : 0, ts: Date.now() };
                     PARTY.members.set(id, e); if (!cur) sysParty(`${name} joined the party.`); partyRender(); break;
                 }
                 case 'pbye': if (cur) { PARTY.members.delete(id); sysParty(`${cur.name} left the party.`); partyRender(); } break;
@@ -23338,10 +23340,10 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function budPlay(F, key, rate, hold) {
             const a = F.actor; if (!a || !a.playEmote) return null; const c = budClip(a, key);
             try { a.playEmote(c.name); a.emoteRate = rate || 1; a.emoteDur = hold ? Infinity : c.dur; } catch (e) { return c; }
-            if (F === BUD.me) { try { net && net.send({ t: 'emote', name: c.send, r: rate || 1, h: hold ? 1 : 0 }); } catch (e) { /* offline */ } }
+            if (F === BUD.me && !F.cmpA) { try { net && net.send({ t: 'emote', name: c.send, r: rate || 1, h: hold ? 1 : 0 }); } catch (e) { /* offline */ } }
             return c;
         }
-        function budStand(F) { try { F.actor.playEmote('stand'); } catch (e) { /* none */ } if (F === BUD.me) { try { net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } } }
+        function budStand(F) { try { F.actor.playEmote('stand'); } catch (e) { /* none */ } if (F === BUD.me && !F.cmpA) { try { net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } } }
         function budReset(F, x, face) {
             Object.assign(F, { hp: 100, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, buf: null, combo: 0, comboDmg: 0, hurtN: 0, armor: 0, down: 0, ko: false, juggle: 0, aiT: 0, aiG: 0, jy: 0, jv: 0 }); F.kv.x = F.kv.z = 0;
             const g = F.actor.group; g.position.set(x, BUD.ringH, 0); g.rotation.y = face; if (F === BUD.me) playerVelocity.y = 0; F.actor.firstFrame = true; budStand(F);
@@ -23534,6 +23536,15 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             }
         }
         /* ---- fighters ---- */
+        /* companions: your own companions can be picked as the opponent, or as the fighter you play (practice) */
+        BUD.cmpA = new Map(); BUD.fighter = (() => { try { return localStorage.getItem('oasis.bud.f') || ''; } catch (e) { return ''; } })();
+        function budCmpGet(id) {
+            const c = typeof cmpFind === 'function' ? cmpFind(id) : null; if (!c) return Promise.resolve(null);
+            const e = BUD.cmpA.get(id); if (e) return e.actor ? Promise.resolve(e.actor) : e.p;
+            const rec = {}; rec.p = (async () => { try { const a = await cmpBuildActor(c); a.group.visible = false; scene.add(a.group); rec.actor = a; return a; } catch (er) { console.warn('budokai companion', er); BUD.cmpA.delete(id); return null; } })(); BUD.cmpA.set(id, rec); return rec.p;
+        }
+        const budCmpAct = (id) => { const e = id && BUD.cmpA.get(id); return (e && e.actor) || null; };
+        function budCmpWarm() { if (BUD.warmed || typeof CMP === 'undefined' || !CMP.list || !CMP.list.length) return; BUD.warmed = 1; CMP.list.slice(0, 4).forEach((c) => { budCmpGet(c.id); }); }
         const budBotAvail = () => BUD.bot && BUD.bot.actor;
         function budBotGet() {
             if (BUD.bot && BUD.bot.actor) return Promise.resolve(BUD.bot.actor); if (BUD.bot && BUD.bot.p) return BUD.bot.p;
@@ -23546,13 +23557,15 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const budAmIn = (S) => !!S && ((S.a && S.a.id === me.id) || (S.b && S.b.id === me.id));
         function budMakeF(S) {
             const mine = S.a.id === me.id ? S.a : S.b, oth = S.a.id === me.id ? S.b : S.a, left = S.a.id === me.id;
-            BUD.me = budNewF(me.id, me.name, localActor, {}); BUD.me.lvl = left;
-            if (oth.bot) { const a = BUD.bot && BUD.bot.actor; if (!a) { BUD.me = null; return false; } a.name = oth.name; a.group.visible = true; BUD.foe = budNewF(oth.id, oth.name, a, { bot: true, aiLv: BUD_LV[S.lv] || BUD_LV.normal }); }
+            const mineAct = (BUD.P && mine.cmp && budCmpAct(mine.cmp)) || localActor; BUD.me = budNewF(me.id, mineAct === localActor ? me.name : mine.name, mineAct, mineAct === localActor ? {} : { cmpA: true }); BUD.me.lvl = left;
+            if (mineAct !== localActor) { mineAct.group.visible = true; localActor.group.visible = false; BUD.hidLocal = true; }
+            if (oth.bot) { const a = (oth.cmp && budCmpAct(oth.cmp)) || (BUD.bot && BUD.bot.actor); if (!a) { BUD.me = null; return false; } a.name = oth.name; a.group.visible = true; BUD.foe = budNewF(oth.id, oth.name, a, { bot: true, aiLv: BUD_LV[S.lv] || BUD_LV.normal }); }
             else { const p = peers.get(oth.id); if (!p) { BUD.me = null; return false; } BUD.foe = budNewF(oth.id, oth.name, p.actor, { remote: true }); }
-            BUD.me.opp = BUD.foe; BUD.foe.opp = BUD.me; budSetStance(localActor, true); budSetStance(BUD.foe.actor, true); return true;
+            BUD.me.opp = BUD.foe; BUD.foe.opp = BUD.me; budSetStance(mineAct, true); budSetStance(BUD.foe.actor, true); return true;
         }
         function budEndBout() {
-            if (BUD.me) { budStand(BUD.me); budSetStance(localActor, false); }
+            if (BUD.me) { budStand(BUD.me); budSetStance(BUD.me.actor, false); budSetStance(localActor, false); if (BUD.me.cmpA) BUD.me.actor.group.visible = false; }
+            if (BUD.hidLocal) { localActor.group.visible = true; BUD.hidLocal = false; }
             if (BUD.foe) { try { BUD.foe.actor.playEmote('stand'); } catch (e) { /* none */ } budSetStance(BUD.foe.actor, false); if (BUD.foe.bot) BUD.foe.actor.group.visible = false; }
             BUD.me = null; BUD.foe = null; BUD.live = false; BUD.k = {}; BUD.text = ''; BUD.seen = -1; for (const s of BUD.sp) { const p = peers.get(s); if (p) budSetStance(p.actor, false); } BUD.sp = [];
         }
@@ -23579,7 +23592,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             else if (S.ph === 'between' || S.ph === 'result') {
                 BUD.live = false; const ha = budHpOf(S.a.id), hb = budHpOf(S.b.id), ko = ha <= 0 || hb <= 0; const wid = ha === hb ? null : ha > hb ? S.a.id : S.b.id, last = S.ph === 'result';
                 BUD.text = last ? ((wid === S.a.id ? S.a.name : S.b.name) + ' WINS!') : ko ? 'K.O.!' : 'TIME UP'; BUD.textSub = last ? '' : ''; BUD.textT = now + 3;
-                if (BUD.me) { const W = wid && budLocalF(wid); if (W && !W.ko) { budPlay(W, 'win', 1, true); } const Lz = BUD.me.id !== wid ? BUD.me : (BUD.foe && !BUD.foe.remote ? BUD.foe : null); if (Lz && !Lz.ko && wid) budPlay(Lz, 'lose', 1, true); }
+                /* no victory/defeat emote: the fighters just stand */
                 if (last && !S.prac) { if (wid === me.id) { BUD.stats.w++; try { gilAdd(40, true); lvAward('win', 40, 20); } catch (e) { /* none */ } } else if (inM) BUD.stats.l++; if (inM) budSaveStats(); }
                 if (ko && wid === me.id) { BUD.stats.ko++; budSaveStats(); }
                 hcSfx('hit');
@@ -23610,7 +23623,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const T = S.tour; if (!T || T.ph !== 'run') return;
             let pr = T.br[T.r][T.m];
             if (!pr) {
-                const win = T.br[T.r].map((p) => ({ id: p.w, name: p.a.id === p.w ? p.a.name : p.b.name, bot: p.a.id === p.w ? p.a.bot : p.b.bot }));
+                const win = T.br[T.r].map((p) => ({ id: p.w, name: p.a.id === p.w ? p.a.name : p.b.name, bot: p.a.id === p.w ? p.a.bot : p.b.bot, cmp: p.a.id === p.w ? p.a.cmp : p.b.cmp }));
                 if (win.length <= 1) { const c = win[0]; S.msg = '🏆 ' + c.name + ' is the BUDOKAI CHAMPION!'; S.tour = null; S.n++; budBroadcast(S); budSync(S); budSend({ k: 'champ', id: c.id, name: c.name }); budOnChamp(c.id, c.name); return; }
                 const nx = []; for (let i = 0; i < win.length; i += 2) nx.push({ a: win[i], b: win[i + 1], w: null }); T.br.push(nx); T.r++; T.m = 0; S.n++; budBroadcast(S); return;
             }
@@ -23623,6 +23636,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function budTourStart(S) {
             const T = S.tour; if (!T) return; const hum = T.p.filter((x) => budHere(x.id)); if (!hum.length) { S.tour = null; S.msg = 'Tournament cancelled'; S.n++; budBroadcast(S); return; }
             const size = hum.length <= 4 ? 4 : 8, names = BUD_NAMES.slice().sort(() => Math.random() - 0.5), ent = hum.map((x) => ({ id: x.id, name: x.name, bot: 0 }));
+            { const cm = (typeof CMP !== 'undefined' && CMP.list ? CMP.list : []).slice(0, 3); for (const c of cm) if (ent.length < size) ent.push({ id: 'cpu:c' + c.id, name: String(c.name).slice(0, 18), bot: 1, cmp: c.id }); }
             for (let i = 0; ent.length < size; i++) ent.push({ id: 'cpu:' + i, name: names[i % names.length], bot: 1 });
             ent.sort(() => Math.random() - 0.5); const r0 = []; for (let i = 0; i < size; i += 2) r0.push({ a: ent[i], b: ent[i + 1], w: null });
             T.ph = 'run'; T.br = [r0]; T.r = 0; T.m = 0; S.n++; budBroadcast(S);
@@ -23659,16 +23673,20 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 case 'q': if (budIsRef() && BUD.S) { const S = BUD.S, nm = budPeerName(from); S.q = S.q.filter((x) => x.id !== from); if (m.on && !budInMatch(S, from)) S.q.push({ id: from, name: nm }); S.n++; budBroadcast(S); } break;
                 case 'tj': if (budIsRef() && BUD.S && BUD.S.tour && BUD.S.tour.ph === 'reg') { const T = BUD.S.tour; T.p = T.p.filter((x) => x.id !== from); if (m.on && T.p.length < 8) T.p.push({ id: from, name: budPeerName(from) }); BUD.S.n++; budBroadcast(BUD.S); } break;
                 case 'tnew': if (budIsRef() && BUD.S && !BUD.S.tour && BUD.S.ph === 'idle') { BUD.S.tour = { ph: 'reg', t: 25, p: [{ id: from, name: budPeerName(from) }], br: null, r: 0, m: 0 }; BUD.S.msg = ''; BUD.S.n++; budBroadcast(BUD.S); } break;
-                case 'champ': if (typeof m.id === 'string' && String(from) === BUD.refId()) budOnChamp(m.id, String(m.name || '').slice(0, 20)); break;
+                case 'champ': if (typeof m.id === 'string' && String(from) === BUD.refId()) budOnChamp(m.id, nmClean(m.name, 20)); break;
             }
         }
         const budInMatch = (S, id) => !!S.a && !!S.b && S.ph !== 'idle' && (S.a.id === id || S.b.id === id);
         BUD.refId = () => { let best = String(me.id); for (const k of peers.keys()) if (String(k) < best) best = String(k); return best; };
         /* ---- actions from the menu ---- */
-        async function budPractice(lv) {
+        async function budPractice(lv, foeCmp) {
             if (BUD.P || (BUD.S && BUD.S.ph !== 'idle' && budAmIn(BUD.S))) return;
-            const a = await budBotGet(); if (!a) { sysChat('The CPU fighter could not load.'); return; }
-            const S = budNewS(); S.prac = 1; S.mode = 'prac'; S.lv = lv; S.stage = BUD.stagePick || 'hall'; S.a = { id: me.id, name: me.name, bot: 0 }; S.b = { id: 'cpu:p', name: 'CPU ' + (BUD_LV[lv] || BUD_LV.normal).n, bot: 1 }; BUD.P = S; BUD.seen = -1; BUD.menuOpen = false; BUD.hp = {}; S.w = [0, 0]; S.rd = 1; budPh(S, 'ready', 3);
+            if (foeCmp && foeCmp === BUD.fighter) { sysChat('Pick a different companion to fight against.'); return; }
+            let fa = null, pa = null; if (foeCmp) { sysChat('Calling in ' + ((cmpFind(foeCmp) || {}).name || 'your companion') + '...'); fa = await budCmpGet(foeCmp); if (!fa) sysChat('That companion could not load, using a CPU fighter.'); }
+            if (BUD.fighter) { pa = await budCmpGet(BUD.fighter); if (!pa) sysChat('Your companion fighter could not load, using your own character.'); }
+            const a = fa || await budBotGet(); if (!a) { sysChat('The CPU fighter could not load.'); return; }
+            if (BUD.P || (BUD.S && BUD.S.ph !== 'idle' && budAmIn(BUD.S))) return;
+            const S = budNewS(); S.prac = 1; S.mode = 'prac'; S.lv = lv; S.stage = BUD.stagePick || 'hall'; S.a = { id: me.id, name: pa ? cmpFind(BUD.fighter).name : me.name, bot: 0, cmp: pa ? BUD.fighter : null }; S.b = fa ? { id: 'cpu:c' + foeCmp, name: cmpFind(foeCmp).name, bot: 1, cmp: foeCmp } : { id: 'cpu:p', name: 'CPU ' + (BUD_LV[lv] || BUD_LV.normal).n, bot: 1 }; BUD.P = S; BUD.seen = -1; BUD.menuOpen = false; BUD.hp = {}; S.w = [0, 0]; S.rd = 1; budPh(S, 'ready', 3);
         }
         function budQuitPractice() { const S = BUD.P; if (!S) return; BUD.P = null; budEndBout(); BUD.menuOpen = true; BUD.text = ''; BUD.seen = -1; }
         function budQueue(on) { const S = BUD.S; if (!S) return; if (budIsRef()) { S.q = S.q.filter((x) => x.id !== me.id); if (on && !budInMatch(S, me.id)) S.q.push({ id: me.id, name: me.name }); S.n++; budBroadcast(S); } else budSend({ k: 'q', on: on ? 1 : 0 }); BUD.inQ = !!on; }
@@ -23795,7 +23813,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             h.querySelector('#bud-mt').addEventListener('click', () => { BUD.menuOpen = !BUD.menuOpen; BUD.lastHud = ''; });
             h.querySelector('#bud-mn').addEventListener('click', (e) => {
                 const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, v = b.dataset.v;
-                if (a === 'stage') { BUD.stagePick = v; } else if (a === 'prac') budPractice(v); else if (a === 'quit') budQuitPractice(); else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
+                if (a === 'stage') { BUD.stagePick = v; } else if (a === 'prac') { BUD.level = v; budPractice(v); } else if (a === 'cfight') budPractice(BUD.level || 'normal', v); else if (a === 'cplay') { BUD.fighter = v; try { localStorage.setItem('oasis.bud.f', v); } catch (er) { /* storage */ } budCmpGet(v); } else if (a === 'cself') { BUD.fighter = ''; try { localStorage.removeItem('oasis.bud.f'); } catch (er) { /* storage */ } } else if (a === 'quit') budQuitPractice(); else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
                 else if (a === 'moves') { try { openAnimations(); } catch (er) { sysChat('Open your Animations panel to set Budokai moves.'); } } else if (a === 'leave') { try { openLobby(); } catch (er) { /* none */ } }
                 else if (a === 'fighters') budSelOpen(); else if (a === 'fback') { BUD.sel = false; } else if (a === 'pl') budPlayAs(+v); else if (a === 'cp') budCpuAs(+v);
                 else if (a === 'help') { BUD.help = !BUD.help; } BUD.lastHud = '';
@@ -23890,6 +23908,11 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             BUD.lastHud = '';
         }
         function budPress(L) { if (BUD.me && BUD.live) budLetter(BUD.me, L); }
+        function budCmpHtml() {
+            const L = typeof CMP !== 'undefined' && CMP.list ? CMP.list : []; if (!L.length) return ''; budCmpWarm(); const fc = BUD.fighter && L.find((c) => c.id === BUD.fighter), esc = (s) => String(s).replace(/[<>&"]/g, '');
+            const rdy = (id) => (budCmpAct(id) ? '' : ' …');
+            return `<h4>COMPANIONS</h4><div class="bud-q">You fight as: <b>${fc ? esc(fc.name) : 'yourself'}</b> (practice)</div><div class="bud-r"><button class="bud-b${fc ? '' : ' on'}" data-a="cself">Myself</button>${L.map((c) => `<button class="bud-b${BUD.fighter === c.id ? ' on' : ''}" data-a="cplay" data-v="${esc(c.id)}">Play as ${esc(c.name)}${rdy(c.id)}</button>`).join('')}</div><div class="bud-q">Practice against a companion (${BUD_LV[BUD.level] ? BUD_LV[BUD.level].n : 'Normal'} level):</div><div class="bud-r">${L.map((c) => `<button class="bud-b" data-a="cfight" data-v="${esc(c.id)}">Fight ${esc(c.name)}${rdy(c.id)}</button>`).join('')}</div>`;
+        }
         function budMenuHtml() {
             const S = BUD.P || BUD.S, inM = budAmIn(S) && S.ph !== 'idle', T = BUD.S && BUD.S.tour, q = BUD.S ? BUD.S.q : [], on = (x) => (BUD.level === x ? ' on' : '');
             let h = '';
@@ -23900,6 +23923,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             else {
                 h += `<h4>FIGHTER</h4><div class="bud-r"><button class="bud-b" data-a="fighters">Choose fighters</button></div><div class="bud-q">You: ${budEsc(myAvatar && myAvatar.name || 'your avatar')} · CPU: ${BUD.botPick ? budEsc(BUD.botPick.name) : 'random'}</div>`;
                 h += `<h4>STAGE</h4><div class="bud-r">${Object.keys(BUD_STAGES).map((k) => `<button class="bud-b${BUD.stagePick === k ? ' on' : ''}" data-a="stage" data-v="${k}">${BUD_STAGES[k].n}</button>`).join('')}</div><div class="bud-q">${budIsRef() ? 'You pick the stage for online matches.' : 'The room host picks the stage for online matches.'}</div>`;
+                h += budCmpHtml();
                 h += `<h4>PRACTICE (CPU)</h4><div class="bud-r">${Object.keys(BUD_LV).map((k) => `<button class="bud-b${on(k)}" data-a="prac" data-v="${k}">${BUD_LV[k].n}</button>`).join('')}</div>`;
                 h += `<h4>ONLINE VERSUS</h4><div class="bud-r"><button class="bud-b${BUD.inQ ? ' on' : ''}" data-a="q">${BUD.inQ ? 'Leave queue' : 'Join queue'}</button></div><div class="bud-q">${q.length ? 'Queue: ' + q.map((x, i) => (i + 1) + '. ' + String(x.name).replace(/[<>&]/g, '')).join('  ') : 'Queue empty — winner stays on'}</div>`;
                 const mineT = T && T.p && T.p.some((x) => x.id === me.id);
@@ -23930,7 +23954,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             const cb = $('bud-cb'), cs = BUD.comboShow; if (cs && cs.n >= 2 && cs.t > 0) { cb.style.display = 'block'; cb.innerHTML = `<b>${cs.n}</b> HITS<small>${cs.d} damage</small>`; } else cb.style.display = 'none';
             $('bud-pad').classList.toggle('on', !!BUD.me); $('bud-mt').textContent = BUD.menuOpen ? 'HIDE' : 'MENU';
             const mn = $('bud-mn'); mn.style.display = BUD.menuOpen ? '' : 'none';
-            if (BUD.menuOpen) { const sig2 = JSON.stringify([BUD.stagePick, BUD.S && BUD.S.n, BUD.S && BUD.S.q, BUD.S && BUD.S.tour && BUD.S.tour.t | 0, !!BUD.P, BUD.inQ, BUD.help, BUD.me && 1, BUD.stats, BUD.S && BUD.S.ph, peers.size, BUD.sel, BUD.roster ? BUD.roster.length : -1, BUD.selBusy, BUD.botPick && BUD.botPick.name, myAvatar && myAvatar.id]) + BUD.lastHud; if (sig2 !== BUD.lastMn) { BUD.lastMn = sig2; mn.innerHTML = budMenuHtml(); } }
+            if (BUD.menuOpen) { const sig2 = JSON.stringify([BUD.stagePick, BUD.fighter, [...BUD.cmpA.values()].filter((x) => x.actor).length, BUD.level, BUD.S && BUD.S.n, BUD.S && BUD.S.q, BUD.S && BUD.S.tour && BUD.S.tour.t | 0, !!BUD.P, BUD.inQ, BUD.help, BUD.me && 1, BUD.stats, BUD.S && BUD.S.ph, peers.size, BUD.sel, BUD.roster ? BUD.roster.length : -1, BUD.selBusy, BUD.botPick && BUD.botPick.name, myAvatar && myAvatar.id]) + BUD.lastHud; if (sig2 !== BUD.lastMn) { BUD.lastMn = sig2; mn.innerHTML = budMenuHtml(); } }
             if (BUD.lastHud === '') BUD.lastMn = '';
             BUD.lastHud = BUD.lastHud === '' ? ' ' : BUD.lastHud;
         }
@@ -23955,7 +23979,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 setTimeout(() => { if (activeMap === 'budokai' && BUD.S && BUD.S.n === 0 && !budIsRef()) budSend({ k: 'ask' }); }, 1500);
             } else if (BUD.ready) {
                 budStageSet('hall'); BUD.group.visible = false; if (BUD.me || BUD.foe) budEndBout(); BUD.P = null; BUD.S = null; if (BUD.rigWas) { BUD.rigWas = false; try { controls.enableRotate = true; controls.enableZoom = true; if (BUD.fov0) { camera.fov = BUD.fov0; camera.updateProjectionMatrix(); } } catch (e) { /* none */ } }
-                for (const n of BUD.nums) n.el.remove(); BUD.nums = []; if (BUD.bot && BUD.bot.actor) BUD.bot.actor.group.visible = false; BUD.hudOn = true; budHud();
+                for (const n of BUD.nums) n.el.remove(); BUD.nums = []; if (BUD.bot && BUD.bot.actor) BUD.bot.actor.group.visible = false; for (const e of BUD.cmpA.values()) if (e.actor) e.actor.group.visible = false; BUD.hudOn = true; budHud();
             }
         }
         function budUpdate(g, dt) {
@@ -23975,6 +23999,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                   T2.d = k.d ? 1 : 0; T2.a = k.a ? 1 : 0; }
                 if (BUD.hs > 0) { BUD.hs -= dt; if (BUD.hs <= 0) { BUD.hs = 0; for (const F of [BUD.me, BUD.foe]) if (F && F.sr !== undefined) { if (!F.remote) F.actor.emoteRate = F.sr; F.sr = undefined; } } dt = 0; }
                 if (dt > 0 && (BUD.live || BUD.me.st === 'stun' || BUD.me.st === 'down' || BUD.me.st === 'getup' || BUD.me.st === 'act')) budTickF(BUD.me, dt, BUD.live ? inp : { x: 0, z: 0, guard: false });
+                if (BUD.me.cmpA) { try { BUD.me.actor.update(dt || 0.016); } catch (e) { /* model */ } }
                 if (BUD.foe.bot) { if (dt > 0) { const ai = budAI(BUD.foe, dt); budTickF(BUD.foe, dt, ai); } try { BUD.foe.actor.update(BUD.hs > 0 || dt > 0 ? (dt || 0.016) : 0.016); } catch (e) { /* model */ } }
                 if (BUD.live) { if (BUD.me.hp > 0 && BUD.foe.bot && BUD.foe.hp <= 0) { /* ref reads hp */ } budReport(false); } else if (BUD.me.st === 'idle') { /* keep the pose */ }
                 if (BUD.me.comboT > 0 && nowS() - BUD.me.comboT > 1.9) BUD.me.combo = 0;
@@ -23983,7 +24008,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             }
             budHud();
         }
-        window.__bud = { get cam() { return camera; }, budPadAct, BUD, budQueue, budTour, budPractice, budPress, budOpen, HERO_ACTS, get map() { return activeMap; }, get MD() { return MAP_DEFS.budokai; }, lg: () => localActor.group };
+        window.__bud = { budCmpGet, budCmpAct, get CMPL() { return typeof CMP !== 'undefined' ? CMP : null; }, get cam() { return camera; }, budPadAct, BUD, budQueue, budTour, budPractice, budPress, budOpen, HERO_ACTS, get map() { return activeMap; }, get MD() { return MAP_DEFS.budokai; }, lg: () => localActor.group };
         MAP_DEFS.budokai = { id: 'budokai', ground: budGround, clamp: budClamp, collide: budCollide, spawn: budSpawn, update: budUpdate };
         /* ------------------------------------------------------------------ *
          *  THE CONSTRUCT: the Hero class training area (white void, code rain, Agents to spar with, style meter)

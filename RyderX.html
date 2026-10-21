@@ -21,6 +21,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--ink);
 #time{position:absolute;left:3.4vmin;top:calc(2.4vmin + min(12vmin,104px) + min(4.4vmin,38px));font-size:min(2.6vmin,22px);color:#cfe6ff}
 #mini{position:absolute;right:2.4vmin;top:2.4vmin;width:min(24vmin,220px);height:min(24vmin,220px);background:rgba(5,10,30,.45);border:2px solid rgba(25,227,255,.45);border-radius:14px}
 #spd{position:absolute;right:3vmin;bottom:2.4vmin;text-align:right;font-weight:800;font-size:min(9vmin,80px);line-height:1;color:#fff}
+#gauge{position:absolute;right:2vmin;bottom:calc(2.4vmin + min(13vmin,112px));width:min(36vmin,300px);height:auto;pointer-events:none;filter:drop-shadow(0 0 6px rgba(25,227,255,.35))}
 #spd small{display:block;font-size:.26em;color:var(--c1);letter-spacing:.2em}
 #airw{position:absolute;left:50%;bottom:3vmin;transform:translateX(-50%);width:min(58vmin,520px)}
 #airl{display:flex;justify-content:space-between;font-size:min(2.2vmin,18px);color:var(--c1);letter-spacing:.2em;margin-bottom:.4vmin;font-weight:800}
@@ -82,6 +83,7 @@ table.res tr.me{background:linear-gradient(90deg,rgba(25,227,255,.35),rgba(255,6
 <div id="hud">
  <div id="pos" class="big">1<small>/8</small></div><div id="lap" class="big">LAP 1/3</div><div id="time">0:00.00</div>
  <canvas id="mini" width="440" height="440"></canvas>
+ <canvas id="gauge" width="300" height="190"></canvas>
  <div id="spd" class="big">0<small>KM/H</small></div>
  <div id="airw"><div id="airl"><span>AIR</span><span id="airn">100</span></div><div id="airb"><div id="airf"></div></div><div id="boostb"><div id="boostf"></div></div></div>
  <div id="msg" class="big"></div><div id="sub"></div><div id="trick" class="big"></div><div id="board"></div>
@@ -114,7 +116,7 @@ const ord = (n) => ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][
 
 /* ============================== save data ============================== */
 const SAVE_KEY = 'ryderx.save.v1';
-const DEF_SAVE = { best: {}, ghosts: {}, cups: {}, opt: { vol: 0.8, mus: 0.6, sfx: 0.9, bloom: 1, laps: 3, steer: 1, hud: 1, shake: 1, cast: 1 }, board: { type: 'speed', color: 0, rider: 0, bike: null }, avatar: 'oasis', stats: { races: 0, wins: 0, tricks: 0 }, tune: {} };
+const DEF_SAVE = { best: {}, ghosts: {}, cups: {}, opt: { vol: 0.8, mus: 0.6, sfx: 0.9, bloom: 1, laps: 3, steer: 1, hud: 1, shake: 1, cast: 1, thr: 0, gauge: 1, fps: 0 }, board: { type: 'speed', color: 0, rider: 0, bike: null }, avatar: 'oasis', stats: { races: 0, wins: 0, tricks: 0 }, tune: {} };
 let SAVE = JSON.parse(JSON.stringify(DEF_SAVE));
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { SAVE = Object.assign(SAVE, s); SAVE.opt = Object.assign({}, DEF_SAVE.opt, s.opt || {}); SAVE.board = Object.assign({}, DEF_SAVE.board, s.board || {}); SAVE.stats = Object.assign({}, DEF_SAVE.stats, s.stats || {}); } } catch (e) { /* storage unavailable */ }
 let _saveT = 0; function save(now) { clearTimeout(_saveT); const f = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); } catch (e) { /* quota or private mode */ } }; if (now) f(); else _saveT = setTimeout(f, 400); }
@@ -244,6 +246,12 @@ const TRACKS = [
     { id: 'magma', name: 'Magma Run', theme: 'lava', diff: 3, seed: 101, R: 310, harm: [[2, 0.15, 0.4], [3, 0.12, 1.5], [4, 0.06, 2.6]], ey: [[2, 14, 1.2], [3, 10, 0.1], [5, 6, 2.2]], width: 29, ramps: 6, pads: 8, rings: 8, blocks: 6, desc: 'Race above rivers of fire. Smash the crates.', bpm: 136, key: 3, mode: 'phr' },
     { id: 'obsidian', name: 'Obsidian Spire', theme: 'lava', diff: 3, seed: 103, R: 360, harm: [[2, 0.12, 1.9], [3, 0.14, 0.7], [5, 0.05, 1.6], [6, 0.02, 0.3]], ey: [[2, 26, 0.2], [3, 16, 1.9], [4, 8, 0.8]], width: 30, ramps: 8, pads: 10, rings: 9, blocks: 6, desc: 'The final test: huge air, hard corners, molten glow.', bpm: 150, key: 6, mode: 'min' },
 ];
+TRACKS.push(
+    { id: 'switch', name: 'Switchback Bay', theme: 'oasis', diff: 2, seed: 113, R: 280, harm: [[3, 0.17, 0.5], [4, 0.10, 2.1], [6, 0.04, 1.2]], ey: [[3, 12, 0.9], [4, 7, 2.2]], width: 25, ramps: 5, pads: 8, rings: 7, blocks: 4, desc: 'Tight hairpins on the waterfront. Ease off the throttle and brake before the bends.', bpm: 132, key: 2, mode: 'maj' },
+    { id: 'razor', name: 'Razor Canyon', theme: 'desert', diff: 3, seed: 127, R: 320, harm: [[2, 0.15, 1.6], [4, 0.12, 0.4], [5, 0.06, 2.5], [7, 0.02, 0.8]], ey: [[3, 20, 1.1], [5, 9, 0.4]], width: 24, ramps: 7, pads: 8, rings: 8, blocks: 7, desc: 'A narrow slot canyon: fast straights, sharp turns and walls that bite.', bpm: 146, key: 9, mode: 'min' },
+    { id: 'grid', name: 'Gridlock Run', theme: 'city', diff: 3, seed: 131, R: 300, harm: [[3, 0.16, 2.8], [4, 0.13, 1.0], [6, 0.05, 0.3]], ey: [[2, 16, 0.3], [4, 10, 1.7]], width: 23, ramps: 6, pads: 9, rings: 7, blocks: 8, desc: 'Downtown at rush hour. Short bursts, blind corners and lots of crates.', bpm: 140, key: 4, mode: 'min' },
+    { id: 'summit', name: 'Summit Spiral', theme: 'ice', diff: 3, seed: 137, R: 350, harm: [[2, 0.13, 0.2], [3, 0.12, 1.7], [5, 0.06, 2.6]], ey: [[2, 28, 0.8], [3, 14, 2.4], [5, 6, 1.1]], width: 27, ramps: 8, pads: 10, rings: 9, blocks: 5, desc: 'Climb the frozen mountain in a long spiral and fly back down.', bpm: 138, key: 7, mode: 'maj' },
+);
 /* ---- the Daily Course: one new generated track a day, the same for everyone (seeded by the UTC date) ---- */
 (function () {
     const day = new Date().toISOString().slice(0, 10); let h = 2166136261; for (const ch of day) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
@@ -263,6 +271,7 @@ const CUPS = [
     { id: 'harbor', name: 'Harbor Cup', tracks: ['harbor', 'vines', 'mesa'] },
     { id: 'frost', name: 'Frost Cup', tracks: ['frost', 'aurora', 'glacier', 'midnight'] },
     { id: 'magma', name: 'Magma Cup', tracks: ['midnight', 'magma', 'chrome', 'obsidian'] },
+    { id: 'brake', name: 'Throttle Cup', tracks: ['switch', 'razor', 'grid', 'summit'] },
     { id: 'master', name: 'Master Cup', tracks: ['harbor', 'frost', 'magma', 'chrome', 'glacier', 'obsidian'] },
 ];
 
@@ -886,6 +895,7 @@ class Racer {
         }
         // ---- speed target
         let top = ty.top * this.skill * (R.mult ? R.mult(this) : 1); if (R.mirrorTop) top *= R.mirrorTop;
+        const thr = inp.thr == null ? 1 : clamp(inp.thr, 0, 1), brk = inp.brk == null ? (inp.brake ? 1 : 0) : clamp(inp.brk, 0, 1); this.thr = thr; this.brk = brk; top *= 0.06 + 0.94 * thr;   // partial throttle lowers your cruise speed; boost and pads still push past it
         this.boosting = !!(inp.boost && this.airm > 0.5 && !stunned && R.go);
         let tgt = top, rate = 0.85 * ty.accel;
         if (this.boosting) { tgt += ty.boost; rate = 2.6; this.airm = Math.max(0, this.airm - 16 * ty.drain * dt); if (!this.wasBoost) R.ev('boost', this); }
@@ -894,11 +904,11 @@ class Racer {
         if (this.padT > 0) { tgt = Math.max(tgt, top + 32); rate = 4; }
         if (this.startBoost > 0) { this.startBoost -= dt; tgt = Math.max(tgt, top + 24); rate = 3.5; }
         if (this.draft > 0) { tgt += 5 * this.draft; rate += 0.4; }
-        if (stunned) tgt *= 0.5; if (inp.brake) { tgt *= 0.4; rate = 2.5; }
+        if (stunned) tgt *= 0.5; if (thr < 1) rate *= 0.55 + 0.45 * thr; if (brk > 0.02) { tgt *= 1 - 0.6 * brk; rate = Math.max(rate, 1 + 1.5 * brk); }
         if (this.jumpCh > 0) tgt *= 0.88;
         const eff = air ? rate * 0.3 : rate;
         if (this.v < tgt) this.v += (tgt - this.v) * (1 - Math.exp(-eff * dt)); else this.v += (tgt - this.v) * (1 - Math.exp(-(air ? 0.15 : 0.7) * dt));
-        if (!air) this.v -= GRAV * sinP * 0.55 * dt; this.v = Math.max(0, this.v);
+        if (!air) this.v -= GRAV * sinP * 0.55 * dt; if (brk > 0.02 && !air) this.v *= Math.exp(-(0.5 + 2.4 * brk) * dt); if (thr < 0.15 && !air && !this.boosting) this.v *= Math.exp(-0.35 * dt); this.v = Math.max(0, this.v);
         // ---- steering
         const turn = 2.05 * ty.handle * (1 - 0.3 * clamp(this.v / 75, 0, 1)) * (this.drift ? 1.45 : 1) * (air ? 0.55 : 1) * (this.v < 6 ? this.v / 6 : 1);
         this.phi += st * turn * dt; this.phi = clamp(this.phi, -1.25, 1.25);
@@ -1019,14 +1029,19 @@ function racerCollide(R, dt) {
 }
 /* ---- g_game.js ---- */
 /* ============================== input ============================== */
-const IN = { keys: {}, steer: 0, boost: false, drift: false, jump: false, trick: false, brake: false, pause: false, touch: { l: 0, r: 0, boost: 0, jump: 0, drift: 0, brake: 0 }, pad: null, used: 'kb', trickEdge: 0, jumpPrev: false, menuEdge: [] };
+const IN = { keys: {}, steer: 0, boost: false, drift: false, jump: false, trick: false, brake: false, thr: 1, brk: 0, pause: false, touch: { l: 0, r: 0, boost: 0, jump: 0, drift: 0, brake: 0 }, pad: null, used: 'kb', trickEdge: 0, jumpPrev: false, menuEdge: [] };
 addEventListener('keydown', (e) => { if (e.repeat) return; IN.keys[e.code] = 1; if (e.code === 'KeyP' || (e.code === 'Escape' && !G.paused)) IN.pause = true; if (['ArrowUp', 'KeyW', 'KeyX', 'KeyV', 'Space'].includes(e.code) && G.mode === 'race') IN.trickEdge = 1; IN.used = 'kb'; if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); if (typeof UI !== 'undefined') UI.key(e); });
 addEventListener('keyup', (e) => { IN.keys[e.code] = 0; });
 addEventListener('blur', () => { IN.keys = {}; });
 function pollInput() {
     const k = IN.keys, t = IN.touch; let st = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0) + t.r - t.l; let boost = !!(k.Space || k.KeyZ || k.KeyN || t.boost), drift = !!(k.ShiftLeft || k.ShiftRight || k.KeyC || k.KeyM || t.drift), jump = !!(k.ArrowUp || k.KeyW || k.KeyX || k.KeyV || t.jump), brake = !!(k.ArrowDown || k.KeyS || t.brake);
     const gp = (navigator.getGamepads && navigator.getGamepads()) || []; let pad = null; for (const g of gp) if (g && g.connected) { pad = g; break; }
-    if (pad) { const ax = Math.abs(pad.axes[0]) > 0.12 ? pad.axes[0] : 0; const dp = (pad.buttons[15] && pad.buttons[15].pressed ? 1 : 0) - (pad.buttons[14] && pad.buttons[14].pressed ? 1 : 0); if (ax || dp) { st = ax || dp; IN.used = 'pad'; } const b = (i) => pad.buttons[i] && pad.buttons[i].pressed; if (b(0)) boost = true; if (b(1) || b(2)) jump = true; if (b(4) || b(5) || b(6) || b(7)) drift = true; if (b(3)) brake = true; if (b(9) && !IN.padStart) IN.pause = true; IN.padStart = b(9); if (b(0) || b(1) || b(2) || b(3)) IN.used = 'pad'; if (jump && !IN.jumpPrev && G.mode === 'race') IN.trickEdge = 1; }
+    if (pad) { const ax = Math.abs(pad.axes[0]) > 0.12 ? pad.axes[0] : 0; const dp = (pad.buttons[15] && pad.buttons[15].pressed ? 1 : 0) - (pad.buttons[14] && pad.buttons[14].pressed ? 1 : 0); if (ax || dp) { st = ax || dp; IN.used = 'pad'; } const b = (i) => pad.buttons[i] && pad.buttons[i].pressed; if (b(0)) boost = true; if (b(1) || b(2)) jump = true; if (b(4) || b(5)) drift = true; if (b(3)) brake = true; if (b(9) && !IN.padStart) IN.pause = true; IN.padStart = b(9); if (b(0) || b(1) || b(2) || b(3)) IN.used = 'pad'; if (jump && !IN.jumpPrev && G.mode === 'race') IN.trickEdge = 1; }
+    /* R2 = throttle, L2 = brake (analog). AUTO throttle (default) keeps the board running on its own; MANUAL makes R2 / E the gas. */
+    let thr = 1, brk = brake ? 1 : 0; const man = SAVE.opt.thr === 1, trg = (i) => (pad && pad.buttons[i] ? Math.max(pad.buttons[i].value || 0, pad.buttons[i].pressed ? 1 : 0) : 0), r2 = trg(7), l2 = trg(6);
+    if (l2 > 0.04) { brk = Math.max(brk, l2); IN.used = 'pad'; }
+    if (man && (pad || !('ontouchstart' in window))) { thr = Math.max(k.KeyE ? 1 : 0, r2); if (r2 > 0.04) IN.used = 'pad'; }
+    IN.thr = thr; IN.brk = brk; brake = brake || brk > 0.35;
     IN.jumpPrev = jump; IN.steer = clamp(st * (0.6 + 0.4 * (SAVE.opt.steer || 1)), -1, 1); IN.boost = boost; IN.drift = drift; IN.jump = jump; IN.brake = brake;
 }
 
@@ -1037,7 +1052,9 @@ const G = {
     parts: null, lines: null, camP: new THREE.Vector3(), camF: new THREE.Vector3(0, 0, -1), camUp: new THREE.Vector3(0, 1, 0), shake: 0, flash: 0, acc: 0, last: 0, clock: 0, orbit: 0, menuVis: null, lights: [], paused: false, timeScale: 1,
 };
 function initGL() {
-    const cv = $('gl'); const r = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); G.pr = Math.min(devicePixelRatio || 1, 1.5); r.setPixelRatio(G.pr); r.setSize(innerWidth, innerHeight, false); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.18; G.renderer = r;
+    const cv = $('gl'); const r = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); G.pr = G.prMax = Math.min(devicePixelRatio || 1, 1.5); r.setPixelRatio(G.pr);
+    cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); G.lost = 1; const d = document.createElement('div'); d.id = 'ctxlost'; d.style.cssText = 'position:fixed;inset:0;z-index:99;background:rgba(3,6,20,.9);color:#fff;display:flex;align-items:center;justify-content:center;font:700 4vmin sans-serif;text-align:center'; d.textContent = 'The graphics were reset. Getting back in...'; document.body.appendChild(d); setTimeout(() => { if (G.lost) location.reload(); }, 4000); });
+    cv.addEventListener('webglcontextrestored', () => { location.reload(); }); r.setSize(innerWidth, innerHeight, false); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.18; G.renderer = r;
     G.scene = new THREE.Scene(); G.cam = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.3, 9000);
     const rt = new THREE.WebGLRenderTarget(innerWidth * G.pr, innerHeight * G.pr, { type: THREE.HalfFloatType, samples: 4 }); G.composer = new EffectComposer(r, rt); G.composer.setPixelRatio(G.pr); G.composer.setSize(innerWidth, innerHeight); G.composer.addPass(new RenderPass(G.scene, G.cam)); G.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.65, 0.78); G.composer.addPass(G.bloom);
     G.grade = new ShaderPass({ uniforms: { tDiffuse: { value: null }, t: { value: 0 }, sat: { value: 1.12 }, con: { value: 1.07 }, vig: { value: 0.34 }, ca: { value: 0.0016 }, spd: { value: 0 } },
@@ -1178,17 +1195,29 @@ function boardFX(r, dt) {
 /* ---- HUD ---- */
 let _hudCache = {};
 function setTxt(id, v) { if (_hudCache[id] !== v) { _hudCache[id] = v; $(id).textContent = v; } }
-function hudShow(on) { $('hud').style.display = on && SAVE.opt.hud !== 0 ? 'block' : 'none'; const tc = on && ('ontouchstart' in window); $('touch').style.display = tc ? 'block' : 'none'; $('spd').style.right = tc ? '46vmin' : ''; $('pausebtn').style.top = ''; _hudCache = {}; }
+function hudShow(on) { $('hud').style.display = on && SAVE.opt.hud !== 0 ? 'block' : 'none'; const tc = on && ('ontouchstart' in window); $('touch').style.display = tc ? 'block' : 'none'; $('spd').style.right = tc ? '46vmin' : ''; $('gauge').style.right = tc ? '44vmin' : ''; $('gauge').style.display = SAVE.opt.gauge === 0 ? 'none' : ''; $('pausebtn').style.top = ''; _hudCache = {}; }
 function sortedRacers() { return G.racers.slice().sort((a, b) => (a.finished && b.finished ? a.finT - b.finT : a.finished ? -1 : b.finished ? 1 : b.dist - a.dist)); }
 function updateHUD(dt) {
     const r = G.player; if (!r) return; const ord_ = sortedRacers(); ord_.forEach((x, i) => { x.place = i + 1; });
     const posEl = $('pos'); const ptxt = r.place + '|' + G.racers.length; if (_hudCache.pos !== ptxt) { _hudCache.pos = ptxt; posEl.innerHTML = r.place + '<small>' + (['', 'ST', 'ND', 'RD'][r.place] || 'TH') + '</small>'; }
     setTxt('lap', 'LAP ' + clamp(Math.max(1, r.lap + 1), 1, G.laps) + '/' + G.laps); setTxt('time', fmtTime(G.nowTime)); setTxt('spd', ''); const sp = $('spd'); const sv = Math.round(r.v * 4.2); if (_hudCache.sv !== sv) { _hudCache.sv = sv; sp.innerHTML = sv + '<small>KM/H</small>'; }
+    drawGauge(r);
     const a = Math.round(r.airm); if (_hudCache.air !== a) { _hudCache.air = a; $('airf').style.width = a + '%'; $('airn').textContent = a; $('airf').classList.toggle('low', a < 20); }
     const bw = r.drift ? Math.min(100, r.driftCharge / 1.4 * 100) : Math.max(0, Math.max(r.turboT, r.padT) / 1.5 * 100); $('boostf').style.width = bw.toFixed(0) + '%';
     if (G.popT > 0) { G.popT -= dt; if (G.popT <= 0) $('trick').classList.remove('on'); } if (G.msgT > 0) { G.msgT -= dt; if (G.msgT <= 0) { $('msg').classList.remove('on'); $('sub').classList.remove('on'); } }
     { let gb = $('gbal'); if (!gb) { gb = document.createElement('div'); gb.id = 'gbal'; gb.style.cssText = 'position:fixed;left:50%;bottom:26%;width:min(36vmin,260px);height:10px;transform:translateX(-50%);background:rgba(10,16,40,.7);border:2px solid #19e3ff;border-radius:8px;display:none;z-index:6;pointer-events:none'; gb.innerHTML = '<div style="position:absolute;left:50%;top:-4px;width:2px;height:14px;background:rgba(255,255,255,.4)"></div><div id="gbm" style="position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:#ffd23f;left:50%;margin-left:-7px"></div>'; document.body.appendChild(gb); } gb.style.display = r.grind ? 'block' : 'none'; if (r.grind) { const gm = $('gbm'); gm.style.left = (50 + clamp(r.gBal, -1, 1) * 46) + '%'; gm.style.background = Math.abs(r.gBal) > 0.7 ? '#ff4a4a' : '#ffd23f'; } }
     drawMini();
+}
+/* speed gauge: a dial for speed, plus the throttle (R2) and brake (L2) levels beside it */
+function drawGauge(r) {
+    if (SAVE.opt.gauge === 0) return; const cv = $('gauge'); if (!cv) return; const sp = Math.round(r.v * 4.2), th = Math.round((r.thr == null ? 1 : r.thr) * 20), bk = Math.round((r.brk || 0) * 20), bo = r.boosting ? 1 : 0, key = (sp >> 2) + '|' + th + '|' + bk + '|' + bo + '|' + (SAVE.opt.thr === 1 ? 1 : 0); if (_hudCache.gk === key) return; _hudCache.gk = key;
+    const g = cv.getContext('2d'), W = 300, H = 190, cx = 150, cy = 150, R = 118, a0 = Math.PI * 0.82, a1 = Math.PI * 2.18, f = clamp(r.v / 120, 0, 1.05); g.clearRect(0, 0, W, H);
+    g.lineCap = 'round'; g.lineWidth = 14; g.strokeStyle = 'rgba(8,14,40,.72)'; g.beginPath(); g.arc(cx, cy, R, a0, a1); g.stroke();
+    const gr = g.createLinearGradient(cx - R, 0, cx + R, 0); gr.addColorStop(0, '#19e3ff'); gr.addColorStop(0.6, '#ffd23f'); gr.addColorStop(1, '#ff3da6'); g.strokeStyle = bo ? '#ffffff' : gr; g.beginPath(); g.arc(cx, cy, R, a0, a0 + (a1 - a0) * Math.min(1, f)); g.stroke();
+    g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i <= 12; i++) { const a = a0 + (a1 - a0) * i / 12, l = i % 3 === 0 ? 14 : 8; g.beginPath(); g.moveTo(cx + Math.cos(a) * (R - 12), cy + Math.sin(a) * (R - 12)); g.lineTo(cx + Math.cos(a) * (R - 12 - l), cy + Math.sin(a) * (R - 12 - l)); g.stroke(); }
+    const na = a0 + (a1 - a0) * Math.min(1, f); g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(na) * (R - 20), cy + Math.sin(na) * (R - 20)); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(cx, cy, 7, 0, 6.3); g.fill();
+    const bar = (x, v, col, lab) => { g.fillStyle = 'rgba(8,14,40,.72)'; g.fillRect(x, 20, 16, 120); g.fillStyle = col; const hh = 120 * v; g.fillRect(x, 140 - hh, 16, hh); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2; g.strokeRect(x, 20, 16, 120); g.fillStyle = '#fff'; g.font = 'bold 14px sans-serif'; g.textAlign = 'center'; g.fillText(lab, x + 8, 160); };
+    bar(24, th / 20, SAVE.opt.thr === 1 ? '#19e3ff' : 'rgba(25,227,255,.55)', SAVE.opt.thr === 1 ? 'R2' : 'AUTO'); bar(260, bk / 20, '#ff3da6', 'L2');
 }
 function drawMini() {
     const T = G.T, cv = $('mini'), g = cv.getContext('2d'); if (!T.mini) return; g.clearRect(0, 0, 440, 440); g.drawImage(T.mini.c, 0, 0);
@@ -1210,7 +1239,7 @@ function stepRace(dt) {
     G.nowTime += dt; R.time = G.nowTime;
     for (const r of G.racers) {
         if (r.remote) { netRemote(r, dt); continue; }
-        let inp; if (r === pl && !r.finished && !G.auto) inp = { steer: IN.steer, boost: IN.boost, drift: IN.drift, jump: IN.jump, trick: !!IN.trickEdge, brake: IN.brake }; else { inp = aiInput(r, R, dt); if (r.finished && r.isPlayer) { inp.boost = false; } }
+        let inp; if (r === pl && !r.finished && !G.auto) inp = { steer: IN.steer, boost: IN.boost, drift: IN.drift, jump: IN.jump, trick: !!IN.trickEdge, brake: IN.brake, thr: IN.thr, brk: IN.brk }; else { inp = aiInput(r, R, dt); if (r.finished && r.isPlayer) { inp.boost = false; } }
         r.step(dt, inp, R);
     }
     IN.trickEdge = 0; racerCollide(R, dt); if (NET.racing) netTick(dt);
@@ -1259,8 +1288,13 @@ function updateMenu(dt) {
 }
 
 /* ---- frame loop ---- */
+function setPR(x) { G.pr = x; try { G.renderer.setPixelRatio(x); G.composer.setPixelRatio(x); G.composer.setSize(innerWidth, innerHeight); } catch (e) { /* resizing is best effort */ } }
 function frame(now) {
-    requestAnimationFrame(frame); const t = now / 1000; let dt = Math.min(0.1, t - (G.last || t)); G.last = t; G.clock += dt;
+    requestAnimationFrame(frame); if (G.lost || document.hidden) { G.last = 0; return; }   // no drawing while the tab is hidden or the graphics context is gone: that is what keeps a phone cool
+    const t = now / 1000, cap = SAVE.opt.fps === 1 ? 1 / 30 : 0; if (cap && G.lr && t - G.lr < cap - 0.004) return; G.lr = t; let dt = Math.min(0.1, t - (G.last || t)); G.last = t; G.clock += dt;
+    /* adaptive resolution: if frames stay slow, draw fewer pixels (down to 60%); if they stay fast, win some back */
+    G.ft = (G.ft || 0.016) * 0.95 + dt * 0.05; if (G.ft > (cap ? 0.046 : 0.028)) G.slowT = (G.slowT || 0) + dt; else { G.slowT = Math.max(0, (G.slowT || 0) - dt * 0.5); if (G.ft < (cap ? 0.036 : 0.019) && G.pr < G.prMax - 0.01) G.fastT = (G.fastT || 0) + dt; else G.fastT = 0; }
+    if (G.slowT > 2.5 && G.pr > 0.61) { G.slowT = 0; setPR(Math.max(0.6, G.pr * 0.85)); } else if (G.fastT > 12) { G.fastT = 0; setPR(Math.min(G.prMax, G.pr * 1.1)); }
     pollInput(); if (IN.pause) { IN.pause = false; if (G.mode === 'race' && !G.done && G.phase !== 'intro') togglePause(); }
     if (G.mode === 'race') {
         if (!G.paused) {
@@ -1328,7 +1362,7 @@ const UI = {
         if (host) this.items.forEach((e, i) => { if (e.textContent === 'START RACE') { this.sel = i; this.focus(true); } });
     },
     how() {
-        const s = el('div', 'scr bgd'); s.innerHTML = '<h2>How to ride</h2><div class="hint" style="max-width:min(88vmin,760px);text-align:left;font-size:min(2.2vmin,17px)"><b style="color:#19e3ff">STEER</b> ← → / A D / stick. Your board runs on its own.<br><b style="color:#ffd23f">BOOST</b> Space / Z / A button — burns AIR. Empty air means no boost.<br><b style="color:#7dffb0">REFILL AIR</b> Fly through rings, ride green AIR STATIONS and land tricks.<br><b style="color:#ff3da6">DRIFT</b> Shift / C — hold into a corner, release for a MINI TURBO (hold longer for more).<br><b style="color:#19e3ff">JUMP</b> Hold ↑ / W / X to charge, release to leap. Ramps launch you automatically.<br><b style="color:#ffd23f">TRICKS</b> Press jump again while you are high up in the air. Finish them before you land for AIR and a speed kick. Land mid-trick and you stumble. Steer left or right while tricking for a 360 spin, hold brake for a grab, or just tap for flips, barrel rolls, kickflips and more. Chain different tricks for bonus rank.<br><b style="color:#19e3ff">GRIND</b> Hop onto a glowing rail (jump so you land on it) and you lock on and grind. Steer the opposite way to keep the dot in the middle, or you bail. Press jump to hop off for a boost.<br><b style="color:#ff3da6">START</b> Hold boost just before GO for a rocket start. Too early and you stall.<br><b style="color:#7dffb0">BOARDS</b> SPEED is fastest on the flat. FLY jumps huge and scores big tricks. POWER smashes crates and shoves rivals.<br>Gold chevron pads give a free boost. Sit in a rival\'s slipstream to catch up.</div>'; const m = el('div', 'menu'); m.style.marginTop = '2vmin'; m.append(this.btn('BACK', () => this.title())); s.appendChild(m); this.show(s, () => this.title(), 'how');
+        const s = el('div', 'scr bgd'); s.innerHTML = '<h2>How to ride</h2><div class="hint" style="max-width:min(88vmin,760px);text-align:left;font-size:min(2.2vmin,17px)"><b style="color:#19e3ff">STEER</b> ← → / A D / stick. Your board runs on its own (Options → THROTTLE: MANUAL puts the gas on R2 / E).<br><b style="color:#ff3da6">BRAKE</b> L2 (analog, press harder to slow more) / ↓ / S. The dial by your speed shows throttle and brake.<br><b style="color:#ffd23f">BOOST</b> Space / Z / A button — burns AIR. Empty air means no boost.<br><b style="color:#7dffb0">REFILL AIR</b> Fly through rings, ride green AIR STATIONS and land tricks.<br><b style="color:#ff3da6">DRIFT</b> Shift / C — hold into a corner, release for a MINI TURBO (hold longer for more).<br><b style="color:#19e3ff">JUMP</b> Hold ↑ / W / X to charge, release to leap. Ramps launch you automatically.<br><b style="color:#ffd23f">TRICKS</b> Press jump again while you are high up in the air. Finish them before you land for AIR and a speed kick. Land mid-trick and you stumble. Steer left or right while tricking for a 360 spin, hold brake for a grab, or just tap for flips, barrel rolls, kickflips and more. Chain different tricks for bonus rank.<br><b style="color:#19e3ff">GRIND</b> Hop onto a glowing rail (jump so you land on it) and you lock on and grind. Steer the opposite way to keep the dot in the middle, or you bail. Press jump to hop off for a boost.<br><b style="color:#ff3da6">START</b> Hold boost just before GO for a rocket start. Too early and you stall.<br><b style="color:#7dffb0">BOARDS</b> SPEED is fastest on the flat. FLY jumps huge and scores big tricks. POWER smashes crates and shoves rivals.<br>Gold chevron pads give a free boost. Sit in a rival\'s slipstream to catch up.</div>'; const m = el('div', 'menu'); m.style.marginTop = '2vmin'; m.append(this.btn('BACK', () => this.title())); s.appendChild(m); this.show(s, () => this.title(), 'how');
     },
     outline(def, cv) {
         const g = cv.getContext('2d'), W = cv.width = 360, H = cv.height = 240; g.clearRect(0, 0, W, H); const pts = []; for (let i = 0; i < 200; i++) { const a = i / 200 * TAU; let r = def.R; for (const [k, amp, ph] of def.harm) r += def.R * amp * Math.cos(k * a + ph); let y = 0; for (const [k, amp, ph] of def.ey) y += amp * Math.sin(k * a + ph); pts.push([Math.cos(a) * r, Math.sin(a) * r, y]); }
@@ -1382,7 +1416,7 @@ const UI = {
         const slider = (label, key, min, max, step) => { const r = el('div', 'opt'); r.innerHTML = '<span>' + label + '</span>'; const i = el('input', 'nv'); i.type = 'range'; i.min = min; i.max = max; i.step = step; i.value = o[key]; i.oninput = () => { o[key] = +i.value; AUD.setVol(); if (key === 'bloom') { G.bloom.strength = (G.T ? G.T.theme.bloom : 0.5) * o.bloom; G.bloom.enabled = o.bloom > 0.01; } save(); }; r.appendChild(i); s.appendChild(r); };
         const pills = (label, key, vals) => { const r = el('div', 'opt'); r.innerHTML = '<span>' + label + '</span>'; const p = el('span'); vals.forEach(([t, v]) => p.appendChild(this.pill(t, (o[key] == null ? vals[1][1] : o[key]) === v, () => { o[key] = v; save(); this.options(); }))); r.appendChild(p); s.appendChild(r); };
         slider('MASTER', 'vol', 0, 1, 0.05); slider('MUSIC', 'mus', 0, 1, 0.05); slider('EFFECTS', 'sfx', 0, 1, 0.05); slider('GLOW', 'bloom', 0, 1.5, 0.05); slider('CAMERA SHAKE', 'shake', 0, 1, 0.1);
-        pills('LAPS', 'laps', [1, 2, 3, 4, 5].map((n) => [n, n])); pills('RIVALS', 'diff', [['EASY', 0], ['NORMAL', 1], ['HARD', 2]]); pills('RIVAL CAST', 'cast', [['DEFAULT', 0], ['MY CHARACTERS', 1]]); pills('STEER ASSIST', 'steer', [['HIGH', 0.5], ['NORMAL', 1], ['LOW', 1.5]]); pills('HUD', 'hud', [['ON', 1], ['OFF', 0]]);
+        pills('LAPS', 'laps', [1, 2, 3, 4, 5].map((n) => [n, n])); pills('RIVALS', 'diff', [['EASY', 0], ['NORMAL', 1], ['HARD', 2]]); pills('RIVAL CAST', 'cast', [['DEFAULT', 0], ['MY CHARACTERS', 1]]); pills('STEER ASSIST', 'steer', [['HIGH', 0.5], ['NORMAL', 1], ['LOW', 1.5]]); pills('THROTTLE', 'thr', [['AUTO', 0], ['MANUAL (R2 / E)', 1]]); pills('GAUGE', 'gauge', [['ON', 1], ['OFF', 0]]); pills('FRAME CAP', 'fps', [['60', 0], ['30 (COOLER)', 1]]); pills('HUD', 'hud', [['ON', 1], ['OFF', 0]]);
         const m = el('div', 'menu'); m.style.marginTop = '1.6vmin'; m.append(this.btn('RESET SAVE DATA', () => { if (confirm('Erase best times, ghosts and progress?')) { const keep = SAVE.opt; Object.assign(SAVE, JSON.parse(JSON.stringify(DEF_SAVE))); SAVE.opt = keep; save(true); this.options(); } }, 'sm'), this.btn('BACK', () => this.title())); s.appendChild(m); this.show(s, () => this.title(), 'options');
     },
     pause() {

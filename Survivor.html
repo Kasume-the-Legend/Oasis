@@ -171,6 +171,8 @@ const saveOpt = () => lsSet('opt', OPT);
 /* ---------- renderer: low-res buffer scaled up, PS1 look ---------- */
 const cv = $('cv'), R = new THREE.WebGLRenderer({ canvas: cv, antialias: false });
 R.setPixelRatio(1); R.outputColorSpace = THREE.SRGBColorSpace;
+cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); window.__ctxLost = 1; const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);color:#e8dcc0;display:flex;align-items:center;justify-content:center;font:700 22px Georgia,serif;text-align:center;padding:20px'; d.textContent = 'The graphics were reset (the device ran short of memory). Reloading, your last save is safe...'; document.body.appendChild(d); setTimeout(() => { if (window.__ctxLost) location.reload(); }, 4000); });
+cv.addEventListener('webglcontextrestored', () => location.reload());
 function sizeR() { R.setSize(Math.round(320 * OPT.res), Math.round(240 * OPT.res), false); const s = $('stage'); s.style.fontSize = (s.clientHeight / 30) + 'px'; }
 window.addEventListener('resize', sizeR); sizeR();
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(50, 4 / 3, 0.1, 70);
@@ -305,6 +307,7 @@ const SFX = {
 };
 const UIKEY = { move: 'ui_move', ok: 'ui_ok', back: 'ui_ok', pickup: 'ui_pick', save: 'ui_save', type: 'ui_save' };
 /* ---------- Mod Kit state (early, so sound and combat code can see it; the screen and loaders are further down) ---------- */
+const RE_ICONS = {};
 const MOD = { cfg: null, buf: {}, aLoaded: false, models: {}, baseW: {}, sk: null, img: {}, dim: {} };
 try { MOD.cfg = JSON.parse(localStorage.getItem(SK + 'mod') || 'null'); } catch (e) { MOD.cfg = null; }
 MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {}, img: {} }, MOD.cfg || {}); MOD.cfg.img = MOD.cfg.img || {}; MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
@@ -2209,8 +2212,8 @@ function modClose() { if (MODUI.el) { MODUI.el.remove(); MODUI.el = null; } try 
 function modRender() {
     const ov = MODUI.el; if (!ov) return; ov.textContent = ''; const wrap = modEl('div', 'width:min(860px,100%)'); ov.appendChild(wrap);
     const top = modEl('div', 'display:flex;align-items:center;gap:10px;margin-bottom:10px'); top.appendChild(modEl('div', 'font:700 22px Georgia,serif;flex:1;letter-spacing:.06em', 'MOD KIT')); const x = modEl('button', B_CSS, 'Close'); x.onclick = modClose; top.appendChild(x); wrap.appendChild(top);
-    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
-    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, item: modTabItem, stk: modTabStk, snd: modTabSnd, bal: modTabBal })[MODUI.tab](body);
+    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['chr', 'Characters'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
+    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, item: modTabItem, chr: modTabChr, stk: modTabStk, snd: modTabSnd, bal: modTabBal })[MODUI.tab](body);
 }
 const B_CSS = 'background:#2a2014;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:5px 11px;font:13px Georgia,serif;cursor:pointer';
 const CARD = 'background:#150f08;border:1px solid #4a3d28;border-radius:8px;padding:10px 12px;margin-bottom:9px';
@@ -2268,6 +2271,34 @@ function modTabItem(body) {
         }
         if (any) body.appendChild(card);
     }
+}
+/* ---- character slots: five uploads for Player 1 and five for Player 2. Each device picks the one it plays; your partner sees your pick. ---- */
+const CHR_N = 5;
+function chrCfg() { MOD.cfg.chr = MOD.cfg.chr || {}; for (const P of ['P1', 'P2']) { const a = MOD.cfg.chr[P]; MOD.cfg.chr[P] = Array.isArray(a) ? a.slice(0, CHR_N) : []; while (MOD.cfg.chr[P].length < CHR_N) MOD.cfg.chr[P].push(null); } return MOD.cfg.chr; }
+async function chrSet(P, i, file) {
+    if (file.size > 60 * 1048576) throw new Error('That file is too big (60 MB max).'); const buf = await file.arrayBuffer();
+    await idbPut('mod:c:' + P + i, { n: file.name, b: buf }); chrCfg()[P][i] = { n: file.name, g: /(^|[^a-z])(m|male|boy|man|he)([^a-z]|$)/i.test(file.name) ? 'male' : 'female' }; modSave();
+}
+async function chrClear(P, i) { try { await idbDel('mod:c:' + P + i); } catch (e) { /* none */ } chrCfg()[P][i] = null; if (OPT.avatar === 'slot:' + P + ':' + i) { OPT.avatar = 'oasis'; saveOpt(); avBoot(); } modSave(); }
+async function chrUse(P, i) { OPT.avatar = 'slot:' + P + ':' + i; saveOpt(); say('Loading ' + chrCfg()[P][i].n + '...', 2200); await avBoot(); }
+function modTabChr(body) {
+    const C = chrCfg(), hint = modEl('div', 'font-size:13px;color:#c9b27a;margin:0 0 8px', 'Upload up to five characters (.vrm, .glb or .fbx) for each player, then press Use on the one you want to play. In co-op the host is Player 1 and the guest is Player 2, and your partner sees whichever one you pick. Kept on this device.'); body.appendChild(hint);
+    for (const P of ['P1', 'P2']) {
+        const card = modEl('div', CARD); card.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:4px', P === 'P1' ? 'Player 1 (host)' : 'Player 2 (guest)'));
+        for (let i = 0; i < CHR_N; i++) {
+            const c = C[P][i], on = OPT.avatar === 'slot:' + P + ':' + i, r = modEl('div', 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #2a2014;flex-wrap:wrap');
+            r.appendChild(modEl('span', 'width:56px;font-size:13px', 'Slot ' + (i + 1))); r.appendChild(modEl('span', 'flex:1;min-width:120px;font-size:13px;color:' + (c ? (on ? '#9be39b' : '#e8dcc0') : '#8a7c5c'), c ? c.n + (on ? '  (playing)' : '') : 'Empty'));
+            const up = modEl('button', B_CSS, c ? 'Replace…' : 'Choose file…'); up.onclick = () => modPickFile('.vrm,.glb,.gltf,.fbx', async (f) => { await chrSet(P, i, f); modRender(); }); r.appendChild(up);
+            if (c) {
+                const g = modEl('button', B_CSS, c.g === 'male' ? 'Male' : 'Female'); g.title = 'Which animation set it uses'; g.onclick = async () => { c.g = c.g === 'male' ? 'female' : 'male'; modSave(); if (on) await avBoot(); modRender(); }; r.appendChild(g);
+                const u = modEl('button', B_CSS + (on ? ';border-color:#9be39b' : ''), on ? 'In use' : 'Use'); u.onclick = async () => { await chrUse(P, i); modRender(); }; r.appendChild(u);
+                const x = modEl('button', B_CSS, 'Clear'); x.onclick = async () => { await chrClear(P, i); modRender(); }; r.appendChild(x);
+            }
+            card.appendChild(r);
+        }
+        body.appendChild(card);
+    }
+    const d = modEl('button', B_CSS, 'Go back to my Oasis character'); d.onclick = async () => { OPT.avatar = 'oasis'; saveOpt(); await avBoot(); modRender(); }; body.appendChild(d);
 }
 function modTabStk(body) {
     const c = stkCfg(), card = modEl('div', CARD); body.appendChild(card);
@@ -2329,7 +2360,13 @@ async function modImport(f) {
 }
 window.__mod = MOD; MOD.fn = { modOpen, modSetModel, modSetSound, modApplyEnemy, modGunInner }; setTimeout(() => { try { modBoot(); } catch (e) { console.warn('mod kit', e); } }, 0);
 function frame(now) {
-    requestAnimationFrame(frame); const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
+    requestAnimationFrame(frame); if (window.__ctxLost || document.hidden) { frame.last = 0; return; }   // nothing is drawn while the tab is hidden or the graphics are gone: keeps a phone cool
+    const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
+    if (window.NXPost && NXPost.on) {   // remake graphics: if frames stay slow, draw fewer pixels (down to 60%), and win them back when it is smooth again
+        frame.ft = (frame.ft || 0.016) * 0.95 + dt * 0.05; const sc = window.__resScale || 1;
+        if (frame.ft > 0.034) frame.slow = (frame.slow || 0) + dt; else { frame.slow = Math.max(0, (frame.slow || 0) - dt * 0.5); frame.fast = frame.ft < 0.02 && sc < 1 ? (frame.fast || 0) + dt : 0; }
+        if (frame.slow > 3 && sc > 0.61) { frame.slow = 0; window.__resScale = Math.max(0.6, sc * 0.85); sizeR(); } else if (frame.fast > 15) { frame.fast = 0; window.__resScale = Math.min(1, sc * 1.1); sizeR(); }
+    }
     try { padPoll(dt); } catch (e) { /* pad */ }
     if (DC.on) { if (!DC.manual) dcUpdate(dt); if (AV.on) { /* vrm updated in avAnim */ } R.render(DC.scene, DC.cam); return; }
     const live = CO.on && CO.peer; if (RM.def && G.started) { if (live && UI.mode && UI.mode !== 'title' && !RM.busy) { for (const k in KEYS) KEYS[k] = false; update(dt); } else if (!UI.mode && !RM.busy) update(dt); else if (!UI.mode) { RM.t += dt; for (const it of RM.inter) if (it.mesh) it.mesh.rotation.y += dt; } }
@@ -2695,6 +2732,7 @@ async function avSync() {   // keep the character in step with the one you are w
 async function avBoot() {
     const src = OPT.avatar || 'oasis'; let buf = null, name = ''; AV.sig = src === 'oasis' ? oasisSig() : 'x';
     try {
+        if (/^slot:P[12]:\d$/.test(src)) { const [, P, ix] = src.split(':'), r = await idbGet('mod:c:' + P + ix); if (r && r.b) { buf = r.b; name = r.n || 'Character'; AV.src = 'slot'; AV.gender = ((chrCfg()[P][+ix]) || {}).g === 'male' ? 'male' : 'female'; } }
         if (src === 'upload') { const r = await idbGet('avatar'); if (r) { buf = await r.arrayBuffer(); name = r.name || 'Uploaded VRM'; } }
         if (!buf && src !== 'none') { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); if (pa && pa.buffer) { buf = new Uint8Array(pa.buffer).slice().buffer; name = pa.name || 'Your Oasis character'; AV.src = 'oasis'; AV.gender = pa.gender === 'female' ? 'female' : 'male'; } }
         if (buf && avIsFbx(buf)) { buf = await avLite(buf); }   // FBX: use the small GLB re-pack for everything (own model, and the copy sent to your partner)
@@ -2767,7 +2805,7 @@ NETCFG.override = (() => { const q = new URLSearchParams(location.search), list 
 const CO = { on: false, role: null, tr: null, peer: null, code: '', state: 'idle', note: '', rp: null, rpRoom: null, pT: 0, sT: 0, lastRx: 0, warned: 0 };
 const r2 = (v) => Math.round(v * 100) / 100;
 const coSend = (m) => { if (CO.tr && CO.peer) { try { CO.tr.send(CO.peer, m); } catch (e) { /* peer gone */ } } };
-function coPost(o) { try { if (window.parent && window.parent !== window) window.parent.postMessage(o, '*'); } catch (e) { /* standalone */ } }
+function coPost(o) { try { if (window.parent && window.parent !== window) window.parent.postMessage(o, location.origin && location.origin !== 'null' ? location.origin : '*'); } catch (e) { /* standalone */ } }
 let p2pLib = null, p2pErr = '';
 async function importP2P(b64) {
     const errs = [];
@@ -3302,6 +3340,7 @@ function menuOpts(p) {
     row('SFX volume: ' + Math.round(OPT.sfx * 100) + '%  (tap to change)', () => { OPT.sfx = OPT.sfx >= 1 ? 0 : Math.round((OPT.sfx + 0.1) * 10) / 10; saveOpt(); musVol(); renderMenu(); });
     { const w = el('div'); w.style.cssText = 'margin:-.2em 0 .5em;display:flex;gap:.6em;align-items:center'; const sl = document.createElement('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(OPT.sfx * 100); sl.style.cssText = 'flex:1'; sl.oninput = () => { OPT.sfx = sl.value / 100; musVol(); saveOpt(); }; sl.onchange = () => { sfx('click'); renderMenu(); }; w.appendChild(sl); L.appendChild(w); }
     row('Character: ' + (AV.on ? AV.name : 'Default soldier') + (AV.err ? '\n' + AV.err : ''), async () => { const src = OPT.avatar || 'oasis'; OPT.avatar = src === 'oasis' ? 'upload' : src === 'upload' ? 'none' : 'oasis'; saveOpt(); if (OPT.avatar === 'none') { say('Using the default soldier next time you start.', 2200); } else await avBoot(); renderMenu(); });
+    row('Character slots (Player 1 / Player 2)...', () => { modOpen(); MODUI.tab = 'chr'; modRender(); });
     row('Upload a VRoid (.vrm)', () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.vrm,.glb'; fi.onchange = async () => { const fl = fi.files[0]; if (!fl) return; await idbPut('avatar', fl); OPT.avatar = 'upload'; saveOpt(); say('Loading ' + fl.name + '...', 2500); await avBoot(); renderMenu(); }; fi.click(); });
     row('Export save + character (.json)', async () => {
         try {
@@ -3449,7 +3488,7 @@ function gilPick(o) {
 Object.assign(ITEMS, { flare2: { n: 'Second Signal Flare', type: 'key', d: 'The harbor master\'s flare, taken from Hale\'s coat. Fire it from the helipad on the roof to call the evacuation helicopter.' } });
 BS.cleaner = { v: 'parasite', sc: [1.75, 1.6], hp: 340, spd: 1.75, rad: 1.05, dmg: 30, cd: 1.3, wind: 0.6, reach: 2.7, phases: 3, name: 'Tyrant T-106 Cleaner' };
 Object.assign(FILES, { purge: { n: 'Sterilization Order', t: 'CONSORTIUM PRIORITY ORDER\n\nPROJECT MASQUERADE IS COMPROMISED. DIRECTOR HALE\'S VITAL SIGNS HAVE CEASED. STERILIZATION PROTOCOL IN EFFECT.\n\nAll charges beneath Harbor Inn are armed. Detonation in fifteen minutes. Every sealed door is unsealed. Every cage is open. Nothing leaves the site alive.\n\nUnit T-106, the Cleaner, is held in the roof hangar and will be released the moment the pad is signaled.' }, helipad: { n: 'Pad Briefing', t: 'HELIPAD - CONSORTIUM USE ONLY\n\nPad lights are cut. Pilots land only for a red flare fired from the pad itself, so the harbor patrol cannot use it. The pad is clear only when the hangar unit is down.\n\nThe hangar beside the pad holds Unit T-106. If the pad is signaled without clearance, the unit is released. It does not stop.\n\nThe Consortium never meant this pad for Hale. It was built for the evacuation of whoever survived the sweep, and for the Cleaner.' } });
-ROOMS.roof.items.push({ k: 'f3', file: 'helipad', x: -3.2, z: 3.4, y: 0.1 });
+if (ROOMS.roof) ROOMS.roof.items.push({ k: 'f3', file: 'helipad', x: -3.2, z: 3.4, y: 0.1 });
 const ESC_SECS = 900;
 const escOn = () => !!(G.esc && G.esc.t > 0 && !G.flags.escapeDone);
 const isSafeDef = (d) => !!(d && (d.safe || d.typewriter));
@@ -3700,7 +3739,7 @@ function stkRoomSetup(id) {
     window.__sv = { camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
 })();
 /* ---------- the item screen, laid out like Resident Evil 2: portrait + ECG, equipped weapon, 8 slots, description, command list ---------- */
-const RE_ICONS = {};
+/* RE_ICONS lives at the top of the module (item pictures reset it while the game is still booting) */
 const RE_IMG = (() => { try { return JSON.parse(document.getElementById('sv-icons').textContent); } catch (e) { return {}; } })();
 function reImg(id) { const f = RE_IMG[id]; if (!f) return null; const i = new Image(); i.src = f[0]; i.className = 'reic'; i.dataset.id = id; return i; }
 function reSpin(img) { const f = RE_IMG[img.dataset.id]; if (!f) return; let k = 0; clearInterval(UI.spinT); UI.spinT = setInterval(() => { if (!img.isConnected) { clearInterval(UI.spinT); return; } k = (k + 1) % f.length; img.src = f[k]; }, 160); }

@@ -505,7 +505,9 @@ function showHalf(xr) {
 
 /* ------------------------------------------------------------------ THREE */
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); window.__ctxLost = 1; setTimeout(() => { if (window.__ctxLost) location.reload(); }, 3000); });
+renderer.domElement.addEventListener('webglcontextrestored', () => location.reload());
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
 $('cv').appendChild(renderer.domElement);
@@ -1378,7 +1380,7 @@ const newCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math
 /* ---- sessions */
 const netCbs = { peer(id) { if (NETC.role === 'guest' && !NETC.peer) NETC.tr.send(id, { t: 'hello', assist: !!SET.assist, v: 1 }); }, left(id) { if (id === NETC.peer) peerGone(); }, msg(id, m) { onNetMsg(id, m); } };
 /* when Blitzball runs inside the Oasis (an iframe), it tells the Oasis about its room code and results */
-function oasisPost(o) { try { if (window.parent && window.parent !== window) window.parent.postMessage(o, '*'); } catch (e) { /* standalone */ } }
+function oasisPost(o) { try { if (window.parent && window.parent !== window) window.parent.postMessage(o, location.origin && location.origin !== 'null' ? location.origin : '*'); } catch (e) { /* standalone */ } }
 async function netHost() {
     netLeave(); NETC.role = 'host'; NETC.code = newCode(); NETC.state = 'opening'; NETC.note = ''; showLobby();
     try { NETC.tr = await openTransport(NETC.code, netCbs); NETC.state = 'waiting'; NETC.note = NETC.tr.note || ''; oasisPost({ blitz: 'code', code: NETC.code }); } catch (e) { NETC.state = 'error'; NETC.note = String(e.message || e); }
@@ -1704,7 +1706,8 @@ function showResult() {
 /* ------------------------------------------------------------------ MAIN LOOP */
 let lastT = performance.now();
 function frame(now) {
-    requestAnimationFrame(frame); let dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; if (M.paused) dt = 0; T.t += dt; M.clock += dt;
+    requestAnimationFrame(frame); if (window.__ctxLost || document.hidden) { lastT = now; return; }   // nothing drawn while the tab is hidden or the graphics are gone
+    let dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; if (M.paused) dt = 0; T.t += dt; M.clock += dt;
     try { pollPad(); computeInput(); if (M.mode === 'title') { for (const p of M.players) { p.ph += dt; } } else if (isGuest()) viewStep(dt); else stepFlow(dt); netTick(dt); meterStep(dt); syncWorld(dt); updCamera(dt); if (M.mode !== 'title') updHud(dt); } catch (e) { console.error('frame', e); }
     renderer.render(scene, camera);
 }
