@@ -212,7 +212,7 @@ function auRoom(def) {
 function auInit() {
     if (AU.ctx) { if (AU.ctx.state === 'suspended') AU.ctx.resume(); return; }
     try {
-        const C = AU.ctx = new (window.AudioContext || window.webkitAudioContext)(), sr = C.sampleRate;
+        const C = AU.ctx = new (window.AudioContext || window.webkitAudioContext)(), sr = C.sampleRate; setTimeout(() => { try { uiDecode(); modLoadAudio(); } catch (e) { /* saved sounds load later */ } }, 0);
         AU.out = C.createGain(); AU.out.gain.value = OPT.vol * OPT.sfx;
         // master chain: glue compressor + soft limiter so layered hits stay punchy without clipping
         const cm = C.createDynamicsCompressor(); cm.threshold.value = -12; cm.knee.value = 8; cm.ratio.value = 9; cm.attack.value = 0.003; cm.release.value = 0.22;
@@ -313,7 +313,7 @@ function modVol(k) { const c = MOD.cfg.sfx[k.slice(2)]; return c && c.vol ? c.vo
 function modPlay(key, vol) { try { const b = MOD.buf[key]; if (!b || !AU.ctx) return false; const s = AU.ctx.createBufferSource(); s.buffer = b; const g = AU.ctx.createGain(); g.gain.value = vol == null ? 1 : vol; s.connect(g); g.connect(AU.out); s.start(); return true; } catch (e) { return false; } }
 function sfx(n, a, b, c) { try { if (!AU.ctx) return; if (!MOD.aLoaded) modLoadAudio(); if (MOD.buf['s:' + n] && modPlay('s:' + n, modVol('s:' + n))) return; const k = UIKEY[n], hb = CO.role === 'guest' && CO.on && CO.peer && CO.hu, bf = hb ? hb[k] : AU.buf[k]; if (k && bf) { const s = AU.ctx.createBufferSource(); s.buffer = bf; s.connect(AU.out); s.start(); return; } if (SFX[n]) SFX[n](a, b, c); } catch (e) { /* audio */ } }
 /* custom audio kept in IndexedDB so uploads survive between sessions */
-const IDB = { db: null };
+const IDB = { db: null }; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ok */ }
 function idb() { return IDB.p || (IDB.p = new Promise((res, rej) => { const q = indexedDB.open('oasis-sv', 1); q.onupgradeneeded = () => q.result.createObjectStore('a'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })); }
 async function idbPut(k, v) { const d = await idb(); return new Promise((res) => { const t = d.transaction('a', 'readwrite'); t.objectStore('a').put(v, k); t.oncomplete = () => res(true); t.onerror = () => res(false); }); }
 async function idbGet(k) { const d = await idb(); return new Promise((res) => { const q = d.transaction('a').objectStore('a').get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); }
@@ -2095,7 +2095,8 @@ const MOD_SFX = [['hit', 'Bullet hits an enemy'], ['hurt', 'You take damage'], [
 const modClass = (e) => (e.bs ? 'boss' : e.t === 'h' ? 'hound' : e.t === 'z' ? (e.cr ? 'crawler' : e.br ? 'brute' : e.ty ? 'tyrant' : 'zombie') : 'boss');
 async function modLoadAudio() {
     if (MOD.aLoaded || !AU.ctx) return; MOD.aLoaded = true;
-    for (const k of Object.keys(MOD.cfg.sfx)) { try { const r = await idbGet('mod:a:' + k); if (r && r.b) MOD.buf[(/^g[fr]_/.test(k) ? '' : 's:') + modKey(k)] = await AU.ctx.decodeAudioData(r.b.slice(0)); } catch (e) { console.warn('mod sound', k, e); } }
+    let ks = Object.keys(MOD.cfg.sfx); try { const d = await idb(); const all = await new Promise((res) => { const q = d.transaction('a').objectStore('a').getAllKeys(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); for (const x of all) if (typeof x === 'string' && x.indexOf('mod:a:') === 0 && !ks.includes(x.slice(6))) ks.push(x.slice(6)); } catch (e) { /* cfg list only */ }
+    for (const k of ks) { try { const r = await idbGet('mod:a:' + k); if (r && r.b) MOD.buf[(/^g[fr]_/.test(k) ? '' : 's:') + modKey(k)] = await AU.ctx.decodeAudioData(r.b.slice(0)); } catch (e) { console.warn('mod sound', k, e); } }
 }
 /* slot keys: plain names are sound effects ('s:hit'), 'gf_rifle' / 'gr_rifle' are a gun's fire and reload */
 const modKey = (k) => (/^g[fr]_/.test(k) ? k.replace('_', ':') : k);
