@@ -817,7 +817,7 @@ function gunMesh(id, inv) {
 function gunRefreshModels() {   // the pack arrived after the avatars were built: swap the box guns for the real ones
     try {
         if (AV.on && AV.N) { for (const id of ['rifle', 'shotgun', 'sniper', 'rocket', 'grenade']) { const old = AV.W[id]; const ng = gunMesh(id, 1 / AV.s); if (old) { old.removeFromParent(); } AV.W[id] = ng; AV.N.rightHand.add(ng); if (PL.W) PL.W[id] = ng; } setWeaponVis(); }
-        const r = CO.rp; if (r && r.vw && r.vwHand) { for (const id of ['rifle', 'shotgun', 'sniper', 'rocket', 'grenade']) { if (r.vw[id]) r.vw[id].removeFromParent(); r.vw[id] = gunMesh(id, r.vwInv); r.vwHand.add(r.vw[id]); } }
+        for (const Q of CO.peers) { const r = Q.rp; if (r && r.vw && r.vwHand) { for (const id of ['rifle', 'shotgun', 'sniper', 'rocket', 'grenade']) { if (r.vw[id]) r.vw[id].removeFromParent(); r.vw[id] = gunMesh(id, r.vwInv); r.vwHand.add(r.vw[id]); } } }
     } catch (e) { console.warn('gun models', e); }
 }
 function explode(x, z, w, dmg) {
@@ -844,9 +844,157 @@ function invGive(id, n, arr) {   // returns what did not fit
 function say(text, ms) { const m = $('msg'); m.textContent = text; m.classList.remove('hide'); clearTimeout(say.t); say.t = setTimeout(() => m.classList.add('hide'), ms || 2600); }
 /* ---------- build a room ---------- */
 function disposeGroup(g) { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) { if (m.map) m.map.dispose(); m.dispose(); } } }); }
+/* ROOMSHAPE:BEGIN
+   Room shaping: turns the plain rectangular rooms of the Harbor Inn games into real architecture.
+   A room keeps its outer rectangle, doors, items and enemies; this layer adds full-height wall blocks (L, T and U shapes), stub walls and bays,
+   pilasters, colonnades, shelf aisles, balcony pits with railings and stair flights - all as ordinary props, so collisions, cameras and the map editor keep working.
+   Every feature is checked: all doors must still reach each other, every item / terminal / enemy must stay reachable, and nothing may sit on a door.  A feature that fails is dropped. */
+const SHAPE = { on: !/[?&]noshape\b/.test(location.search), hand: {}, stats: { rooms: 0, feats: 0, dropped: 0 } };
+function shDoorSp(def, x) { const w = def.w, d = def.d; return { x: x.side === 'E' ? w / 2 - 1.4 : x.side === 'W' ? -w / 2 + 1.4 : x.at, z: x.side === 'N' ? -d / 2 + 1.4 : x.side === 'S' ? d / 2 - 1.4 : x.at }; }
+function shTargets(def) {
+    const T = []; for (const it of def.items || []) T.push([it.x, it.z, 'item']); for (const p of def.puz || []) T.push([p.x, p.z, 'puz']);
+    if (def.typewriter) T.push([def.typewriter.x, def.typewriter.z, 'type']); if (def.box) T.push([def.box.x, def.box.z, 'box']); if (def.locker) T.push([def.locker.x + 0.55, def.locker.z, 'locker']);
+    return T;
+}
+function shRects(def) {
+    const R = []; for (const p of def.props || []) if (!p.nc) R.push([p.x - p.w / 2, p.x + p.w / 2, p.z - p.d / 2, p.z + p.d / 2]);
+    if (def.locker) R.push([def.locker.x + 0.3, def.locker.x + 0.8, def.locker.z - 0.45, def.locker.z + 0.45]); for (const p of def.puz || []) if (p.type !== 'look') R.push([p.x - 0.4, p.x + 0.4, p.z - 0.35, p.z + 0.35]);
+    return R;
+}
+function shValid(def) {
+    const w = def.w, d = def.d, cs = 0.25, nx = Math.ceil(w / cs), nz = Math.ceil(d / cs), blk = new Uint8Array(nx * nz), R = shRects(def), INF = 0.5;
+    const ci = (x) => Math.floor((x + w / 2) / cs), cj = (z) => Math.floor((z + d / 2) / cs);
+    for (const r of R) { const i0 = Math.max(0, ci(r[0] - INF)), i1 = Math.min(nx - 1, ci(r[1] + INF)), j0 = Math.max(0, cj(r[2] - INF)), j1 = Math.min(nz - 1, cj(r[3] + INF)); for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = (i + 0.5) * cs - w / 2, z = (j + 0.5) * cs - d / 2; if (x > r[0] - INF && x < r[1] + INF && z > r[2] - INF && z < r[3] + INF) blk[j * nx + i] = 1; } }
+    const sps = (def.doors || []).map((x) => shDoorSp(def, x)); if (!sps.length) return true;
+    for (const s of sps) { const i = clampI(ci(s.x), nx), j = clampI(cj(s.z), nz); if (blk[j * nx + i]) return false; }
+    const seen = new Uint8Array(nx * nz), st = []; { const s = sps[0], i = clampI(ci(s.x), nx), j = clampI(cj(s.z), nz); seen[j * nx + i] = 1; st.push(j * nx + i); }
+    while (st.length) { const c = st.pop(), i = c % nx, j = (c - i) / nx; for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = i + a, y = j + b; if (x < 0 || y < 0 || x >= nx || y >= nz) continue; const k = y * nx + x; if (!seen[k] && !blk[k]) { seen[k] = 1; st.push(k); } } }
+    for (const s of sps) { if (!seen[clampI(cj(s.z), nz) * nx + clampI(ci(s.x), nx)]) return false; }
+    const near = (x, z, rad) => { const i0 = clampI(ci(x - rad), nx), i1 = clampI(ci(x + rad), nx), j0 = clampI(cj(z - rad), nz), j1 = clampI(cj(z + rad), nz); for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (seen[j * nx + i]) return true; return false; };
+    for (const [x, z] of shTargets(def)) if (!near(x, z, 1.3)) return false;
+    for (const e of def.enemies || []) { for (const r of R) if (e.x > r[0] - 0.1 && e.x < r[1] + 0.1 && e.z > r[2] - 0.1 && e.z < r[3] + 0.1) return false; }
+    return true;
+}
+const clampI = (v, n) => Math.max(0, Math.min(n - 1, v));
+function shClear(def, r, pad) {   // a block may not touch a door's doorstep, an item, an enemy or a puzzle post
+    const P = pad == null ? 1 : pad; for (const x of def.doors || []) { const s = shDoorSp(def, x); if (s.x > r[0] - 2.1 && s.x < r[1] + 2.1 && s.z > r[2] - 2.1 && s.z < r[3] + 2.1) return false; }
+    for (const [x, z] of shTargets(def)) if (x > r[0] - P && x < r[1] + P && z > r[2] - P && z < r[3] + P) return false;
+    for (const e of def.enemies || []) if (e.x > r[0] - 0.7 && e.x < r[1] + 0.7 && e.z > r[2] - 0.7 && e.z < r[3] + 0.7) return false;
+    for (const p of def.props || []) { if (p.nc) continue; if (Math.abs(p.x - (r[0] + r[1]) / 2) < p.w / 2 + (r[1] - r[0]) / 2 - 0.05 && Math.abs(p.z - (r[2] + r[3]) / 2) < p.d / 2 + (r[3] - r[2]) / 2 - 0.05) return false; }
+    return true;
+}
+function shLighter(c, k) { const r = Math.min(255, ((c >> 16) & 255) * k) | 0, g = Math.min(255, ((c >> 8) & 255) * k) | 0, b = Math.min(255, (c & 255) * k) | 0; return (r << 16) | (g << 8) | b; }
+function shBuild(def, f) {   // a feature -> one or more props
+    const h = def.h || 4, wl = def.wall || ['wall', 0x806040, 5, 1.5], out = [], tex = wl[0], wc = wl[1], at = (o) => out.push(Object.assign({ sh: 1 }, o));
+    if (f.k === 'void' || f.k === 'part') at({ x: f.x, z: f.z, w: f.w, d: f.d, h: f.h || h, tex, c: wc });
+    else if (f.k === 'blk') at({ x: f.x, z: f.z, w: f.w, d: f.d, h: f.h, tex: f.tex || 'wood', c: f.c == null ? 0x4a3020 : f.c, nc: f.nc, y: f.y });
+    else if (f.k === 'col') { at({ x: f.x, z: f.z, w: 0.8, d: 0.8, h, tex: 'stone', c: shLighter(wc, 1.15) }); at({ x: f.x, z: f.z, w: 1.0, d: 1.0, h: 0.35, tex: 'stone', c: shLighter(wc, 0.9), nc: 1 }); }
+    else if (f.k === 'pil') at({ x: f.x, z: f.z, w: f.w || 0.7, d: f.d || 0.4, h, tex: 'stone', c: shLighter(wc, 1.2), nc: 1 });
+    else if (f.k === 'pit') { at({ x: f.x, z: f.z, w: f.w, d: f.d, h: 0.04, tex: 'metal', c: 0x050505, y: -0.01 }); const t = 0.14, rh = 1.05, rc = 0x2a1c10; if (!f.open || !f.open.includes('N')) at({ x: f.x, z: f.z - f.d / 2 - t / 2, w: f.w + t * 2, d: t, h: rh, tex: 'wood', c: rc, nc: 1 }); if (!f.open || !f.open.includes('S')) at({ x: f.x, z: f.z + f.d / 2 + t / 2, w: f.w + t * 2, d: t, h: rh, tex: 'wood', c: rc, nc: 1 }); if (!f.open || !f.open.includes('W')) at({ x: f.x - f.w / 2 - t / 2, z: f.z, w: t, d: f.d, h: rh, tex: 'wood', c: rc, nc: 1 }); if (!f.open || !f.open.includes('E')) at({ x: f.x + f.w / 2 + t / 2, z: f.z, w: t, d: f.d, h: rh, tex: 'wood', c: rc, nc: 1 }); }
+    else if (f.k === 'stair') { const n = f.n || 8, ri = (f.top || 2.4) / n, along = f.dir === 'N' || f.dir === 'S', len = along ? f.d : f.w, tr = len / n; for (let i = 0; i < n; i++) { const hh = (i + 1) * ri, off = -len / 2 + tr * (i + 0.5), sg = f.dir === 'S' || f.dir === 'E' ? 1 : -1, o = off * sg * -1; at({ x: along ? f.x : f.x + (f.dir === 'E' ? -1 : 1) * 0 + (f.dir === 'E' ? -off * -1 : off * -1) * 0 + (along ? 0 : (f.dir === 'E' ? off : -off)), z: along ? f.z + (f.dir === 'S' ? off : -off) : f.z, w: along ? f.w : tr + 0.02, d: along ? tr + 0.02 : f.d, h: hh, tex: 'wood', c: f.c == null ? 0x4a2c18 : f.c, nc: i === 0 ? 0 : undefined }); } }
+    else if (f.k === 'rail') at({ x: f.x, z: f.z, w: f.w, d: f.d, h: 1.05, tex: 'wood', c: 0x2a1c10 });
+    return out;
+}
+function shCamZones(def) {   // where a fixed camera stands (and the mirrored corners augCams will add) and the strip of room in front of it: nothing tall may rise there
+    const Z = [], cs = def.cams || [], one = cs.length === 1;
+    for (const c of cs) { const f = [c.t[0] - c.p[0], c.t[2] - c.p[2]], L = Math.hypot(f[0], f[1]) || 1; for (const mx of one ? [1, -1] : [1]) for (const mz of one ? [1, -1] : [1]) Z.push({ x: c.p[0] * mx, z: c.p[2] * mz, dx: f[0] / L * mx, dz: f[1] / L * mz }); }
+    return Z;
+}
+function shCamHit(def, r) {
+    for (const z of shCamZones(def)) for (let s = 0; s <= 5; s += 0.5) { const x = z.x + z.dx * s, y = z.z + z.dz * s, pad = s === 0 ? 2.4 : 1.1; if (x > r[0] - pad && x < r[1] + pad && y > r[2] - pad && y < r[3] + pad) return true; }
+    return false;
+}
+function shTry(def, f) {   // add a feature if it keeps the room playable
+    const props = shBuild(def, f); if (!props.length) return false; const solid = props.filter((p) => !p.nc);
+    if (solid.length) { const xs = solid.map((p) => [p.x - p.w / 2, p.x + p.w / 2, p.z - p.d / 2, p.z + p.d / 2]); const r = [Math.min(...xs.map((a) => a[0])), Math.max(...xs.map((a) => a[1])), Math.min(...xs.map((a) => a[2])), Math.max(...xs.map((a) => a[3]))]; if (!shClear(def, r, f.k === 'pit' || f.k === 'stair' ? 1.2 : 1) || ((f.k === 'void' || f.k === 'part' || f.k === 'col') && shCamHit(def, r))) { SHAPE.stats.dropped++; return false; } }
+    const n = def.props.length; def.props.push(...props); if (solid.length && !shValid(def)) { def.props.length = n; SHAPE.stats.dropped++; return false; } SHAPE.stats.feats++; return true;
+}
+function shLow(def, key) { return hashS(key) % 1000 / 1000; }
+function autoFeatures(def, id) {
+    const w = def.w, d = def.d, h = def.h || 4, R = rng(hashS(id) + 977), F = [], area = w * d, corridor = d <= 6.6 && w >= 11, nm = (def.name || '').toLowerCase(), pick = (a) => a[Math.floor(R() * a.length)];
+    const pilasters = (side) => { const L = side === 'N' || side === 'S' ? w : d, step = L > 14 ? 3.6 : 4.2, n = Math.floor((L - 2.4) / step); for (let i = 0; i <= n; i++) { const t = -L / 2 + 1.2 + i * (L - 2.4) / Math.max(1, n); if ((side === 'N' || side === 'S') ? true : true) F.push(side === 'N' ? { k: 'pil', x: t, z: -d / 2 + 0.2, w: 0.7, d: 0.4 } : side === 'S' ? { k: 'pil', x: t, z: d / 2 - 0.2, w: 0.7, d: 0.4 } : side === 'E' ? { k: 'pil', x: w / 2 - 0.2, z: t, w: 0.4, d: 0.7 } : { k: 'pil', x: -w / 2 + 0.2, z: t, w: 0.4, d: 0.7 }); } };
+    if (corridor) { pilasters('N'); if (d >= 5.4) pilasters('S'); return F; }
+    const sx = pick([-1, 1]);
+    if (area >= 140) {   // grand room: an L, a colonnade on one side, pilasters on the long wall
+        const vw = Math.min(w * 0.36, 7.5), vd = Math.min(d * 0.38, 5.4); F.push({ k: 'void', x: sx * (w / 2 - vw / 2), z: -d / 2 + vd / 2, w: vw, d: vd });
+        F.push({ k: 'void', x: -sx * (w / 2 - 1.1), z: -d / 2 + 1.6, w: 2.2, d: 3.2 });
+        for (const z of [d * 0.08, d * 0.3]) F.push({ k: 'col', x: -sx * (w / 2 - 1.5), z });
+        pilasters('N');
+    } else if (area >= 96) {   // large room: a corner block and a bay wall, or two stub walls forming bays
+        if (R() < 0.55) { const vw = Math.min(w * 0.3, 5), vd = Math.min(d * 0.34, 4); F.push({ k: 'void', x: sx * (w / 2 - vw / 2), z: -d / 2 + vd / 2, w: vw, d: vd }); F.push({ k: 'part', x: -sx * (w * 0.12), z: -d / 2 + d * 0.16, w: 0.35, d: d * 0.32 }); }
+        else { F.push({ k: 'part', x: -w * 0.18, z: -d / 2 + d * 0.2, w: 0.35, d: d * 0.4 }); F.push({ k: 'part', x: w * 0.2, z: -d / 2 + d * 0.2, w: 0.35, d: d * 0.4 }); }
+        pilasters('N');
+    } else if (area >= 56) {   // medium: one corner bay and a stub
+        const vw = Math.min(w * 0.28, 3.4), vd = Math.min(d * 0.34, 3); F.push({ k: 'void', x: sx * (w / 2 - vw / 2), z: -d / 2 + vd / 2, w: vw, d: vd }); F.push({ k: 'part', x: -sx * w * 0.15, z: -d / 2 + d * 0.16, w: 0.35, d: d * 0.3 }); pilasters('N');
+    } else { const vw = Math.min(w * 0.3, 2.2), vd = Math.min(d * 0.35, 2.2); F.push({ k: 'void', x: sx * (w / 2 - vw / 2), z: -d / 2 + vd / 2, w: vw, d: vd }); pilasters('N'); }
+    return F;
+}
+function shPillars(def) {   // freestanding full-height posts in the middle of a room are what make it a box with pillars: set them into the wall as pilasters (or drop them when a door is there)
+    const w = def.w, d = def.d, h = def.h || 4, doors = def.doors || []; let n = 0;
+    for (const p of def.props || []) {
+        if (p.nc || p.sh || p.shape || p.w > 1.4 || p.d > 1.4 || p.h < h * 0.7) continue; if (Math.min(w / 2 - Math.abs(p.x), d / 2 - Math.abs(p.z)) < 1.3) continue;
+        const ew = w / 2 - Math.abs(p.x), ed = d / 2 - Math.abs(p.z), side = ew < ed ? (p.x < 0 ? 'W' : 'E') : (p.z < 0 ? 'N' : 'S'), lat = side === 'N' || side === 'S' ? p.x : p.z;
+        if (doors.some((q) => q.side === side && Math.abs(q.at - lat) < 1.9)) { p.h = 0; p.nc = 1; p.gone = 1; n++; continue; }
+        if (side === 'N' || side === 'S') { p.z = (side === 'N' ? -1 : 1) * (d / 2 - 0.22); p.w = 0.7; p.d = 0.44; } else { p.x = (side === 'W' ? -1 : 1) * (w / 2 - 0.22); p.w = 0.44; p.d = 0.7; }
+        p.nc = 1; n++;
+    }
+    if (n) def.props = def.props.filter((p) => !p.gone); return n;
+}
+function shapeRoom(def, id) {
+    if (!SHAPE.on || !def || def._sh || def.custom || def.noShape) return; def._sh = 1; SHAPE.stats.rooms++; def.props = def.props || []; SHAPE.stats.pillars = (SHAPE.stats.pillars || 0) + shPillars(def);
+    let F; try { F = SHAPE.hand[id] ? SHAPE.hand[id](def) : autoFeatures(def, id); } catch (e) { console.warn('room shape', id, e); F = []; }
+    for (const f of F) { try { shTry(def, f); } catch (e) { console.warn('shape feature', id, e); } }
+}
+
+/* ---------- door cameras: from the zone around every door, the active camera must show the door itself and the spot in front of it ---------- */
+function cdWallPt(def, x) { const w = def.w, d = def.d; return { x: x.side === 'E' ? w / 2 : x.side === 'W' ? -w / 2 : x.at, z: x.side === 'N' ? -d / 2 : x.side === 'S' ? d / 2 : x.at }; }
+function cdFor(def, px, pz) { const cs = def.cams; for (let i = 0; i < cs.length; i++) { const z = cs[i].zone; if (z && px >= z[0] && px <= z[2] && pz >= z[1] && pz <= z[3]) return i; } for (let i = 0; i < cs.length; i++) if (!cs[i].zone) return i; return 0; }
+function cdBlocked(def, a, b) {   // a tall solid between camera point a and target b?
+    const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz), n = Math.ceil(L / 0.25);
+    for (let i = 1; i < n; i++) { const t = i / n, x = a[0] + dx * t, y = a[1] + dy * t, z = a[2] + dz * t; if (L * (1 - t) < 0.45) break; for (const o of def.props || []) { if (o.nc || o.h < 1.0) continue; if (y < o.h + 0.05 && Math.abs(x - o.x) < o.w / 2 && Math.abs(z - o.z) < o.d / 2 && y > (o.y || 0) - 0.05) return true; } }
+    return false;
+}
+function cdSees(def, c, pt) {   // inside the frame (with margin) and not behind a tall prop
+    const f = [c.t[0] - c.p[0], c.t[1] - c.p[1], c.t[2] - c.p[2]], fl = Math.hypot(...f); f[0] /= fl; f[1] /= fl; f[2] /= fl;
+    const r = [-f[2], 0, f[0]], rl = Math.hypot(r[0], r[2]) || 1; r[0] /= rl; r[2] /= rl; const u = [f[1] * r[2] - f[2] * r[1], f[2] * r[0] - f[0] * r[2], f[0] * r[1] - f[1] * r[0]];
+    const v = [pt[0] - c.p[0], pt[1] - c.p[1], pt[2] - c.p[2]], z = v[0] * f[0] + v[1] * f[1] + v[2] * f[2]; if (z < 0.5) return false;
+    const th = Math.tan(c.fov * Math.PI / 360), asp = 1.5, nx = (v[0] * r[0] + v[1] * r[1] + v[2] * r[2]) / z / (th * asp), ny = (v[0] * u[0] + v[1] * u[1] + v[2] * u[2]) / z / th;
+    if (Math.abs(nx) > 0.86 || Math.abs(ny) > 0.86) return false; return !cdBlocked(def, c.p, pt);
+}
+function cdSamples(def, x) {   // where the player stands near a door: on the doorstep and a few steps into the room, plus the door itself
+    const wp = cdWallPt(def, x), w = def.w, d = def.d, ix = x.side === 'W' ? 1 : x.side === 'E' ? -1 : 0, iz = x.side === 'N' ? 1 : x.side === 'S' ? -1 : 0, S = [];
+    for (const dep of [1.4, 2.6, 3.8]) for (const lat of dep < 2 ? [0] : [-1.4, 0, 1.4]) { const px = wp.x + ix * dep + (iz ? lat : 0), pz = wp.z + iz * dep + (ix ? lat : 0); if (Math.abs(px) < w / 2 - 0.5 && Math.abs(pz) < d / 2 - 0.5) S.push([px, pz]); }
+    return { door: [wp.x, 1.15, wp.z], spots: S, ix, iz, wp };
+}
+function cdFails(def) {
+    const bad = []; (def.doors || []).forEach((x, i) => { const S = cdSamples(def, x); let ok = true, seen = 0; S.spots.forEach(([px, pz], j) => { const c = def.cams[cdFor(def, px, pz)]; if (!cdSees(def, c, S.door)) ok = false; if (cdSees(def, c, [px, 0.9, pz])) seen++; else if (j === 0) ok = false; }); if (seen < S.spots.length * 0.7) ok = false; if (!ok) bad.push(i); }); return bad;
+}
+function camDoors(def) {
+    if (def._cd || !SHAPE.on || !def.cams || !def.doors || !def.doors.length || def.custom || def.noShape) return; def._cd = 1;
+    let bad = cdFails(def), guard = 0; const w = def.w, d = def.d, h = def.h || 4;
+    while (bad.length && guard++ < def.doors.length + 6) {
+        const x = def.doors[bad[0]], S = cdSamples(def, x), wp = S.wp, best = { n: bad.length, sc: -1e9, k: null }, mid = (a, b) => (a + b) / 2;
+        const zone = [Math.max(-w / 2 - 1, wp.x - (S.iz ? 3.4 : 0) - (S.ix > 0 ? 1 : 0) - (S.ix < 0 ? 4.6 : 0)), Math.max(-d / 2 - 1, wp.z - (S.ix ? 3.4 : 0) - (S.iz > 0 ? 1 : 0) - (S.iz < 0 ? 4.6 : 0)), Math.min(w / 2 + 1, wp.x + (S.iz ? 3.4 : 0) + (S.ix < 0 ? 1 : 0) + (S.ix > 0 ? 4.6 : 0)), Math.min(d / 2 + 1, wp.z + (S.ix ? 3.4 : 0) + (S.iz < 0 ? 1 : 0) + (S.iz > 0 ? 4.6 : 0))];
+        const m = 0.7, xs = [-w / 2 + m, -w / 4, 0, w / 4, w / 2 - m], zs = [-d / 2 + m, -d / 4, 0, d / 4, d / 2 - m], cand = [];
+        for (const px of xs) for (const pz of zs) { if (Math.abs(px) < w / 2 - m - 0.01 && Math.abs(pz) < d / 2 - m - 0.01) continue; cand.push([px, pz]); }
+        for (const [px, pz] of cand) {
+            const dist = Math.hypot(px - wp.x, pz - wp.z); if (dist < 3.2) continue; if ((def.props || []).some((o) => !o.nc && o.h > 2.2 && Math.abs(px - o.x) < o.w / 2 + 1.5 && Math.abs(pz - o.z) < o.d / 2 + 1.5)) continue; if ((px - wp.x) * S.ix + (pz - wp.z) * S.iz < 2.2) continue;   // across the room from the door, not beside it
+            if ((def.props || []).some((o) => !o.nc && o.h > 2.2 && Math.abs(px - o.x) < o.w / 2 + 0.3 && Math.abs(pz - o.z) < o.d / 2 + 0.3)) continue;
+            for (const py of [Math.min(h - 0.25, 4.4), Math.min(h - 0.25, 3.2)]) for (const fov of [56, 64, 72]) {
+                const tz = S.spots[Math.min(1, S.spots.length - 1)] || [wp.x, wp.z], k = { p: [px, py, pz], t: [mid(wp.x, tz[0]), 0.7, mid(wp.z, tz[1])], fov, zone };
+                def.cams.unshift(k); const nb = cdFails(def); def.cams.shift();
+                const sc = -nb.length * 100 - (nb.includes(bad[0]) ? 1000 : 0) + dist * 2 - Math.abs(py - 3.8) * 0.5 - fov * 0.05; if (sc > best.sc) { best.sc = sc; best.k = k; best.n = nb.length; best.nb0 = nb.includes(bad[0]); }
+            }
+        }
+        if (!best.k || best.n > bad.length || best.nb0) { SHAPE.stats.camfail = (SHAPE.stats.camfail || 0) + 1; SHAPE.stats.camFailRooms = (SHAPE.stats.camFailRooms || []).concat([(def.name || '?') + '#' + bad[0]]); break; }
+        def.cams.unshift(best.k); SHAPE.stats.cams = (SHAPE.stats.cams || 0) + 1; bad = cdFails(def);
+    }
+}
+SHAPE.valid = shValid; SHAPE.camFails = cdFails; SHAPE.sees = cdSees; SHAPE.samples = cdSamples; SHAPE.camFor = cdFor; SHAPE.camDoors = camDoors;
+/* ROOMSHAPE:END */
 function buildRoom(id) {
-    const def = ROOMS[id]; if (RM.group) { scene.remove(RM.group); disposeGroup(RM.group); }
-    const g = new THREE.Group(); scene.add(g); RM = { id, def, group: g, cols: [], inter: [], enemies: [], items: [], cam: 0, busy: RM.busy, t: 0, lf: [], hounds: false, boot: 0 }; auRoom(def); augCams(def);
+    const def = ROOMS[id]; shapeRoom(def, id); if (RM.group) { scene.remove(RM.group); disposeGroup(RM.group); }
+    const g = new THREE.Group(); scene.add(g); RM = { id, def, group: g, cols: [], inter: [], enemies: [], items: [], cam: 0, busy: RM.busy, t: 0, lf: [], hounds: false, boot: 0 }; auRoom(def); augCams(def); camDoors(def);
     scene.fog = new THREE.Fog(def.fog, 8, 26); scene.background = new THREE.Color(def.sky ? 0x0a1020 : def.fog);
     g.add(new THREE.AmbientLight(def.amb[0], def.amb[1]));
     for (const l of def.lights) { const pl = new THREE.PointLight(l.c, l.i, l.r, 1.4); pl.position.set(l.x, l.y, l.z); g.add(pl); if (l.fl) RM.lf.push({ pl, b: l.i, k: l.fl, ph: Math.random() * 9 }); }
@@ -1202,7 +1350,7 @@ function freeSpot(x, z, r) {   // never drop anybody inside furniture: spiral ou
 function loadRoom(id, doorId, pos) {
     G.room = id; G.seen = G.seen || {}; G.seen[id] = 1; buildRoom(id); RM.busy = true; const def = ROOMS[id]; let sp = { x: 0, z: 0, rot: 0 };
     if (pos) sp = pos; else if (doorId) { const dd = def.doors.find((q) => q.id === doorId); if (dd) sp = dd.sp; } else sp = { x: G.x, z: G.z, rot: G.rot };
-    if (CO.on && CO.role === 'guest') sp = { x: sp.x + Math.cos(sp.rot) * 0.75, z: sp.z - Math.sin(sp.rot) * 0.75, rot: sp.rot }; if (CO.on && G.hp <= 0) G.hp = 35; { const fs = freeSpot(sp.x, sp.z, 0.4); sp = { x: fs[0], z: fs[1], rot: sp.rot }; } placePlayer(sp.x, sp.z, sp.rot); setWeaponVis(); camPick(true); coRoomLoaded(); RM.entered = performance.now(); RM.musFor = null; escRoomSetup(id); try { stkRoomSetup(id); } catch (er) { console.warn('stalker', er); }
+    if (CO.on && CO.role === 'guest') { const sl = Math.max(2, Math.min(4, CO.slot || 2)), lat = [0, 0.85, -0.85, 1.7][sl - 1], fw = [0, 0.4, 0.4, 0.8][sl - 1]; sp = { x: sp.x + Math.cos(sp.rot) * fw + Math.sin(sp.rot) * lat, z: sp.z - Math.sin(sp.rot) * fw + Math.cos(sp.rot) * lat, rot: sp.rot }; }   // the party arrives side by side, not in a queue if (CO.on && G.hp <= 0) G.hp = 35; { const fs = freeSpot(sp.x, sp.z, 0.4); sp = { x: fs[0], z: fs[1], rot: sp.rot }; } placePlayer(sp.x, sp.z, sp.rot); setWeaponVis(); camPick(true); coRoomLoaded(); RM.entered = performance.now(); RM.musFor = null; escRoomSetup(id); try { stkRoomSetup(id); } catch (er) { console.warn('stalker', er); }
 }
 /* more angles: a room with one fixed camera gets cameras from the opposite corners. Whichever quadrant you stand in is filmed from the corner across from it. */
 function augCams(def) {
@@ -2239,7 +2387,7 @@ function eventHounds() {
     [[0.5, 1.9], [1.8, 2.0]].forEach(([x, z], i) => { const key = 'east:h' + i; if (!G.dead[key] && !RM.enemies.some((e) => e.key === key)) spawnEnemy({ t: 'h', x, z, rot: 3 }, key, true); }); say('Glass shatters. Something is coming through the window!', 2200);
 }
 function triggerEvents() {
-    if (RM.id === 'east' && !G.flags.hounds && CO.role !== 'guest' && (PL.x > -2.6 || (CO.rp && CO.rpRoom === 'east' && CO.rp.x > -2.6)) && !RM.busy) { eventHounds(); coSend({ t: 'ev', k: 'hounds' }); }
+    if (RM.id === 'east' && !G.flags.hounds && CO.role !== 'guest' && (PL.x > -2.6 || CO.peers.some((q) => q.rp && q.rpRoom === 'east' && q.rp.x > -2.6)) && !RM.busy) { eventHounds(); coSend({ t: 'ev', k: 'hounds' }); }
     if (RM.id === 'roof' && !RM.ended && performance.now() - RM.entered > 2600) { if (G.flags.act2) { RM.ended = 1; } else if (invHas('flare')) { RM.ended = 1; invTake('flare', 1); setFlag('act2'); sfx('ok'); say('You fire the flare. A patrol boat answers with its light, but the dock gate is sealed by the inn\'s own network. The radio on the roof crackles: "The way to the harbor is through the lab beneath the boiler room. The lift crank is in two halves, somewhere in the garden. The garden key is up here on the roof."', 9000); } else if (!RM.hinted) { RM.hinted = 1; say('The harbor lies silent below. You need some way to signal for help...', 3600); } }
     if (RM.def.event === 'end2' && G.flags.finalDead && !RM.ended && !G.esc) { RM.ended = 1; setTimeout(() => { if (!G.esc) startEscape(); }, 3200); }
 }
@@ -2569,8 +2717,8 @@ function modTabItem(body) {
         if (any) body.appendChild(card);
     }
 }
-/* ---- character slots: five uploads for Player 1 and five for Player 2. Each device picks the one it plays; your partner sees your pick. ---- */
-const CHR_N = 5;
+/* ---- character slots: ten for Player 1 and ten for Player 2 (uploads, or picked from your Oasis My Characters). Each device picks the one it plays; your partner sees your pick. ---- */
+const CHR_N = 10;
 function chrCfg() { MOD.cfg.chr = MOD.cfg.chr || {}; for (const P of ['P1', 'P2']) { const a = MOD.cfg.chr[P]; MOD.cfg.chr[P] = Array.isArray(a) ? a.slice(0, CHR_N) : []; while (MOD.cfg.chr[P].length < CHR_N) MOD.cfg.chr[P].push(null); } return MOD.cfg.chr; }
 async function chrSet(P, i, file) {
     if (file.size > 60 * 1048576) throw new Error('That file is too big (60 MB max).'); const buf = await file.arrayBuffer();
@@ -2578,13 +2726,48 @@ async function chrSet(P, i, file) {
 }
 async function chrClear(P, i) { try { await idbDel('mod:c:' + P + i); } catch (e) { /* none */ } chrCfg()[P][i] = null; if (OPT.avatar === 'slot:' + P + ':' + i) { OPT.avatar = 'oasis'; saveOpt(); avBoot(); } modSave(); }
 async function chrUse(P, i) { OPT.avatar = 'slot:' + P + ':' + i; saveOpt(); say('Loading ' + chrCfg()[P][i].n + '...', 2200); await avBoot(); }
+/* Oasis "My Characters" pool: the Oasis page keeps your characters in IndexedDB psHomeWeb (same browser storage, so the game can read them). Opening it at version 1 and aborting the upgrade means we never create an empty database by accident. */
+function oasisDb() { return new Promise((res) => { try { const r = indexedDB.open('psHomeWeb', 1); r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) { /* none */ } }; r.onsuccess = () => res(r.result); r.onerror = () => res(null); r.onblocked = () => res(null); } catch (e) { res(null); } }); }
+async function oasisGet(k) {
+    const db = await oasisDb(); if (!db) return undefined;
+    try { if (!db.objectStoreNames.contains('kv')) { db.close(); return undefined; } return await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => { db.close(); res(q.result); }; q.onerror = () => { db.close(); res(undefined); }; }); } catch (e) { try { db.close(); } catch (e2) { /* none */ } return undefined; }
+}
+async function oasisChars() { const L = await oasisGet('chars:index'); return (Array.isArray(L) ? L : []).filter((e) => e && typeof e.id === 'string' && e.kind !== 'sprite' && e.kind !== 'obj'); }
+async function chrFromOasis(P, i, e) {
+    const r = await oasisGet('char:' + e.id); if (!r || !r.buffer) throw new Error('"' + e.name + '" has no model file in My Characters');
+    const buf = r.buffer instanceof ArrayBuffer ? r.buffer.slice(0) : (r.buffer.buffer ? r.buffer.buffer.slice(r.buffer.byteOffset, r.buffer.byteOffset + r.buffer.byteLength) : null); if (!buf) throw new Error('Could not read "' + e.name + '"'); if (buf.byteLength > 60 * 1048576) throw new Error('"' + e.name + '" is too big (60 MB max)');
+    const nm = String(e.name || 'Character').replace(/\.(vrm|glb|gltf|fbx)$/i, '').replace(/[^\w .()\-]/g, '').slice(0, 40) + (r.kind === 'fbx' || avIsFbx(buf) ? '.fbx' : '.vrm');
+    await idbPut('mod:c:' + P + i, { n: nm, b: buf }); chrCfg()[P][i] = { n: nm, g: e.gender === 'male' ? 'male' : 'female' }; modSave();
+}
+async function chrPick(P, slot) {   // slot = a number: choose one for that slot; null: choose up to ten to fill the slots in order
+    const host = MODUI.el || document.body, ov = modEl('div', 'position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:12px'), box = modEl('div', 'background:#150f08;border:1px solid #6b5a3a;border-radius:10px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px 14px;font-family:Georgia,serif;color:#e8dcc0');
+    box.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:6px', slot === null ? 'Pick up to ' + CHR_N + ' characters for ' + (P === 'P1' ? 'Player 1' : 'Player 2') : 'Pick a character for slot ' + (slot + 1))); const list = modEl('div', ''); box.appendChild(list); ov.appendChild(box); host.appendChild(ov);
+    const close = () => ov.remove(); ov.addEventListener('click', (ev) => { if (ev.target === ov) close(); }); list.appendChild(modEl('div', 'font-size:13px;color:#8a7c5c', 'Loading your characters…'));
+    const L = await oasisChars(); list.textContent = '';
+    if (!L.length) { list.appendChild(modEl('div', 'font-size:13px;color:#c9b27a', 'No characters found. Add some in the Oasis (My Characters), open Harbor Inn from the Oasis on the same browser, then try again.')); const b = modEl('button', B_CSS + ';margin-top:8px', 'Close'); b.onclick = close; box.appendChild(b); return; }
+    const chosen = []; const goBtn = modEl('button', B_CSS + ';margin-top:8px;margin-right:8px', slot === null ? 'Use these (0)' : 'Close');
+    for (const e of L) {
+        const row = modEl('label', 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #2a2014;font-size:13px;cursor:pointer'), ck = document.createElement('input'); ck.type = slot === null ? 'checkbox' : 'radio'; ck.name = 'chrpick'; ck.style.pointerEvents = 'auto'; row.appendChild(ck); row.appendChild(modEl('span', 'flex:1', e.name || 'Character')); row.appendChild(modEl('span', 'color:#8a7c5c', (e.gender === 'male' ? 'Male' : 'Female') + ' · ' + Math.round((e.size || 0) / 1048576 * 10) / 10 + ' MB'));
+        ck.onchange = async () => {
+            if (slot !== null) { ck.disabled = true; try { await chrFromOasis(P, slot, e); say('Added ' + e.name, 1800); close(); modRender(); } catch (er) { say(String(er.message || er).slice(0, 90), 4000); ck.disabled = false; ck.checked = false; } return; }
+            const i = chosen.indexOf(e); if (ck.checked) { if (chosen.length >= CHR_N) { ck.checked = false; say(CHR_N + ' at most.', 1500); return; } if (i < 0) chosen.push(e); } else if (i >= 0) chosen.splice(i, 1); goBtn.textContent = 'Use these (' + chosen.length + ')';
+        };
+        list.appendChild(row);
+    }
+    goBtn.onclick = async () => { if (slot === null && chosen.length) { goBtn.disabled = true; let n = 0; for (let i = 0; i < chosen.length; i++) { try { await chrFromOasis(P, i, chosen[i]); n++; } catch (er) { say(String(er.message || er).slice(0, 90), 3500); } } say(n + ' character' + (n === 1 ? '' : 's') + ' added to ' + (P === 'P1' ? 'Player 1' : 'Player 2') + '.', 2400); modRender(); } close(); }; box.appendChild(goBtn);
+    const cb = modEl('button', B_CSS + ';margin-top:8px', 'Cancel'); cb.onclick = close; box.appendChild(cb);
+}
 function modTabChr(body) {
-    const C = chrCfg(), hint = modEl('div', 'font-size:13px;color:#c9b27a;margin:0 0 8px', 'Upload up to five characters (.vrm, .glb or .fbx) for each player, then press Use on the one you want to play. In co-op the host is Player 1 and the guest is Player 2, and your partner sees whichever one you pick. Kept on this device.'); body.appendChild(hint);
+    const C = chrCfg(), hint = modEl('div', 'font-size:13px;color:#c9b27a;margin:0 0 8px', 'Fill up to ten slots per player from your Oasis My Characters, or upload files (.vrm, .glb or .fbx), then press Use on the one you want to play. In co-op the host is Player 1 and the guest is Player 2, and your partner sees whichever one you pick. Kept on this device.'); body.appendChild(hint);
     for (const P of ['P1', 'P2']) {
         const card = modEl('div', CARD); card.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:4px', P === 'P1' ? 'Player 1 (host)' : 'Player 2 (guest)'));
+        { const top = modEl('div', 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px'); const f5 = modEl('button', B_CSS, 'Fill up to ' + CHR_N + ' from my characters…'); f5.onclick = () => chrPick(P, null); top.appendChild(f5);
+          if (P === 'P2') { const cp = modEl('button', B_CSS, 'Copy Player 1\'s characters'); cp.onclick = async () => { let n = 0; for (let i = 0; i < CHR_N; i++) { const r = await idbGet('mod:c:P1' + i); if (r && r.b) { await idbPut('mod:c:P2' + i, { n: r.n, b: r.b.slice(0) }); chrCfg().P2[i] = Object.assign({}, chrCfg().P1[i]); n++; } } modSave(); say(n + ' copied.', 1800); modRender(); }; top.appendChild(cp); }
+          card.appendChild(top); }
         for (let i = 0; i < CHR_N; i++) {
             const c = C[P][i], on = OPT.avatar === 'slot:' + P + ':' + i, r = modEl('div', 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #2a2014;flex-wrap:wrap');
             r.appendChild(modEl('span', 'width:56px;font-size:13px', 'Slot ' + (i + 1))); r.appendChild(modEl('span', 'flex:1;min-width:120px;font-size:13px;color:' + (c ? (on ? '#9be39b' : '#e8dcc0') : '#8a7c5c'), c ? c.n + (on ? '  (playing)' : '') : 'Empty'));
+            const pk = modEl('button', B_CSS, 'My characters…'); pk.onclick = () => chrPick(P, i); r.appendChild(pk);
             const up = modEl('button', B_CSS, c ? 'Replace…' : 'Choose file…'); up.onclick = () => modPickFile('.vrm,.glb,.gltf,.fbx', async (f) => { await chrSet(P, i, f); modRender(); }); r.appendChild(up);
             if (c) {
                 const g = modEl('button', B_CSS, c.g === 'male' ? 'Male' : 'Female'); g.title = 'Which animation set it uses'; g.onclick = async () => { c.g = c.g === 'male' ? 'female' : 'male'; modSave(); if (on) await avBoot(); modRender(); }; r.appendChild(g);
@@ -2641,6 +2824,9 @@ async function modExport() {
     for (const k of Object.keys(MOD.cfg.sfx)) { const r = await idbGet('mod:a:' + k); if (r) out.files['a:' + k] = { n: r.n, b: modB64(r.b) }; }
     for (const [g, o] of [['e', MOD.cfg.en], ['g', MOD.cfg.gun]]) for (const k of Object.keys(o)) if (o[k].mf) { const r = await idbGet('mod:m:' + g + ':' + k); if (r) out.files['m:' + g + ':' + k] = { n: r.n, b: modB64(r.b) }; }
     for (const k of Object.keys(MOD.cfg.img || {})) { const r = await idbGet('mod:i:' + k); if (r) out.files['i:' + k] = { n: r.n, b: modB64(r.b) }; }
+    { let total = 0; const cf = {}; for (const P of ['P1', 'P2']) for (let i = 0; i < CHR_N; i++) if ((chrCfg()[P][i])) { const r = await idbGet('mod:c:' + P + i); if (r && r.b) { cf['c:' + P + ':' + i] = r; total += r.b.byteLength; } }
+      if (total > 120 * 1048576) { out.cfg = Object.assign({}, out.cfg, { chr: undefined }); try { alert('Your characters come to ' + Math.round(total / 1048576) + ' MB, too big to bundle in one pack file (120 MB max). The pack was saved without them. Use Fill from my characters on the other device instead.'); } catch (e) { /* none */ } }
+      else for (const [k, r] of Object.entries(cf)) out.files[k] = { n: r.n, b: modB64(r.b) }; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' })); a.download = 'harbor-inn-modpack.json'; document.body.appendChild(a); a.click(); a.remove();
 }
 async function modReset() {
@@ -2650,9 +2836,9 @@ async function modReset() {
     MOD.cfg = { v: 1, en: {}, gun: {}, sfx: {}, img: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }; MOD.buf = {}; MOD.models = {}; modSave(); modApplyGuns(); gunRefreshModels();
 }
 async function modImport(f) {
-    const o = JSON.parse(await f.text()); if (!o || o.game !== 'oasis-survivor-modkit' || !o.cfg) throw new Error('not a Harbor Inn mod pack'); await modReset();
-    MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {}, img: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }, o.cfg); MOD.cfg.img = MOD.cfg.img || {}; MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
-    for (const [k, v] of Object.entries(o.files || {})) { if (k.startsWith('a:')) await idbPut('mod:a:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('m:')) await idbPut('mod:m:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('i:')) await idbPut('mod:i:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); }
+    const o = JSON.parse(await f.text()); if (!o || o.game !== 'oasis-survivor-modkit' || !o.cfg) throw new Error('not a Harbor Inn mod pack'); const keepChr = MOD.cfg.chr; await modReset();
+    MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {}, img: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }, o.cfg); if (!o.cfg.chr) MOD.cfg.chr = keepChr; MOD.cfg.img = MOD.cfg.img || {}; MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
+    for (const [k, v] of Object.entries(o.files || {})) { if (k.startsWith('a:')) await idbPut('mod:a:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('m:')) await idbPut('mod:m:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('i:')) await idbPut('mod:i:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (/^c:P[12]:\d$/.test(k)) await idbPut('mod:c:' + k.slice(2).replace(':', ''), { n: String(v.n || 'Character').slice(0, 60), b: modUnB64(v.b) }); }
     modSave(); MOD.aLoaded = false; if (AU.ctx) await modLoadAudio(); await modBoot(); modRender();
 }
 window.__mod = MOD; MOD.fn = { modOpen, modSetModel, modSetSound, modApplyEnemy, modGunInner }; setTimeout(() => { try { modBoot(); } catch (e) { console.warn('mod kit', e); } }, 0);
@@ -3033,7 +3219,7 @@ async function avBoot() {
         if (src === 'upload') { const r = await idbGet('avatar'); if (r) { buf = await r.arrayBuffer(); name = r.name || 'Uploaded VRM'; } }
         if (!buf && src !== 'none') { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); if (pa && pa.buffer) { buf = new Uint8Array(pa.buffer).slice().buffer; name = pa.name || 'Your Oasis character'; AV.src = 'oasis'; AV.gender = pa.gender === 'female' ? 'female' : 'male'; } }
         if (buf && avIsFbx(buf)) { buf = await avLite(buf); }   // FBX: use the small GLB re-pack for everything (own model, and the copy sent to your partner)
-        if (buf) { AV.raw = buf; await avLoad(buf, name); AV.err = ''; try { coSendAvatar(); coSendMusic(); } catch (e) { /* no link */ } } else AV.err = src === 'none' ? '' : 'No character found. Equip a VRoid in the Oasis, or upload a .vrm in Options.';
+        if (buf) { AV.raw = buf; await avLoad(buf, name); AV.err = ''; try { CO.peers.forEach((Q) => { Q.avFor = null; }); coEach(() => { coSendAvatar(); coSendMusic(); }); } catch (e) { /* no link */ } } else AV.err = src === 'none' ? '' : 'No character found. Equip a VRoid in the Oasis, or upload a .vrm in Options.';
     } catch (e) { AV.err = 'Could not load the character: ' + (e && e.message || e); console.warn('avatar', e); AV.on = false; try { avClear(); } catch (e2) { /* default soldier stays */ } try { say(AV.err.slice(0, 90), 6000); } catch (e3) { /* not in a room yet */ } }
     return AV.on;
 }
@@ -3099,9 +3285,27 @@ function dcUpdate(dt) {
 /* ---------- co-op for two: the host runs the monsters and the world, the guest sends where they are and what they hit ---------- */
 const NETCFG = { appId: 'oasis-survivor-v1', strategies: ['torrent', 'nostr', 'mqtt'], redundancy: { nostr: 6, torrent: 5, mqtt: 4 }, turnApi: 'https://oasis-turn.acoffey412.workers.dev' };
 NETCFG.override = (() => { const q = new URLSearchParams(location.search), list = (...k) => k.flatMap((x) => (q.get(x) || '').split(',')).map((x) => x.trim()).filter((x) => /^wss?:\/\//.test(x)); return { nostr: list('nostr'), torrent: list('tracker'), mqtt: list('mqtt') }; })();
-const CO = { on: false, role: null, tr: null, peer: null, code: '', state: 'idle', note: '', rp: null, rpRoom: null, pT: 0, sT: 0, lastRx: 0, warned: 0 };
+/* CO4 */
+/* Up to four players: the host plus up to three guests. Every other player is a record in CO.peers. The per-partner fields (peer, peerPid, rp,
+   rpRoom, avIn, pinv ...) are read through CO.cur, so all the older single-partner code keeps working: CO.cur is the "main" partner at rest,
+   and withPeer(P, fn) points it at another player for the length of fn. */
+const CO = { on: false, role: null, tr: null, code: '', state: 'idle', note: '', pT: 0, sT: 0, lastRx: 0, warned: 0, peers: [], cur: null, slot: 1, ros: null, auto: 0, autoGo: 0 };
+const CO_MAX = 4, CO_KEYS = ['peer', 'peerPid', 'rp', 'rpRoom', 'avFor', 'msFor', 'avIn', 'pinv', 'ptfa', 'peerName', 'pslot', 'pHost', 'ok'];
+const CO_COL = [0x8a2f2f, 0x2f5a8a, 0x2f8a4a, 0xb08a2a], CO_TXT = ['#e66', '#6af', '#6c8', '#ec4'];
+for (const k of CO_KEYS) Object.defineProperty(CO, k, { get() { return CO.cur ? CO.cur[k] : undefined; }, set(v) { if (CO.cur) CO.cur[k] = v; }, enumerable: false, configurable: true });
+const coMk = (id) => ({ peer: id, peerPid: '', rp: null, rpRoom: null, avFor: null, msFor: null, avIn: null, pinv: null, ptfa: null, peerName: '', pslot: 0, pHost: false, ok: false, q: [], hold: null });
+const coById = (id) => CO.peers.find((p) => p.peer === id);
+const coPrimary = () => CO.role === 'guest' ? (CO.peers.find((p) => p.pHost && p.ok) || null) : (CO.peers.find((p) => p.ok) || null);
+const coFix = () => { CO.cur = coPrimary(); };
+function withPeer(P, fn) { const sv = CO.cur; CO.cur = P; try { return fn(); } finally { CO.cur = sv && CO.peers.includes(sv) ? sv : coPrimary(); } }
+const coEach = (fn) => { for (const P of CO.peers.slice()) if (P.ok) withPeer(P, fn); };
+const coOk = () => CO.peers.filter((p) => p.ok);
 const r2 = (v) => Math.round(v * 100) / 100;
-const coSend = (m) => { if (CO.tr && CO.peer) { try { CO.tr.send(CO.peer, m); } catch (e) { /* peer gone */ } } };
+function coSendTo(P, m) { if (CO.tr && P) { try { CO.tr.send(P.peer, m); } catch (e) { /* peer gone */ } } }
+function coAll(m, skip, force) { for (const P of CO.peers.slice()) if (P !== skip && (P.ok || force)) coSendTo(P, m); }
+const CO_BC = new Set(['p', 'flag', 'sfx', 'world', 'go', 'en', 'dd', 'ev', 'taken', 'over', 'bar', 'savecopy', 'ros', 'bye']), CO_HOSTMSG = new Set(['hit', 'door', 'take', 'bag', 'savereq']);
+/* where a message goes: world news to everybody, requests to the host, everything else to the partner CO.cur points at */
+const coSend = (m) => { if (!CO.tr) return; if (CO_BC.has(m.t)) { coAll(m, null, m.t === 'bye'); return; } if (CO.role === 'guest' && CO_HOSTMSG.has(m.t)) { coSendTo(CO.peers.find((p) => p.pHost), m); return; } if (CO.cur) coSendTo(CO.cur, m); };
 function coPost(o) { try { if (window.parent && window.parent !== window) window.parent.postMessage(o, location.origin && location.origin !== 'null' ? location.origin : '*'); } catch (e) { /* standalone */ } }
 let p2pLib = null, p2pErr = '';
 async function importP2P(b64) {
@@ -3171,11 +3375,11 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ', newCode = () => Array.from({ leng
 function setFlag(k) { G.flags[k] = 1; coSend({ t: 'flag', k }); }
 function esfx(n) { sfx(n); if (CO.role === 'host') coSend({ t: 'sfx', n }); }
 function tgt(E) {
-    let best = PL, bd = PL.state === 'dead' ? 1e9 : Math.hypot(PL.x - E.x, PL.z - E.z); const r = CO.rp;
-    if (CO.role === 'host' && r && r.state !== 'dead' && CO.rpRoom === RM.id) { const d = Math.hypot(r.x - E.x, r.z - E.z); if (d < bd) { best = r; bd = d; } }
+    let best = PL, bd = PL.state === 'dead' ? 1e9 : Math.hypot(PL.x - E.x, PL.z - E.z);
+    if (CO.role === 'host') for (const Q of CO.peers) { const q = Q.rp; if (q && Q.ok && q.state !== 'dead' && Q.rpRoom === RM.id) { const d = Math.hypot(q.x - E.x, q.z - E.z); if (d < bd) { best = q; bd = d; } } }
     return best;
 }
-function hurtT(T, dmg, fx, fz) { if (T === PL) hurtPlayer(dmg, fx, fz); else coSend({ t: 'hurt', dmg, fx, fz }); }
+function hurtT(T, dmg, fx, fz) { if (T === PL) hurtPlayer(dmg, fx, fz); else { const Q = CO.peers.find((p) => p.rp === T); if (Q) coSendTo(Q, { t: 'hurt', dmg, fx, fz }); } }
 function dealHit(E, dmg, crit, leg) { if (CO.role === 'guest') { coSend({ t: 'hit', key: E.key, dmg, crit: crit ? 1 : 0, leg: leg ? 1 : 0 }); sfx('hit'); } else hitEnemy(E, dmg, crit, null, leg); }
 function guestEnemy(E, dt) {
     const n = E.net; if (!n) return; const m = E.mdl; E.ph += dt; const k = 1 - Math.exp(-dt * 14), ox = E.x, oz = E.z; E.x += (n.x - E.x) * k; E.z += (n.z - E.z) * k; E.rot += wrapA(n.rot - E.rot) * Math.min(1, dt * 14);
@@ -3187,28 +3391,29 @@ function guestEnemy(E, dt) {
 }
 /* ---- the partner */
 function coEnsureRP() {
-    if (CO.rp) return CO.rp; const h = makePlayer({ shirt: 0x8a2f2f, sleeve: 0x8a2f2f, pants: 0x2f3a4a, hair: 0xc8a050 }); h.root.visible = false; scene.add(h.root);
+    if (CO.rp) return CO.rp; const cl = CO_COL[(((CO.pslot || 2) - 1) % 4 + 4) % 4], h = makePlayer({ shirt: cl, sleeve: cl, pants: 0x2f3a4a, hair: 0xc8a050 }); h.root.visible = false; scene.add(h.root);
     const lt = new THREE.PointLight(0xffc880, 0, 7); lt.position.set(0, 1.3, 0.6); h.root.add(lt);
     CO.rp = { light: lt, g: h.root, P: h.P, W: h.W, x: 0, z: 0, rot: 0, tx: 0, tz: 0, tr: 0, state: 'idle', aim: false, eq: 'pistol', hp: 100, speed: 0, walk: 0, cur: false }; return CO.rp;
 }
 /* ---- the partner's own VRM: sent once over the link in chunks, then shown instead of the blocky stand-in */
 const AVX = { chunk: 12000, max: 26 * 1048576 };
 const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
-const COQ = { q: [], iv: 0, peer: null };
+const COQ = { iv: 0, get q() { return CO.cur ? CO.cur.q : []; }, set q(v) { /* per player */ }, get peer() { return CO.peer; }, set peer(v) { /* per player */ } };
 const avHash = (u8) => { let h = 0; const st = Math.max(1, Math.floor(u8.length / 97)); for (let i = 0; i < u8.length; i += st) h = (h * 31 + u8[i]) % 65521; return u8.length + ':' + h; };
 async function gz(u8) { try { if (typeof CompressionStream === 'undefined') return null; return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); } catch (e) { return null; } }
 async function gunz(u8) { return await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); }
-function coQueue(k, u8, extra) { COQ.q.push({ k, u8, extra: extra || {}, n: Math.ceil(u8.length / AVX.chunk), i: 0, ack: 0, hdr: false, go: false, t: performance.now() }); if (!COQ.iv) COQ.iv = setInterval(coPump, 20); }
+function coQueue(k, u8, extra) { if (!CO.cur) return; CO.cur.q.push({ k, u8, extra: extra || {}, n: Math.ceil(u8.length / AVX.chunk), i: 0, ack: 0, hdr: false, go: false, t: performance.now() }); if (!COQ.iv) COQ.iv = setInterval(coPumpAll, 20); }
+function coPumpAll() { let any = false; if (CO.on) for (const P of CO.peers.slice()) if (P.q.length) { any = true; withPeer(P, coPump); } if (!any) { clearInterval(COQ.iv); COQ.iv = 0; } }
 function coPump() {
-    if (!CO.on || !CO.peer || COQ.peer !== CO.peer || !COQ.q.length) { COQ.q.length = 0; clearInterval(COQ.iv); COQ.iv = 0; return; }
-    const it = COQ.q[0], now = performance.now();
-    if (now - it.t > 20000) { COQ.q.shift(); return; }      // the other side is not answering (older version): give up quietly instead of flooding the link
+    const q = CO.cur.q; if (!CO.on || !CO.peer || !q.length) { q.length = 0; return; }
+    const it = q[0], now = performance.now();
+    if (now - it.t > 20000) { q.shift(); return; }      // the other side is not answering (older version): give up quietly instead of flooding the link
     if (!it.hdr) { it.hdr = true; coSend(Object.assign({ t: 'avh', k: it.k, n: it.n, size: it.u8.length, h: avHash(it.u8) }, it.extra)); return; }
     if (!it.go) return;
     while (it.i < it.n && it.i - it.ack < 5) { coSend({ t: 'avc', k: it.k, i: it.i, d: b64(it.u8.subarray(it.i * AVX.chunk, (it.i + 1) * AVX.chunk)) }); it.i++; }
-    if (it.ack >= it.n) COQ.q.shift();
+    if (it.ack >= it.n) q.shift();
 }
-function coAvAck(m) { const it = COQ.q.find((q) => q.k === m.k); if (!it) return; it.t = performance.now(); if (m.have) { COQ.q.splice(COQ.q.indexOf(it), 1); return; } if (m.i === -1) it.go = true; else it.ack = Math.max(it.ack, (m.i | 0) + 1); }
+function coAvAck(m) { const q = CO.cur.q, it = q.find((x) => x.k === m.k); if (!it) return; it.t = performance.now(); if (m.have) { q.splice(q.indexOf(it), 1); return; } if (m.i === -1) it.go = true; else it.ack = Math.max(it.ack, (m.i | 0) + 1); }
 async function fbxToLiteGlb(buf) {   // an FBX character is re-packed as a small GLB (512 px textures, no animations): it travels to your partner and loads fast
     const [{ FBXLoader }, { GLTFExporter }] = await Promise.all([import('three/addons/loaders/FBXLoader.js'), import('three/addons/exporters/GLTFExporter.js')]);
     const u8 = repairFbx(new Uint8Array(buf.slice(0))), root = new FBXLoader().parse(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength), '');
@@ -3247,37 +3452,41 @@ async function avLite(buf) {
         return o.buffer;
     } catch (e) { console.warn('avatar repack', e); return buf; }
 }
+let avLiteK = null, avLiteP = null;
+const avLiteOnce = () => { if (avLiteK !== AV.raw) { avLiteK = AV.raw; avLiteP = (async () => { let u8 = new Uint8Array(await avLite(AV.raw)), z = 0; const g = await gz(u8); if (g && g.length < u8.length) { u8 = g; z = 1; } return { u8, z }; })(); } return avLiteP; };
 async function coSendAvatar() {
-    if (!CO.on || !CO.peer || !AV.raw || CO.avFor === CO.peer) return; CO.avFor = CO.peer; const to = CO.peer; let u8 = new Uint8Array(await avLite(AV.raw)), z = 0; { const g = await gz(u8); if (g && g.length < u8.length) { u8 = g; z = 1; } } if (CO.peer !== to) return; if (u8.length > AVX.max) { CO.avFor = null; return; } COQ.peer = CO.peer;
-    coQueue('av', u8, { z, name: String(AV.name || 'Character').slice(0, 24), g: AV.gender === 'female' ? 'female' : 'male' });
+    const P = CO.cur; if (!CO.on || !P || !AV.raw || P.avFor === P.peer) return; P.avFor = P.peer; const { u8, z } = await avLiteOnce(); if (!CO.peers.includes(P)) return; if (u8.length > AVX.max) { P.avFor = null; return; }
+    withPeer(P, () => coQueue('av', u8, { z, name: String(AV.name || 'Character').slice(0, 24), g: AV.gender === 'female' ? 'female' : 'male' }));
 }
-// the host's music and menu sounds play for the guest too: YouTube links go as text, uploaded files in chunks
+// the host's music and menu sounds play for the guests too: YouTube links go as text, uploaded files in chunks
 async function coSendMusic() {
-    if (!CO.on || !CO.peer || CO.role !== 'host' || CO.msFor === CO.peer) return; CO.msFor = CO.peer; COQ.peer = CO.peer; const to = CO.peer;
+    const P = CO.cur; if (!CO.on || !P || CO.role !== 'host' || P.msFor === P.peer) return; P.msFor = P.peer;
     coSend({ t: 'mus', yt: MUS.yt, hu: USLOTS.map((u) => u[0]) }); let tot = 0;
-    for (const [pre, list] of [['m', MSLOTS], ['u', USLOTS]]) for (const [k] of list) { try { const b = await idbGet(pre + '_' + k); if (CO.peer !== to) return; if (b && b.size <= 16 * 1048576 && tot + b.size <= 44 * 1048576) { tot += b.size; coQueue(pre + ':' + k, new Uint8Array(await b.arrayBuffer()), { type: String(b.type || 'audio/mpeg').slice(0, 40) }); } } catch (e) { /* no file */ } }
+    for (const [pre, list] of [['m', MSLOTS], ['u', USLOTS]]) for (const [k] of list) { try { const b = await idbGet(pre + '_' + k); if (!CO.peers.includes(P)) return; if (b && b.size <= 16 * 1048576 && tot + b.size <= 44 * 1048576) { tot += b.size; const u8 = new Uint8Array(await b.arrayBuffer()); withPeer(P, () => coQueue(pre + ':' + k, u8, { type: String(b.type || 'audio/mpeg').slice(0, 40) })); } } catch (e) { /* no file */ } }
 }
-window.__svco = { equipW, fire, reload, loadPowder, WPN, ITEMS, gunMesh, GR, genRoom, PL, RM, G: () => G, tradeGive, coTradeMsg, mnPartner, getG: () => G, coMsg, coQueue, COQ, gz, avHash, CO, avLite: (b) => avLite(b), rpLoadVRM: (b, g) => rpLoadVRM(b, g), coAvIn, rpAnim: (d) => rpAnim(d) };   // (tests)
+window.__svco = { equipW, fire, reload, loadPowder, WPN, ITEMS, gunMesh, GR, genRoom, PL, RM, G: () => G, tradeGive, coTradeMsg, mnPartner, getG: () => G, coMsg, coQueue, COQ, gz, avHash, CO, avLite: (b) => avLite(b), rpLoadVRM: (b, g) => rpLoadVRM(b, g), coMk, coById, withPeer, coRoster: () => coRoster(), qmStart: () => qmStart(), QM: () => QM, coOk: () => coOk(), coMenu: () => coMenu(), M: () => M, coSave: () => coSave(), coLeave: () => coLeave(), qaTarget: () => qaTarget(), goRoom: (a, b, c, d) => goRoom(a, b, c, d), tgt: (E) => tgt(E), coAvIn, rpAnim: (d) => rpAnim(d) };   // (tests)
 function coHostMus() { MUS.cur = null; musStop(); }
 async function coAvDone(k, A, buf) {
+    const P = CO.cur;
     if (k === 'av') {
         try { if (CO.peerPid && A.h) idbPut('pav_' + CO.peerPid, { h: A.h, z: A.z, g: A.g, buf: buf.buffer }); } catch (e) { /* no cache */ }
-        try { await rpLoadVRM(A.z ? await gunz(buf) : buf.buffer, A.g); say('Your partner\'s character is ready.', 2200); } catch (e) { console.warn('partner avatar', e); say('Could not load your partner\'s character.', 3000); }
+        try { await rpLoadVRM(A.z ? await gunz(buf) : buf.buffer, A.g, P); say(P.peerName + '\'s character is ready.', 2200); } catch (e) { console.warn('partner avatar', e); say('Could not load your partner\'s character.', 3000); }
     } else if (CO.role === 'guest') { CO.hm = CO.hm || { files: {}, yt: {} }; const slot = k.slice(2); if (k[0] === 'm') { CO.hm.files[slot] = { url: URL.createObjectURL(new Blob([buf], { type: A.type })) }; coHostMus(); } else if (AU.ctx) { AU.ctx.decodeAudioData(buf.buffer.slice(0)).then((d) => { CO.hu = CO.hu || {}; CO.hu[slot] = d; }).catch(() => { /* bad file */ }); } }
 }
 async function coAvIn(m) {
-    const k = String(m.k || 'av'); CO.avIn = CO.avIn || {};
+    const k = String(m.k || 'av'), P = CO.cur; CO.avIn = CO.avIn || {};
     if (m.t === 'avh') {
         const n = +m.n | 0, size = +m.size | 0; if (n < 1 || n > 4000 || size < 1 || size > AVX.max || !/^(av|m:[a-z_]{1,12}|u:[a-z_]{1,12})$/.test(k)) { delete CO.avIn[k]; return; }
         const A = { n, size, got: 0, parts: new Array(n), g: m.g === 'female' ? 'female' : 'male', z: m.z ? 1 : 0, h: String(m.h || '').slice(0, 24), type: /^audio\/[\w.+-]{1,30}$/.test(m.type || '') ? m.type : 'audio/mpeg' };
-        if (k === 'av' && CO.peerPid && A.h) { try { const c = await idbGet('pav_' + CO.peerPid); if (c && c.h === A.h && c.buf) { coSend({ t: 'avk', k, have: 1 }); say('Your partner\'s character is ready.', 2200); rpLoadVRM(c.z ? await gunz(new Uint8Array(c.buf)) : c.buf, c.g).catch((e) => console.warn('cached avatar', e)); return; } } catch (e) { /* not cached */ } }
-        if (k === 'av') say('Loading your partner\'s character...', 3500); CO.avIn[k] = A; coSend({ t: 'avk', k, i: -1 }); return;
+        if (k === 'av' && P.peerPid && A.h) { try { const c = await idbGet('pav_' + P.peerPid); if (c && c.h === A.h && c.buf) { coSendTo(P, { t: 'avk', k, have: 1 }); say(P.peerName + '\'s character is ready.', 2200); rpLoadVRM(c.z ? await gunz(new Uint8Array(c.buf)) : c.buf, c.g, P).catch((e) => console.warn('cached avatar', e)); return; } } catch (e) { /* not cached */ } }
+        if (k === 'av') say('Loading ' + P.peerName + '\'s character...', 3500); P.avIn = P.avIn || {}; P.avIn[k] = A; coSendTo(P, { t: 'avk', k, i: -1 }); return;
     }
     const A = CO.avIn[k]; if (!A) return; const i = +m.i | 0; if (i < 0 || i >= A.n || A.parts[i] || typeof m.d !== 'string' || m.d.length > 20000) return;
     try { A.parts[i] = Uint8Array.from(atob(m.d), (c) => c.charCodeAt(0)); } catch (e) { return; } A.got++; coSend({ t: 'avk', k, i });
     if (A.got === A.n) { const buf = new Uint8Array(A.size); let o = 0; for (const p of A.parts) { if (o + p.length > A.size) { delete CO.avIn[k]; return; } buf.set(p, o); o += p.length; } delete CO.avIn[k]; coAvDone(k, A, buf); }
 }
-async function rpLoadVRM(buffer, gender) {
+async function rpLoadVRM(buffer, gender, P0) {
+    const P = P0 || CO.cur;
     const { vrm, VM } = await avParse(buffer);
     vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
     const N = {}; for (const n of ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'leftLowerLeg', 'rightUpperLeg', 'rightLowerLeg']) N[n] = vrm.humanoid.getNormalizedBoneNode(n);
@@ -3285,7 +3494,7 @@ async function rpLoadVRM(buffer, gender) {
     if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
     vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), sc = 1.68 / h; const PW = (n) => n.getWorldPosition(new THREE.Vector3()), ua = PW(N.rightUpperArm).distanceTo(PW(N.rightLowerArm)), la = N.rightHand ? PW(N.rightLowerArm).distanceTo(PW(N.rightHand)) : ua; const grp = new THREE.Group(); grp.add(vrm.scene); grp.scale.setScalar(sc); grp.position.y = -bb.min.y * sc; { const hn = vrm.humanoid.getNormalizedBoneNode('hips'); if (hn) { const hp = hn.getWorldPosition(new THREE.Vector3()); grp.position.x = -hp.x * sc; grp.position.z = -hp.z * sc; } }
     const boneFor = (n) => vrm.humanoid.getNormalizedBoneNode(n) || vrm.humanoid.getNormalizedBoneNode(n.replace('Pinky', 'Little')), D = acData(); let names = []; if (D) { const ref = (D.male && D.male.idle) || D.gp.gp_idle; names = Object.keys(ref.b).filter((n) => boneFor(n)); }
-    const r = coEnsureRP(); Object.assign(r, { names, nodes: names.map(boneFor), qs: names.map(() => new THREE.Quaternion()), qa: names.map(() => new THREE.Quaternion()), cache: {}, cc: null, cp: null, cf: 1, act: null, actW: 0, ua, la, sc, hips0: N.hips.position.y, hy: { v: 1 }, ow: { R: 0, L: 0 }, off: { R: new THREE.Vector3(-0.2, -0.5, 0.2), L: new THREE.Vector3(0.2, -0.5, 0.2) }, pose: { sp: 0, hd: 0 }, gender: gender === 'female' ? 'female' : 'male', lastSt: 'idle' }); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
+    const r = withPeer(P, coEnsureRP); Object.assign(r, { names, nodes: names.map(boneFor), qs: names.map(() => new THREE.Quaternion()), qa: names.map(() => new THREE.Quaternion()), cache: {}, cc: null, cp: null, cf: 1, act: null, actW: 0, ua, la, sc, hips0: N.hips.position.y, hy: { v: 1 }, ow: { R: 0, L: 0 }, off: { R: new THREE.Vector3(-0.2, -0.5, 0.2), L: new THREE.Vector3(0.2, -0.5, 0.2) }, pose: { sp: 0, hd: 0 }, gender: gender === 'female' ? 'female' : 'male', lastSt: 'idle' }); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
     { const inv = 1 / sc, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0 }), B = (w, h2, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h2 * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
         const pist = new THREE.Group(); pist.add(B(0.19, 0.04, 0.03, 0x1a1c20, -0.15, 0.015, 0), B(0.03, 0.095, 0.032, 0x14110e, -0.08, -0.05, 0), B(0.05, 0.03, 0.024, 0x2a2d33, -0.1, -0.012, 0));
         const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06 * inv, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.9 })); fl.position.set(-0.27 * inv, 0.015 * inv, 0); fl.visible = false; pist.add(fl); pist.userData.fl = fl;
@@ -3373,18 +3582,18 @@ function tfaStore(i) {   // move one herb / spray from the bag into the Team Fir
     if (old && !(G.inv.indexOf(null) >= 0 || sl.n === 1 || G.inv.some((s) => s && s.id === old.id && s.n < (ITEMS[old.id].max || 1)))) { say('Your bag is full.', 1800); return; }
     invTake(id, 1); if (old) invGive(old.id, 1); G.tfa = { id, n: 1 }; sfx('pickup'); say(ITEMS[id].n + ' is stored in Team First Aid.', 2200); M.sub = null; renderMenu();
 }
-function qaTarget() {
-    if (!(CO.on && CO.peer && CO.rp)) return null; const r = CO.rp;
-    if (r.state !== 'dead' || CO.rpRoom !== RM.id || PL.state !== 'idle' || RM.busy || UI.mode) return null;
-    return Math.hypot(r.x - PL.x, r.z - PL.z) < 1.6 ? r : null;
+function qaTarget() {   // the nearest downed partner within reach (the player record, not the avatar)
+    if (!CO.on || !CO.peers.length || PL.state !== 'idle' || RM.busy || UI.mode) return null; let best = null, bd = 1.6;
+    for (const Q of CO.peers) { const r = Q.rp; if (!r || !Q.ok || r.state !== 'dead' || Q.rpRoom !== RM.id) continue; const d = Math.hypot(r.x - PL.x, r.z - PL.z); if (d < bd) { bd = d; best = Q; } }
+    return best;
 }
 function qaCancel() { QA.act = null; if (PL.state === 'pick') PL.state = 'idle'; const b = $('qa'); if (b) b.classList.add('hide'); }
-function qaStart() { if (QA.act) return; const r = qaTarget(), pk = r ? aidPick() : null; if (!r || !pk) return; QA.act = { t: 0, dur: 1.15, pk }; PL.state = 'pick'; PL.st = 0.35; sfx('click'); }
+function qaStart() { if (QA.act) return; const r = qaTarget(), pk = r ? aidPick() : null; if (!r || !pk) return; QA.act = { t: 0, dur: 1.15, pk, P: r }; PL.state = 'pick'; PL.st = 0.35; sfx('click'); }
 function qaFinish() {
     const a = QA.act; QA.act = null; PL.state = 'idle'; $('qa').classList.add('hide');
     if (!aidTake(a.pk)) { say('The item is gone.', 1600); return; }
-    const tid = ++QA.tid; QA.pend[tid] = a.pk; coSend({ t: 'rev', id: a.pk.id, tid }); sfx('heal');
-    setTimeout(() => { const pk = QA.pend[tid]; if (pk) { delete QA.pend[tid]; aidReturn(pk); say('No answer from ' + partnerName() + '; the item came back.', 2400); } }, 6000);
+    const tid = ++QA.tid; QA.pend[tid] = Object.assign({ P: a.P, nm: a.P.peerName }, a.pk); coSendTo(a.P, { t: 'rev', id: a.pk.id, tid }); sfx('heal');
+    setTimeout(() => { const pk = QA.pend[tid]; if (pk) { delete QA.pend[tid]; aidReturn(pk); say('No answer from ' + pk.nm + '; the item came back.', 2400); } }, 6000);
 }
 function reviveSelf(id) {   // you were down and your partner used an item on you
     const full = aidKind(id) === 'spray';
@@ -3401,50 +3610,97 @@ function coRevMsg(m) {
 function qaTick(dt) {
     const box = $('qa'); if (!box) return; if (!QA.bound) { QA.bound = 1; box.onclick = () => qaStart(); }
     const cNow = !!KEYS.KeyC, edge = cNow && !QA.c; QA.c = cNow;
-    if (!(CO.on && CO.peer)) { if (QA.act) qaCancel(); box.classList.add('hide'); return; }
-    const r = CO.rp;
-    if (PL.state === 'dead') { if (!QA.noted && r && r.state !== 'dead') { QA.noted = 1; say('You are down. Your partner can revive you with a herb or a first aid spray.', 4200); } box.classList.add('hide'); return; }
+    if (!(CO.on && CO.peers.length)) { if (QA.act) qaCancel(); box.classList.add('hide'); return; }
+    if (PL.state === 'dead') { if (!QA.noted && CO.peers.some((q) => q.ok && q.rp && q.rp.state !== 'dead')) { QA.noted = 1; say('You are down. A partner can revive you with a herb or a first aid spray.', 4200); } box.classList.add('hide'); return; }
     QA.noted = 0;
     if (QA.act) {
-        const a = QA.act;
-        if (!r || r.state !== 'dead' || CO.rpRoom !== RM.id || PL.hurtT > 0.5 || UI.mode || RM.busy) { qaCancel(); return; }
+        const a = QA.act, r = a.P && a.P.rp;
+        if (!r || r.state !== 'dead' || a.P.rpRoom !== RM.id || PL.hurtT > 0.5 || UI.mode || RM.busy) { qaCancel(); return; }
         a.t += dt; PL.state = 'pick'; PL.st = 0.35; box.style.setProperty('--p', Math.min(100, a.t / a.dur * 100) + '%'); box.classList.remove('hide');
         if (a.t >= a.dur) qaFinish(); return;
     }
-    if (!qaTarget()) { box.classList.add('hide'); QA.hint = 0; QA.sig = ''; return; }
-    const pk = aidPick();
-    if (!pk) { box.classList.add('hide'); QA.sig = ''; if (!QA.hint) { QA.hint = 1; say('Nothing to revive ' + partnerName() + ' with. Keep a Green Herb or First Aid Spray in your Team First Aid slot.', 4200); } return; }
+    const tp = qaTarget(); if (!tp) { box.classList.add('hide'); QA.hint = 0; QA.sig = ''; return; }
+    const pk = aidPick(), nm = tp.peerName;
+    if (!pk) { box.classList.add('hide'); QA.sig = ''; if (!QA.hint) { QA.hint = 1; say('Nothing to revive ' + nm + ' with. Keep a Green Herb or First Aid Spray in your Team First Aid slot.', 4200); } return; }
     const tc = document.getElementById('touch'), gp = !!(tc && tc.classList.contains('gp')), ps = /054c|playstation|dualshock|dualsense|wireless controller/i.test(window.__padInfo || ''), gl = gp ? (ps ? '○' : 'B') : 'C';
-    const sig = gl + pk.id + partnerName(); if (sig !== QA.sig) { QA.sig = sig; box.innerHTML = '<span class="g" data-g="' + gl + '"></span><span>REVIVE ' + partnerName().toUpperCase().slice(0, 12) + '<small>' + ITEMS[pk.id].n + (aidKind(pk.id) === 'spray' ? ' → FULL HEALTH' : ' → CAUTION') + '</small></span>'; box.style.setProperty('--p', '0%'); }
+    const sig = gl + pk.id + nm; if (sig !== QA.sig) { QA.sig = sig; box.innerHTML = '<span class="g" data-g="' + gl + '"></span><span>REVIVE ' + nm.toUpperCase().slice(0, 12) + '<small>' + ITEMS[pk.id].n + (aidKind(pk.id) === 'spray' ? ' → FULL HEALTH' : ' → CAUTION') + '</small></span>'; box.style.setProperty('--p', '0%'); }
     box.classList.remove('hide'); if (edge) qaStart();
 }
-function coRoomLoaded() { if (!CO.on) return; CO.pT = 1; if (CO.rp) CO.rp.g.visible = CO.rpRoom === RM.id; }
+function coRoomLoaded() { if (!CO.on) return; CO.pT = 1; for (const Q of CO.peers) if (Q.rp) Q.rp.g.visible = Q.rpRoom === RM.id; }
 function coTick(dt) {
-    if (!CO.on || !CO.peer) return; const r = CO.rp;
+    if (!CO.on || !CO.peers.some((q) => q.ok)) return;
     CO.pT += dt; if (CO.pT > 0.083) { CO.pT = 0; coSend({ t: 'p', x: r2(PL.x), z: r2(PL.z), r: r2(PL.rot), s: PL.state, a: PL.aim ? 1 : 0, e: G.eq, h: G.hp, w: r2(PL.speed), m: RM.id, f: PL.shots | 0 }); }
     if (CO.role === 'host') { CO.sT += dt; if (CO.sT > 0.1) { CO.sT = 0; if (RM.enemies.length) coSend({ t: 'en', room: RM.id, l: RM.enemies.map((E) => [E.key, E.t, r2(E.x), r2(E.z), r2(E.rot), E.st, r2(E.stT || 0), r2(E.atkT || 0), Math.round(E.hp * 10) / 10, E.stun > 0 ? 1 : 0, E.cr ? 1 : 0, r2(E.jy || 0), E.stalker ? E.tyid : 0]) }); } }
-    if (r) { const vis = CO.rpRoom === RM.id; r.g.visible = vis; if (vis) { const k = 1 - Math.exp(-dt * 12), ox = r.x, oz = r.z; r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.rot += wrapA(r.tr - r.rot) * Math.min(1, dt * 12); r.walk += r.speed * dt * 0.75; r.g.position.x = r.x; r.g.position.z = r.z; r.g.rotation.y = r.rot; rpAnim(dt); }
-        const b = $('buddy'), f = r.hp / 100, txt = r.state === 'dead' ? 'DEAD' : f > 0.65 ? 'FINE' : f > 0.35 ? 'CAUTION' : 'DANGER', col = r.state === 'dead' ? '#777' : f > 0.65 ? '#3f3' : f > 0.35 ? '#fc3' : '#f33'; b.classList.remove('hide'); b.innerHTML = 'P' + (CO.role === 'host' ? '2' : '1') + ' <b style="color:' + col + '">' + txt + '</b>'; }
-    if (PL.state === 'dead' && r && r.state === 'dead' && !CO.overT) { CO.overT = 1; setTimeout(() => { CO.overT = 0; if (PL.state === 'dead') gameOver(); }, 1600); }
-    if (performance.now() - CO.lastRx > 12000 && !CO.warned) { CO.warned = 1; say('Connection to your partner is weak...', 2500); }
+    let allDown = PL.state === 'dead'; const tags = [];
+    for (const Q of CO.peers.slice().sort((x, y) => x.pslot - y.pslot)) {
+        const r = Q.rp; if (!Q.ok || !r) { if (Q.ok) allDown = false; continue; }
+        withPeer(Q, () => {
+            const vis = Q.rpRoom === RM.id; r.g.visible = vis; if (vis) { const k = 1 - Math.exp(-dt * 12); r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.rot += wrapA(r.tr - r.rot) * Math.min(1, dt * 12); r.walk += r.speed * dt * 0.75; r.g.position.x = r.x; r.g.position.z = r.z; r.g.rotation.y = r.rot; rpAnim(dt); }
+        });
+        if (r.state !== 'dead') allDown = false;
+        const f = r.hp / 100, txt = r.state === 'dead' ? 'DEAD' : f > 0.65 ? 'FINE' : f > 0.35 ? 'CAUTION' : 'DANGER', col = r.state === 'dead' ? '#777' : f > 0.65 ? '#3f3' : f > 0.35 ? '#fc3' : '#f33';
+        tags.push('<span style="color:' + CO_TXT[(Q.pslot - 1) % 4] + '">P' + Q.pslot + '</span> <b style="color:' + col + '">' + txt + '</b>');
+    }
+    const b = $('buddy'); b.classList.remove('hide'); const html = tags.join('&nbsp; '); if (b.dataset.h !== html) { b.dataset.h = html; b.innerHTML = html; }
+    if (allDown && !CO.overT) { CO.overT = 1; setTimeout(() => { CO.overT = 0; if (PL.state === 'dead') gameOver(); }, 1600); }
+    if (performance.now() - CO.lastRx > 12000 && !CO.warned) { CO.warned = 1; say('Connection to your partners is weak...', 2500); }
+}
+/* ---- who joins: hello / welcome / roster. The host numbers the players 1-4 and tells everybody who is in; guests only trust the host and the players it lists. */
+function coRoster() { if (CO.role !== 'host') return; coAll({ t: 'ros', l: [[PID, 1]].concat(coOk().map((p) => [p.peerPid, p.pslot])) }); }
+function coApplyRoster() {
+    const l = CO.ros; if (!l || CO.role !== 'guest') return;
+    for (const [pid, sl] of l) {
+        if (pid === PID) { CO.slot = sl; continue; } const Q = CO.peers.find((q) => q.peerPid === pid && !q.pHost); if (!Q) continue;
+        const was = Q.ok; Q.ok = true; Q.pslot = sl; Q.peerName = 'Player ' + sl;
+        if (!was) { const held = Q.hold || []; Q.hold = null; withPeer(Q, () => { coEnsureRP(); for (const m of held) coIn(Q, m); }); setTimeout(() => { if (CO.peers.includes(Q)) withPeer(Q, coSendAvatar); }, 600); say(Q.peerName + ' is here.', 1800); }
+    }
+    for (const Q of CO.peers.slice()) if (!Q.pHost && Q.ok && !l.some((x) => x[0] === Q.peerPid)) coDrop(Q);
+    coRefresh();
+}
+function coHello(id, m, Q) {
+    const pid = String(m.pid || '').slice(0, 24); if (!pid || pid === PID) return;
+    if (CO.role === 'host') {
+        if (Q) { coSendTo(Q, { t: 'welcome', pid: PID, host: 1, slot: Q.pslot }); return; }
+        if (coOk().length >= CO_MAX - 1) { try { CO.tr.send(id, { t: 'full' }); } catch (e) { /* gone */ } return; }
+        Q = coMk(id); Q.peerPid = pid; Q.ok = true; const used = CO.peers.map((q) => q.pslot); Q.pslot = [2, 3, 4].find((n) => !used.includes(n)); Q.peerName = 'Player ' + Q.pslot; CO.peers.push(Q); coFix();
+        coSendTo(Q, { t: 'welcome', pid: PID, host: 1, slot: Q.pslot }); coRoster();
+        withPeer(Q, () => { coEnsureRP(); setTimeout(() => { if (CO.peers.includes(Q)) withPeer(Q, () => { coSendAvatar(); coSendMusic(); }); }, 600); if (G.started) coSendStart1(); });
+        if (G.started) say(Q.peerName + ' joined.', 2200); CO.state = 'connected'; coRefresh(); return;
+    }
+    if (CO.role === 'guest') {   // another guest: counts only once the host lists them
+        if (!Q) { Q = coMk(id); CO.peers.push(Q); } Q.peerPid = pid; coSendTo(Q, { t: 'welcome', pid: PID, host: 0 }); coApplyRoster();
+    }
+}
+function coWelcome(Q, m) {
+    Q.peerPid = String(m.pid || '').slice(0, 24); if (CO.role !== 'guest') return;
+    if (m.host) { Q.pHost = true; Q.ok = true; Q.pslot = 1; Q.peerName = 'Player 1'; CO.slot = Math.max(2, Math.min(4, m.slot | 0)); CO.state = 'connected'; coFix(); withPeer(Q, coEnsureRP); setTimeout(() => { if (CO.peers.includes(Q)) withPeer(Q, coSendAvatar); }, 600); coApplyRoster(); coRefresh(); } else coApplyRoster();
 }
 /* ---- messages */
+const CO_HOST_ONLY = new Set(['start', 'go', 'en', 'dd', 'ev', 'world', 'taken', 'sfx', 'mus', 'savecopy', 'hurt', 'bagreq', 'ros']);
 function coMsg(id, m) {
     if (!m || typeof m !== 'object') return; CO.lastRx = performance.now(); CO.warned = 0;
-    if (m.t === 'hello') { if (CO.peer && CO.peer !== id) { CO.tr.send(id, { t: 'full' }); return; } CO.peer = id; CO.peerPid = String(m.pid || ''); CO.on = true; coEnsureRP(); CO.state = 'connected'; CO.tr.send(id, { t: 'welcome', pid: PID }); setTimeout(() => { coSendAvatar(); coSendMusic(); }, 600); if (G.started) { coSendStart(); say('Player 2 joined.', 2200); } coRefresh(); return; }
-    if (id !== CO.peer && m.t !== 'full') return;
+    const Q = coById(id);
+    if (m.t === 'hello') { coHello(id, m, Q); return; }
+    if (m.t === 'full') { if (CO.role === 'guest' && !CO.peers.some((q) => q.pHost)) { try { CO.tr.close(); } catch (e) { /* closed */ } CO.tr = null; CO.peers = []; CO.cur = null; CO.state = 'error'; CO.note = 'That game already has four players.'; coRefresh(); } return; }
+    if (!Q) return;
+    if (m.t === 'welcome') { coWelcome(Q, m); return; }
+    if (m.t === 'bye') { coDrop(Q); return; }
+    if (!Q.ok) { if (CO.role === 'guest' && !Q.pHost) { Q.hold = Q.hold || []; if (Q.hold.length < 90) Q.hold.push(m); } return; }   // a player the host has not listed yet: keep what they send until it does
+    withPeer(Q, () => coIn(Q, m));
+}
+function coIn(P, m) {
+    if (CO_HOST_ONLY.has(m.t) && (CO.role === 'host' || !P.pHost)) return;   // only the host commands the world
     switch (m.t) {
-        case 'welcome': CO.peerPid = String(m.pid || ''); coRefresh(); setTimeout(() => { coSendAvatar(); coSendMusic(); }, 600); break;
         case 'avh': case 'avc': coAvIn(m); break;
         case 'avk': coAvAck(m); break;
         case 'iq': case 'ir': case 'gv': case 'gva': coTradeMsg(m); break;
         case 'rev': case 'reva': coRevMsg(m); break;
         case 'mus': if (CO.role === 'guest') { const yt = {}; if (m.yt && typeof m.yt === 'object') for (const k of ['title', 'explore', 'safe', 'boss']) { const y = m.yt[k]; if (y && (/^[\w-]{11}$/.test(y.v || '') || /^[\w-]{10,60}$/.test(y.l || ''))) yt[k] = { v: /^[\w-]{11}$/.test(y.v || '') ? y.v : null, l: /^[\w-]{10,60}$/.test(y.l || '') ? y.l : null }; } CO.hm = CO.hm || { files: {}, yt: {} }; CO.hm.yt = yt; CO.hu = CO.hu || {}; coHostMus(); } break;
         case 'bagreq': coSend({ t: 'bag', bag: coBag() }); break;
-        case 'bag': if (CO.role === 'host') { CO.bags = CO.bags || {}; if (CO.peerPid) CO.bags[CO.peerPid] = m.bag; if (CO.bagCb) { const cb = CO.bagCb; CO.bagCb = null; cb(m.bag); } } break;
+        case 'bag': if (CO.role === 'host') { CO.bags = CO.bags || {}; if (CO.peerPid) CO.bags[CO.peerPid] = m.bag; if (CO.bagWait) { CO.bagWait.delete(CO.peerPid); if (!CO.bagWait.size && CO.bagCb) { const cb = CO.bagCb; CO.bagCb = null; cb(true); } } } break;
         case 'savereq': if (CO.role === 'host') coSave(); break;
         case 'savecopy': coStoreSave(m.blob); say('Game saved for both players.', 2400); break;
-        case 'full': CO.state = 'error'; CO.note = 'That game already has two players.'; coRefresh(); break;
+        case 'ros': if (P.pHost && Array.isArray(m.l)) { CO.ros = m.l.filter((x) => Array.isArray(x) && typeof x[0] === 'string' && (x[1] | 0) >= 1 && (x[1] | 0) <= 4).map((x) => [x[0].slice(0, 24), x[1] | 0]).slice(0, 4); coApplyRoster(); } break;
         case 'start': if (CO.role !== 'guest') break; closePanel(); G = Object.assign(newG(), m.bag || {}); G.flags = m.world.flags || {}; G.taken = m.world.taken || {}; G.dead = m.world.dead || {}; G.seen = m.world.seen || G.seen || {}; G.saves = m.world.saves || 0; G.kills = m.world.kills || 0; G.drops = m.world.drops || {}; G.room = m.room; G.time = m.time || 0; beginCo({ x: m.x, z: m.z, rot: m.rot }); break;
         case 'over': if (UI.mode !== 'over') { PL.state = 'dead'; G.hp = 0; gameOver(true); } break;   // the whole party is down
         case 'p': { const r = coEnsureRP(); r.tx = m.x; r.tz = m.z; r.tr = m.r; r.state = m.s; r.aim = !!m.a; r.eq = m.e; r.hp = m.h; r.speed = m.w; CO.rpRoom = m.m; if (r.f !== undefined && m.f !== r.f && m.m === RM.id) { r.kick = 1; if (isGun(m.e)) { r.flash = 0.07; if (!gunFireSnd(m.e)) { /* synthesised fallback played */ } } else { r.swT = 0.35; sfx('swing'); } } r.f = m.f | 0; if (!r.cur) { r.x = m.x; r.z = m.z; r.rot = m.r; r.cur = true; } if (m.m !== RM.id) r.cur = false; break; }
@@ -3454,79 +3710,126 @@ function coMsg(id, m) {
         case 'dd': { if (CO.role !== 'guest') break; G.drops = G.drops || {}; G.drops[m.ek] = { r: m.r, item: m.item, n: m.n, x: m.x, z: m.z }; const dk = 'dd:' + m.ek; if (RM.id === m.r && !G.taken[dk] && !RM.inter.some((q) => q.key === dk)) { const f = freeSpot(m.x, m.z, 0.3); worldItem({ k: 'dd', item: m.item, n: m.n, x: f[0], z: f[1], y: 0.1 }, dk); } break; }
         case 'flag': if (String(m.k) !== 'escapeDone') G.flags[String(m.k)] = 1; break;
         case 'world': if (m.drops) G.drops = m.drops; G.flags = m.flags || G.flags; G.taken = m.taken || G.taken; G.dead = m.dead || G.dead; for (const o of RM.inter.slice()) if (o.key && G.taken[o.key] && o.mesh) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } break;
-        case 'take': { if (CO.role !== 'host') break; const o = RM.inter.find((q) => q.key === m.key); if (!G.taken[m.key]) { G.taken[m.key] = 1; if (o) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } coSend({ t: 'taken', key: m.key, by: 'g' }); } else coSend({ t: 'taken', key: m.key, by: 'x' }); break; }
+        case 'take': { if (CO.role !== 'host') break; const o = RM.inter.find((q) => q.key === m.key); if (!G.taken[m.key]) { G.taken[m.key] = 1; if (o) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } coSendTo(CO.cur, { t: 'taken', key: m.key, by: 'g' }); coAll({ t: 'taken', key: m.key, by: 'o' }, CO.cur); } else coSendTo(CO.cur, { t: 'taken', key: m.key, by: 'x' }); break; }
         case 'taken': { const o = RM.inter.find((q) => q.key === m.key); if (m.by === 'g' && CO.role === 'guest' && o) { o.confirmed = 1; interact(o); } else { G.taken[m.key] = 1; if (o) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } } break; }
         case 'door': { if (CO.role !== 'host' || RM.busy) break; const d = RM.def.doors[m.di | 0]; if (d) { if (UI.mode) closePanel(); goRoom(d.to, d.toDoor, d); } break; }
         case 'go': { if (CO.role !== 'guest') break; if (UI.mode) closePanel(); const d = m.di >= 0 ? RM.def.doors[m.di] : null; goRoom(m.id, m.doorId, d, true); break; }
         case 'ev': if (m.k === 'hounds' && CO.role === 'guest') eventHounds(); else if (m.k === 'boss' && CO.role === 'guest') { const d = m.drop; sfx('roar'); if (d) { if (d.flag) G.flags[d.flag] = 1; if (d.item) worldItem({ k: 'drop', item: d.item, n: d.n || 1, x: m.x, z: m.z, y: 0.1 }, d.key); } say(d && d.msg ? d.msg : 'It collapses.'); } break;
         case 'sfx': if (SFX[m.n]) sfx(m.n); break;
-        case 'bye': coPeerGone(); break;
+        case 'bye': coDrop(P); break;
     }
 }
-function coPeerGone() {
-    CO.avFor = null; CO.msFor = null; CO.avIn = null; CO.hm = null; CO.hu = null; if (CO.role === 'guest') coHostMus(); CO.peer = null; CO.rpRoom = null; if (CO.rp) CO.rp.g.visible = false; $('buddy').classList.add('hide'); const was = CO.role;
-    if (G.started) say(was === 'host' ? 'Player 2 left the game.' : 'The host left the game.', 3000);
-    if (was === 'guest') { CO.state = 'error'; CO.note = 'The host left the game.'; if (G.started) setTimeout(() => { coLeave(); toTitle(); }, 2500); } else { CO.state = 'waiting'; }
+function coDrop(Q) {
+    const i = CO.peers.indexOf(Q); if (i < 0) return; const wasHost = Q.pHost, nm = Q.peerName || 'A player'; CO.peers.splice(i, 1); if (Q.rp) { try { Q.rp.g.visible = false; scene.remove(Q.rp.g); } catch (e) { /* gone */ } } Q.q.length = 0; coFix();
+    if (CO.role === 'guest' && wasHost) { CO.hm = null; CO.hu = null; coHostMus(); }
+    if (!coOk().length) { const b = $('buddy'); if (b) { b.classList.add('hide'); b.dataset.h = ''; } }
+    if (G.started) say(wasHost ? 'The host left the game.' : nm + ' left the game.', 3000);
+    if (CO.role === 'guest' && wasHost) { CO.state = 'error'; CO.note = 'The host left the game.'; if (G.started) setTimeout(() => { coLeave(); toTitle(); }, 2500); } else if (CO.role === 'host') { coRoster(); if (!coOk().length) CO.state = 'waiting'; }
     coRefresh();
 }
-function coSendStart() { if (CO.role === 'host' && CO.peer) coSend({ t: 'start', world: { flags: G.flags, taken: G.taken, dead: G.dead, seen: G.seen, saves: G.saves, kills: G.kills, drops: G.drops || {} }, bag: (CO.bags || {})[CO.peerPid] || null, room: RM.id || G.room, x: PL.x, z: PL.z, rot: PL.rot, time: G.time }); }
-const coCbs = { peer(id) { if (CO.role === 'guest' && !CO.peer) { CO.peer = id; CO.state = 'connected'; coEnsureRP(); CO.tr.send(id, { t: 'hello', v: 1, pid: PID }); coRefresh(); } }, left(id) { if (id === CO.peer) coPeerGone(); }, msg(id, m) { coMsg(id, m); } };
-async function coHost() {
-    coLeave(); CO.role = 'host'; CO.code = newCode(); CO.state = 'opening'; CO.note = ''; CO.on = true; coRefresh();
-    try { CO.tr = await openTransport(CO.code, coCbs); CO.state = 'waiting'; CO.note = CO.tr.note || ''; coPost({ survivor: 'code', code: CO.code }); } catch (e) { CO.state = 'error'; CO.note = String(e.message || e); }
+function coSendStart1() { if (CO.role === 'host' && CO.peer) coSend({ t: 'start', world: { flags: G.flags, taken: G.taken, dead: G.dead, seen: G.seen, saves: G.saves, kills: G.kills, drops: G.drops || {} }, bag: (CO.bags || {})[CO.peerPid] || null, room: RM.id || G.room, x: PL.x, z: PL.z, rot: PL.rot, time: G.time }); }
+function coSendStart() { coEach(coSendStart1); }
+const coCbs = {
+    peer(id) { if (CO.role === 'guest') { if (!coById(id)) CO.peers.push(coMk(id)); try { CO.tr.send(id, { t: 'hello', v: 2, pid: PID }); } catch (e) { /* not ready */ } } },
+    left(id) { const Q = coById(id); if (Q) coDrop(Q); }, msg(id, m) { coMsg(id, m); }
+};
+setInterval(() => { try { if (CO.role === 'guest' && CO.tr) for (const Q of CO.peers) if (!Q.peerPid) CO.tr.send(Q.peer, { t: 'hello', v: 2, pid: PID }); } catch (e) { /* not ready */ } }, 3000);
+async function coHost(code0, auto) {
+    coLeave(); CO.role = 'host'; CO.code = code0 || newCode(); CO.auto = auto ? Date.now() : 0; CO.autoGo = 0; CO.state = 'opening'; CO.note = ''; CO.on = true; coRefresh();
+    try { CO.tr = await openTransport(CO.code, coCbs); CO.state = coOk().length ? 'connected' : 'waiting'; CO.note = CO.tr.note || ''; coPost({ survivor: 'code', code: CO.code }); } catch (e) { CO.state = 'error'; CO.note = String(e.message || e); }
     coRefresh();
 }
 async function coJoin(code) {
     coLeave(); CO.role = 'guest'; CO.code = code; CO.state = 'opening'; CO.note = ''; CO.on = true; coRefresh();
-    try { CO.tr = await openTransport(code, coCbs); CO.state = 'searching'; CO.note = CO.tr.note || ''; } catch (e) { CO.state = 'error'; CO.note = String(e.message || e); }
-    const me = CO.tr; setTimeout(() => { if (CO.tr === me && !CO.peer && CO.role === 'guest') { CO.state = 'error'; CO.note = 'Could not find that game. Check the code and that your friend is hosting. Some networks (mobile data, offices) block direct connections.'; coRefresh(); } }, 30000);
+    try { CO.tr = await openTransport(code, coCbs); CO.state = 'searching'; CO.note = CO.tr.note || ''; for (const Q of CO.peers) { try { CO.tr.send(Q.peer, { t: 'hello', v: 2, pid: PID }); } catch (e) { /* not ready */ } } } catch (e) { CO.state = 'error'; CO.note = String(e.message || e); }
+    const me = CO.tr; setTimeout(() => { if (CO.tr === me && !coOk().length && CO.role === 'guest') { CO.state = 'error'; CO.note = 'Could not find that game. Check the code and that your friend is hosting. Some networks (mobile data, offices) block direct connections.'; coRefresh(); } }, 30000);
     coRefresh();
 }
 function coLeave() {
-    try { coSend({ t: 'bye' }); } catch (e) { /* closed */ } try { if (CO.tr) CO.tr.close(); } catch (e) { /* closed */ }
-    CO.tr = null; CO.peer = null; CO.role = null; CO.on = false; CO.state = 'idle'; CO.code = ''; CO.note = ''; CO.rpRoom = null; if (CO.rp) CO.rp.g.visible = false; const b = $('buddy'); if (b) b.classList.add('hide');
+    try { coAll({ t: 'bye' }, null, true); } catch (e) { /* closed */ } const tr = CO.tr; setTimeout(() => { try { if (tr) tr.close(); } catch (e) { /* closed */ } }, 250);
+    for (const Q of CO.peers) if (Q.rp) { try { Q.rp.g.visible = false; scene.remove(Q.rp.g); } catch (e) { /* gone */ } }
+    CO.tr = null; CO.peers = []; CO.cur = null; CO.role = null; CO.on = false; CO.state = 'idle'; CO.code = ''; CO.note = ''; CO.slot = 1; CO.ros = null; CO.auto = 0; CO.autoGo = 0; const b = $('buddy'); if (b) { b.classList.add('hide'); b.dataset.h = ''; }
 }
-/* ---- the lobby screen (title menu: Co-op) */
+/* ---- quick match: everybody searching joins one public room, and when four are in the four who arrived first are put together */
+const QM = { on: false, tr: null, seen: new Map(), ids: new Set(), iv: 0, t0: 0, state: '', note: '', n: 1, last: '', stable: 0 };
+const qmCbs = {
+    peer(id) { QM.ids.add(id); try { if (QM.tr) QM.tr.send(id, { t: 'q', pid: PID, ts: QM.t0 }); } catch (e) { /* not ready */ } },
+    left(id) { QM.ids.delete(id); QM.seen.delete(id); },
+    msg(id, m) { if (!m || typeof m !== 'object' || !QM.on) return; if (m.t === 'q') QM.seen.set(id, { ts: +m.ts || 0, at: performance.now() }); else if (m.t === 'm' && /^[A-Z]{4}$/.test(String(m.code || ''))) { qmStop(true); coJoin(String(m.code)); } }
+};
+function qmStop(slow) { const tr = QM.tr; QM.on = false; QM.tr = null; clearInterval(QM.iv); QM.iv = 0; QM.seen.clear(); QM.ids.clear(); if (tr) setTimeout(() => { try { tr.close(); } catch (e) { /* closed */ } }, slow ? 2500 : 50); }
+function qmTick() {
+    if (!QM.on || !QM.tr) return; const now = performance.now();
+    for (const [id, v] of QM.seen) if (now - v.at > 7000) QM.seen.delete(id);
+    for (const id of QM.ids) { try { QM.tr.send(id, { t: 'q', pid: PID, ts: QM.t0 }); } catch (e) { /* gone */ } }
+    const me = QM.tr.self, all = [{ id: me, ts: QM.t0 }].concat([...QM.seen].map(([id, v]) => ({ id, ts: v.ts }))).sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1));
+    QM.n = Math.min(4, all.length);
+    if (all.length >= 4 && all[0].id === me) {
+        const grp = all.slice(0, 4).map((q) => q.id), sig = grp.join(); if (sig === QM.last) QM.stable++; else { QM.last = sig; QM.stable = 0; }
+        if (QM.stable >= 1) { const code = newCode(); for (const id of grp.slice(1)) { try { QM.tr.send(id, { t: 'm', code }); } catch (e) { /* gone */ } } qmStop(true); coHost(code, true); return; }
+    } else { QM.last = ''; QM.stable = 0; }
+    coRefresh();
+}
+async function qmStart() {
+    coLeave(); qmStop(); QM.on = true; QM.state = 'opening'; QM.note = ''; QM.t0 = Date.now() + Math.random(); QM.n = 1; QM.last = ''; QM.stable = 0; coRefresh();
+    try { const tr = await openTransport('QUEUE-' + NETCFG.appId, qmCbs); if (!QM.on) { tr.close(); return; } QM.tr = tr; QM.state = 'searching'; QM.note = tr.note || ''; QM.iv = setInterval(qmTick, 1000); } catch (e) { QM.state = 'error'; QM.note = String(e.message || e); }
+    coRefresh();
+}
+/* a quick-match game starts by itself two seconds after the fourth player joins (or after 30 s with whoever came) */
+setInterval(() => {
+    try {
+        if (CO.role !== 'host' || !CO.auto || (G && G.started)) return; const n = coOk().length, now = Date.now();
+        if (n >= 3 && !CO.autoGo) CO.autoGo = now;
+        if ((CO.autoGo && now - CO.autoGo > 2500) || (n >= 1 && now - CO.auto > 30000)) { CO.auto = 0; CO.autoGo = 0; closePanel(); UI.mode = null; CO.bags = {}; startNew(); } else if (n === 0 && now - CO.auto > 45000) { CO.auto = 0; coRefresh(); } else if (UI.mode === 'co') coMenu();
+    } catch (e) { /* menu closed */ }
+}, 700);
+/* ---- the lobby screen (title menu: Online) */
 function coRefresh() { if (UI.mode === 'co') coMenu(); }
 function coMenu() {
-    UI.mode = 'co'; const p = panel('Co-op (2 players)'), els = []; const add = (t, fn) => { const b = btn(t, fn); b.style.cssText += ';display:block;width:100%;margin:.4em 0;text-align:left'; p.appendChild(b); els.push(b); return b; }; const msg = (t) => { const d = el('div', 'desc', t); d.style.margin = '.6em 0'; p.appendChild(d); };
-    const back = () => { coLeave(); closePanel(); UI.mode = 'title'; titleMenu(); };
-    if (!CO.role) {
-        msg('Play the inn together. The host runs the monsters, you share the rooms, doors and key items; each of you keeps your own bag and health.'); add('Host a game', () => coHost()); const row = el('div'); row.style.cssText = 'display:flex;gap:.5em;margin:.4em 0'; const inp = el('input', 'inp'); inp.placeholder = 'Code'; inp.maxLength = 4; inp.style.cssText = 'flex:1;font-size:1.3em;text-transform:uppercase;letter-spacing:.3em'; const jb = btn('Join', () => { const c = inp.value.trim().toUpperCase(); if (/^[A-Z]{4}$/.test(c)) coJoin(c); else say('Enter the 4-letter code.', 1800); }); row.append(inp, jb); p.appendChild(row); els.push(jb); add('Back', back); UI.back = back;
+    UI.mode = 'co'; const p = panel('Online (up to 4 players)'), els = []; const add = (t, fn) => { const b = btn(t, fn); b.style.cssText += ';display:block;width:100%;margin:.4em 0;text-align:left'; p.appendChild(b); els.push(b); return b; }; const msg = (t) => { const d = el('div', 'desc', t); d.style.margin = '.6em 0'; p.appendChild(d); };
+    const back = () => { qmStop(); coLeave(); closePanel(); UI.mode = 'title'; titleMenu(); };
+    const roster = () => { const d = el('div', 'desc'); d.style.cssText = 'margin:.6em 0;text-align:center;letter-spacing:.05em'; const n = 1 + coOk().length; d.innerHTML = [1, 2, 3, 4].map((sl) => { const on = sl === 1 || sl === CO.slot || coOk().some((q) => q.pslot === sl), me = sl === (CO.role === 'host' ? 1 : CO.slot); return '<span style="margin:0 .5em;color:' + (on ? CO_TXT[sl - 1] : '#555') + '">' + (on ? '●' : '○') + ' P' + sl + (me ? ' (you)' : '') + '</span>'; }).join('') + '<br>' + n + ' / 4 players'; p.appendChild(d); };
+    if (QM.on) {
+        msg(QM.state === 'opening' ? 'Opening the connection...' : QM.state === 'error' ? 'Could not start: ' + QM.note : 'Searching for players...  ' + QM.n + ' / 4\nThe game starts by itself as soon as four players are in the queue.' + (QM.note ? '\n' + QM.note : '')); add('Cancel', () => { qmStop(); coMenu(); }); UI.back = () => { qmStop(); coMenu(); };
+    } else if (!CO.role) {
+        msg('Play together, up to four. The host runs the monsters; you share the rooms, doors and key items, and each of you keeps your own bag and health.');
+        add('Quick match: public queue, starts at 4 players', () => qmStart()); add('Host a private game', () => coHost()); const row = el('div'); row.style.cssText = 'display:flex;gap:.5em;margin:.4em 0'; const inp = el('input', 'inp'); inp.placeholder = 'Code'; inp.maxLength = 4; inp.style.cssText = 'flex:1;font-size:1.3em;text-transform:uppercase;letter-spacing:.3em'; const jb = btn('Join', () => { const c = inp.value.trim().toUpperCase(); if (/^[A-Z]{4}$/.test(c)) coJoin(c); else say('Enter the 4-letter code.', 1800); }); row.append(inp, jb); p.appendChild(row); els.push(jb); add('Back', back); UI.back = back;
     } else if (CO.role === 'host') {
-        const big = el('div', 'big', CO.code); big.style.cssText = 'position:static;font-size:3em;letter-spacing:.4em;text-align:center;color:#e0c26a;margin:.3em 0'; p.appendChild(big);
-        msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? 'Could not start: ' + CO.note : CO.peer ? 'Player 2 is connected. Start when you are ready.' : 'Waiting for Player 2. Give them this code, or they get an invite if they are in your Oasis room.' + (CO.note ? '\n' + CO.note : ''));
-        if (CO.state !== 'error') { add('Start new game', () => { closePanel(); UI.mode = null; CO.bags = {}; startNew(); }); if (lsGet('save', null)) add('Continue saved game', () => { closePanel(); UI.mode = null; continueGame(); }); 
-            for (const [key, sv] of coSaveList()) { const other = sv.pids.find((q) => q !== PID) || '', here = CO.peer && CO.peerPid === other; add('Continue co-op save with ' + pname(other) + (here ? '' : '  (waiting for them to join)') + '  ' + new Date(sv.ts).toLocaleDateString(), () => { if (!here) { sfx('locked'); say('This save needs ' + pname(other) + ' to be here. Give them the code above.', 3000); return; } closePanel(); UI.mode = null; hostLoadCo(sv); }); } } add('Leave co-op', back); UI.back = back;
+        const big = el('div', 'big', CO.auto ? 'MATCH FOUND' : CO.code); big.style.cssText = 'position:static;font-size:' + (CO.auto ? '2em' : '3em') + ';letter-spacing:.4em;text-align:center;color:#e0c26a;margin:.3em 0'; p.appendChild(big); if (CO.state !== 'error') roster();
+        const n = coOk().length;
+        msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? 'Could not start: ' + CO.note : CO.auto ? (CO.autoGo ? 'All four are here. Starting...' : 'Waiting for your team to connect...') : n ? 'Start when you are ready. Up to ' + (3 - n) + ' more can join with the code (or an invite if they are in your Oasis room).' : 'Waiting for players. Give them this code, or they get an invite if they are in your Oasis room.' + (CO.note ? '\n' + CO.note : ''));
+        if (CO.state !== 'error') { add('Start new game', () => { CO.auto = 0; closePanel(); UI.mode = null; CO.bags = {}; startNew(); }); if (!CO.auto && lsGet('save', null)) add('Continue saved game', () => { closePanel(); UI.mode = null; continueGame(); });
+            if (!CO.auto) for (const [key, sv] of coSaveList()) { const others = sv.pids.filter((q) => q !== PID), miss = others.filter((o) => !coOk().some((q) => q.peerPid === o)); add('Continue co-op save with ' + others.map(pname).join(', ') + (miss.length ? '  (waiting for ' + miss.map(pname).join(', ') + ')' : '') + '  ' + new Date(sv.ts).toLocaleDateString(), () => { if (miss.length) { sfx('locked'); say('This save needs ' + miss.map(pname).join(', ') + ' to be here. Give them the code above.', 3000); return; } closePanel(); UI.mode = null; hostLoadCo(sv); }); } } add('Leave', back); UI.back = back;
     } else {
-        msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? CO.note : CO.peer ? 'Connected. Waiting for the host to start...' : 'Looking for game ' + CO.code + '...'); add('Leave co-op', back); UI.back = back;
+        roster(); msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? CO.note : coOk().length ? 'Connected. Waiting for the host to start...' : 'Looking for game ' + CO.code + '...'); add('Leave', back); UI.back = back;
     }
     setNav(els, 1);
 }
 function beginCo(pos) {
     $('title').classList.add('hide'); $('hud').classList.remove('hide'); closePanel(); UI.mode = null; const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; RM.busy = true; musPlay(null); G.started = true;
-    loadRoom(G.room, null, { x: pos.x, z: pos.z, rot: pos.rot }); setWeaponVis(); setTimeout(() => { f.style.transition = 'opacity .8s'; f.style.opacity = 0; RM.busy = false; say('Player 1 is here. Stay together.', 3000); }, 500);
+    loadRoom(G.room, null, { x: pos.x, z: pos.z, rot: pos.rot }); setWeaponVis(); setTimeout(() => { f.style.transition = 'opacity .8s'; f.style.opacity = 0; RM.busy = false; say('Your team is here. Stay together.', 3000); }, 500);
 }
 /* ---------- co-op saves: one shared slot per pair of players, usable only when both are present ---------- */
-const PID = (() => { let p = lsGet('pid', null); if (!p) { try { p = Array.from(crypto.getRandomValues(new Uint8Array(9))).map((b) => (b % 36).toString(36)).join(''); } catch (e) { p = Math.random().toString(36).slice(2, 11); } lsSet('pid', p); } return p; })();
+const PID = (() => { let p = lsGet('pid', null); if (!p) { try { p = Array.from(crypto.getRandomValues(new Uint8Array(9))).map((b) => (b % 36).toString(36)).join(''); } catch (e) { p = Math.random().toString(36).slice(2, 11); } lsSet('pid', p); } if (/[?&]net=bc/.test(location.search)) p = (p + Math.random().toString(36).slice(2, 6)).slice(-12); return p; })();   // (test mode: tabs of one browser share storage, give each its own id)
 const pname = (pid) => 'P-' + String(pid || '????').slice(0, 4).toUpperCase();
 const coBag = () => { const s = JSON.parse(JSON.stringify(G)); for (const k of ['flags', 'taken', 'dead', 'seen']) delete s[k]; return s; };
 const coSaveList = () => { const all = lsGet('cosaves', {}) || {}; return Object.entries(all).filter(([k, v]) => v && v.pids && v.pids.includes(PID)).sort((a, b) => b[1].ts - a[1].ts); };
 function coStoreSave(blob) { if (!blob || !blob.pids) return; const all = lsGet('cosaves', {}) || {}; all[blob.pids.slice().sort().join('+')] = blob; lsSet('cosaves', all); }
-function coSave() {   // the host collects both bags and stores the blob on both machines
-    if (CO.role !== 'host' || !CO.peer) return;
-    const done = (bag) => {
-        if (!bag) { sfx('locked'); say('Your partner did not answer. The game was not saved.', 2600); return; }
-        const pids = [PID, CO.peerPid || 'unknown'], blob = { v: 1, ts: Date.now(), pids, world: { flags: G.flags, taken: G.taken, dead: G.dead, seen: G.seen || {}, saves: G.saves, kills: G.kills, time: G.time, room: RM.id }, pos: { x: PL.x, z: PL.z, rot: PL.rot }, bags: { [PID]: coBag(), [CO.peerPid || 'unknown']: bag } };
-        coStoreSave(blob); coSend({ t: 'savecopy', blob }); say('Game saved for both players.', 2400);
+function coSave() {   // the host collects every bag and stores the blob on every machine
+    if (CO.role !== 'host' || !coOk().length) return;
+    const ps = coOk(), done = (all) => {
+        if (!all) { sfx('locked'); say('A partner did not answer. The game was not saved.', 2600); return; }
+        const ids = ps.map((q) => q.peerPid || 'unknown'), pids = [PID].concat(ids), bags = { [PID]: coBag() }; ids.forEach((id) => { bags[id] = (CO.bags || {})[id]; });
+        const blob = { v: 1, ts: Date.now(), pids, world: { flags: G.flags, taken: G.taken, dead: G.dead, seen: G.seen || {}, saves: G.saves, kills: G.kills, time: G.time, room: RM.id }, pos: { x: PL.x, z: PL.z, rot: PL.rot }, bags };
+        coStoreSave(blob); coSend({ t: 'savecopy', blob }); say('Game saved for all players.', 2400);
     };
-    CO.bagCb = done; coSend({ t: 'bagreq' }); setTimeout(() => { if (CO.bagCb === done) { CO.bagCb = null; done(null); } }, 2500);
+    CO.bags = CO.bags || {}; CO.bagWait = new Set(ps.map((q) => q.peerPid)); CO.bagCb = done; for (const q of ps) coSendTo(q, { t: 'bagreq' }); setTimeout(() => { if (CO.bagCb === done) { CO.bagCb = null; CO.bagWait = null; done(false); } }, 2500);
 }
 function hostLoadCo(sv) {
-    const other = sv.pids.find((q) => q !== PID); if (!CO.peer || CO.peerPid !== other) { say('Waiting for ' + pname(other) + '.', 2000); return; }
-    CO.bags = { [other]: sv.bags[other] }; G = Object.assign(newG(), sv.bags[PID] || {}); Object.assign(G, sv.world); G.x = sv.pos.x; G.z = sv.pos.z; G.rot = sv.pos.rot; G.hp = Math.max(G.hp, 40); begin(true);
+    const others = sv.pids.filter((q) => q !== PID), miss = others.filter((o) => !coOk().some((q) => q.peerPid === o)); if (miss.length) { say('Waiting for ' + miss.map(pname).join(', ') + '.', 2000); return; }
+    CO.bags = {}; for (const o of others) CO.bags[o] = sv.bags[o]; G = Object.assign(newG(), sv.bags[PID] || {}); Object.assign(G, sv.world); G.x = sv.pos.x; G.z = sv.pos.z; G.rot = sv.pos.rot; G.hp = Math.max(G.hp, 40); begin(true);
 }
-setInterval(() => { try { if (CO.on && CO.peer && CO.role === 'guest' && G && G.started) coSend({ t: 'bag', bag: coBag() }); } catch (e) { /* offline */ } }, 5000);
+setInterval(() => { try { if (CO.on && CO.role === 'guest' && coOk().length && G && G.started) coSend({ t: 'bag', bag: coBag() }); } catch (e) { /* offline */ } }, 5000);
 /* ---------- screens: title, bag, files, item box, typewriter, dial, sound, game over, ending ---------- */
 const UI = { mode: null, nav: null, back: null };
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
@@ -3561,8 +3864,11 @@ function renderMenu() {
     if (M.tab === 'partner' && !(CO.on && CO.peer)) M.tab = 'items';
     if (M.tab === 'items') reItems(body); else if (M.tab === 'partner') mnPartner(body); else if (M.tab === 'files') menuFiles(body); else if (M.tab === 'map') reMap(body); else if (M.tab === 'sound') menuSound(body); else menuOpts(body);
 }
-function partnerName() { return CO.peerName || ('Player ' + (CO.role === 'host' ? '2' : '1')); }
-function mnPartner(p) {
+function partnerName() { return CO.peerName || ('Player ' + (CO.pslot || (CO.role === 'host' ? 2 : 1))); }
+function coSel() { const l = coOk(); if (!l.length) return null; if (!((M.pi | 0) < l.length)) M.pi = 0; return l[M.pi | 0]; }   // the partner the Item / Partner screens are showing
+const selName = () => { const Q = coSel(); return Q ? Q.peerName : partnerName(); };
+function mnPartner(p) { const Q = coSel(); if (Q) withPeer(Q, () => mnPartner1(p)); }
+function mnPartner1(p) {
     const r = CO.rp; if (CO.pinvT === undefined || performance.now() - CO.pinvT > 1500) { CO.pinvT = performance.now(); coSend({ t: 'iq' }); }
     const hp = r ? Math.max(0, Math.round(r.hp)) : 0, f = hp / 100, ct = !r ? '?' : r.state === 'dead' ? 'DEAD' : f > 0.65 ? 'FINE' : f > 0.35 ? 'CAUTION' : 'DANGER', cc = r && r.state === 'dead' ? '#888' : f > 0.65 ? '#3f3' : f > 0.35 ? '#fc3' : '#f33';
     const cols = el('div', 'cols'), L = el('div'), Rr = el('div'), st = el('div', 'desc'), room = CO.rpRoom && ROOMS[CO.rpRoom] ? ROOMS[CO.rpRoom].name : '';
@@ -3576,13 +3882,15 @@ function mnPartner(p) {
         if (eqLast) d.textContent += '\n(equipped: switch weapons first)'; else { add('Give 1', () => tradeGive(M.sel, 1)); if (sel.n > 1) add('Give all (' + sel.n + ')', () => tradeGive(M.sel, sel.n)); }
         add('Back', () => { M.sub = null; renderMenu(); }); Rr.appendChild(acts);
     }
+    if (coOk().length > 1 && M.sub !== 'give') { const nx = btn('Next player (' + coOk()[((M.pi | 0) + 1) % coOk().length].peerName + ')', () => { M.pi = ((M.pi | 0) + 1) % coOk().length; M.sub = null; renderMenu(); }); nx.style.cssText += ';display:block;margin-top:.5em'; Rr.appendChild(nx); els.push(nx); }
     cols.append(L, Rr); p.appendChild(cols); setNav(M.sub === 'give' && ael.length ? ael : els, M.sub === 'give' ? 1 : 2); if (M.sub !== 'give' && els[M.sel]) { UI.nav.idx = M.sel; hiNav(); }
 }
 let tradeId = 0; const tradePend = {};
-function tradeGive(i, n) {
-    const sl = G.inv[i]; if (!sl || !(CO.on && CO.peer)) return; n = Math.min(n, sl.n); if (n < 1) return; const id = sl.id; sl.n -= n; if (sl.n <= 0) G.inv[i] = null;
-    const tid = ++tradeId; tradePend[tid] = { id, n }; coSend({ t: 'gv', id, n, tid }); sfx('ok'); say('Gave ' + ITEMS[id].n + (n > 1 ? ' x' + n : '') + ' to ' + partnerName() + '.', 2000);
-    setTimeout(() => { const pd = tradePend[tid]; if (pd) { delete tradePend[tid]; const left = invGive(pd.id, pd.n); say('No answer from ' + partnerName() + '; the item came back.', 2400); if (UI.mode === 'menu') renderMenu(); } }, 12000);
+function tradeGive(i, n) { const Q = coSel(); if (Q) withPeer(Q, () => tradeGive1(i, n)); }
+function tradeGive1(i, n) {
+    const sl = G.inv[i]; if (!sl || !(CO.on && CO.peer)) return; const nm = partnerName(); n = Math.min(n, sl.n); if (n < 1) return; const id = sl.id; sl.n -= n; if (sl.n <= 0) G.inv[i] = null;
+    const tid = ++tradeId; tradePend[tid] = { id, n }; coSend({ t: 'gv', id, n, tid }); sfx('ok'); say('Gave ' + ITEMS[id].n + (n > 1 ? ' x' + n : '') + ' to ' + nm + '.', 2000);
+    setTimeout(() => { const pd = tradePend[tid]; if (pd) { delete tradePend[tid]; const left = invGive(pd.id, pd.n); say('No answer from ' + nm + '; the item came back.', 2400); if (UI.mode === 'menu') renderMenu(); } }, 12000);
     M.sub = null; if (UI.mode === 'menu') renderMenu();
 }
 function coTradeMsg(m) {
@@ -3663,7 +3971,7 @@ function menuOpts(p) {
         };
         fi.click();
     });
-    if (CO.on) { const c = el('div', 'desc', 'Co-op: ' + (CO.role === 'host' ? 'hosting, code ' + CO.code : 'joined ' + CO.code) + (CO.peer ? ' (partner connected)' : ' (waiting for partner)')); c.style.marginTop = '.6em'; L.appendChild(c); }
+    if (CO.on) { const c = el('div', 'desc', 'Co-op: ' + (CO.role === 'host' ? 'hosting, code ' + CO.code : 'joined ' + CO.code) + ' (' + (1 + coOk().length) + ' / 4 players)'); c.style.marginTop = '.6em'; L.appendChild(c); }
     const h = el('div', 'desc'); h.style.marginTop = '.8em'; h.textContent = 'Keys: Arrow keys or WASD move/turn, Z or Shift (hold) aim, Space/Enter/E action (shoot while aiming), Q quick turn, R reload, C or Ctrl run, Tab or I bag.\nTouch: use the buttons on screen.'; L.appendChild(h); p.appendChild(L); setNav(els, 1);
 }
 function menuSound(p) {
@@ -3725,7 +4033,7 @@ function toTitle() { G.started = false; $('hud').classList.add('hide'); $('title
 function titleMenu() {
     const t = $('tmenu'); t.innerHTML = ''; { const cl = el('div', 'desc', 'Character: ' + (AV.on ? AV.name : (OPT.avatar || 'oasis') === 'oasis' && !oasisSig() ? 'Default soldier (no Oasis character found)' : 'Default soldier')); cl.style.cssText = 'text-align:center;margin:0 0 .6em;opacity:.75'; t.appendChild(cl); } const els = []; const add = (txt, fn) => { const b = btn(txt, fn); t.appendChild(b); els.push(b); };
     add('New Game', () => { auInit(); startNew(); }); if (lsGet('save', null)) add('Continue', () => { auInit(); continueGame(); }); add('Sound and options', () => { auInit(); G.started = false; UI.mode = 'menu'; M.tab = 'sound'; renderMenu(); $('menu').style.zIndex = 20; });
-    add('Co-op (2 players)', () => { auInit(); coMenu(); });
+    add('Online co-op (up to 4 players)', () => { auInit(); coMenu(); });
     add('Controls', () => { const p = panel('Controls'); p.appendChild(el('div', 'desc', 'Classic: Up/Down walk, Left/Right turn.\nZ or Shift (hold): aim. Space/Enter/E: use, take, open, or fire while aiming.\nQ: quick turn   R: reload   Tab/I: bag, files, sound\n\nTouch: use the on-screen buttons.\n\nFind keys, manage your bag, save at typewriters, and get to the roof.')); const b = btn('Back', () => { closePanel(); UI.mode = 'title'; titleMenu(); }); b.style.marginTop = '1em'; p.appendChild(b); UI.mode = 'ctl'; setNav([b]); UI.back = () => { closePanel(); UI.mode = 'title'; titleMenu(); }; });
     setNav(els, 1); UI.mode = 'title';
 }
@@ -4034,7 +4342,7 @@ function stkRoomSetup(id) {
         window.__ps = PS; PS.go = go;
     }
     document.addEventListener('pointerdown', () => { auInit(); if (UI.mode === 'title' && !MUS.cur && PS.musOk) musPlay('title'); }, { once: false });
-    window.__sv = { padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
+    window.__sv = { SHAPE, oasisChars, chrFromOasis, chrCfg, idbGet, modExport, padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
 })();
 /* ---------- the item screen, laid out like Resident Evil 2: portrait + ECG, equipped weapon, 8 slots, description, command list ---------- */
 /* RE_ICONS lives at the top of the module (item pictures reset it while the game is still booting) */
@@ -4122,12 +4430,12 @@ function svPhoto(g, head, key) {
     return out || (hit && hit.c);
 }
 function reCard(who) {   // one player's portrait + condition, for the Item screen
-    const me = who === 'me', r = CO.rp, hp = me ? G.hp : Math.max(0, Math.round(r ? r.hp : 0)), f = hp / 100, dead = !me && r && r.state === 'dead';
+    const me = who === 'me', SP = coSel(), r = SP && SP.rp, hp = me ? G.hp : Math.max(0, Math.round(r ? r.hp : 0)), f = hp / 100, dead = !me && r && r.state === 'dead';
     const ct = dead ? 'DEAD' : f > 0.65 ? 'FINE' : f > 0.35 ? 'CAUTION' : 'DANGER', cc = dead ? '#888' : f > 0.65 ? '#3f3' : f > 0.35 ? '#fc3' : '#f33';
     const top = el('div', 're-top sm'), por = el('div', 're-por'), pc = document.createElement('canvas'); pc.width = 120; pc.height = 120; por.appendChild(pc);
     const ph = me ? (AV.on ? svPhoto(PL.g, AV.N && AV.N.head, 'me') : null) : (r && r.N ? svPhoto(r.g, r.N.head, 'p') : null);
     if (ph) { const g = pc.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(ph, 0, 0, 120, 120); } else rePortrait(pc);
-    por.appendChild(el('div', 're-name', String(me ? (AV.on && AV.name ? AV.name : 'Survivor') : partnerName()).slice(0, 14)));
+    por.appendChild(el('div', 're-name', String(me ? (AV.on && AV.name ? AV.name : 'Survivor') : selName()).slice(0, 14)));
     const cond = el('div', 're-cond'), ec = document.createElement('canvas'); ec.width = 300; ec.height = 110; cond.appendChild(ec); reEcg(ec, hp); const cl = el('div', 're-condl', ct); cl.style.color = cc; cond.appendChild(cl); cond.appendChild(el('div', 're-condk', 'CONDITION'));
     top.append(por, cond); return top;
 }
@@ -4135,15 +4443,15 @@ function reItems(body) {
     const w = WPN[G.eq] || {}, [ct, cc] = condText(), re = el('div', 're-items'); body.appendChild(re);
     const L = el('div', 're-left'), Rt = el('div', 're-right'); re.append(L, Rt);
     const co = !!(CO.on && CO.peer); if (!co) M.who = 'me'; const viewP = co && M.who === 'p';
-    if (co && (CO.pinvT === undefined || performance.now() - CO.pinvT > 1500)) { CO.pinvT = performance.now(); coSend({ t: 'iq' }); }
+    const SPr = coSel(); if (co && SPr && (CO.pinvT === undefined || performance.now() - CO.pinvT > 1500)) { CO.pinvT = performance.now(); coSendTo(SPr, { t: 'iq' }); }
     if (co) {   // you and your partner stacked: click one to see that player's bag
-        for (const who of ['me', 'p']) { const c = reCard(who); c.classList.add('pick'); if ((who === 'p') === viewP) c.classList.add('sel'); c.onclick = () => { if ((who === 'p') === viewP) return; M.who = who; M.sel = 0; M.sub = null; sfx('ok'); renderMenu(); }; L.appendChild(c); }
+        for (const who of ['me', 'p']) { const c = reCard(who); c.classList.add('pick'); if ((who === 'p') === viewP) c.classList.add('sel'); c.onclick = () => { if ((who === 'p') === viewP) { if (who === 'p' && coOk().length > 1) { M.pi = ((M.pi | 0) + 1) % coOk().length; M.sel = 0; M.sub = null; sfx('ok'); renderMenu(); } return; } M.who = who; M.sel = 0; M.sub = null; sfx('ok'); renderMenu(); }; L.appendChild(c); }
     } else L.appendChild(reCard('me'));
-    const INV = viewP ? Array.from({ length: G.inv.length }, (_, i) => { const x = (CO.pinv || [])[i]; return x ? { id: x[0], n: x[1] } : null; }) : G.inv, peq = viewP && CO.rp ? CO.rp.eq : G.eq;
+    const INV = viewP ? Array.from({ length: G.inv.length }, (_, i) => { const x = ((SPr && SPr.pinv) || [])[i]; return x ? { id: x[0], n: x[1] } : null; }) : G.inv, peq = viewP && SPr && SPr.rp ? SPr.rp.eq : G.eq;
     const mid = el('div', 're-mid'); L.appendChild(mid);
     const desc = el('div', 're-desc'); L.appendChild(desc);
     const eq = el('div', 're-eq'); eq.appendChild(el('div', 're-eql', 'EQUIP')); const eqi = el('div', 're-eqi'); eqi.appendChild(reIcon(peq, 1)); if (w.gun && !viewP) { const n = el('div', 're-cnt', String(G.mag)); eqi.appendChild(n); const sp = el('div', 're-cnt re-cnt2', '/' + invCount('ammo')); eqi.appendChild(sp); } eq.appendChild(eqi); const eqrow = el('div', 're-eqrow'); eqrow.appendChild(eq);
-    { const tf = el('div', 're-eq re-tfa'); tf.appendChild(el('div', 're-eql', 'TEAM FIRST AID')); const tfi = el('div', 're-eqi'), T = viewP ? (CO.ptfa ? { id: CO.ptfa } : null) : G.tfa; if (T && ITEMS[T.id]) tfi.appendChild(reIcon(T.id, 1)); tf.appendChild(tfi); tf.onclick = () => { if (viewP) return; sfx('ok'); M.sub = 'tfa'; renderMenu(); }; eqrow.appendChild(tf); }
+    { const tf = el('div', 're-eq re-tfa'); tf.appendChild(el('div', 're-eql', 'TEAM FIRST AID')); const tfi = el('div', 're-eqi'), T = viewP ? (SPr && SPr.ptfa ? { id: SPr.ptfa } : null) : G.tfa; if (T && ITEMS[T.id]) tfi.appendChild(reIcon(T.id, 1)); tf.appendChild(tfi); tf.onclick = () => { if (viewP) return; sfx('ok'); M.sub = 'tfa'; renderMenu(); }; eqrow.appendChild(tf); }
     Rt.appendChild(eqrow);
     const grid = el('div', 're-grid'), els = []; Rt.appendChild(grid);
     INV.forEach((s, i) => { const b = el('div', 're-slot'); if (s) { const it = ITEMS[s.id]; b.appendChild(reIcon(s.id)); if (s.n > 1 || (it.max || 1) > 1) b.appendChild(el('div', 're-cnt', String(s.n))); if (s.id === peq) b.appendChild(el('div', 're-eqtag', 'E')); } b.onclick = () => { sfx('ok'); slotClick(i); }; grid.appendChild(b); els.push(b); });
@@ -4158,7 +4466,7 @@ function reItems(body) {
         if (it.type === 'weapon') add('Equip', () => { equipW(sel.id); M.sub = null; renderMenu(); });
         if (it.type === 'heal' || it.type === 'mix' || sel.id === 'gherb') add('Combine', () => { M.sub = 'combine'; M.from = M.sel; renderMenu(); });
         add('Check', () => { M.sub = 'check'; renderMenu(); });
-        if (co) { const eqLast = sel.id === G.eq && invCount(sel.id) <= 1; if (!eqLast) { add('Give ' + partnerName().slice(0, 10), () => tradeGive(M.sel, 1)); if (sel.n > 1) add('Give all', () => tradeGive(M.sel, sel.n)); } }
+        if (co) { const eqLast = sel.id === G.eq && invCount(sel.id) <= 1; if (!eqLast) { add('Give ' + selName().slice(0, 10), () => tradeGive(M.sel, 1)); if (sel.n > 1) add('Give all', () => tradeGive(M.sel, sel.n)); } }
         if (it.type !== 'key') add('Discard', () => { ask('Discard ' + it.n + '?', ['Yes', 'No']).then((a) => { if (a === 0) { G.inv[M.sel] = null; } M.sub = null; renderMenu(); }); });
         add('Back', () => { M.sub = null; renderMenu(); }); mid.appendChild(acts);
     }
