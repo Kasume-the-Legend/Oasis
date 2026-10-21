@@ -3056,7 +3056,7 @@ function coMsg(id, m) {
         case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10] }; } break; }
         case 'hit': { if (CO.role !== 'host') break; const E = RM.enemies.find((q) => q.key === m.key); if (E && CO.rp) hitEnemy(E, Math.min(60, +m.dmg || 0), !!m.crit, CO.rp, !!m.leg); break; }
         case 'hurt': hurtPlayer(+m.dmg || 0, +m.fx || 0, +m.fz || 0); break;
-        case 'flag': G.flags[String(m.k)] = 1; break;
+        case 'flag': if (String(m.k) !== 'escapeDone') G.flags[String(m.k)] = 1; break;
         case 'world': G.flags = m.flags || G.flags; G.taken = m.taken || G.taken; G.dead = m.dead || G.dead; for (const o of RM.inter.slice()) if (o.key && G.taken[o.key] && o.mesh) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } break;
         case 'take': { if (CO.role !== 'host') break; const o = RM.inter.find((q) => q.key === m.key); if (!G.taken[m.key]) { G.taken[m.key] = 1; if (o) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } coSend({ t: 'taken', key: m.key, by: 'g' }); } else coSend({ t: 'taken', key: m.key, by: 'x' }); break; }
         case 'taken': { const o = RM.inter.find((q) => q.key === m.key); if (m.by === 'g' && CO.role === 'guest' && o) { o.confirmed = 1; interact(o); } else { G.taken[m.key] = 1; if (o) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } } break; }
@@ -3497,7 +3497,7 @@ function heliTick(dt) {
     if (k >= 1 && !H.landed) { H.landed = 1; RM.shake = Math.max(RM.shake || 0, 0.35); RM.inter.push({ kind: 'heli', x: 1.4, z: -3.5, r: 3.2, text: 'Board the helicopter' }); say('The helicopter touches down. Go!', 2600); }
 }
 function boardHeli() {
-    if (RM.busy || G.flags.escapeDone) return; RM.busy = true; setFlag('escapeDone'); G.flags.escapeDone = 1; sfx('heli'); musPlay(null);
+    if (RM.busy || G.flags.escapeDone) return; RM.busy = true; G.flags.escapeDone = 1; /* local only: each player boards for themselves (a synced flag locked the partner out of the helicopter) */ sfx('heli'); musPlay(null);
     const f = $('fade'); f.style.transition = 'opacity 1.6s'; f.style.opacity = 1;
     setTimeout(() => { f.style.transition = 'opacity .6s'; f.style.opacity = 0; RM.busy = false; UI.go('end'); }, 2200);
 }
