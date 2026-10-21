@@ -827,7 +827,7 @@ function gunRefreshModels() {   // the pack arrived after the avatars were built
     } catch (e) { console.warn('gun models', e); }
 }
 function explode(x, z, w, dmg) {
-    RM.shake = 0.5; RM.flash = 0.15; if (!(!MOD.buf['s:boom'] && GPK.buf.rocket_boom1 && gunSnd(w.splash > 3 ? 'rocket_boom1' : 'grenade_boom1', 1))) sfx('boom');
+    RM.shake = 0.5; RM.flash = 0.15; padRumble(1, 0.8, 320); if (!(!MOD.buf['s:boom'] && GPK.buf.rocket_boom1 && gunSnd(w.splash > 3 ? 'rocket_boom1' : 'grenade_boom1', 1))) sfx('boom');
     for (const E of RM.enemies) { if (E.st === 'dead') continue; const d = Math.hypot(E.x - x, E.z - z); if (d < w.splash + E.rad) dealHit(E, dmg * (1 - Math.min(0.7, d / (w.splash + E.rad) * 0.7)), false, false); }
 }
 const RISE_T = 2.6;
@@ -1132,11 +1132,13 @@ function reload() {
     const w = curW(); if (PL.state !== 'idle' || !w.gun || G.mag >= w.mag) return false; const have = invCount(w.ammo); if (!have) { sfx('click'); say('Out of ' + ITEMS[w.ammo].n.toLowerCase() + '.', 1500); return false; }
     PL.state = 'reload'; PL.st = 0; PL.relT = w.rel || 1.3; gunRelSnd(G.eq); if (AV.on) avAct('gp', 'gpreload', { rate: 2.0 / PL.relT }); return true;
 }
-/* controller rumble: dual-rumble through the Gamepad API (Chrome/Edge/Opera; silently skipped where unsupported) */
+/* controller rumble: dual-rumble through the Gamepad API (Chrome/Edge/Opera; silently skipped where unsupported). Options > Controller rumble: Normal / Low / Off (localStorage oasis.rumble) */
+const RUMBLE = { lvl: 1, last: 0 }; try { const v = localStorage.getItem('oasis.rumble'); RUMBLE.lvl = v === 'off' ? 0 : v === 'low' ? 0.5 : 1; } catch (e) { /* storage */ }
 function padRumble(strong, weak, ms) {
     try {
-        if (!navigator.getGamepads) return; for (const q of navigator.getGamepads()) { if (!q || !q.connected) continue; const a = q.vibrationActuator || (q.hapticActuators && q.hapticActuators[0]); if (!a) continue;
-        if (a.playEffect) a.playEffect('dual-rumble', { startDelay: 0, duration: ms, strongMagnitude: Math.min(1, strong), weakMagnitude: Math.min(1, weak) }); else if (a.pulse) a.pulse(Math.min(1, strong), ms); break; }
+        if (!RUMBLE.lvl || document.hidden || !navigator.getGamepads) return; const now = performance.now(); if (now - RUMBLE.last < 30 && strong <= (RUMBLE.s || 0)) return;
+        for (const q of navigator.getGamepads()) { if (!q || !q.connected) continue; const a = q.vibrationActuator || (q.hapticActuators && q.hapticActuators[0]); if (!a) continue; RUMBLE.last = now; RUMBLE.s = strong; const st = Math.min(1, strong * RUMBLE.lvl), wk = Math.min(1, weak * RUMBLE.lvl);
+            if (a.playEffect) a.playEffect('dual-rumble', { startDelay: 0, duration: Math.min(1500, ms), strongMagnitude: st, weakMagnitude: wk }); else if (a.pulse) a.pulse(st, ms); break; }
     } catch (e) { /* no rumble */ }
 }
 function fire() {
@@ -1152,7 +1154,7 @@ function fire() {
 }
 function swing() {
     if (PL.cd > 0 || PL.state !== 'idle') return; const w = curW(); PL.cd = w.rate; PL.state = 'swing'; PL.st = 0; sfx('swing'); PL.shots = (PL.shots | 0) + 1;
-    setTimeout(() => { if (PL.state === 'dead') return; const fx = Math.sin(PL.rot), fz = Math.cos(PL.rot); for (const E of RM.enemies) { if (E.st === 'dead') continue; const dx = E.x - PL.x, dz = E.z - PL.z, t = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx); if (t > -0.2 && t < w.reach + E.rad && lat < 0.9 + E.rad * 0.6) dealHit(E, w.dmg * gearMult(G.eq), Math.random() < 0.1); } }, w.rate * 300);
+    setTimeout(() => { if (PL.state === 'dead') return; const fx = Math.sin(PL.rot), fz = Math.cos(PL.rot); for (const E of RM.enemies) { if (E.st === 'dead') continue; const dx = E.x - PL.x, dz = E.z - PL.z, t = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx); if (t > -0.2 && t < w.reach + E.rad && lat < 0.9 + E.rad * 0.6) { padRumble(0.5, 0.3, 100); dealHit(E, w.dmg * gearMult(G.eq), Math.random() < 0.1); } } }, w.rate * 300);
 }
 function nearestInter() {
     let best = null, bs = 0; const fx = Math.sin(PL.rot), fz = Math.cos(PL.rot);
@@ -1910,6 +1912,295 @@ for (const id of GR.order) { ROOMS[id] = genRoom(GR.specs[id]); ROOMS[id].mp = G
     ROOMS.library.items.push({ k: 'f2', file: 'logbook', x: -3.0, z: 0.8, y: 0.1 });
     ROOMS.landing.items.push({ k: 'f2', file: 'portraits', x: -5.0, z: 1.0, y: 0.1 });
 }
+/* MAPEDIT:BEGIN */
+/* ================= MAP EDITOR (Mod Kit > Maps) =================
+ * Build rooms by hand in 3D: a tilted, orbiting build camera over a half-metre grid, a palette of walls, furniture, lights, enemies, items, notes and doors, a Test Play
+ * button, and share codes. A map is plain data (see mapClean); mapToDef turns it into the same room definition the generator makes, so the whole engine (cameras, doors, enemies,
+ * items, saves, map screen) treats it like any other room. A map can be a NEW room linked into the level through doors, or it can REPLACE a room of the game (same id) so you can
+ * finish a floor by hand. Shared code: HIMAP1: + base64url(deflate(json)). Everything imported goes through mapClean: whitelists and clamps, never code.
+ * Injected into Survivor.html by tools/inject_mapedit.py; HI2/HI3 inherit it from Survivor.html at build time.
+ */
+const MAPS_K = SK + 'maps', MAP_PROPS = { crate: 'Crate', barrel: 'Barrel', drum: 'Steel drum', table: 'Table', chair: 'Chair', sofa: 'Sofa', plant: 'Plant', pillar: 'Pillar', wall: 'Wall', box: 'Block', lamp: 'Street lamp', fire: 'Fire barrel', corpse: 'Body', blood: 'Blood', papers: 'Papers', window: 'Window', car: 'Wrecked car', barricade: 'Barricade' };
+const MAP_ENEMY = { z: 'Walker', c: 'Crawler', d: 'Dormant', b: 'Brute', h: 'Hound', l: 'Licker', g: 'Dormant crawler' };
+let MAPS = {};
+const ED = { on: false, m: null, tool: 'select', sel: null, cam: { x: 0, z: 0, yaw: 0.7, pitch: 0.95, dist: 17, ty: 0.7, tp: 0.95 }, mk: null, dirty: 0, test: false, prev: null, ui: null, drag: null, pend: null, rc: null, ray: null, keys: {}, orig: {}, snap: 0.5 };
+const has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+const mapNum = (v, lo, hi, d) => (Number.isFinite(+v) && v !== null && v !== '' ? Math.max(lo, Math.min(hi, +v)) : d);
+const mapStr = (v, n) => String(v == null ? '' : v).replace(/[^\w .,'!?:;()\-]/g, '').slice(0, n);
+const mapId = () => 'm_' + [...crypto.getRandomValues(new Uint8Array(5))].map((b) => b.toString(16).padStart(2, '0')).join('');
+function mapBlank(name) { return { v: 1, id: mapId(), name: name || 'New room', th: 'lab', w: 16, d: 12, h: 4, sky: 0, safe: 0, on: 1, fl: 0, props: [], items: [], en: [], lights: [], doors: [], notes: {}, tw: null, bx: null, spawn: null, replaces: null, keep: null, auto: 0 }; }
+function mapClean(r, own) {   // validate and clamp a map from storage or from another player: numbers within ranges, strings from whitelists, never code
+    if (!r || typeof r !== 'object') return null; const m = mapBlank(mapStr(r.name, 40) || 'Map'); m.id = own && /^[a-z0-9_]{1,40}$/.test(r.id || '') ? r.id : mapId();
+    m.th = has(THEME, r.th) ? r.th : 'lab'; m.w = Math.round(mapNum(r.w, 6, 60, 16) * 2) / 2; m.d = Math.round(mapNum(r.d, 6, 60, 12) * 2) / 2; m.h = mapNum(r.h, 2.6, 9, 4); m.sky = r.sky ? 1 : 0; m.safe = r.safe ? 1 : 0; m.on = r.on === 0 ? 0 : 1; m.fl = Math.round(mapNum(r.fl, 0, 99, 0)); m.auto = 0;
+    const px = (v) => mapNum(v, -m.w / 2, m.w / 2, 0), pz = (v) => mapNum(v, -m.d / 2, m.d / 2, 0), rot = (v) => mapNum(v, -7, 7, 0);
+    for (const p of (Array.isArray(r.props) ? r.props : []).slice(0, 400)) { if (!p || !has(MAP_PROPS, p.t)) continue; const o = { t: p.t, x: px(p.x), z: pz(p.z), ry: rot(p.ry), s: mapNum(p.s, 0.4, 3, 1) }; if (p.t === 'wall') { o.x2 = px(p.x2); o.z2 = pz(p.z2); } if (p.t === 'box') { o.w = mapNum(p.w, 0.3, 12, 1.2); o.d = mapNum(p.d, 0.3, 12, 1.2); o.h = mapNum(p.h, 0.1, 9, 1); o.c = Math.round(mapNum(p.c, 0, 0xffffff, 0x6a5a4a)); o.hide = p.hide ? 1 : 0; o.nc = p.nc ? 1 : 0; o.tex = ['wood', 'stone', 'metal', 'tile', 'carpet', 'wall', 'brick'].includes(p.tex) ? p.tex : 'wood'; } if (p.t === 'window') { o.side = 'NSEW'.includes(p.side) && p.side ? p.side : 'N'; o.at = mapNum(p.at, -30, 30, 0); } m.props.push(o); }
+    for (const q of (Array.isArray(r.items) ? r.items : []).slice(0, 80)) { if (!q) continue; const o = { x: px(q.x), z: pz(q.z) }; if (q.file) { o.file = mapStr(q.file, 24); } else if (has(ITEMS, q.item)) { o.item = q.item; o.n = Math.round(mapNum(q.n, 1, 99, 1)); } else continue; m.items.push(o); }
+    for (const e of (Array.isArray(r.en) ? r.en : []).slice(0, 60)) if (e && has(MAP_ENEMY, e.t)) m.en.push({ t: e.t, x: px(e.x), z: pz(e.z), rot: rot(e.rot) });
+    for (const l of (Array.isArray(r.lights) ? r.lights : []).slice(0, 16)) if (l) m.lights.push({ x: px(l.x), z: pz(l.z), y: mapNum(l.y, 0.5, 8, 3), c: Math.round(mapNum(l.c, 0, 0xffffff, 0xffd8a0)), i: mapNum(l.i, 0.2, 3, 1.1), r: mapNum(l.r, 3, 30, 12), fl: l.fl ? 1 : 0 });
+    for (const d of (Array.isArray(r.doors) ? r.doors : []).slice(0, 12)) { if (!d || !'NSEW'.includes(d.side || 'x') || !d.side) continue; const L = d.side === 'N' || d.side === 'S' ? m.w : m.d; const o = { side: d.side, at: Math.round(mapNum(d.at, -(L / 2 - 1.7), L / 2 - 1.7, 0) * 2) / 2, to: mapStr(d.to, 40), tside: 'NSEW'.includes(d.tside || 'x') && d.tside ? d.tside : 'S', tat: mapNum(d.tat, -30, 30, 0), lock: d.lock ? mapStr(d.lock, 30) : null, label: mapStr(d.label, 30) || 'Door' }; if (own) { if (d.id) o.id = mapStr(d.id, 50); if (d.toDoor) o.toDoor = mapStr(d.toDoor, 50); } m.doors.push(o); }
+    if (r.notes && typeof r.notes === 'object') { let n = 0; for (const k of Object.keys(r.notes)) { if (n++ >= 20 || !/^[a-z0-9_]{1,24}$/.test(k)) continue; const v = r.notes[k]; if (v && typeof v === 'object') if (k !== '__proto__') m.notes[k] = { n: mapStr(v.n, 40) || 'Note', t: String(v.t == null ? '' : v.t).replace(/[<>]/g, '').slice(0, 800) }; } }
+    for (const q of m.items) if (q.file && !m.notes[q.file] && !(typeof FILES !== 'undefined' && FILES[q.file] && own)) q.file = null; m.items = m.items.filter((q) => q.item || q.file);
+    const pt = (v) => (v && typeof v === 'object' ? { x: px(v.x), z: pz(v.z) } : null); m.tw = pt(r.tw); m.bx = pt(r.bx); m.spawn = pt(r.spawn);
+    if (own) { m.replaces = r.replaces && typeof r.replaces === 'string' ? mapStr(r.replaces, 40) : null; m.keep = r.keep && typeof r.keep === 'object' ? r.keep : null; if (m.replaces) m.id = m.replaces; }
+    return m;
+}
+function mapsLoad() { try { const o = JSON.parse(localStorage.getItem(MAPS_K) || '{}'); MAPS = {}; for (const id in o) { const m = mapClean(Object.assign({}, o[id], { id }), true); if (m) MAPS[m.id] = m; } } catch (e) { MAPS = {}; } }
+function mapsSave() { try { localStorage.setItem(MAPS_K, JSON.stringify(MAPS)); return true; } catch (e) { try { say('Could not save the maps: storage is full.', 3200); } catch (e2) { /* hud */ } return false; } }
+// ---------- map -> room definition
+const MAP_SPEC = { z: { t: 'z' }, l: { t: 'z', lk: 1 }, c: { t: 'z', cr: 1 }, d: { t: 'z', dorm: 1 }, b: { t: 'z', br: 1 }, h: { t: 'h' }, g: { t: 'z', cr: 1, dorm: 1 } };
+const mapColor = (c) => (typeof c === 'number' ? c : 0x6a5a4a);
+function mapToDef(m) {
+    const T = THEME[m.th] || THEME.lab, w = m.w, d = m.h ? m.d : m.d, h = m.h || T.h, solid = [];
+    const props = [], extra = [];   // props: engine boxes (collision + a plain visual); extra: dressed by DECOR
+    for (const p of m.props) {
+        const s = p.s || 1;
+        if (p.t === 'box') props.push({ x: p.x, z: p.z, w: p.w, d: p.d, h: p.h, c: mapColor(p.c), tex: p.tex || 'wood', hide: p.hide ? 1 : 0, nc: p.nc ? 1 : 0 });
+        else if (p.t === 'wall') { const horiz = Math.abs(p.x2 - p.x) >= Math.abs(p.z2 - p.z), len = Math.max(0.5, horiz ? Math.abs(p.x2 - p.x) : Math.abs(p.z2 - p.z)) + 0.3; props.push({ x: horiz ? (p.x + p.x2) / 2 : p.x, z: horiz ? p.z : (p.z + p.z2) / 2, w: horiz ? len : 0.3, d: horiz ? 0.3 : len, h: h * 0.96, c: T.pc ? T.pc[0] : 0x6a6a68, tex: T.wall ? (T.wall[0] === 'wall' ? 'wall' : T.pt || 'stone') : 'stone' }); }
+        else if (p.t === 'pillar') props.push({ x: p.x, z: p.z, w: 0.9 * s, d: 0.9 * s, h: h, c: 0x8a9298, tex: T.pt === 'wood' ? 'metal' : (T.pt || 'stone') });
+        else extra.push(p);
+    }
+    const lights = m.lights.map((l) => ({ x: l.x, y: l.y, z: l.z, c: l.c, i: l.i, r: l.r, fl: l.fl ? 1 : 0 }));
+    if (!lights.length) lights.push({ x: 0, y: Math.min(h - 0.5, 3.6), z: 0, c: m.safe ? 0xffc88a : T.lc[0], i: m.safe ? 1.4 : 1.1, r: Math.max(w, d) * 0.8 + 4 });
+    const camY = Math.min(h - 0.25, 4.8), ccx = w / 2 - 0.6, ccz = d / 2 - 0.6, cams = w >= 16 ? [{ p: [-ccx, camY, ccz], t: [w * 0.12, 0.4, -d * 0.12], fov: 56, zone: [-w / 2 - 1, -d / 2 - 1, 0.5, d / 2 + 1] }, { p: [ccx, camY, ccz], t: [-w * 0.12, 0.4, -d * 0.12], fov: 56, zone: [-0.5, -d / 2 - 1, w / 2 + 1, d / 2 + 1] }] : [{ p: [-ccx, camY, ccz], t: [w * 0.15, 0.4, -d * 0.15], fov: 58 }];
+    const doors = []; m.doors.forEach((x, i) => { const id = x.id || (m.id + '_d' + i), to = x.to; if (to ? (!ROOMS[to] || to === m.id) : !x.id) return; doors.push(D(id, x.side, x.at, to || null, x.toDoor || (to + '_' + m.id + '_' + i), x.lock || null, x.label || 'Door')); });
+    const items = [], notesUsed = {}; m.items.forEach((q, i) => { if (q.file) items.push({ k: 'e' + i, file: q.file, x: q.x, z: q.z, y: 0.1 }); else items.push({ k: 'e' + i, item: q.item, n: q.n || 1, x: q.x, z: q.z, y: 0.1 }); });
+    const enemies = m.en.map((e) => Object.assign({ x: e.x, z: e.z, rot: e.rot || 0 }, MAP_SPEC[e.t] || MAP_SPEC.z)); const keep = m.keep || {};
+    for (const e of keep.boss || []) enemies.push(e);
+    const spots = []; for (let x = -w / 2 + 2; x < w / 2 - 1; x += 3) for (let z = -d / 2 + 2; z < d / 2 - 1; z += 3) if (!props.some((p) => Math.abs(p.x - x) < p.w / 2 + 0.8 && Math.abs(p.z - z) < p.d / 2 + 0.8)) spots.push({ x, z });
+    const def = { name: m.name, w, d, h, floor: T.floor, wall: T.wall, amb: m.sky ? [0x2a3248, 1.2] : (m.safe ? [0x4a3a2a, 1.0] : T.amb), fog: m.sky ? 0x0a1020 : T.fog, mus: m.safe ? 'safe' : 'explore', lights, cams, props, doors, items, enemies, puz: keep.puz || [], gen: { th: m.th, spots }, custom: 1 };
+    if (m.sky) { def.sky = 1; def.lights.forEach((l) => { if (!m.lights.length) l.c = 0x7a9aff; }); }
+    if (m.safe) { def.safe = 1; const t = m.tw || { x: 1.9, z: -d / 2 + 1.2 }, b = m.bx || { x: -1.9, z: -d / 2 + 1.2 }; def.typewriter = { x: t.x, z: t.z }; def.box = { x: b.x, z: b.z }; if (!props.some((p) => Math.abs(p.x - t.x) < 0.6 && Math.abs(p.z - t.z) < 0.6)) props.push({ x: t.x, z: t.z, w: 1.6, d: 0.9, h: 0.8, c: 0x4a2c16, tex: 'wood' }); if (!props.some((p) => Math.abs(p.x - b.x) < 0.6 && Math.abs(p.z - b.z) < 0.6)) props.push({ x: b.x, z: b.z, w: 1.4, d: 0.9, h: 0.8, c: 0x5a3a1a, tex: 'wood' }); }
+    if (keep.event) def.event = keep.event; if (keep.hint) def.hint = keep.hint; def.mp = m.mp || null;
+    def._extra = extra; return def;
+}
+function mapDecor(m, def) {
+    const orig = ED.orig[m.id] && m.keepDecor !== 0 ? ED.orig[m.id] : null;
+    return (X) => {
+        if (orig) { try { orig(X); } catch (e) { console.warn('original dressing', e); } }
+        const { w, d, h } = X;
+        for (const p of def._extra || []) {
+            const s = p.s || 1, ry = p.ry || 0;
+            try {
+                switch (p.t) {
+                    case 'crate': X.crate(p.x, p.z, 0.9 * s, ry); break;
+                    case 'barrel': X.barrel(p.x, p.z, 0.95, 0x5a3a1a); break;
+                    case 'drum': X.drum(p.x, p.z, 0x3a4a5a); break;
+                    case 'table': X.table(p.x, p.z, 1.6 * s, 0.9 * s, 0.8, 0x4a2a14); break;
+                    case 'chair': X.chair(p.x, p.z, ry, false); break;
+                    case 'sofa': X.sofa(p.x, p.z, ry, 0x4a1a1a, 2.2 * s); break;
+                    case 'plant': X.plant(p.x, p.z, s); break;
+                    case 'corpse': X.corpse(p.x, p.z, ry, 0x4a3a2a, 1); break;
+                    case 'blood': X.blood(p.x, p.z, 1.4 * s, Math.abs(Math.round(p.x * 3 + p.z)) % 5); break;
+                    case 'papers': X.papers(p.x, p.z, 6, 1.4 * s); break;
+                    case 'fire': X.Cy(0.34, 0.34, 0.9, mat(0x2a2220), p.x, 0.45, p.z, 10); X.flame(p.x, 1.0, p.z, 2.4); X.light(p.x, 1.6, p.z, 0xff7a30, 1.4, 9); X.col(p.x, p.z, 0.7, 0.7); break;
+                    case 'lamp': X.Cy(0.07, 0.09, 3.4, mat(0x2a2c30), p.x, 1.7, p.z, 6); X.B(0.34, 0.12, 0.34, GL(0xffc468), p.x, 3.4, p.z); X.halo(p.x, 3.3, p.z, 3.4, 0xffa640, 0.4); X.col(p.x, p.z, 0.3, 0.3); break;
+                    case 'car': { const c = [0x3a4a5a, 0x6a2a24, 0x4a4a42, 0x2a3a2e][Math.abs(Math.round(p.x + p.z)) % 4], g = new THREE.Group(); const pm = (mesh, x, y, z) => { mesh.position.set(x, y, z); g.add(mesh); }; pm(boxM(4.1 * s, 0.75, 1.7 * s, mat(c)), 0, 0.62, 0); pm(boxM(2.1 * s, 0.62, 1.55 * s, mat(c)), -0.2, 1.28, 0); pm(boxM(2.0 * s, 0.5, 1.58 * s, GL(0x0c1018)), -0.2, 1.3, 0); for (const [wx, wz] of [[-1.3, 0.85], [1.3, 0.85], [-1.3, -0.85], [1.3, -0.85]]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.22, 10), mat(0x101012)); wh.position.set(wx * s, 0.36, wz * s); wh.rotation.x = Math.PI / 2; g.add(wh); } X.add(g, p.x, 0, p.z, ry); const q = Math.abs(Math.sin(ry)) > 0.7; X.col(p.x, p.z, (q ? 1.7 : 4.1) * s, (q ? 4.1 : 1.7) * s); break; }
+                    case 'barricade': for (let i = 0; i < 3; i++) X.B(3 * s, 0.28, 0.5, mat(i % 2 ? 0x7a6a48 : 0x8a7a58), p.x, 0.14 + i * 0.26, p.z, ry); X.B(3 * s, 0.14, 0.05, GL(0xd8b020), p.x, 1.05, p.z - 0.3, ry); { const q = Math.abs(Math.sin(ry)) > 0.7; X.col(p.x, p.z, (q ? 1 : 3) * s, (q ? 3 : 1) * s); } break;
+                    case 'window': X.window(p.side || 'N', p.at || 0, 1.9, 1.2, 1.4, false); break;
+                }
+            } catch (e) { console.warn('map prop', p.t, e); }
+        }
+    };
+}
+function mapApply(m) {   // put one map into the game's rooms
+    if (!m || !m.on) return null; if (m.replaces && !ROOMS[m.replaces]) return null;
+    if (m.replaces && !ED.orig[m.id]) ED.orig[m.id] = DECOR[m.id] || null; if (m.replaces && !ED.base) ED.base = {}; if (m.replaces && !ED.base[m.id]) ED.base[m.id] = ROOMS[m.id];
+    const mp = ROOMS[m.id] && ROOMS[m.id].mp; m.mp = mp || m.mp || null; const def = mapToDef(m);
+    if (!def.mp) { let at = null; for (const dd of m.doors) { const t = ROOMS[dd.to]; if (t && t.mp) { at = t.mp; m.fl = t.mp[4]; break; } } const sz = [Math.max(2, Math.round(m.w / 3.4)), Math.max(2, Math.round(m.d / 3.4))]; def.mp = at ? [at[0] + at[2] + 1, at[1], sz[0], sz[1], at[4]] : [0, 0, sz[0], sz[1], m.fl | 0]; m.mp = def.mp; }
+    ROOMS[m.id] = def; DECOR[m.id] = mapDecor(m, def); for (const k in m.notes) FILES[k] = { n: m.notes[k].n, t: m.notes[k].t };
+    return def;
+}
+function mapLinks() {   // the matching doors on the rooms the maps connect to
+    for (const id in ROOMS) { const r = ROOMS[id]; if (r.doors && r.doors.some((q) => q.ed)) r.doors = r.doors.filter((q) => !q.ed); }
+    for (const m of Object.values(MAPS)) { if (!m.on || !ROOMS[m.id] || ROOMS[m.id].custom !== 1) continue; m.doors.forEach((x, i) => { const t = ROOMS[x.to]; if (!t || x.to === m.id || x.id) return; const back = x.toDoor || (x.to + '_' + m.id + '_' + i); if (t.doors.some((q) => q.id === back)) return; const L = x.tside === 'N' || x.tside === 'S' ? t.w : t.d, at = Math.max(-(L / 2 - 1.7), Math.min(L / 2 - 1.7, x.tat || 0)); const dd = D(back, x.tside, at, m.id, (x.id || (m.id + '_d' + i)), null, m.name); dd.ed = 1; t.doors.push(dd); }); }
+}
+function mapsApplyAll() { if (typeof ROOMS === 'undefined') return; for (const m of Object.values(MAPS)) { try { mapApply(m); } catch (e) { console.warn('map', m.id, e); } } try { mapLinks(); } catch (e) { console.warn('map links', e); } }
+function mapRestore(id) {   // put a replaced room back the way the game made it
+    const m = MAPS[id]; if (m && ED.base && ED.base[id]) { ROOMS[id] = ED.base[id]; DECOR[id] = ED.orig[id]; } if (m) { delete MAPS[id]; mapsSave(); } try { mapLinks(); } catch (e) { /* links */ }
+}
+// ---------- start from a room of the game
+function mapFromRoom(id) {
+    const r = (ED.base && ED.base[id]) || ROOMS[id]; if (!r) return null; const m = mapBlank(r.name || id); m.id = id; m.replaces = id; m.name = String(r.name || id).slice(0, 40); m.th = (r.gen && THEME[r.gen.th]) ? r.gen.th : 'lab'; m.w = r.w; m.d = r.d; m.h = r.h; m.sky = r.sky ? 1 : 0; m.safe = r.safe ? 1 : 0; m.mp = r.mp;
+    m.keepDecor = 1; m.props = (r.props || []).slice(0, 400).map((p) => ({ t: 'box', x: p.x, z: p.z, ry: 0, s: 1, w: p.w, d: p.d, h: p.h, c: p.c, hide: p.hide ? 1 : 0, nc: p.nc ? 1 : 0, tex: p.tex || 'wood' }));
+    m.items = (r.items || []).filter((q) => q.item || q.file).map((q) => (q.file ? { x: q.x, z: q.z, file: q.file } : { x: q.x, z: q.z, item: q.item, n: q.n || 1 }));
+    const inv = { z: 'z', h: 'h' }; m.en = (r.enemies || []).filter((e) => !e.bs && !e.boss).map((e) => ({ t: e.t === 'h' ? 'h' : e.lk ? 'l' : e.cr && e.dorm ? 'g' : e.cr ? 'c' : e.dorm ? 'd' : e.br ? 'b' : 'z', x: e.x, z: e.z, rot: e.rot || 0 }));
+    m.doors = (r.doors || []).map((x) => ({ side: x.side, at: x.at, to: x.to, tside: 'S', tat: 0, lock: x.lock || null, label: x.label || 'Door', id: x.id, toDoor: x.toDoor }));
+    m.lights = (r.lights || []).slice(0, 16).map((l) => ({ x: l.x, z: l.z, y: l.y, c: l.c, i: l.i, r: l.r, fl: l.fl ? 1 : 0 })); if (r.typewriter) m.tw = { x: r.typewriter.x, z: r.typewriter.z }; if (r.box) m.bx = { x: r.box.x, z: r.box.z };
+    m.keep = { puz: r.puz || [], boss: (r.enemies || []).filter((e) => e.bs || e.boss), event: r.event || null, hint: r.hint || null };
+    return m;
+}
+// ---------- sharing
+const b64u = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+async function mapShareCode(m) {
+    const o = JSON.parse(JSON.stringify(m)); delete o.replaces; delete o.keep; delete o.mp; delete o.keepDecor; delete o.id; for (const q of o.doors) { delete q.id; delete q.toDoor; q.to = ''; } const raw = new TextEncoder().encode(JSON.stringify(o));
+    const cs = new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw')); const u8 = new Uint8Array(await new Response(cs).arrayBuffer()); return 'HIMAP1:' + b64u(u8);
+}
+async function mapFromCode(code) {
+    code = String(code || '').trim(); if (!code.startsWith('HIMAP1:') || code.length > 600000) throw new Error('That is not a map code.');
+    const u8 = unb64u(code.slice(7)); const ds = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw')); const buf = new Uint8Array(await new Response(ds).arrayBuffer()); if (buf.length > 2000000) throw new Error('Map too large.');
+    const m = mapClean(JSON.parse(new TextDecoder().decode(buf)), false); if (!m) throw new Error('Map could not be read.'); m.doors = []; return m;   // links to rooms are made on your own copy, never taken from a code
+}
+// ---------- the editor
+function edDirty() { ED.dirty = 1; clearTimeout(edDirty.t); edDirty.t = setTimeout(edRebuild, 70); }
+function edSnapPush() { const j = JSON.stringify(ED.m); if (!ED.hist) ED.hist = []; if (ED.hist[ED.hist.length - 1] === j) return; ED.hist.push(j); if (ED.hist.length > 60) ED.hist.shift(); }
+function edUndo() { if (!ED.hist || ED.hist.length < 2) { say('Nothing to undo.', 1200); return; } ED.hist.pop(); const o = JSON.parse(ED.hist[ED.hist.length - 1]), m = ED.m; for (const k of Object.keys(m)) delete m[k]; Object.assign(m, o); ED.sel = null; ED.pend = null; edBar(); edUi(); ED.skipSnap = 1; edDirty(); }
+function edRebuild() {
+    if (!ED.on || !ED.m) return; ED.dirty = 0; if (ED.skipSnap) ED.skipSnap = 0; else edSnapPush(); const m = ED.m; m.on = 1; try { mapApply(m); mapLinks(); } catch (e) { console.warn('rebuild', e); return; }
+    G.room = m.id; try { buildRoom(m.id); } catch (e) { console.warn('buildRoom', e); return; } RM.busy = false; PL.g.visible = false; const sp = ED.m.spawn || { x: 0, z: 0 }; placePlayer(sp.x, sp.z, 0); PL.g.visible = !!ED.test; edMarkers();
+}
+function edMarkers() {   // selection ring and the hover marker live in the scene itself so they survive room rebuilds
+    if (!ED.mk) { ED.mk = new THREE.Group(); ED.hv = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.9), new THREE.MeshBasicMaterial({ color: 0x40ff90, transparent: true, opacity: 0.6, depthTest: false })); ED.hv.renderOrder = 9; ED.sl = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.04, 6, 24), new THREE.MeshBasicMaterial({ color: 0xffd040, depthTest: false })); ED.sl.rotation.x = Math.PI / 2; ED.sl.renderOrder = 9; ED.amb = new THREE.AmbientLight(0xffffff, 1.5); ED.mk.add(ED.hv, ED.sl, ED.amb); scene.add(ED.mk); }
+    if (ED.amb) ED.amb.visible = !ED.test; const s = edSelObj(); ED.sl.visible = !!s; if (s) ED.sl.position.set(s.x, 0.08, s.z);
+}
+function edSelObj() { const s = ED.sel, m = ED.m; if (!s || !m) return null; const L = { prop: m.props, item: m.items, en: m.en, light: m.lights, door: m.doors }[s.k]; const o = L && L[s.i]; if (!o) return null; if (s.k === 'door') { const hw = m.w / 2, hd = m.d / 2; return { x: o.side === 'E' ? hw : o.side === 'W' ? -hw : o.at, z: o.side === 'N' ? -hd : o.side === 'S' ? hd : o.at }; } return o; }
+function edSnap(v) { return Math.round(v / ED.snap) * ED.snap; }
+function edGround(ev) {
+    const c = $('cv').getBoundingClientRect(), nx = ((ev.clientX - c.left) / c.width) * 2 - 1, ny = -((ev.clientY - c.top) / c.height) * 2 + 1; if (!ED.rc) { ED.rc = new THREE.PerspectiveCamera(46, 1, 0.1, 200); ED.ray = new THREE.Raycaster(); }
+    edCamApply(ED.rc); ED.rc.aspect = c.width / c.height; ED.rc.updateProjectionMatrix(); ED.rc.updateMatrixWorld(true); ED.ray.setFromCamera({ x: nx, y: ny }, ED.rc); const o = ED.ray.ray.origin, d = ED.ray.ray.direction; if (Math.abs(d.y) < 1e-4) return null; const t = -o.y / d.y; if (t < 0) return null; return { x: o.x + d.x * t, z: o.z + d.z * t };
+}
+function edCamApply(cam) { const C = ED.cam, cp = Math.cos(C.pitch), sp = Math.sin(C.pitch); cam.position.set(C.x + Math.sin(C.yaw) * cp * C.dist, sp * C.dist, C.z + Math.cos(C.yaw) * cp * C.dist); cam.lookAt(C.x, 0, C.z); }
+function edFrame(dt) {
+    if (!ED.on || ED.test) return; const C = ED.cam, k = ED.keys, sp = C.dist * 0.9 * dt, fx = -Math.sin(C.yaw), fz = -Math.cos(C.yaw), rx = -fz, rz = fx;
+    const up = k.KeyW || k.ArrowUp, dn = k.KeyS || k.ArrowDown, lf = k.KeyA || k.ArrowLeft, rt = k.KeyD || k.ArrowRight; C.x += (fx * ((up ? 1 : 0) - (dn ? 1 : 0)) + rx * ((rt ? 1 : 0) - (lf ? 1 : 0))) * sp; C.z += (fz * ((up ? 1 : 0) - (dn ? 1 : 0)) + rz * ((rt ? 1 : 0) - (lf ? 1 : 0))) * sp;
+    C.x = Math.max(-40, Math.min(40, C.x)); C.z = Math.max(-40, Math.min(40, C.z)); C.yaw += (C.ty - C.yaw) * Math.min(1, dt * 9); C.pitch += (C.tp - C.pitch) * Math.min(1, dt * 9); edCamApply(camera); camera.fov = 46; camera.updateProjectionMatrix();
+    if (RM) { RM.dbgCam = null; RM.shake = 0; }
+}
+function edPlace(g) {   // the current tool applied at a ground point
+    const m = ED.m, t = ED.tool, x = edSnap(Math.max(-m.w / 2 + 0.25, Math.min(m.w / 2 - 0.25, g.x))), z = edSnap(Math.max(-m.d / 2 + 0.25, Math.min(m.d / 2 - 0.25, g.z)));
+    const add = (L, o) => { if (L.length >= 400) { say('That is the limit for this map.', 1800); return false; } L.push(o); ED.sel = { k: L === m.props ? 'prop' : L === m.items ? 'item' : L === m.en ? 'en' : 'light', i: L.length - 1 }; return true; };
+    if (t === 'select') { edPick(g); return; }
+    if (t === 'erase') { edPick(g); edDelete(); return; }
+    if (t === 'wall') { if (!ED.pend) { ED.pend = { x, z }; edHint('Click the other end of the wall.'); return; } const a = ED.pend; ED.pend = null; const horiz = Math.abs(x - a.x) >= Math.abs(z - a.z); add(m.props, { t: 'wall', x: a.x, z: a.z, x2: horiz ? x : a.x, z2: horiz ? a.z : z, ry: 0, s: 1 }); edHint(''); edDirty(); return; }
+    if (t === 'spawn') { m.spawn = { x, z }; edDirty(); return; } if (t === 'save') { m.safe = 1; m.tw = { x, z }; edDirty(); return; } if (t === 'itembox') { m.safe = 1; m.bx = { x, z }; edDirty(); return; }
+    if (t === 'light') { add(m.lights, { x, z, y: Math.min(m.h - 0.4, 3.2), c: 0xffd8a0, i: 1.1, r: 12, fl: 0 }); edDirty(); return; }
+    if (t.startsWith('en:')) { add(m.en, { t: t.slice(3), x, z, rot: 0 }); edDirty(); return; }
+    if (t.startsWith('item:')) { add(m.items, { x, z, item: t.slice(5), n: t === 'item:ammo' ? 12 : 1 }); edDirty(); return; }
+    if (t === 'note') { const key = 'n' + Math.floor(Math.random() * 1e6).toString(36); m.notes[key] = { n: 'Note', t: 'Write something here.' }; add(m.items, { x, z, file: key }); edDirty(); return; }
+    if (t === 'door') { edDoorAt(g); return; }
+    if (t === 'window') { const hw = m.w / 2, hd = m.d / 2, dists = [['N', Math.abs(g.z + hd)], ['S', Math.abs(g.z - hd)], ['W', Math.abs(g.x + hw)], ['E', Math.abs(g.x - hw)]].sort((a, b) => a[1] - b[1]), side = dists[0][0], at = edSnap(side === 'N' || side === 'S' ? g.x : g.z); add(m.props, { t: 'window', x: 0, z: 0, ry: 0, s: 1, side, at }); edDirty(); return; }
+    if (t === 'box') { add(m.props, { t: 'box', x, z, ry: 0, s: 1, w: 1.5, d: 1.5, h: 1, c: 0x6a5a4a, tex: 'wood', hide: 0, nc: 0 }); edDirty(); return; }
+    if (MAP_PROPS[t]) { add(m.props, { t, x, z, ry: 0, s: 1 }); edDirty(); }
+}
+function edPick(g) {
+    const m = ED.m; let best = null, bd = 1.3; const test = (k, L, f) => L.forEach((o, i) => { const p = f ? f(o) : o, d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = { k, i }; } });
+    test('prop', m.props, (o) => (o.t === 'wall' ? { x: (o.x + o.x2) / 2, z: (o.z + o.z2) / 2 } : o.t === 'window' ? { x: o.side === 'E' ? m.w / 2 : o.side === 'W' ? -m.w / 2 : o.at, z: o.side === 'N' ? -m.d / 2 : o.side === 'S' ? m.d / 2 : o.at } : o)); test('item', m.items); test('en', m.en); test('light', m.lights); m.doors.forEach((o, i) => { const p = edSelObjFor(o); const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = { k: 'door', i }; } });
+    ED.sel = best; edUi(); edMarkers();
+}
+function edSelObjFor(o) { const hw = ED.m.w / 2, hd = ED.m.d / 2; return { x: o.side === 'E' ? hw : o.side === 'W' ? -hw : o.at, z: o.side === 'N' ? -hd : o.side === 'S' ? hd : o.at }; }
+function edDelete() { const s = ED.sel, m = ED.m; if (!s) return; const L = { prop: m.props, item: m.items, en: m.en, light: m.lights, door: m.doors }[s.k]; if (L) L.splice(s.i, 1); ED.sel = null; edUi(); edDirty(); }
+function edDoorAt(g) {
+    const m = ED.m, hw = m.w / 2, hd = m.d / 2, dists = [['N', Math.abs(g.z + hd)], ['S', Math.abs(g.z - hd)], ['W', Math.abs(g.x + hw)], ['E', Math.abs(g.x - hw)]].sort((a, b) => a[1] - b[1]), side = dists[0][0], L = side === 'N' || side === 'S' ? m.w : m.d;
+    const at = Math.max(-(L / 2 - 1.7), Math.min(L / 2 - 1.7, edSnap(side === 'N' || side === 'S' ? g.x : g.z))); if (m.doors.length >= 12) { say('That is enough doors.', 1500); return; }
+    const targets = Object.keys(ROOMS).filter((k) => k !== m.id); if (!targets.length) return; m.doors.push({ side, at, to: ED.lastTo && ROOMS[ED.lastTo] ? ED.lastTo : targets[0], tside: { N: 'S', S: 'N', E: 'W', W: 'E' }[side], tat: 0, lock: null, label: 'Door' }); ED.sel = { k: 'door', i: m.doors.length - 1 }; edUi(); edDirty();
+}
+function edHint(t) { if (ED.ui && ED.ui.hint) ED.ui.hint.textContent = t || ED.defHint; }
+const EDCSS = 'font:700 12px Nunito,Georgia,sans-serif;color:#e8dcc0;background:rgba(20,14,8,.9);border:1px solid #6b5a3a;border-radius:7px;padding:5px 8px;cursor:pointer;pointer-events:auto';
+function edUi() {
+    const U = ED.ui; if (!U) return; const m = ED.m, tools = U.tools; tools.textContent = '';
+    const grp = (title, list) => { const g = modEl('div', 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px'); g.appendChild(modEl('div', 'width:100%;font:800 10px Nunito,sans-serif;color:#c9b27a;letter-spacing:.1em', title)); for (const [k, l] of list) { const b = modEl('button', EDCSS + (ED.tool === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { ED.tool = k; ED.pend = null; edHint(''); edUi(); }; g.appendChild(b); } tools.appendChild(g); };
+    grp('BUILD', [['select', 'Select / move'], ['erase', 'Erase'], ['wall', 'Wall'], ['box', 'Block'], ['pillar', 'Pillar'], ['window', 'Window'], ['door', 'Door']]);
+    grp('DECORATE', ['crate', 'barrel', 'drum', 'table', 'chair', 'sofa', 'plant', 'lamp', 'fire', 'car', 'barricade', 'corpse', 'blood', 'papers'].map((k) => [k, MAP_PROPS[k]]).concat([['light', 'Light']]));
+    grp('ENEMIES', Object.keys(MAP_ENEMY).map((k) => ['en:' + k, MAP_ENEMY[k]]));
+    grp('ITEMS', [['item:ammo', 'Ammo'], ['item:gherb', 'Green herb'], ['item:rherb', 'Red herb'], ['item:spray', 'Spray'], ['item:ribbon', 'Ink ribbon'], ['note', 'Note']].filter(([k]) => k === 'note' || ITEMS[k.slice(5)]));
+    grp('ROOM', [['spawn', 'Start point'], ['save', 'Save point'], ['itembox', 'Item box']]);
+    // inspector
+    const I = U.insp; I.textContent = ''; const s = edSelObj(); if (!s) { I.appendChild(modEl('div', 'color:#8a7c5c;font-size:12px', 'Nothing selected. Pick the Select tool and click something.')); return; }
+    const sel = ED.sel, o = { prop: m.props, item: m.items, en: m.en, light: m.lights, door: m.doors }[sel.k][sel.i]; I.appendChild(modEl('div', 'font:800 12px Nunito,sans-serif;color:#ffd96a;margin-bottom:4px', { prop: MAP_PROPS[o.t] || 'Object', item: o.file ? 'Note' : (ITEMS[o.item] ? ITEMS[o.item].n : 'Item'), en: MAP_ENEMY[o.t], light: 'Light', door: 'Door' }[sel.k]));
+    const row = (label, el) => { const r = modEl('label', 'display:flex;align-items:center;gap:6px;font-size:12px;margin:2px 0'); r.appendChild(modEl('span', 'width:70px;color:#c9b27a', label)); r.appendChild(el); I.appendChild(r); };
+    const rng = (v, lo, hi, st, fn) => { const i = document.createElement('input'); i.type = 'range'; i.min = lo; i.max = hi; i.step = st; i.value = v; i.style.cssText = 'flex:1;accent-color:#c9a24a;pointer-events:auto'; i.oninput = () => { fn(+i.value); edDirty(); edMarkers(); }; return i; };
+    const sbtn = (t, fn) => { const b = modEl('button', EDCSS, t); b.onclick = fn; return b; };
+    if (sel.k === 'prop' && o.t !== 'wall' && o.t !== 'window' && o.t !== 'blood') { row('Turn', rng(o.ry || 0, -3.2, 3.2, 0.1, (v) => { o.ry = v; })); if (o.t === 'box') { row('Width', rng(o.w, 0.3, 12, 0.1, (v) => { o.w = v; })); row('Depth', rng(o.d, 0.3, 12, 0.1, (v) => { o.d = v; })); row('Height', rng(o.h, 0.1, m.h, 0.1, (v) => { o.h = v; })); const c = document.createElement('input'); c.type = 'color'; c.value = '#' + (o.c >>> 0).toString(16).padStart(6, '0'); c.oninput = () => { o.c = parseInt(c.value.slice(1), 16); edDirty(); }; c.style.pointerEvents = 'auto'; row('Colour', c); } else row('Size', rng(o.s || 1, 0.4, 3, 0.05, (v) => { o.s = v; })); }
+    if (sel.k === 'en') { const s2 = document.createElement('select'); s2.style.cssText = 'flex:1;pointer-events:auto;background:#150f08;color:#e8dcc0'; for (const k in MAP_ENEMY) { const op = document.createElement('option'); op.value = k; op.textContent = MAP_ENEMY[k]; if (k === o.t) op.selected = true; s2.appendChild(op); } s2.onchange = () => { o.t = s2.value; edDirty(); edUi(); }; row('Kind', s2); row('Facing', rng(o.rot || 0, -3.2, 3.2, 0.1, (v) => { o.rot = v; })); }
+    if (sel.k === 'item' && o.item) { const s2 = document.createElement('select'); s2.style.cssText = 'flex:1;pointer-events:auto;background:#150f08;color:#e8dcc0;max-width:150px'; for (const k of Object.keys(ITEMS)) { const op = document.createElement('option'); op.value = k; op.textContent = ITEMS[k].n; if (k === o.item) op.selected = true; s2.appendChild(op); } s2.onchange = () => { o.item = s2.value; edDirty(); }; row('Item', s2); row('Amount', rng(o.n || 1, 1, 40, 1, (v) => { o.n = v; })); }
+    if (sel.k === 'item' && o.file && m.notes[o.file]) { const nt = m.notes[o.file], t1 = document.createElement('input'); t1.value = nt.n; t1.maxLength = 40; t1.style.cssText = 'flex:1;pointer-events:auto;background:#150f08;color:#e8dcc0;border:1px solid #4a3d28'; t1.oninput = () => { nt.n = mapStr(t1.value, 40) || 'Note'; }; row('Title', t1); const ta = document.createElement('textarea'); ta.value = nt.t; ta.maxLength = 800; ta.rows = 5; ta.style.cssText = 'width:100%;pointer-events:auto;background:#150f08;color:#e8dcc0;border:1px solid #4a3d28;font:12px Georgia'; ta.oninput = () => { nt.t = ta.value.replace(/[<>]/g, '').slice(0, 800); }; I.appendChild(ta); }
+    if (sel.k === 'light') { row('Strength', rng(o.i, 0.2, 3, 0.05, (v) => { o.i = v; })); row('Reach', rng(o.r, 3, 30, 1, (v) => { o.r = v; })); row('Height', rng(o.y, 0.5, m.h, 0.1, (v) => { o.y = v; })); const c = document.createElement('input'); c.type = 'color'; c.value = '#' + (o.c >>> 0).toString(16).padStart(6, '0'); c.oninput = () => { o.c = parseInt(c.value.slice(1), 16); edDirty(); }; c.style.pointerEvents = 'auto'; row('Colour', c); const fk = document.createElement('input'); fk.type = 'checkbox'; fk.checked = !!o.fl; fk.onchange = () => { o.fl = fk.checked ? 1 : 0; edDirty(); }; fk.style.pointerEvents = 'auto'; row('Flicker', fk); }
+    if (sel.k === 'door') {
+        const s2 = document.createElement('select'); s2.style.cssText = 'flex:1;pointer-events:auto;background:#150f08;color:#e8dcc0;max-width:170px'; for (const k of Object.keys(ROOMS).filter((q) => q !== m.id)) { const op = document.createElement('option'); op.value = k; op.textContent = (ROOMS[k].name || k) + ' (' + k + ')'; if (k === o.to) op.selected = true; s2.appendChild(op); } s2.onchange = () => { o.to = s2.value; ED.lastTo = o.to; edDirty(); }; row('Leads to', s2);
+        if (!o.id) { const s3 = document.createElement('select'); s3.style.cssText = 'pointer-events:auto;background:#150f08;color:#e8dcc0'; for (const k of ['N', 'S', 'E', 'W']) { const op = document.createElement('option'); op.value = k; op.textContent = k; if (k === o.tside) op.selected = true; s3.appendChild(op); } s3.onchange = () => { o.tside = s3.value; edDirty(); }; row('Their wall', s3); const tr = ROOMS[o.to], L = tr ? (o.tside === 'N' || o.tside === 'S' ? tr.w : tr.d) : 20; row('Their spot', rng(o.tat || 0, -(L / 2 - 1.7), L / 2 - 1.7, 0.5, (v) => { o.tat = v; })); }
+        const s4 = document.createElement('select'); s4.style.cssText = 'pointer-events:auto;background:#150f08;color:#e8dcc0;max-width:150px'; const none = document.createElement('option'); none.value = ''; none.textContent = 'No lock'; s4.appendChild(none); for (const k of Object.keys(ITEMS).filter((q) => ITEMS[q].type === 'key')) { const op = document.createElement('option'); op.value = k; op.textContent = ITEMS[k].n; if (k === o.lock) op.selected = true; s4.appendChild(op); } s4.onchange = () => { o.lock = s4.value || null; edDirty(); }; row('Locked by', s4);
+        const L2 = o.side === 'N' || o.side === 'S' ? m.w : m.d; row('Position', rng(o.at, -(L2 / 2 - 1.7), L2 / 2 - 1.7, 0.5, (v) => { o.at = v; }));
+    }
+    const bar = modEl('div', 'display:flex;gap:6px;margin-top:6px'); bar.appendChild(sbtn('Duplicate', () => { const L = { prop: m.props, item: m.items, en: m.en, light: m.lights }[sel.k]; if (L && L.length < 400) { const c = JSON.parse(JSON.stringify(o)); c.x = (c.x || 0) + 1; c.z = (c.z || 0) + 1; if (c.x2 != null) { c.x2 += 1; c.z2 += 1; } L.push(c); ED.sel = { k: sel.k, i: L.length - 1 }; edUi(); edDirty(); } })); bar.appendChild(sbtn('Delete', edDelete)); I.appendChild(bar);
+}
+function edBar() {
+    const U = ED.ui, m = ED.m, b = U.bar; b.textContent = ''; const nm = document.createElement('input'); nm.value = m.name; nm.maxLength = 40; nm.style.cssText = 'width:150px;background:#150f08;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:4px 6px;font:700 13px Georgia;pointer-events:auto'; nm.oninput = () => { m.name = mapStr(nm.value, 40) || 'Room'; }; b.appendChild(nm);
+    const step = (lbl, get, set, lo, hi, st) => { const w = modEl('span', 'display:flex;align-items:center;gap:3px;font-size:12px'); w.appendChild(modEl('span', 'color:#c9b27a', lbl)); const v = modEl('b', 'min-width:26px;text-align:center', String(get())); const mk = (t, dl) => { const q = modEl('button', EDCSS + ';padding:2px 7px', t); q.onclick = () => { set(Math.max(lo, Math.min(hi, get() + dl * st))); v.textContent = String(get()); edDirty(); }; return q; }; w.append(mk('-', -1), v, mk('+', 1)); b.appendChild(w); };
+    step('Width', () => m.w, (v) => { m.w = v; }, 6, 60, 2); step('Depth', () => m.d, (v) => { m.d = v; }, 6, 60, 2); step('Height', () => Math.round(m.h * 10) / 10, (v) => { m.h = v; }, 2.6, 9, 0.4);
+    const th = document.createElement('select'); th.style.cssText = 'background:#150f08;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:3px;font:12px Georgia;pointer-events:auto;max-width:110px'; for (const k of Object.keys(THEME)) { const op = document.createElement('option'); op.value = k; op.textContent = k; if (k === m.th) op.selected = true; th.appendChild(op); } th.onchange = () => { m.th = th.value; edDirty(); }; b.appendChild(th);
+    const ck = (lbl, key) => { const l = modEl('label', 'font-size:12px;display:flex;align-items:center;gap:3px;pointer-events:auto'); const c = document.createElement('input'); c.type = 'checkbox'; c.checked = !!m[key]; c.onchange = () => { m[key] = c.checked ? 1 : 0; edDirty(); }; l.append(c, lbl); b.appendChild(l); }; ck('Open sky', 'sky'); ck('Safe room', 'safe');
+    const bt = (t, fn) => { const q = modEl('button', EDCSS, t); q.onclick = fn; b.appendChild(q); return q; };
+    bt('Undo', edUndo); bt('Test play', edTest); bt('Save', () => { edSave(); say('Saved.', 1200); }); bt('Share code', async () => { try { const c = await mapShareCode(m); try { await navigator.clipboard.writeText(c); say('Map code copied.', 1800); } catch (e) { prompt('Copy this map code:', c); } } catch (e) { say('Could not make a code.', 2000); } }); bt('Done', edExit);
+}
+function edSave() { if (!ED.m) return; MAPS[ED.m.id] = ED.m; mapsSave(); }
+function edInput(e) {
+    if (!ED.on) return; const t = e.target; if (t && /INPUT|SELECT|TEXTAREA/.test(t.tagName)) return;
+    if (e.type === 'keyup') { ED.keys[e.code] = false; e.stopImmediatePropagation(); return; }
+    e.stopImmediatePropagation(); if (ED.test) { if (e.code === 'Escape') { e.preventDefault(); edTestEnd(); } else ED.testKeys = 1; if (e.code !== 'Escape') { /* game keys fall through below */ } return; }
+    ED.keys[e.code] = true; const C = ED.cam;
+    if (e.code === 'KeyQ') C.ty -= Math.PI / 2; else if (e.code === 'KeyE') C.ty += Math.PI / 2; else if (e.code === 'Delete' || e.code === 'Backspace') { e.preventDefault(); edDelete(); } else if (e.code === 'Escape') { e.preventDefault(); if (ED.pend) { ED.pend = null; edHint(''); } else { ED.sel = null; edUi(); edMarkers(); } } else if (e.code === 'KeyR' && ED.sel) { const o = edSelObj(); if (o && o.ry != null) { o.ry = (o.ry || 0) + Math.PI / 4; if (o.ry > 3.2) o.ry -= 6.4; edDirty(); edUi(); } } else if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); edUndo(); }
+}
+function edPointer(e) {
+    if (!ED.on || ED.test) return; const el = $('cv'); if (e.type === 'pointerdown') { el.setPointerCapture && el.setPointerCapture(e.pointerId); ED.ptr = ED.ptr || new Map(); ED.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, btn: e.button, t: performance.now() }); ED.pinch = ED.ptr.size === 2 ? edPinchD() : 0; if (ED.ptr.size === 1 && e.button === 0 && ED.tool === 'select') { const g = edGround(e); if (g) { edPick(g); const so = edSelObj(); if (so && ED.sel && ED.sel.k !== 'door') ED.drag = { o: edSelObj(), dx: so.x - g.x, dz: so.z - g.z }; } } e.preventDefault(); e.stopImmediatePropagation(); return; }
+    const p = ED.ptr && ED.ptr.get(e.pointerId);
+    if (e.type === 'pointermove') {
+        if (!p) { const g = edGround(e); if (g && ED.hv) { ED.hv.position.set(edSnap(g.x), 0.05, edSnap(g.z)); } return; }
+        const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+        if (ED.ptr.size === 2) { const d = edPinchD(); if (ED.pinch) ED.cam.dist = Math.max(5, Math.min(60, ED.cam.dist * ED.pinch / d)); ED.pinch = d; const C = ED.cam, k = C.dist * 0.0012; C.x -= (dx * Math.cos(C.yaw) - dy * Math.sin(C.yaw)) * k * 0.5; C.z += (dx * Math.sin(C.yaw) + dy * Math.cos(C.yaw)) * k * 0.5; return; }
+        if (p.btn === 2 || p.btn === 1 || e.shiftKey) { const C = ED.cam, k = C.dist * 0.0022; C.x -= (dx * Math.cos(C.yaw) + dy * Math.sin(C.yaw)) * k; C.z -= (-dx * Math.sin(C.yaw) + dy * Math.cos(C.yaw)) * k; p.moved = 1; return; }
+        if (ED.drag) { const g = edGround(e); if (g) { ED.drag.o.x = Math.max(-ED.m.w / 2 + 0.2, Math.min(ED.m.w / 2 - 0.2, edSnap(g.x + ED.drag.dx))); ED.drag.o.z = Math.max(-ED.m.d / 2 + 0.2, Math.min(ED.m.d / 2 - 0.2, edSnap(g.z + ED.drag.dz))); if (ED.drag.o.x2 != null) { /* walls move by their first end only while dragging; keep their length */ } edMarkers(); p.moved = 1; ED.dragDirty = 1; } return; }
+        if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 6) p.moved = 1; return;
+    }
+    if (e.type === 'pointerup' || e.type === 'pointercancel') {
+        if (!p) return; ED.ptr.delete(e.pointerId); if (ED.drag) { ED.drag = null; if (ED.dragDirty) { ED.dragDirty = 0; edDirty(); } edUi(); }
+        else if (e.type === 'pointerup' && !p.moved && p.btn === 0 && ED.ptr.size === 0 && ED.tool !== 'select') { const g = edGround(e); if (g && Math.abs(g.x) < ED.m.w / 2 + 2 && Math.abs(g.z) < ED.m.d / 2 + 2) { edPlace(g); edUi(); edBar(); edMarkers(); } }
+        e.preventDefault(); e.stopImmediatePropagation();
+    }
+}
+function edPinchD() { const a = [...ED.ptr.values()]; return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }
+function edWheel(e) { if (!ED.on || ED.test) return; e.preventDefault(); ED.cam.dist = Math.max(5, Math.min(60, ED.cam.dist * (1 + Math.sign(e.deltaY) * 0.1))); }
+function edTest() { document.body.classList.remove('mapedit'); ED.test = true; if (ED.mk) ED.mk.visible = false; edSave(); mapApply(ED.m); mapLinks(); ED.ui.root.style.display = 'none'; const sp = ED.m.spawn || { x: 0, z: 0 }; G.room = ED.m.id; loadRoom(ED.m.id, null, { x: sp.x, z: sp.z, rot: 0 }); UI.mode = null; $('hud').classList.remove('hide'); PL.g.visible = true; ED.testHint = say('Test play: press Esc to go back to the editor.', 3000); }
+function edTestEnd() { document.body.classList.add('mapedit'); ED.test = false; if (ED.mk) ED.mk.visible = true; UI.mode = 'edit'; $('hud').classList.add('hide'); ED.ui.root.style.display = ''; edRebuild(); }
+function edOpen(m) {
+    if (ED.on) return; ED.m = m; ED.hist = null; ED.on = true; ED.test = false; ED.sel = null; ED.tool = 'select'; ED.pend = null; ED.ptr = new Map(); ED.prev = { room: G.room, x: PL.x, z: PL.z, started: G.started, ui: UI.mode };
+    try { if (!G.started) { startNew(); } } catch (e) { /* new */ } ED.wasStarted = ED.prev.started; ED.cam.x = 0; ED.cam.z = 0; ED.cam.dist = Math.max(14, Math.max(m.w, m.d) * 1.1);
+    const root = modEl('div', 'position:fixed;inset:0;z-index:9500;pointer-events:none;font-family:Georgia,serif'); const bar = modEl('div', 'position:absolute;left:0;right:0;top:0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;background:rgba(10,7,4,.8);border-bottom:1px solid #4a3d28;pointer-events:auto'); const left = modEl('div', 'position:absolute;left:6px;top:46px;bottom:34px;width:min(190px,34vw);overflow:auto;padding:6px;background:rgba(10,7,4,.78);border:1px solid #4a3d28;border-radius:8px;pointer-events:auto'); const right = modEl('div', 'position:absolute;right:6px;top:46px;width:min(230px,40vw);max-height:60%;overflow:auto;padding:6px 8px;background:rgba(10,7,4,.78);border:1px solid #4a3d28;border-radius:8px;pointer-events:auto'); const hint = modEl('div', 'position:absolute;left:0;right:0;bottom:0;padding:5px 10px;background:rgba(10,7,4,.8);font-size:12px;color:#c9b27a;pointer-events:none;text-align:center');
+    ED.defHint = 'Drag with the right mouse button (or two fingers) to move the view. Wheel or pinch to zoom. Q / E turn the view. R turns the selected object. Delete removes it. Ctrl+Z undoes.'; hint.textContent = ED.defHint; root.append(bar, left, right, hint); document.body.appendChild(root); ED.ui = { root, bar, tools: left, insp: right, hint };
+    for (const ev of ['keydown', 'keyup']) window.addEventListener(ev, edInput, true); const cv = $('cv'); for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) cv.addEventListener(ev, edPointer, true); cv.addEventListener('wheel', edWheel, { passive: false }); cv.addEventListener('contextmenu', ED.cm = (e) => e.preventDefault());
+    document.body.classList.add('mapedit'); { const st = document.createElement('style'); st.id = 'mapedcss'; st.textContent = 'body.mapedit #nxcard,body.mapedit #h3card,body.mapedit #h3live,body.mapedit #msg{display:none!important}'; document.head.appendChild(st); }
+    UI.mode = 'edit'; $('hud').classList.add('hide'); edBar(); edUi(); edRebuild(); edMarkers();
+}
+function edExit() {
+    if (!ED.on) return; edSave(); ED.on = false; clearTimeout(edDirty.t); for (const ev of ['keydown', 'keyup']) window.removeEventListener(ev, edInput, true); const cv = $('cv'); for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) cv.removeEventListener(ev, edPointer, true); cv.removeEventListener('wheel', edWheel); cv.removeEventListener('contextmenu', ED.cm);
+    if (ED.mk) { scene.remove(ED.mk); ED.mk.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); ED.mk = null; } ED.ui.root.remove(); ED.ui = null; document.body.classList.remove('mapedit'); { const st = $('mapedcss'); if (st) st.remove(); } if (RM) RM.dbgCam = null; PL.g.visible = true; UI.mode = null; mapsApplyAll();
+    const pv = ED.prev; if (!pv.started) { try { toTitle(); } catch (e) { /* title */ } } else { $('hud').classList.remove('hide'); try { loadRoom(ROOMS[pv.room] ? pv.room : Object.keys(ROOMS)[0], null, { x: pv.x, z: pv.z, rot: 0 }); } catch (e) { console.warn(e); } } ED.m = null; try { modOpen(); MODUI.tab = 'map'; modRender(); } catch (e) { /* mod kit */ }
+}
+{   // the build camera and the frame hook
+    const _bg = bgSync; bgSync = function () { try { if (ED.on && !ED.test) edFrame(1 / 60); } catch (e) { /* editor */ } return _bg.apply(this, arguments); };
+    const _lr = loadRoom; loadRoom = function (id, ...a) { if (!ROOMS[id]) { console.warn('missing room', id); id = Object.keys(ROOMS)[0]; } return _lr.call(this, id, ...a); };
+}
+// ---------- Mod Kit tab
+function modTabMap(body) {
+    body.appendChild(modEl('div', 'font-size:13px;color:#c9b27a;margin:0 0 8px', 'Build rooms in 3D, link them to the rest of the level with doors, or replace a room of this game to finish a floor by hand. Share a room as a code and paste a friend\'s code to get theirs. Maps are kept on this device.'));
+    const top = modEl('div', 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'); const mk = (t, fn) => { const b = modEl('button', B_CSS, t); b.onclick = fn; top.appendChild(b); };
+    mk('New room', () => { const m = mapBlank('New room'); const first = Object.keys(ROOMS)[0]; if (first) m.doors.push({ side: 'W', at: 0, to: first, tside: 'E', tat: 0, lock: null, label: 'Door' }); MAPS[m.id] = m; mapsSave(); modClose(); edOpen(m); });
+    mk('Paste a code…', async () => { const c = prompt('Paste a map code (it starts with HIMAP1:)'); if (!c) return; try { const m = await mapFromCode(c); MAPS[m.id] = m; mapsSave(); mapsApplyAll(); modRender(); say('Map added. Open it and add a door to link it in.', 2800); } catch (e) { alert('That code could not be used: ' + (e && e.message || e)); } });
+    body.appendChild(top);
+    const card = modEl('div', CARD); card.appendChild(modEl('div', 'font:700 14px Georgia,serif;margin-bottom:4px', 'Your maps')); const list = Object.values(MAPS); if (!list.length) card.appendChild(modEl('div', 'font-size:13px;color:#8a7c5c', 'None yet.'));
+    for (const m of list) {
+        const r = modEl('div', 'display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #2a2014;flex-wrap:wrap'); r.appendChild(modEl('span', 'flex:1;min-width:140px;font-size:13px;color:' + (m.on ? '#e8dcc0' : '#8a7c5c'), m.name + (m.replaces ? '  (replaces ' + m.replaces + ')' : '') + '  ' + m.w + 'x' + m.d));
+        const b = (t, fn) => { const q = modEl('button', B_CSS, t); q.onclick = fn; r.appendChild(q); }; b('Edit', () => { modClose(); edOpen(m); }); b(m.on ? 'On' : 'Off', () => { m.on = m.on ? 0 : 1; mapsSave(); if (!m.on && m.replaces) { mapRestore(m.id); MAPS[m.id] = m; m.on = 0; mapsSave(); } else mapsApplyAll(); modRender(); }); b('Share', async () => { try { const c = await mapShareCode(m); try { await navigator.clipboard.writeText(c); say('Map code copied.', 1800); } catch (e) { prompt('Copy this map code:', c); } } catch (e) { alert('Could not make a code.'); } });
+        b('Delete', () => { if (!confirm('Delete "' + m.name + '"?')) return; if (m.replaces) mapRestore(m.id); else { delete MAPS[m.id]; mapsSave(); if (ROOMS[m.id] && ROOMS[m.id].custom) { delete ROOMS[m.id]; delete DECOR[m.id]; } mapLinks(); } modRender(); }); card.appendChild(r);
+    }
+    body.appendChild(card);
+    const c2 = modEl('div', CARD); c2.appendChild(modEl('div', 'font:700 14px Georgia,serif;margin-bottom:4px', 'Finish a room of this game by hand')); c2.appendChild(modEl('div', 'font-size:12px;color:#c9b27a;margin-bottom:6px', 'Pick a room and it opens in the editor with everything in it. Turn the map Off (or Delete it) to get the original room back.'));
+    const sel = document.createElement('select'); sel.style.cssText = 'background:#150f08;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:4px;max-width:100%;font:13px Georgia'; for (const k of Object.keys(ROOMS)) { if (ROOMS[k].custom && !MAPS[k]?.replaces) continue; const op = document.createElement('option'); op.value = k; op.textContent = (ROOMS[k].name || k) + '  (' + k + ')'; sel.appendChild(op); } c2.appendChild(sel);
+    const go = modEl('button', B_CSS + ';margin-left:8px', 'Edit this room'); go.onclick = () => { const id = sel.value; if (!id) return; let m = MAPS[id]; if (!m || !m.replaces) { m = mapFromRoom(id); if (!m) return; } m.on = 1; MAPS[id] = m; mapsSave(); modClose(); edOpen(m); }; c2.appendChild(go); body.appendChild(c2);
+}
+window.__map = { ED, MAPS: () => MAPS, mapClean, mapToDef, mapApply, mapsApplyAll, mapBlank, mapFromRoom, mapShareCode, mapFromCode, edOpen, edExit, edPlace, edRebuild, mapsLoad, mapsSave, mapLinks, edTest, edTestEnd, edUndo };
+mapsLoad(); setTimeout(() => { try { mapsApplyAll(); } catch (e) { console.warn('maps', e); } }, 0);
+
+/* MAPEDIT:END */
 /* ================= HARBOR INN 2: RESIDENT EVIL NX (Oymyakon-13) =================
  * Injected into a copy of Survivor.html by tools/build_hi2.py. Everything Harbor Inn 1 built (menus, co-op, saves, weapons, enemies) is reused;
  * this block throws away the inn and lays out the facility from Andre Coffey's fan book. Chapters are separate sections below: add a new
@@ -4239,8 +4530,8 @@ function modClose() { if (MODUI.el) { MODUI.el.remove(); MODUI.el = null; } try 
 function modRender() {
     const ov = MODUI.el; if (!ov) return; ov.textContent = ''; const wrap = modEl('div', 'width:min(860px,100%)'); ov.appendChild(wrap);
     const top = modEl('div', 'display:flex;align-items:center;gap:10px;margin-bottom:10px'); top.appendChild(modEl('div', 'font:700 22px Georgia,serif;flex:1;letter-spacing:.06em', 'MOD KIT')); const x = modEl('button', B_CSS, 'Close'); x.onclick = modClose; top.appendChild(x); wrap.appendChild(top);
-    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['chr', 'Characters'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
-    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, item: modTabItem, chr: modTabChr, stk: modTabStk, snd: modTabSnd, bal: modTabBal })[MODUI.tab](body);
+    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['chr', 'Characters'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup'], ['map', 'Maps']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
+    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, item: modTabItem, chr: modTabChr, stk: modTabStk, snd: modTabSnd, bal: modTabBal, map: modTabMap })[MODUI.tab](body);
 }
 const B_CSS = 'background:#2a2014;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:5px 11px;font:13px Georgia,serif;cursor:pointer';
 const CARD = 'background:#150f08;border:1px solid #4a3d28;border-radius:8px;padding:10px 12px;margin-bottom:9px';
@@ -5357,6 +5648,7 @@ function menuOpts(p) {
     const L = el('div'), els = []; const row = (t, fn) => { const b = btn(t, fn); b.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:.4em'; L.appendChild(b); els.push(b); };
     row('Controls: ' + (OPT.ctrl === 'tank' ? 'Classic tank controls' : 'Camera-relative (modern)'), () => { OPT.ctrl = OPT.ctrl === 'tank' ? 'modern' : 'tank'; saveOpt(); renderMenu(); });
     row('Picture: ' + (OPT.res === 1 ? 'PlayStation (320x240)' : 'Sharper (480x360)'), () => { OPT.res = OPT.res === 1 ? 1.5 : 1; saveOpt(); sizeR(); renderMenu(); });
+    row('Controller rumble: ' + (RUMBLE.lvl === 0 ? 'Off' : RUMBLE.lvl < 1 ? 'Low' : 'Normal'), () => { RUMBLE.lvl = RUMBLE.lvl === 1 ? 0.5 : RUMBLE.lvl === 0.5 ? 0 : 1; try { localStorage.setItem('oasis.rumble', RUMBLE.lvl === 0 ? 'off' : RUMBLE.lvl < 1 ? 'low' : 'normal'); } catch (e) { /* storage */ } padRumble(1, 1, 350); renderMenu(); });
     row('Film grain: ' + (OPT.grain ? 'On' : 'Off'), () => { OPT.grain = OPT.grain ? 0 : 1; $('grain').style.display = OPT.grain ? '' : 'none'; saveOpt(); renderMenu(); });
     row('Scanlines: ' + ['Off', 'Light', 'Strong'][OPT.scan | 0], () => { OPT.scan = ((OPT.scan | 0) + 1) % 3; applyScan(); saveOpt(); renderMenu(); });
     row('Pre-rendered backgrounds: ' + (OPT.bg ? 'On' : 'Off') + '  (' + Object.keys(BG.tex).length + ' loaded)', () => { OPT.bg = OPT.bg ? 0 : 1; saveOpt(); renderMenu(); });
@@ -5765,7 +6057,7 @@ function stkRoomSetup(id) {
         window.__ps = PS; PS.go = go;
     }
     document.addEventListener('pointerdown', () => { auInit(); if (UI.mode === 'title' && !MUS.cur && PS.musOk) musPlay('title'); }, { once: false });
-    window.__sv = { camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
+    window.__sv = { padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
 })();
 /* ---------- the item screen, laid out like Resident Evil 2: portrait + ECG, equipped weapon, 8 slots, description, command list ---------- */
 /* RE_ICONS lives at the top of the module (item pictures reset it while the game is still booting) */

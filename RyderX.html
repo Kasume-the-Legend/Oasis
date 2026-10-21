@@ -920,7 +920,14 @@ class Racer {
         const lapNow = Math.floor(this.dist / T.L); if (lapNow > this.lap) { this.lap = lapNow; R.ev('lap', this); } else if (lapNow < this.lap) this.lap = lapNow;
         // ---- walls
         T.at(this.s, F); const hw = F.w / 2 - 1.3;
-        if (!grinding && Math.abs(this.u) > hw) { const sg = Math.sign(this.u); this.u = sg * hw; this.v *= 1 - 0.18 * dt; if (Math.sign(Math.sin(this.phiV)) === sg || Math.abs(this.phiV) < 0.01) { const sn = Math.abs(Math.sin(this.phiV)), hit = sn * this.v; this.phiV = -this.phiV * 0.2; this.phi = Math.min(Math.abs(this.phi), 0.12) * Math.sign(this.phi || 0) * 0.5; this.v *= 1 - 0.14 * sn; if (hit > 8 && this.wallCool <= 0) { this.wallCool = 0.35; R.ev('wall', this, hit); } } }   // glancing contact scrubs only a little: you slide along the wall instead of sticking
+        if (!grinding && Math.abs(this.u) > hw) { const sg = Math.sign(this.u); this.u = sg * hw; this.v *= 1 - 0.06 * dt; this.u -= sg * 0.25 * dt; if (Math.sign(Math.sin(this.phiV)) === sg || Math.abs(this.phiV) < 0.01) { const sn = Math.abs(Math.sin(this.phiV)), hit = sn * this.v; this.phiV = -this.phiV * 0.2; this.phi = Math.min(Math.abs(this.phi), 0.12) * Math.sign(this.phi || 0) * 0.5; this.v *= 1 - 0.14 * sn; if (hit > 8 && this.wallCool <= 0) { this.wallCool = 0.35; R.ev('wall', this, hit); } } }   // glancing contact scrubs only a little: you slide along the wall instead of sticking
+        // ---- never stay pinned: against the wall (or on a rail) and barely moving for a moment? slide back toward the middle of the road with a little push
+        { if (this.wdD == null) { this.wdD = this.dist; this.wdT = 0; this.pinT = 0; }
+          const pinned = grinding ? this.v < 9 : (Math.abs(this.u) > hw - 0.7 && !air);
+          this.wdT += dt;
+          if (!pinned) { this.wdT = 0; this.wdD = this.dist; this.pinT = 0; }
+          else if (this.wdT >= 0.4) { const slow = (this.dist - this.wdD) < 2.4 || this.v < 10; this.wdT = 0; this.wdD = this.dist; this.pinT = slow ? this.pinT + 0.4 : 0; }
+          if (this.pinT >= 0.8 && !stunned) { if (grinding) this.forceOut = 1; this.u -= Math.sign(this.u || 1) * Math.min(Math.abs(this.u), 9 * dt); this.phi *= 0.4; this.phiV *= 0.4; this.v = Math.max(this.v, 22); this.turboT = Math.max(this.turboT, 0.4); if (this.pinT >= 1.6) { this.pinT = 0; } } }
         // ---- vertical
         const ng = T.ground(this.s, this.u) + (this.T.hoverBase || 0); const ah = -GRAV * cosP - this.v * this.v * KP * 0.92;
         if (grinding) { this.h = ng + this.grind.h; this.vh = 0; this.gr = ng; this.vhG = 0; this.air = false; }
@@ -941,7 +948,7 @@ class Racer {
             this.gBal += (this.gBal * 1.15 + Math.sin(this.gT * 2.1 + this.id * 1.7) * 0.55 + 2.6 * st) * dt; this.gBal = clamp(this.gBal, -1.2, 1.2);
             this.gScore += dt * (80 + 60 * this.gT); this.airm = Math.min(100, this.airm + 8 * dt); this.u = rl.u;
             const dEnd = T.relS(this.s, rl.s) - rl.len; let out = 0;
-            if (Math.abs(this.gBal) > 1) out = 'bail'; else if (inp.jump && this.gArm) out = 'jump'; else if (dEnd > 0) out = 'end';
+            if (Math.abs(this.gBal) > 1) out = 'bail'; else if (inp.jump && this.gArm) out = 'jump'; else if (dEnd > 0) out = 'end'; if (this.forceOut) { out = 'end'; this.forceOut = 0; }
             if (out) {
                 const t = this.gT, sc = Math.round(this.gScore); this.grind = null; this.railCool = out === 'jump' ? 1.1 : 0.7; this.trickScore += sc;
                 if (out === 'bail') { this.stun = 0.6; this.v *= 0.55; this.vh = 2.5; this.phi = 0; this.phiV = 0; R.ev('bail', this, t); }
@@ -1017,7 +1024,7 @@ function racerCollide(R, dt) {
         const dx = ds / 3.4, dy = du / 2.0, d2 = dx * dx + dy * dy; if (d2 >= 1) continue;
         const nx = Math.abs(dx) > Math.abs(dy) ? 0 : Math.sign(dy || (Math.random() - 0.5)); const push = (1 - Math.sqrt(d2)) * 4;
         // lateral shove always, longitudinal bump slows the rear one
-        a.u -= nx * push * 0.5 * dt * 12; b.u += nx * push * 0.5 * dt * 12;
+        { const wl = (r) => { const FF = r.F; return Math.abs(r.u) > (FF && FF.w ? FF.w / 2 - 3.2 : 99); }; const fa = b.remote ? 1 : 0.5, fb = a.remote ? 1 : 0.5; if (!a.remote && !(wl(a) && Math.sign(-nx) === Math.sign(a.u))) a.u -= nx * push * fa * dt * 12; if (!b.remote && !(wl(b) && Math.sign(nx) === Math.sign(b.u))) b.u += nx * push * fb * dt * 12; }
         if (Math.abs(dx) >= Math.abs(dy)) { const rear = ds > 0 ? a : b, front = ds > 0 ? b : a; if (rear.v > front.v) { const dv = (rear.v - front.v) * 0.5; rear.v -= dv * 0.35; front.v += dv * 0.25; } }
         for (const [x, y] of [[a, b], [b, a]]) { if (x.ty.smash && x.v > 34 && y.stun <= 0 && x.hitCool !== undefined ? x.hitCool <= 0 : (x.ty.smash && x.v > 34 && y.stun <= 0)) { x.hitCool = 1.2; y.stun = 0.5; y.v *= 0.6; y.phi += (Math.random() - 0.5) * 0.7; R.ev('shove', x, y); } }
         if (a.hitCool > 0) a.hitCool -= dt; if (b.hitCool > 0) b.hitCool -= dt;
@@ -1125,9 +1132,20 @@ function startRace(cfg) {
     showMsg('', 0); G.lastNum = 0; $('board').innerHTML = (BTYPES[SAVE.board.type].name + ' · ' + (bikeSel() ? bikeSel().name : variantFor(SAVE.board.color).name)).toUpperCase();
 }
 
+/* controller rumble: dual-rumble through the Gamepad API (Chrome/Edge/Opera; skipped where unsupported). Options > RUMBLE: LOW / NORMAL / OFF */
+const RUMBLE = { last: 0 };
+function padRumble(strong, weak, ms) {
+    try {
+        const lvl = SAVE && SAVE.opt && SAVE.opt.rumble != null ? SAVE.opt.rumble : 1; if (!lvl || document.hidden || !navigator.getGamepads) return; const now = performance.now(); if (now - RUMBLE.last < 30 && strong <= (RUMBLE.s || 0)) return;
+        for (const q of navigator.getGamepads()) { if (!q || !q.connected) continue; const a = q.vibrationActuator || (q.hapticActuators && q.hapticActuators[0]); if (!a) continue; RUMBLE.last = now; RUMBLE.s = strong; const st = Math.min(1, strong * lvl), wk = Math.min(1, weak * lvl);
+            if (a.playEffect) a.playEffect('dual-rumble', { startDelay: 0, duration: Math.min(1500, ms), strongMagnitude: st, weakMagnitude: wk }); else if (a.pulse) a.pulse(st, ms); break; }
+    } catch (e) { /* no rumble */ }
+}
+const RX_RUMBLE = { pad: [0.5, 0.6, 140], boost: [0.5, 0.5, 160], minit: [0.4, 0.3, 110], jump: [0.15, 0.25, 60], grindstart: [0.2, 0.5, 120], bail: [0.9, 0.6, 220], trickland: [0.6, 0.4, 150], sloppy: [0.5, 0.2, 100], smash: [0.8, 0.5, 160], crash: [1, 0.9, 280], shove: [0.8, 0.7, 200], wall: [0.7, 0.35, 110], lap: [0.2, 0.4, 90], ring: [0.15, 0.4, 60], driftstart: [0.1, 0.3, 70], bump: [0.4, 0.2, 90], grindend: [0.2, 0.3, 80] };
+function rxRumble(type, d) { let v = RX_RUMBLE[type]; if (type === 'land') { const k = Math.max(0.12, Math.min(1, (d || 0) / 26)); v = [k, k * 0.6, 60 + k * 160]; } else if (type === 'launch') { if (!(d > 10)) return; v = [0.3, 0.5, 120]; } if (v) padRumble(v[0], v[1], v[2]); }
 function raceEvent(type, r, d) {
     const pl = r === G.player; const T = G.T;
-    if (pl) AUD.ev(type, d);
+    if (pl) { AUD.ev(type, d); rxRumble(type, d); } else if (type === 'shove' && d === G.player) rxRumble('shove', 0);
     switch (type) {
         case 'ring': { if (pl) { G.flash = Math.max(G.flash, 0.05); } for (let i = 0; i < 18; i++) { const a = Math.random() * TAU; const F = r.F; T.pos(d.s, d.u, d.h, _p3, T.at(d.s, {})); emit(_p3.x, _p3.y, _p3.z, Math.cos(a) * 9 * Math.random(), (Math.random() - 0.3) * 8, Math.sin(a) * 9 * Math.random(), 0.6, 1, 0.9, 0.3, 4); } if (pl) popup('+' + (d.high ? 10 : 6) + ' AIR', '#7dffb0', 0.5); break; }
         case 'pad': if (pl) { G.shake = Math.max(G.shake, 0.3); popup('BOOST!', '#ffd23f', 0.6); } break;
@@ -1416,8 +1434,8 @@ const UI = {
         const slider = (label, key, min, max, step) => { const r = el('div', 'opt'); r.innerHTML = '<span>' + label + '</span>'; const i = el('input', 'nv'); i.type = 'range'; i.min = min; i.max = max; i.step = step; i.value = o[key]; i.oninput = () => { o[key] = +i.value; AUD.setVol(); if (key === 'bloom') { G.bloom.strength = (G.T ? G.T.theme.bloom : 0.5) * o.bloom; G.bloom.enabled = o.bloom > 0.01; } save(); }; r.appendChild(i); s.appendChild(r); };
         const pills = (label, key, vals) => { const r = el('div', 'opt'); r.innerHTML = '<span>' + label + '</span>'; const p = el('span'); vals.forEach(([t, v]) => p.appendChild(this.pill(t, (o[key] == null ? vals[1][1] : o[key]) === v, () => { o[key] = v; save(); this.options(); }))); r.appendChild(p); s.appendChild(r); };
         slider('MASTER', 'vol', 0, 1, 0.05); slider('MUSIC', 'mus', 0, 1, 0.05); slider('EFFECTS', 'sfx', 0, 1, 0.05); slider('GLOW', 'bloom', 0, 1.5, 0.05); slider('CAMERA SHAKE', 'shake', 0, 1, 0.1);
-        pills('LAPS', 'laps', [1, 2, 3, 4, 5].map((n) => [n, n])); pills('RIVALS', 'diff', [['EASY', 0], ['NORMAL', 1], ['HARD', 2]]); pills('RIVAL CAST', 'cast', [['DEFAULT', 0], ['MY CHARACTERS', 1]]); pills('STEER ASSIST', 'steer', [['HIGH', 0.5], ['NORMAL', 1], ['LOW', 1.5]]); pills('THROTTLE', 'thr', [['AUTO', 0], ['MANUAL (R2 / E)', 1]]); pills('GAUGE', 'gauge', [['ON', 1], ['OFF', 0]]); pills('FRAME CAP', 'fps', [['60', 0], ['30 (COOLER)', 1]]); pills('HUD', 'hud', [['ON', 1], ['OFF', 0]]);
-        const m = el('div', 'menu'); m.style.marginTop = '1.6vmin'; m.append(this.btn('RESET SAVE DATA', () => { if (confirm('Erase best times, ghosts and progress?')) { const keep = SAVE.opt; Object.assign(SAVE, JSON.parse(JSON.stringify(DEF_SAVE))); SAVE.opt = keep; save(true); this.options(); } }, 'sm'), this.btn('BACK', () => this.title())); s.appendChild(m); this.show(s, () => this.title(), 'options');
+        pills('LAPS', 'laps', [1, 2, 3, 4, 5].map((n) => [n, n])); pills('RIVALS', 'diff', [['EASY', 0], ['NORMAL', 1], ['HARD', 2]]); pills('RIVAL CAST', 'cast', [['DEFAULT', 0], ['MY CHARACTERS', 1]]); pills('STEER ASSIST', 'steer', [['HIGH', 0.5], ['NORMAL', 1], ['LOW', 1.5]]); pills('THROTTLE', 'thr', [['AUTO', 0], ['MANUAL (R2 / E)', 1]]); pills('GAUGE', 'gauge', [['ON', 1], ['OFF', 0]]); pills('RUMBLE', 'rumble', [['LOW', 0.5], ['NORMAL', 1], ['OFF', 0]]); pills('FRAME CAP', 'fps', [['60', 0], ['30 (COOLER)', 1]]); pills('HUD', 'hud', [['ON', 1], ['OFF', 0]]);
+        const m = el('div', 'menu'); m.style.marginTop = '1.6vmin'; m.append(this.btn('TEST RUMBLE', () => padRumble(1, 1, 450), 'sm'), this.btn('RESET SAVE DATA', () => { if (confirm('Erase best times, ghosts and progress?')) { const keep = SAVE.opt; Object.assign(SAVE, JSON.parse(JSON.stringify(DEF_SAVE))); SAVE.opt = keep; save(true); this.options(); } }, 'sm'), this.btn('BACK', () => this.title())); s.appendChild(m); this.show(s, () => this.title(), 'options');
     },
     pause() {
         const s = el('div', 'scr'); s.style.background = 'rgba(3,6,20,.6)'; s.innerHTML = '<h2>Paused</h2>'; const m = el('div', 'menu');
@@ -1614,6 +1632,6 @@ function oasisDefaults() { try { if (!SAVE.pickRider && AV.on) SAVE.board.rider 
     const lf = $('loadf'); lf.style.width = '15%';
     try { initGL(); lf.style.width = '40%'; } catch (e) { $('load').innerHTML = '<div class="hint">Ryder X needs WebGL. ' + (e && e.message || '') + '</div>'; return; }
     setTimeout(() => { try { rivalLoad(); } catch (e) { /* roster */ } try { bikeLoad(); } catch (e) { /* bikes */ } }, 2500); G.menuTrack = 0; setTimeout(() => { try { menuScene(0); lf.style.width = '85%'; UI.title(); } catch (e) { console.error(e); window.__bootErr = String(e && e.stack || e); } $('load').style.opacity = 0; setTimeout(() => { $('load').style.display = 'none'; }, 600); requestAnimationFrame(frame); avBoot().then(() => { oasisDefaults(); if (G.mode === 'menu') { try { rebuildMenuBoard(); } catch (e) { /* menu not ready */ } if (UI.cur === 'garage') UI.garage(); } }); }, 60);
-    window.__rx = { plainModel, avLoad, bikeLoad, RXB, updateCamera, camSnap, placeVisual, stepRace, aiInput, Racer, G, UI, IN, AUD, SAVE, TRACKS, Track, startRace, menuScene, endRace, togglePause, BTYPES, AV, RIV, NET, netHost, netJoin, netStart };
+    window.__rx = { padRumble, raceEvent, RUMBLE, plainModel, avLoad, bikeLoad, RXB, updateCamera, camSnap, placeVisual, stepRace, aiInput, Racer, G, UI, IN, AUD, SAVE, TRACKS, Track, startRace, menuScene, endRace, togglePause, BTYPES, AV, RIV, NET, netHost, netJoin, netStart };
 })();
 </script></body></html>

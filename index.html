@@ -4271,6 +4271,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 }
                 case 'kc': { try { kcOnMsg(from, m); } catch (e) { console.warn('kitchen message', e); } break; }
                 case 'hugq': case 'hugy': { try { hugMsg(from, m); } catch (e) { console.warn('hug', e); } break; }
+                case 'hc': { try { hugFitOn(from, m); } catch (e) { /* fit */ } break; }
                 case 'wxs': { try { wxOnShare(from, m); } catch (e) { console.warn('studio weather', e); } break; }
                 case 'wxq': { try { wxOnQ(from, m); } catch (e) { /* none */ } break; }
                 case 'afk': { const ap = peers.get(from); if (ap && ap.actor) afkSet(ap.actor, m.on === 1 || m.on === true); break; }
@@ -13507,6 +13508,16 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             waist: { u: [0.1, -0.6, 0.8], l: [-0.88, -0.1, 0.5], lean: 0.14, hy: -0.3, hr: -0.1 }
         };
         function hugRole(a) { return a.gender === 'female' ? 'neck' : 'waist'; }
+        /* ---- Hug fit (like the bike fitting): spacing between you and your partner, and where your hands sit. Saved on this device and sent to your partner so they see your fit. ---- */
+        const HUG_LS = 'oasis.hug.v1', HUGC_DEF = { d: 0.36, up: 0, fwd: 0, wrap: 0, hy: 0 };
+        const hugClean = (c) => { c = c && typeof c === 'object' ? c : {}; const f = (v, lo, hi, d) => (Number.isFinite(+v) && v !== null && v !== '' ? Math.max(lo, Math.min(hi, +v)) : d); return { d: f(c.d, 0.2, 0.9, 0.36), up: f(c.up, -0.6, 0.6, 0), fwd: f(c.fwd, -0.6, 0.6, 0), wrap: f(c.wrap, -0.6, 0.6, 0), hy: f(c.hy, -0.5, 0.5, 0) }; };
+        const HUGC = hugClean((() => { try { return JSON.parse(localStorage.getItem(HUG_LS) || '{}'); } catch (e) { return {}; } })()); HUG.dist = HUGC.d;
+        const hugSave = () => { try { localStorage.setItem(HUG_LS, JSON.stringify(HUGC)); } catch (e) { /* storage */ } };
+        let hugSendT = 0; const hugBroadcast = () => { clearTimeout(hugSendT); hugSendT = setTimeout(() => { try { net && net.send({ t: 'hc', c: hugClean(HUGC) }); } catch (e) { /* offline */ } }, 250); };
+        function hugSpace() {   // move me to the chosen distance from my partner, facing them
+            const a = localActor; if (!a || !a.hugWith) return; const pa = hugActor(a.hugWith); if (!pa) return; const lp = a.group.position, pp = pa.group.position; let dx = lp.x - pp.x, dz = lp.z - pp.z; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+            lp.set(pp.x + dx * HUGC.d, lp.y, pp.z + dz * HUGC.d); a.group.rotation.y = Math.atan2(-dx, -dz); try { playerVelocity.set(0, 0, 0); } catch (e) { /* velocity */ }
+        }
         /* ---------- Blitzball class: Wakka's stance, five emotes and a ball that follows the hand ---------- */
         const _blq1 = new THREE.Quaternion(), _blq2 = new THREE.Quaternion(), _blr = new THREE.Vector3(), _bld = new THREE.Vector3(), _blw = new THREE.Vector3();
         function blzLeg(U, L, side, d1, d2, e, f) {   // upper leg and shin by direction (x outward, y up, z forward), like hugArm does for arms
@@ -13586,10 +13597,11 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         setInterval(() => { try { if (localActor && localActor.blitz !== (BLZ.on ? 1 : 0)) localActor.blitz = BLZ.on ? 1 : 0; if (BLZ.on && net) net.send({ t: 'blz', on: 1 }); } catch (e) { /* ignore */ } }, 4000);
         window.__blz = BLZ; BLZ.set = blzSet;
         function hugPose(a, p, e, f) {
-            const b = a.bones, P = HUG_POSE[hugRole(a)]; if (!b) return;
-            hugArm(b, 1, P.u, P.l, e, f); hugArm(b, -1, [P.u[0], P.u[1] - 0.03, P.u[2]], [P.l[0], P.l[1] - 0.08, P.l[2] - 0.06], e, f);
+            const b = a.bones, P = HUG_POSE[hugRole(a)]; if (!b) return; const C = a === localActor ? HUGC : (a.hugc || HUGC_DEF);
+            const U = [P.u[0] + C.wrap, P.u[1] + C.up, P.u[2] + C.fwd], Lw = [P.l[0] + C.wrap * 0.5, P.l[1] + C.up * 0.7, P.l[2] + C.fwd * 0.8];
+            hugArm(b, 1, U, Lw, e, f); hugArm(b, -1, [U[0], U[1] - 0.03, U[2]], [Lw[0], Lw[1] - 0.08, Lw[2] - 0.06], e, f);
             if (b.spine) b.spine.rotation.x += P.lean * e * f; if (b.chest) b.chest.rotation.x += P.lean * 0.5 * e * f;
-            if (b.head) { b.head.rotation.y += P.hy * e; b.head.rotation.z += P.hr * e * f; }
+            if (b.head) { b.head.rotation.y += (P.hy + C.hy) * e; b.head.rotation.z += P.hr * e * f; }
             p.happy = Math.max(p.happy || 0, 0.7 * e); p.legL *= 0.2; p.legR *= 0.2;
         }
         const hugActor = (id) => { const q = peers.get(id); return q && q.actor; };
@@ -13618,21 +13630,40 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const iLead = meMale !== thMale ? meMale : iAsked;   // a man and a woman: he stays, she steps in; otherwise whoever asked stays
             localActor.hugWith = pid;
             if (iLead) { localActor.group.rotation.y = Math.atan2(pp.x - lp.x, pp.z - lp.z); }
-            else { let dx = lp.x - pp.x, dz = lp.z - pp.z; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L; lp.set(pp.x + dx * HUG.dist, lp.y, pp.z + dz * HUG.dist); localActor.group.rotation.y = Math.atan2(-dx, -dz); }
+            else { let dx = lp.x - pp.x, dz = lp.z - pp.z; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L; lp.set(pp.x + dx * HUGC.d, lp.y, pp.z + dz * HUGC.d); localActor.group.rotation.y = Math.atan2(-dx, -dz); }
             try { playerVelocity.set(0, 0, 0); } catch (e) { /* velocity */ }
-            localActor.playEmote('hug'); net && net.send({ t: 'emote', name: 'hug' }); sysChat('You are hugging ' + (pa.name || 'them') + '. Walk away to let go.');
+            localActor.playEmote('hug'); net && net.send({ t: 'emote', name: 'hug' }); hugBroadcast(); sysChat('You are hugging ' + (pa.name || 'them') + '. Walk away to let go.');
         }
         function hugMsg(from, m) {
             if (!m || m.to !== me.id) return;
             if (m.t === 'hugq') { if (localActor.emote === 'hug') return; hugToast(from); sysChat((peers.get(from) || {}).name + ' wants to hug you.'); }
             else if (m.t === 'hugy') { hugBegin(from, true); }
         }
+        function hugFitOn(from, m) { const q = peers.get(from); if (q && q.actor && m && m.c) q.actor.hugc = hugClean(m.c); }
+        const HUGUI = { el: null, hidden: false };
+        function hugPanel() {
+            const on = !!(localActor && localActor.emote === 'hug' && localActor.hugWith) && !HUGUI.hidden;
+            if (!on) { if (HUGUI.el) HUGUI.el.style.display = 'none'; if (!(localActor && localActor.emote === 'hug')) HUGUI.hidden = false; return; }
+            if (!HUGUI.el) {
+                const el = HUGUI.el = document.createElement('div'); el.id = 'hugfit'; el.style.cssText = 'position:fixed;left:12px;bottom:84px;z-index:9000;width:min(250px,60vw);background:rgba(10,14,24,.88);border:1px solid #2c3a52;border-radius:12px;padding:8px 10px;font:700 11px Nunito,sans-serif;color:#9fb0c8;display:grid;gap:3px;backdrop-filter:blur(4px)';
+                const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px'; const t = document.createElement('b'); t.textContent = '🤗 Hug fit'; t.style.cssText = 'flex:1;color:#e6edf7;font-size:12px'; top.appendChild(t);
+                const bt = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.style.cssText = 'font:800 10px Nunito,sans-serif;color:#e6edf7;background:rgba(80,160,255,.3);border:0;border-radius:7px;padding:3px 8px;cursor:pointer'; b.onclick = fn; return b; };
+                const rows = [['d', 'Spacing', 0.2, 0.9, 0.01, (v) => Math.round(v * 100) + ' cm'], ['up', 'Hands up / down', -0.6, 0.6, 0.02, (v) => (v > 0 ? '+' : '') + v.toFixed(2)], ['fwd', 'Hands in / out', -0.6, 0.6, 0.02, (v) => (v > 0 ? '+' : '') + v.toFixed(2)], ['wrap', 'Arms wide / close', -0.6, 0.6, 0.02, (v) => (v > 0 ? '+' : '') + v.toFixed(2)], ['hy', 'Head turn', -0.5, 0.5, 0.02, (v) => (v > 0 ? '+' : '') + v.toFixed(2)]], ctl = {};
+                const sync = () => { for (const [k, , , , , fm] of rows) { ctl[k].i.value = HUGC[k]; ctl[k].v.textContent = fm(HUGC[k]); } };
+                top.appendChild(bt('Reset', () => { Object.assign(HUGC, HUGC_DEF); HUG.dist = HUGC.d; hugSave(); hugSpace(); hugBroadcast(); sync(); })); top.appendChild(bt('✕', () => { HUGUI.hidden = true; el.style.display = 'none'; })); el.appendChild(top);
+                for (const [k, lb, mn, mx, st, fm] of rows) { const r = document.createElement('label'); r.style.cssText = 'display:flex;align-items:center;gap:6px'; const sp = document.createElement('span'); sp.style.cssText = 'width:92px'; sp.textContent = lb; const i = document.createElement('input'); i.type = 'range'; i.min = mn; i.max = mx; i.step = st; i.style.cssText = 'flex:1;min-width:0'; const v = document.createElement('b'); v.style.cssText = 'width:42px;text-align:right;color:#e6edf7'; ctl[k] = { i, v };
+                    i.oninput = () => { HUGC[k] = +i.value; HUGC.d = hugClean(HUGC).d; HUG.dist = HUGC.d; v.textContent = fm(HUGC[k]); hugSave(); if (k === 'd') hugSpace(); hugBroadcast(); }; r.append(sp, i, v); el.appendChild(r); }
+                sync(); for (const ev of ['pointerdown', 'keydown']) el.addEventListener(ev, (e) => e.stopPropagation()); document.body.appendChild(el);
+            }
+            HUGUI.el.style.display = 'grid';
+        }
+        setInterval(() => { try { hugPanel(); } catch (e) { /* panel */ } }, 300);
         function hugCheck(a) {   // a hug ends for both when either walks off
             if (a !== localActor || !a.hugWith) return; const pa = hugActor(a.hugWith);
             if (a.emote !== 'hug') { a.hugWith = null; return; }
             if (!pa || pa.emote !== 'hug') { if (nowS() - a.emoteStart > 2.5) { a.emote = null; a.hugWith = null; try { net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } } }
         }
-        window.__hug = { HUG, HUG_POSE, THREE, async mk(key, x, z, ry) { const { root, vrm } = await buildModel(getBaseBuffer(key), 'gltf', { asAvatar: true }); const a = new Actor('t' + key, key); a.gender = key; a.setModel(root, vrm); scene.add(a.group); a.group.position.set(x, 0, z); a.group.rotation.y = ry; return a; }, scene: () => scene };
+        window.__hug = { HUG, HUGC, HUGUI, hugPanel, hugSpace, hugClean, HUG_POSE, THREE, async mk(key, x, z, ry) { const { root, vrm } = await buildModel(getBaseBuffer(key), 'gltf', { asAvatar: true }); const a = new Actor('t' + key, key); a.gender = key; a.setModel(root, vrm); scene.add(a.group); a.group.position.set(x, 0, z); a.group.rotation.y = ry; return a; }, scene: () => scene };
         window.__hug.state = () => ({ e: localActor.emote, w: localActor.hugWith, p: [localActor.group.position.x, localActor.group.position.z, localActor.group.rotation.y], peers: [...peers.entries()].map(([id, q]) => ({ id, e: q.actor && q.actor.emote, g: q.actor && q.actor.gender, p: q.actor && [q.actor.group.position.x, q.actor.group.position.z] })) }); window.__hug.ask = hugAsk;
         window.__hug.fake = (id, name, a) => { peers.set(id, { id, name, actor: a }); }; window.__hug.msg = (from, m) => hugMsg(from, Object.assign({ to: me.id }, m)); window.__hug.me = () => me.id;
 
@@ -23233,6 +23264,19 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             shake: 0, camP: null, camWas: false, camSide: 1, key: '', tourJoined: false, inQ: false, level: 'normal', menuOpen: true, popT: 0, buf: null, stats: { w: 0, l: 0, ko: 0, tour: 0 }, lastHud: '', textT: 0, text: '', textSub: '', ghost: new Map(), bots: 0
         };
         try { Object.assign(BUD.stats, JSON.parse(localStorage.getItem('oasis.bud') || '{}')); } catch (e) { /* storage */ }
+        /* controller rumble (Gamepad API dual-rumble; Chrome/Edge). Budokai menu > Rumble: Normal / Low / Off, saved as localStorage oasis.rumble (same key as the Harbor Inn games) */
+        const RUMBLE = { lvl: 1, last: 0 }; try { const v = localStorage.getItem('oasis.rumble'); RUMBLE.lvl = v === 'off' ? 0 : v === 'low' ? 0.5 : 1; } catch (e) { /* storage */ }
+        function padRumble(strong, weak, ms) {
+            try {
+                if (!RUMBLE.lvl || document.hidden || !navigator.getGamepads) return; const now = performance.now(); if (now - RUMBLE.last < 30 && strong <= (RUMBLE.s || 0)) return;
+                for (const q of navigator.getGamepads()) { if (!q || !q.connected) continue; const a = q.vibrationActuator || (q.hapticActuators && q.hapticActuators[0]); if (!a) continue; RUMBLE.last = now; RUMBLE.s = strong; const st = Math.min(1, strong * RUMBLE.lvl), wk = Math.min(1, weak * RUMBLE.lvl);
+                    if (a.playEffect) a.playEffect('dual-rumble', { startDelay: 0, duration: Math.min(1500, ms), strongMagnitude: st, weakMagnitude: wk }); else if (a.pulse) a.pulse(st, ms); break; }
+            } catch (e) { /* no rumble */ }
+        }
+        function budRumble(out, dmg, mine, meD) {
+            if (meD) { if (out === 'hit') padRumble(Math.min(1, 0.45 + dmg / 30), 0.6, 120 + dmg * 6); else if (out === 'throw') padRumble(0.9, 0.8, 320); else if (out === 'gbreak') padRumble(1, 1, 400); else if (out === 'block') padRumble(0.25, 0.1, 70); else if (out === 'counter') padRumble(0.4, 0.4, 120); }
+            else if (mine) { if (out === 'hit' || out === 'throw') padRumble(0.25 + Math.min(0.5, dmg / 30), 0.2, 80); else if (out === 'gbreak') padRumble(0.7, 0.5, 200); else if (out === 'counter') padRumble(0.8, 0.6, 220); else if (out === 'stuff') padRumble(0.4, 0.3, 100); else if (out === 'block') padRumble(0.12, 0.1, 50); }
+        }
         const budSaveStats = () => { try { localStorage.setItem('oasis.bud', JSON.stringify(BUD.stats)); } catch (e) { /* storage */ } };
         const BUD_RT = 60, BUD_NAMES = ['Kenji', 'Mika', 'Tetsu', 'Aiko', 'Ren', 'Sora', 'Daichi', 'Yuna', 'Haru', 'Itsuki'];
         const BUD_LV = { dummy: { n: 'Dummy', think: 9, atk: 0, grd: 0, thr: 0 }, easy: { n: 'Easy', think: 0.5, atk: 0.35, grd: 0.15, thr: 0.1 }, normal: { n: 'Normal', think: 0.3, atk: 0.55, grd: 0.35, thr: 0.2 }, hard: { n: 'Hard', think: 0.17, atk: 0.8, grd: 0.55, thr: 0.3 } };
@@ -23263,7 +23307,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const budNum = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d);
         const budIsRef = () => { const id = String(me.id); for (const k of peers.keys()) if (String(k) < id) return false; return true; };
         const budPeerName = (id) => { if (id === me.id) return me.name; const p = peers.get(id); return p ? (p.name || 'Player') : String(id).startsWith('cpu:') ? ((BUD.S && [BUD.S.a, BUD.S.b].find((x) => x && x.id === id)) || {}).name || 'CPU' : 'Player'; };
-        function budNewF(id, name, actor, o) { return Object.assign({ id, name, actor, hp: 100, max: 100, sp: 0, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, holdT: 0, kv: { x: 0, z: 0 }, buf: null, bufT: -9, combo: 0, comboT: -9, comboDmg: 0, hurtN: 0, armor: 0, bot: false, remote: false, aiT: 0, aiG: 0, aiLv: BUD_LV.normal, opp: null, down: 0, ko: false, lastKey: '', juggle: 0 }, o || {}); }
+        function budNewF(id, name, actor, o) { return Object.assign({ id, name, actor, hp: 100, max: 100, sp: 0, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, holdT: 0, kv: { x: 0, z: 0 }, buf: null, bufT: -9, combo: 0, comboT: -9, comboDmg: 0, hurtN: 0, armor: 0, bot: false, remote: false, aiT: 0, aiG: 0, aiLv: BUD_LV.normal, opp: null, down: 0, ko: false, lastKey: '', juggle: 0, gd: 100, gdT: -9, style: '' }, o || {}); }
         /* ---- the room: a round hall, a raised ring, stands with a crowd ---- */
         function ensureBudokai() {
             if (BUD.ready) return; BUD.ready = true;
@@ -23345,7 +23389,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         }
         function budStand(F) { try { F.actor.playEmote('stand'); } catch (e) { /* none */ } if (F === BUD.me && !F.cmpA) { try { net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } } }
         function budReset(F, x, face) {
-            Object.assign(F, { hp: 100, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, buf: null, combo: 0, comboDmg: 0, hurtN: 0, armor: 0, down: 0, ko: false, juggle: 0, aiT: 0, aiG: 0, jy: 0, jv: 0 }); F.kv.x = F.kv.z = 0;
+            Object.assign(F, { hp: 100, st: 'idle', act: null, t: 0, stun: 0, inv: 0, guard: false, buf: null, combo: 0, comboDmg: 0, hurtN: 0, armor: 0, down: 0, ko: false, juggle: 0, gd: 100, gdT: -9, aiT: 0, aiG: 0, jy: 0, jv: 0 }); F.kv.x = F.kv.z = 0;
             const g = F.actor.group; g.position.set(x, BUD.ringH, 0); g.rotation.y = face; if (F === BUD.me) playerVelocity.y = 0; F.actor.firstFrame = true; budStand(F);
         }
         function budStart(F, key) {
@@ -23397,7 +23441,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function budFace(F, O, rate, dt) { const p = budPosOf(F), q = budPosOf(O), g = F.actor.group; g.rotation.y = lerpAngle(g.rotation.y, Math.atan2(q.x - p.x, q.z - p.z), 1 - Math.exp(-dt * rate)); }
         function budReact(D, dmg, info, kd) {
             D.jy = 0; D.jv = 0; D.hp = Math.max(0, D.hp - dmg); D.sp = Math.min(100, D.sp + dmg * 0.8); D.comboT = -9; D.combo = 0; const now = nowS();
-            if (D.hp <= 0) return budKO(D);
+            if (D.hp <= 0 && BUD.P && BUD.P.train && D.bot) D.hp = 100; if (D.hp <= 0) return budKO(D);
             const fx = info.fx !== undefined ? info.fx : budPosOf(D).x - 1, fz = info.fz !== undefined ? info.fz : budPosOf(D).z, p = budPosOf(D), ax = p.x - fx, az = p.z - fz, al = Math.hypot(ax, az) || 1;
             D.act = null; D.buf = null; D.guard = false;
             if (now - (D.hurtT || -9) > 2) D.juggle = 0; D.hurtT = now; D.juggle++;
@@ -23410,7 +23454,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function budKO(D) {
             D.hp = 0; D.ko = true; D.st = 'ko'; D.act = null; D.guard = false;
             const a = D.actor, cc = budClip(a, 'ko'); if (!cc.custom && Math.random() < 0.5) { try { a.playEmote('f_hdie2'); a.emoteRate = 1.1; a.emoteDur = Infinity; if (D === BUD.me) net && net.send({ t: 'emote', name: 'f_hdie2', r: 1.1, h: 1 }); } catch (e) { budPlay(D, 'ko', 1.1, true); } } else budPlay(D, 'ko', 1.1, true);
-            BUD.shake = 0.5; if (BUD.crowd) BUD.crowd.cheer = 1; budReport(true);
+            BUD.shake = 0.5; if (D === BUD.me) padRumble(1, 1, 520); else padRumble(0.5, 0.7, 260); if (BUD.crowd) BUD.crowd.cheer = 1; budReport(true);
         }
         function budResolve(D, info, A) {      // D (a fighter on this device) is hit by info; A is the attacker if it is also on this device
             if (!D || D.ko || D.st === 'down' || D.st === 'getup' || D.st === 'win' || D.st === 'lose' || !BUD.live) return;
@@ -23420,10 +23464,11 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (D.inv > 0 || (D.st === 'air' && D.jy > 0.2 && kind !== 'special')) { out = 'evade'; dmg = 0; }
             else if (actv && actv.mv.kind === 'hold' && actv.hold && actv.t >= actv.hold[0] && actv.t <= actv.hold[1] && kind === 'strike') { out = 'counter'; dmg = 0; cd = 15; D.inv = 0.5; }
             else if (kind === 'throw') { if (actv && (actv.mv.kind === 'strike' || actv.mv.kind === 'special') && actv.hit && actv.t >= actv.hit[0] - 0.05) { out = 'stuff'; dmg = 0; } else out = 'throw'; }
-            else if (D.guard && Math.abs(angDiff(fromYaw, D.actor.group.rotation.y)) < 1.5) { out = 'block'; dmg = Math.max(1, Math.round(dmg * (kind === 'special' ? 0.35 : 0.12))); }
+            else if (D.guard && Math.abs(angDiff(fromYaw, D.actor.group.rotation.y)) < 1.5) { out = 'block'; dmg = Math.max(1, Math.round(dmg * (kind === 'special' ? 0.35 : 0.12))); D.gd = (D.gd === undefined ? 100 : D.gd) - (kind === 'special' ? 34 : 7 + info.dmg * 1.5); D.gdT = nowS(); if (D.gd <= 0) { out = 'gbreak'; D.gd = 0; dmg = Math.max(dmg, Math.round(info.dmg * 0.8)); } else D.gd = Math.max(0, D.gd); }
             const cp = { x: p.x, y: p.y + 1.15, z: p.z };
             if (out === 'hit' || out === 'throw') budReact(D, dmg, info, out === 'throw');
             else if (out === 'block') { D.hp = Math.max(1, D.hp - dmg); D.st = 'stun'; D.stun = 0.18; D.act = null; D.kv.x = -ax / (Math.hypot(ax, az) || 1) * 1.2; D.kv.z = -az / (Math.hypot(ax, az) || 1) * 1.2; D.sp = Math.min(100, D.sp + 2); budPlay(D, 'blk', 2.0); }
+            else if (out === 'gbreak') { D.hp = Math.max(1, D.hp - dmg); D.guard = false; D.st = 'stun'; D.stun = 1.05; D.act = null; D.buf = null; D.kv.x = -ax / (Math.hypot(ax, az) || 1) * 2.4; D.kv.z = -az / (Math.hypot(ax, az) || 1) * 2.4; D.gd = 45; D.gdT = nowS() + 0.8; D.sp = Math.min(100, D.sp + 5); budPlay(D, 'kb', 1.3); }
             else if (out === 'counter') { D.sp = Math.min(100, D.sp + 6); }
             const m = { k: 'res', a: info.a, d: D.id, out, dmg, big: info.big, cd, x: cp.x, y: cp.y, z: cp.z, hp: D.hp, sp: Math.round(D.sp), fx: p.x, fz: p.z };
             budSend(m); budOnRes(D.id === BUD.me.id ? me.id : D.id, m);
@@ -23432,16 +23477,17 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function budOnRes(from, m) {
             if (!m || typeof m.out !== 'string') return; const out = String(m.out).slice(0, 8), dmg = budNum(m.dmg, 0, 60, 0), big = m.big ? 1 : 0, x = budNum(m.x, -60, 60, 0), y = budNum(m.y, 0, 6, 1), z = budNum(m.z, -60, 60, 0), meD = m.d === me.id;
             if (typeof m.d === 'string') { BUD.hp[m.d] = budNum(m.hp, 0, 100, 100); BUD.hpT = nowS(); }
-            if (!BUD.group || !BUD.group.visible) return;
+            if (!BUD.group || !BUD.group.visible) return; try { budRumble(out, dmg, m.a === me.id, meD); } catch (e) { /* pad */ }
             if (out === 'evade') { budPop(x, y + 0.4, z, 'EVADE', 'eva'); return; }
             if (out === 'stuff') { budPop(x, y + 0.4, z, 'STUFFED', 'blk'); } else if (out === 'block') { budPop(x, y + 0.2, z, 'BLOCK', 'blk'); budFx(x, y, z, 'block', 0); dnBeep(380, 0.07, 'square', 0.05, 220); }
+            else if (out === 'gbreak') { budPop(x, y + 0.6, z, 'GUARD BREAK!', 'crit'); budFx(x, y, z, 'counter', 1); hcSfx('hit'); BUD.shake = Math.max(BUD.shake, 0.35); }
             else if (out === 'counter') { budPop(x, y + 0.5, z, 'COUNTER!', 'crit'); budFx(x, y, z, 'counter', 1); hcSfx('hit'); }
             else { budPop(x, y + 0.3, z, String(dmg), meD ? 'hurt' : big ? 'crit' : ''); budFx(x, y, z, out, big); hcSfx('hit'); if (out === 'throw') budPop(x, y + 0.9, z, 'THROW!', 'crit'); }
             budHitStop(big ? 0.06 : out === 'block' ? 0.03 : 0.04);
             if (big || out === 'counter') { BUD.shake = Math.max(BUD.shake, big ? 0.3 : 0.2); if (BUD.crowd) BUD.crowd.cheer = Math.min(1, BUD.crowd.cheer + 0.45); } else if (BUD.crowd) BUD.crowd.cheer = Math.min(1, BUD.crowd.cheer + 0.12);
             const A = budLocalF(m.a); if (!A) return; const now = nowS();
             if (out === 'hit' || out === 'throw') { A.combo = now - A.comboT < 1.8 ? A.combo + 1 : 1; A.comboT = now; A.comboDmg = (A.combo > 1 ? A.comboDmg : 0) + dmg; A.sp = Math.min(100, A.sp + dmg * 1.2); if (A === BUD.me) BUD.comboShow = { n: A.combo, d: A.comboDmg, t: 1.8 }; }
-            else if (out === 'block') A.sp = Math.min(100, A.sp + 1);
+            else if (out === 'block' || out === 'gbreak') A.sp = Math.min(100, A.sp + (out === 'gbreak' ? 8 : 1));
             else if (out === 'counter') { const cd = budNum(m.cd, 0, 40, 15); budReact(A, cd, { fx: budNum(m.fx, -60, 60, 0), fz: budNum(m.fz, -60, 60, 0), kd: 1, big: 1 }, true); budPop(x, y + 0.2, z, String(cd), A === BUD.me ? 'hurt' : 'crit'); }
             else if (out === 'stuff') { A.st = 'stun'; A.stun = 0.38; A.act = null; budPlay(A, 'hit1', 2.0); }
         }
@@ -23455,7 +23501,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         /* ---- per-frame fighter simulation (for the fighters whose body is on this device: you, and the CPU) ---- */
         function budTickF(F, dt, inp) {
             const O = F.opp, g = F.actor.group, p = g.position, now = nowS(); if (!O) return;
-            if (F.inv > 0) F.inv -= dt; F.jin = inp;
+            if (F.inv > 0) F.inv -= dt; F.jin = inp; if (F.gd < 100 && now - F.gdT > 0.9) F.gd = Math.min(100, F.gd + (F.st === 'guard' ? 9 : 20) * dt);
             const op = budPosOf(O);
             if (F.kv.x * F.kv.x + F.kv.z * F.kv.z > 1e-4) { p.x += F.kv.x * dt; p.z += F.kv.z * dt; const k = Math.exp(-dt * 5); F.kv.x *= k; F.kv.z *= k; }
             if (F.st === 'stun') { F.stun -= dt; if (F.stun <= 0) { F.st = 'idle'; budStand(F); } }
@@ -23496,20 +23542,21 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         /* ---- the CPU opponent ---- */
         function budAI(F, dt) {
             const O = F.opp, lv = F.aiLv, inp = { x: 0, z: 0, guard: false }; if (!O || !BUD.live || F.ko) return inp;
-            if (lv.think >= 9) return inp;
+            if (lv.think >= 9) { if (BUD.dummyGuard && F.gd > 5 && (F.st === 'idle' || F.st === 'guard')) inp.guard = true; return inp; }
+            const sty = F.style, atkM = sty === 'rush' ? 1.25 : sty === 'wall' ? 0.7 : 1, grdB = sty === 'wall' ? 0.25 : 0, dashM = sty === 'rush' ? 2 : 1;
             const d = budDist(F, O), now = nowS(); F.aiT -= dt;
             if (F.st === 'idle' || F.st === 'guard') {
                 if (d > 2.3) inp.x = 1; else if (d < 1.05) inp.x = -0.7;
-                if (d > 3.4 && F.st === 'idle' && Math.random() < 0.012 + 0.012 * lv.atk) budLetter(F, 'F');
+                if (d > 3.4 && F.st === 'idle' && Math.random() < (0.012 + 0.012 * lv.atk) * dashM) budLetter(F, 'F');
                 if (F.st === 'idle' && d > 2.6 && Math.random() < 0.004 + 0.008 * lv.atk) { F.jin = { x: 1, z: 0 }; budLetter(F, 'V'); }
                 if (F.aiZ && now < F.aiZT) inp.z = F.aiZ;
                 if (F.aiT <= 0) {
                     F.aiT = lv.think * (0.7 + Math.random() * 0.7); const oa = O.st === 'act' && O.act && O.act.mv.kind !== 'hold' && O.act.mv.kind !== 'dodge' && O.act.t < O.act.dur * 0.55;
-                    if (oa && d < 2.6 && Math.random() < lv.grd) { if (Math.random() < 0.12) budLetter(F, 'B'); else if (Math.random() < 0.12) { F.jin = { x: -1, z: 0 }; budLetter(F, 'V'); } else if (Math.random() < 0.3) budLetter(F, Math.random() < 0.5 ? 'Q' : 'E'); else F.aiG = 0.55; }
-                    else if (d < 2.1 && Math.random() < lv.atk) { if (O.guard && Math.random() < 0.55 + lv.thr) budLetter(F, 'T'); else if (F.sp >= 50 && Math.random() < 0.3) budLetter(F, 'S'); else { budLetter(F, Math.random() < 0.5 ? 'P' : 'K'); F.aiChain = Math.random() < 0.6 ? 1 + ((Math.random() * 2) | 0) : 0; } }
+                    if (oa && d < 2.6 && Math.random() < lv.grd + grdB) { if (sty === 'wall' && Math.random() < 0.3) budLetter(F, 'H'); else if (Math.random() < 0.12) budLetter(F, 'B'); else if (Math.random() < 0.12) { F.jin = { x: -1, z: 0 }; budLetter(F, 'V'); } else if (Math.random() < 0.3) budLetter(F, Math.random() < 0.5 ? 'Q' : 'E'); else F.aiG = 0.55; }
+                    else if (d < 2.1 && Math.random() < lv.atk * atkM) { if ((O.guard || O.st === 'guard') && Math.random() < 0.55 + lv.thr) budLetter(F, 'T'); else if (sty === 'grap' && !O.guard && Math.random() < 0.28) budLetter(F, 'T'); else if (F.sp >= 50 && Math.random() < 0.3) budLetter(F, 'S'); else { budLetter(F, Math.random() < 0.5 ? 'P' : 'K'); F.aiChain = Math.random() < 0.6 ? 1 + ((Math.random() * 2) | 0) : 0; } }
                     else if (Math.random() < 0.3) { F.aiZ = Math.random() < 0.5 ? -1 : 1; F.aiZT = now + 0.5; }
                 }
-                if (F.aiG > 0) { inp.guard = true; F.aiG -= dt; }
+                if (F.aiG > 0) { if (F.gd < 18) F.aiG = 0; else { inp.guard = true; F.aiG -= dt; } }
             } else if (F.st === 'act' && F.aiChain > 0 && F.act && F.act.t > F.act.dur * 0.25 && !F.buf && F.act.mv.ch) { F.buf = Math.random() < 0.6 ? 'P' : 'K'; F.bufT = now; F.aiChain--; }
             return inp;
         }
@@ -23559,7 +23606,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const mine = S.a.id === me.id ? S.a : S.b, oth = S.a.id === me.id ? S.b : S.a, left = S.a.id === me.id;
             const mineAct = (BUD.P && mine.cmp && budCmpAct(mine.cmp)) || localActor; BUD.me = budNewF(me.id, mineAct === localActor ? me.name : mine.name, mineAct, mineAct === localActor ? {} : { cmpA: true }); BUD.me.lvl = left;
             if (mineAct !== localActor) { mineAct.group.visible = true; localActor.group.visible = false; BUD.hidLocal = true; }
-            if (oth.bot) { const a = (oth.cmp && budCmpAct(oth.cmp)) || (BUD.bot && BUD.bot.actor); if (!a) { BUD.me = null; return false; } a.name = oth.name; a.group.visible = true; BUD.foe = budNewF(oth.id, oth.name, a, { bot: true, aiLv: BUD_LV[S.lv] || BUD_LV.normal }); }
+            if (oth.bot) { const a = (oth.cmp && budCmpAct(oth.cmp)) || (BUD.bot && BUD.bot.actor); if (!a) { BUD.me = null; return false; } a.name = oth.name; a.group.visible = true; BUD.foe = budNewF(oth.id, oth.name, a, { bot: true, aiLv: BUD_LV[S.lv] || BUD_LV.normal, style: oth.style || '' }); }
             else { const p = peers.get(oth.id); if (!p) { BUD.me = null; return false; } BUD.foe = budNewF(oth.id, oth.name, p.actor, { remote: true }); }
             BUD.me.opp = BUD.foe; BUD.foe.opp = BUD.me; budSetStance(mineAct, true); budSetStance(BUD.foe.actor, true); return true;
         }
@@ -23679,14 +23726,14 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const budInMatch = (S, id) => !!S.a && !!S.b && S.ph !== 'idle' && (S.a.id === id || S.b.id === id);
         BUD.refId = () => { let best = String(me.id); for (const k of peers.keys()) if (String(k) < best) best = String(k); return best; };
         /* ---- actions from the menu ---- */
-        async function budPractice(lv, foeCmp) {
+        async function budPractice(lv, foeCmp, train) {
             if (BUD.P || (BUD.S && BUD.S.ph !== 'idle' && budAmIn(BUD.S))) return;
             if (foeCmp && foeCmp === BUD.fighter) { sysChat('Pick a different companion to fight against.'); return; }
             let fa = null, pa = null; if (foeCmp) { sysChat('Calling in ' + ((cmpFind(foeCmp) || {}).name || 'your companion') + '...'); fa = await budCmpGet(foeCmp); if (!fa) sysChat('That companion could not load, using a CPU fighter.'); }
             if (BUD.fighter) { pa = await budCmpGet(BUD.fighter); if (!pa) sysChat('Your companion fighter could not load, using your own character.'); }
             const a = fa || await budBotGet(); if (!a) { sysChat('The CPU fighter could not load.'); return; }
             if (BUD.P || (BUD.S && BUD.S.ph !== 'idle' && budAmIn(BUD.S))) return;
-            const S = budNewS(); S.prac = 1; S.mode = 'prac'; S.lv = lv; S.stage = BUD.stagePick || 'hall'; S.a = { id: me.id, name: pa ? cmpFind(BUD.fighter).name : me.name, bot: 0, cmp: pa ? BUD.fighter : null }; S.b = fa ? { id: 'cpu:c' + foeCmp, name: cmpFind(foeCmp).name, bot: 1, cmp: foeCmp } : { id: 'cpu:p', name: 'CPU ' + (BUD_LV[lv] || BUD_LV.normal).n, bot: 1 }; BUD.P = S; BUD.seen = -1; BUD.menuOpen = false; BUD.hp = {}; S.w = [0, 0]; S.rd = 1; budPh(S, 'ready', 3);
+            const S = budNewS(); S.prac = 1; S.mode = 'prac'; S.lv = lv; S.stage = BUD.stagePick || 'hall'; S.a = { id: me.id, name: pa ? cmpFind(BUD.fighter).name : me.name, bot: 0, cmp: pa ? BUD.fighter : null }; const sty = lv === 'dummy' || train ? '' : ['rush', 'grap', 'wall'][(Math.random() * 3) | 0]; if (train) S.train = 1; S.b = fa ? { id: 'cpu:c' + foeCmp, name: cmpFind(foeCmp).name, bot: 1, cmp: foeCmp, style: sty } : { id: 'cpu:p', name: train ? 'TRAINING DUMMY' : 'CPU ' + (BUD_LV[lv] || BUD_LV.normal).n + (sty ? ' · ' + { rush: 'Rusher', grap: 'Grappler', wall: 'Counter' }[sty] : ''), bot: 1, style: sty }; BUD.P = S; BUD.seen = -1; BUD.menuOpen = false; BUD.hp = {}; S.w = [0, 0]; S.rd = 1; budPh(S, 'ready', 3);
         }
         function budQuitPractice() { const S = BUD.P; if (!S) return; BUD.P = null; budEndBout(); BUD.menuOpen = true; BUD.text = ''; BUD.seen = -1; }
         function budQueue(on) { const S = BUD.S; if (!S) return; if (budIsRef()) { S.q = S.q.filter((x) => x.id !== me.id); if (on && !budInMatch(S, me.id)) S.q.push({ id: me.id, name: me.name }); S.n++; budBroadcast(S); } else budSend({ k: 'q', on: on ? 1 : 0 }); BUD.inQ = !!on; }
@@ -23790,7 +23837,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
 .bud-side.r .bud-bar{clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 100%,0 100%)}.bud-bar i{display:block;height:100%;background:linear-gradient(180deg,#9aeaff 0,#2ab4e6 45%,#1b6fd8 100%);transition:width .1s linear;box-shadow:inset 0 -6px 8px rgba(0,0,0,.25)}
 .bud-side.r .bud-bar i{margin-left:auto}.bud-bar i.mid{background:linear-gradient(180deg,#fff4a0 0,#ffc531 50%,#f08a1a 100%)}.bud-bar i.low{background:linear-gradient(180deg,#ffb08a 0,#ff5a2a 50%,#c41a1a 100%);animation:budlow .5s infinite alternate}@keyframes budlow{to{filter:brightness(1.5)}}
 .bud-sp{height:7px;background:rgba(0,0,0,.6);border:1px solid #9ad7ff;overflow:hidden;margin:1px 14px;width:62%}.bud-side.r .bud-sp{margin-left:auto}.bud-sp i{display:block;height:100%;background:#5ab8ff;transition:width .12s}.bud-sp.full i{background:#fff;box-shadow:0 0 8px #9ad7ff}
-.bud-pips{display:flex;gap:5px;margin:3px 16px;height:14px}.bud-side.r .bud-pips{justify-content:flex-end}.bud-pips b{width:14px;height:14px;border-radius:50%;border:2px solid #cfd6de;background:radial-gradient(circle at 35% 30%,#445,#0a0c12)}.bud-pips b.on{background:radial-gradient(circle at 35% 30%,#fff7c0,#f2a81a);box-shadow:0 0 8px #ffc531}
+.bud-gd{height:5px;background:rgba(0,0,0,.6);border:1px solid #ffd27a;overflow:hidden;margin:1px 14px;width:46%}.bud-gd i{display:block;height:100%;background:#ffb030;transition:width .1s}.bud-gd.low i{background:#ff4a3a}.bud-pips{display:flex;gap:5px;margin:3px 16px;height:14px}.bud-side.r .bud-pips{justify-content:flex-end}.bud-pips b{width:14px;height:14px;border-radius:50%;border:2px solid #cfd6de;background:radial-gradient(circle at 35% 30%,#445,#0a0c12)}.bud-pips b.on{background:radial-gradient(circle at 35% 30%,#fff7c0,#f2a81a);box-shadow:0 0 8px #ffc531}
 #bud-tm{width:92px;text-align:center;font:italic 900 46px Orbitron,sans-serif;text-shadow:0 0 14px rgba(255,255,255,.7),0 3px 6px #000;color:#fff;margin-top:-8px}
 #bud-ct{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);text-align:center;font:900 clamp(34px,8vw,84px) Orbitron,sans-serif;color:#ffd24a;text-shadow:0 0 18px rgba(255,140,40,.8),4px 4px 0 #000;letter-spacing:.06em;white-space:nowrap}#bud-ct small{display:block;font-size:clamp(13px,2.4vw,22px);color:#fff;letter-spacing:.12em;text-shadow:0 2px 4px #000}
 #bud-cb{position:absolute;left:3vw;top:38%;font:900 22px Orbitron,sans-serif;color:#fff;text-shadow:0 0 8px #000,2px 2px 0 #000;display:none;line-height:1.1}#bud-cb b{font-size:54px;color:#ffd24a}#bud-cb small{display:block;font-size:12px;color:#9ad7ff}
@@ -23806,14 +23853,14 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
         function budHudBuild() {
             if (BUD.hud) return; budCss();
             const h = document.createElement('div'); h.id = 'bud-hud';
-            h.innerHTML = `<div id="bud-top"><div class="bud-side"><div class="bud-nm" id="bud-n1"></div><div class="bud-bar"><i id="bud-h1"></i></div><div class="bud-sp" id="bud-s1"><i></i></div><div class="bud-pips" id="bud-p1"></div></div><div id="bud-tm">60</div><div class="bud-side r"><div class="bud-nm" id="bud-n2"></div><div class="bud-bar"><i id="bud-h2"></i></div><div class="bud-pips" id="bud-p2"></div></div></div>
+            h.innerHTML = `<div id="bud-top"><div class="bud-side"><div class="bud-nm" id="bud-n1"></div><div class="bud-bar"><i id="bud-h1"></i></div><div class="bud-sp" id="bud-s1"><i></i></div><div class="bud-gd" id="bud-g1"><i></i></div><div class="bud-pips" id="bud-p1"></div></div><div id="bud-tm">60</div><div class="bud-side r"><div class="bud-nm" id="bud-n2"></div><div class="bud-bar"><i id="bud-h2"></i></div><div class="bud-pips" id="bud-p2"></div></div></div>
 <div id="bud-ct"></div><div id="bud-cb"></div><button id="bud-mt" type="button">MENU</button><div id="bud-mn"></div>
 <div id="bud-pad"><button class="mv" data-m="a">◀</button><button class="mv" data-m="d">▶</button><button class="mv" data-m="w">▲</button><button class="mv" data-m="s">▼</button><button data-l="P">P</button><button data-l="K">K</button><button data-l="T">T</button><button data-g="H" data-l="H">H</button><button data-gd="1">G</button><button data-l="S">SP</button><button data-l="V">&uarr;</button><button data-l="B">&laquo;</button><button data-l="F">&raquo;</button></div>`;
             document.body.appendChild(h); BUD.hud = h; const nl = document.createElement('div'); nl.id = 'bud-nl'; document.body.appendChild(nl); BUD.nl = nl;
             h.querySelector('#bud-mt').addEventListener('click', () => { BUD.menuOpen = !BUD.menuOpen; BUD.lastHud = ''; });
             h.querySelector('#bud-mn').addEventListener('click', (e) => {
                 const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, v = b.dataset.v;
-                if (a === 'stage') { BUD.stagePick = v; } else if (a === 'prac') { BUD.level = v; budPractice(v); } else if (a === 'cfight') budPractice(BUD.level || 'normal', v); else if (a === 'cplay') { BUD.fighter = v; try { localStorage.setItem('oasis.bud.f', v); } catch (er) { /* storage */ } budCmpGet(v); } else if (a === 'cself') { BUD.fighter = ''; try { localStorage.removeItem('oasis.bud.f'); } catch (er) { /* storage */ } } else if (a === 'quit') budQuitPractice(); else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
+                if (a === 'stage') { BUD.stagePick = v; } else if (a === 'prac') { BUD.level = v; budPractice(v); } else if (a === 'cfight') budPractice(BUD.level || 'normal', v); else if (a === 'cplay') { BUD.fighter = v; try { localStorage.setItem('oasis.bud.f', v); } catch (er) { /* storage */ } budCmpGet(v); } else if (a === 'cself') { BUD.fighter = ''; try { localStorage.removeItem('oasis.bud.f'); } catch (er) { /* storage */ } } else if (a === 'quit') budQuitPractice(); else if (a === 'train') budPractice('dummy', null, 1); else if (a === 'dguard') BUD.dummyGuard = !BUD.dummyGuard; else if (a === 'rumble') { RUMBLE.lvl = RUMBLE.lvl === 1 ? 0.5 : RUMBLE.lvl === 0.5 ? 0 : 1; try { localStorage.setItem('oasis.rumble', RUMBLE.lvl === 0 ? 'off' : RUMBLE.lvl < 1 ? 'low' : 'normal'); } catch (er) { /* storage */ } padRumble(1, 1, 350); } else if (a === 'q') budQueue(!BUD.inQ); else if (a === 'tour') budTour(!(BUD.S && BUD.S.tour && BUD.S.tour.p.some((x) => x.id === me.id)));
                 else if (a === 'moves') { try { openAnimations(); } catch (er) { sysChat('Open your Animations panel to set Budokai moves.'); } } else if (a === 'leave') { try { openLobby(); } catch (er) { /* none */ } }
                 else if (a === 'fighters') budSelOpen(); else if (a === 'fback') { BUD.sel = false; } else if (a === 'pl') budPlayAs(+v); else if (a === 'cp') budCpuAs(+v);
                 else if (a === 'help') { BUD.help = !BUD.help; } BUD.lastHud = '';
@@ -23918,20 +23965,20 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             let h = '';
             if (BUD.help) return `<h4>CONTROLS</h4><div style="line-height:1.55">A / D move away / toward<br>W / S sidestep in / out<br><b>J</b> punch · <b>K</b> kick · <b>L</b> throw · <b>H</b> hold<br><b>Space / Shift / G</b> guard (hold)<br><b>Q / E</b> dodge left / right<br><b>X</b> or double-tap D = forward dash · <b>Z</b> or double-tap A = back dash (dash then press an attack to cancel into it)<br><b>C</b> jump: hold D / A / W / S with it for a diagonal jump with a front flip or back flip (you dodge everything but a special while airborne)<br><b>U</b> special (needs 50 SP)<br><br><b>Combos:</b> J J J · K K K · J J K · K K J · J then K · K then J (press the next button as the move lands).<br><b>Triangle:</b> strikes beat throws, throws beat guards, holds catch strikes (counter).<br><b>Gamepad:</b> stick/D-pad move &amp; sidestep · X punch · A kick · Y throw · B hold · LT/LB guard · RB special · RT+stick dodge · Select jump · L3 back dash · R3 forward dash (or flick the stick twice) · Start menu.<br>Your own animations: open <i>My moves</i> and set the “Budokai” slots.</div><div class="bud-r" style="margin-top:8px"><button class="bud-b" data-a="help">Back</button></div>`;
             if (BUD.sel && !BUD.P && !inM) return budFightersHtml();
-            if (BUD.P) h += `<h4>PRACTICE</h4><div class="bud-r"><button class="bud-b dng" data-a="quit">Quit practice</button></div>`;
+            if (BUD.P) h += `<h4>${BUD.P.train ? 'TRAINING' : 'PRACTICE'}</h4><div class="bud-r"><button class="bud-b dng" data-a="quit">Quit practice</button>${BUD.P.train ? `<button class="bud-b${BUD.dummyGuard ? ' on' : ''}" data-a="dguard">Dummy guards: ${BUD.dummyGuard ? 'ON' : 'OFF'}</button>` : ''}</div>${BUD.P.train ? '<div class="bud-q">No KO. SP and health refill. Try guarding, then throw a guarding dummy, or hit it until its GUARD BREAKS.</div>' : ''}`;
             else if (inM) h += `<h4>${S.mode === 'tour' ? 'TOURNAMENT' : 'VERSUS'}</h4><div class="bud-q">Match in progress — best of 3.</div>`;
             else {
                 h += `<h4>FIGHTER</h4><div class="bud-r"><button class="bud-b" data-a="fighters">Choose fighters</button></div><div class="bud-q">You: ${budEsc(myAvatar && myAvatar.name || 'your avatar')} · CPU: ${BUD.botPick ? budEsc(BUD.botPick.name) : 'random'}</div>`;
                 h += `<h4>STAGE</h4><div class="bud-r">${Object.keys(BUD_STAGES).map((k) => `<button class="bud-b${BUD.stagePick === k ? ' on' : ''}" data-a="stage" data-v="${k}">${BUD_STAGES[k].n}</button>`).join('')}</div><div class="bud-q">${budIsRef() ? 'You pick the stage for online matches.' : 'The room host picks the stage for online matches.'}</div>`;
                 h += budCmpHtml();
-                h += `<h4>PRACTICE (CPU)</h4><div class="bud-r">${Object.keys(BUD_LV).map((k) => `<button class="bud-b${on(k)}" data-a="prac" data-v="${k}">${BUD_LV[k].n}</button>`).join('')}</div>`;
+                h += `<h4>PRACTICE (CPU)</h4><div class="bud-r">${Object.keys(BUD_LV).map((k) => `<button class="bud-b${on(k)}" data-a="prac" data-v="${k}">${BUD_LV[k].n}</button>`).join('')}<button class="bud-b" data-a="train">Training</button></div>`;
                 h += `<h4>ONLINE VERSUS</h4><div class="bud-r"><button class="bud-b${BUD.inQ ? ' on' : ''}" data-a="q">${BUD.inQ ? 'Leave queue' : 'Join queue'}</button></div><div class="bud-q">${q.length ? 'Queue: ' + q.map((x, i) => (i + 1) + '. ' + String(x.name).replace(/[<>&]/g, '')).join('  ') : 'Queue empty — winner stays on'}</div>`;
                 const mineT = T && T.p && T.p.some((x) => x.id === me.id);
                 h += `<h4>TOURNAMENT</h4><div class="bud-r"><button class="bud-b${mineT ? ' on' : ''}" data-a="tour">${!T ? 'Start a tournament' : T.ph !== 'reg' ? 'In progress' : mineT ? 'Leave tournament' : 'Join tournament'}</button></div>`;
                 if (T && T.ph === 'reg') h += `<div class="bud-q">Sign-up ${Math.max(0, Math.ceil(T.t))}s · ${T.p.length}/8 fighters (CPU fills the bracket)</div>`;
             }
             if (S && S.mode === 'tour' || T) h += budBracketHtml(T);
-            h += `<h4>YOU</h4><div class="bud-q">Wins ${BUD.stats.w} · Losses ${BUD.stats.l} · KOs ${BUD.stats.ko} · Titles ${BUD.stats.tour}</div><div class="bud-r"><button class="bud-b" data-a="moves">My moves</button><button class="bud-b" data-a="help">Controls</button><button class="bud-b dng" data-a="leave">Leave arena</button></div>`;
+            h += `<h4>YOU</h4><div class="bud-q">Wins ${BUD.stats.w} · Losses ${BUD.stats.l} · KOs ${BUD.stats.ko} · Titles ${BUD.stats.tour}</div><div class="bud-r"><button class="bud-b" data-a="rumble">Rumble: ${RUMBLE.lvl === 0 ? 'Off' : RUMBLE.lvl < 1 ? 'Low' : 'Normal'}</button><button class="bud-b" data-a="moves">My moves</button><button class="bud-b" data-a="help">Controls</button><button class="bud-b dng" data-a="leave">Leave arena</button></div>`;
             return h;
         }
         function budBracketHtml(T) {
@@ -23947,7 +23994,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 const hl = budHpOf(L.id), hr = budHpOf(R.id); $('bud-n1').textContent = L.name; $('bud-n2').textContent = R.name;
                 for (const [id, h] of [['bud-h1', hl], ['bud-h2', hr]]) { const e = $(id); e.style.width = Math.max(0, h) + '%'; e.classList.toggle('low', h < 25); e.classList.toggle('mid', h >= 25 && h < 50); }
                 const pips = (w) => `<b class="${w >= 1 ? 'on' : ''}"></b><b class="${w >= 2 ? 'on' : ''}"></b>`; $('bud-p1').innerHTML = pips(wl); $('bud-p2').innerHTML = pips(wr);
-                const sp = BUD.me ? BUD.me.sp : 0, se = $('bud-s1'); se.style.display = BUD.me ? '' : 'none'; se.firstChild.style.width = sp + '%'; se.classList.toggle('full', sp >= 50);
+                const sp = BUD.me ? BUD.me.sp : 0, se = $('bud-s1'); se.style.display = BUD.me ? '' : 'none'; se.firstChild.style.width = sp + '%'; se.classList.toggle('full', sp >= 50); { const ge = $('bud-g1'), gv = BUD.me ? Math.round(BUD.me.gd === undefined ? 100 : BUD.me.gd) : 100; ge.style.display = BUD.me ? '' : 'none'; ge.firstChild.style.width = gv + '%'; ge.classList.toggle('low', gv < 30); }
                 const tl = S.ph === 'round' ? Math.max(0, (BUD.tlBase !== undefined ? BUD.tlBase : S.tl) - (BUD.P ? 0 : now - BUD.tlT)) : S.ph === 'ready' ? 60 : Math.max(0, S.tl); $('bud-tm').textContent = BUD.P && S.ph === 'round' ? Math.ceil(S.pt) : Math.ceil(tl);
             }
             const ct = $('bud-ct'), tx = now < BUD.textT ? BUD.text : (S && S.msg && now < BUD.textT ? S.msg : ''); const sig = tx + '|' + BUD.textSub; if (BUD.lastCt !== sig) { BUD.lastCt = sig; ct.innerHTML = tx ? `${tx.replace(/[<>&]/g, '')}${BUD.textSub ? '<small>' + BUD.textSub.replace(/[<>&]/g, '') + '</small>' : ''}` : ''; }
@@ -23991,6 +24038,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 if (ref) { BUD.hbT += dt; if (BUD.hbT > 2.5) { BUD.hbT = 0; budBroadcast(BUD.S); } budRefTick(BUD.S, dt); }
             }
             if (BUD.P) budRefTick(BUD.P, dt);
+            if (BUD.P && BUD.P.train && BUD.me && BUD.foe) { BUD.me.sp = 100; BUD.me.gd = 100; BUD.me.hp = 100; if (BUD.P.ph === 'round') BUD.P.pt = 60; if (nowS() - Math.max(BUD.foe.hurtT || -9, BUD.foe.gdT || -9) > 2.2) { BUD.foe.hp = 100; BUD.foe.gd = 100; } }
             if (BUD.me && BUD.foe) {
                 const k = BUD.k, inp = { x: (k.d ? 1 : 0) - (k.a ? 1 : 0), z: (k.w ? 1 : 0) - (k.s ? 1 : 0), guard: !!k.g };
                 { const tn = nowS(), T2 = BUD.tp || (BUD.tp = { a: 0, d: 0, pa: -9, pd: -9 });      // double-tap toward = forward dash, double-tap away = back dash (keys, D-pad, stick and touch arrows)
@@ -24008,7 +24056,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             }
             budHud();
         }
-        window.__bud = { budCmpGet, budCmpAct, get CMPL() { return typeof CMP !== 'undefined' ? CMP : null; }, get cam() { return camera; }, budPadAct, BUD, budQueue, budTour, budPractice, budPress, budOpen, HERO_ACTS, get map() { return activeMap; }, get MD() { return MAP_DEFS.budokai; }, lg: () => localActor.group };
+        window.__bud = { budLetter, budResolve, budTickF, budAI, budReact, budHud, budCmpGet, budCmpAct, get CMPL() { return typeof CMP !== 'undefined' ? CMP : null; }, get cam() { return camera; }, budPadAct, BUD, budQueue, budTour, budPractice, budPress, budOpen, HERO_ACTS, get map() { return activeMap; }, get MD() { return MAP_DEFS.budokai; }, lg: () => localActor.group };
         MAP_DEFS.budokai = { id: 'budokai', ground: budGround, clamp: budClamp, collide: budCollide, spawn: budSpawn, update: budUpdate };
         /* ------------------------------------------------------------------ *
          *  THE CONSTRUCT: the Hero class training area (white void, code rain, Agents to spar with, style meter)

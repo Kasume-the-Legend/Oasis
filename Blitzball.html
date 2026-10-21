@@ -280,6 +280,16 @@ const AU = {
     },
     musicOff() { this.started = false; if (this.timer) clearInterval(this.timer); this.timer = null; MUS.pend = null; musStop(); }
 };
+/* controller rumble (Gamepad API dual-rumble). Settings > Controller rumble: Normal / Low / Off */
+const RUMBLE = { last: 0 };
+function padRumble(strong, weak, ms) {
+    try {
+        const lvl = SET.rumble == null ? 1 : SET.rumble; if (!lvl || document.hidden || !navigator.getGamepads) return; const now = performance.now(); if (now - RUMBLE.last < 30 && strong <= (RUMBLE.s || 0)) return;
+        for (const q of navigator.getGamepads()) { if (!q || !q.connected) continue; const a = q.vibrationActuator || (q.hapticActuators && q.hapticActuators[0]); if (!a) continue; RUMBLE.last = now; RUMBLE.s = strong; const st = Math.min(1, strong * lvl), wk = Math.min(1, weak * lvl);
+            if (a.playEffect) a.playEffect('dual-rumble', { startDelay: 0, duration: Math.min(1500, ms), strongMagnitude: st, weakMagnitude: wk }); else if (a.pulse) a.pulse(st, ms); break; }
+    } catch (e) { /* no rumble */ }
+}
+for (const [k, v] of Object.entries({ shot: [0.7, 0.4, 130], tackle: [0.8, 0.5, 150], goal: [1, 0.7, 420], tech: [0.5, 0.8, 200], catchSnd: [0.3, 0.2, 70], miss: [0.2, 0.3, 90], pass: [0.15, 0.2, 50], encounter: [0.3, 0.5, 90] })) { const f = AU[k]; if (typeof f === 'function') AU[k] = function (...a) { padRumble(v[0], v[1], v[2]); return f.apply(this, a); }; }
 
 /* ---------- custom music: a file or a YouTube link per slot, kept on this device ---------- */
 const MSLOTS = [['title', 'Title screen', 'loop'], ['match', 'During the match', 'loop'], ['goal', 'Goal scored', 'sting'], ['win', 'Victory', 'end'], ['lose', 'Defeat', 'end']];
@@ -1672,11 +1682,11 @@ function showSettings(from) {
     <div class="sl"><label>Effects</label><input type="range" id="sS" min="0" max="100" value="${Math.round(SET.sfx * 100)}"></div>
     <div class="row" style="margin:8px 0"><button class="btn ${SET.meter ? 'on' : ''}" id="sT">Shot timing meter: ${SET.meter ? 'ON' : 'OFF'}</button><button class="btn ${SET.assist ? 'on' : ''}" id="sA">Auto-assist: ${SET.assist ? 'ON' : 'OFF'}</button></div>
     <div class="row" style="margin-bottom:8px"><span class="lab" style="margin:0">Camera</span>${seg(CAMN.map((n, i) => [i, n]), camMode, 'cam')}</div>
-    <div class="row" style="margin-bottom:8px"><button class="btn" id="sMu">Custom music…</button></div><div class="row"><button class="btn gold" id="sB">Back</button></div></div>`;
+    <div class="row" style="margin-bottom:8px"><button class="btn" id="sRu">Controller rumble: ${SET.rumble === 0 ? 'OFF' : SET.rumble === 0.5 ? 'LOW' : 'NORMAL'}</button><button class="btn" id="sMu">Custom music…</button></div><div class="row"><button class="btn gold" id="sB">Back</button></div></div>`;
     $('sM').oninput = (e) => { SET.music = e.target.value / 100; AU.vol(); saveSet(); }; $('sS').oninput = (e) => { SET.sfx = e.target.value / 100; AU.vol(); saveSet(); }; $('sS').onchange = () => AU.ok();
     $('sT').onclick = () => { SET.meter = !SET.meter; saveSet(); showSettings(from); }; $('sA').onclick = () => { SET.assist = !SET.assist; M.assist = SET.assist; saveSet(); showSettings(from); };
     p.querySelectorAll('[data-cam]').forEach((b) => b.onclick = () => { camMode = +b.dataset.cam; SET.cam = camMode; saveSet(); $('camname').textContent = 'CAM · ' + CAMN[camMode]; showSettings(from); });
-    $('sMu').onclick = () => { AU.ok(); showMusic(from); };
+    $('sMu').onclick = () => { AU.ok(); showMusic(from); }; $('sRu').onclick = () => { SET.rumble = SET.rumble === 0 ? 1 : SET.rumble === 0.5 ? 0 : SET.rumble === 1 || SET.rumble == null ? 0.5 : 1; saveSet(); padRumble(1, 1, 350); showSettings(from); };
     $('sB').onclick = () => { AU.back(); show('pause', false); if (from === 'pause') togglePause(true); }; $('sB').focus();
 }
 function togglePause(force) {
@@ -1711,7 +1721,7 @@ function frame(now) {
     try { pollPad(); computeInput(); if (M.mode === 'title') { for (const p of M.players) { p.ph += dt; } } else if (isGuest()) viewStep(dt); else stepFlow(dt); netTick(dt); meterStep(dt); syncWorld(dt); updCamera(dt); if (M.mode !== 'title') updHud(dt); } catch (e) { console.error('frame', e); }
     renderer.render(scene, camera);
 }
-window.__bz = { PROG, TECH, FORMS, applyStatus, showTeam, showFormation, commitXp, techUsed, showHalf, M, THREE, step: (dt) => { stepFlow(dt); }, startMatch, setupMatch, startKickoff, camera, scene, SET, ST, Player, calcShot, calcPass, aiEncounter, doShoot, doPass, TEAMS, keeper, field, goalPos, DIFF, REC, encOpen, showTitle, showResult, togglePause, IN, KEYS, actCommand, tackle, flightEnd, takeBall, E: () => E, AU, setCam: (m) => { camMode = m; }, NETC, localSeat, seatOf, seasonNew, seasonRecord, seasonFixture, showSeason, showLobby, netHost, netJoin, hostStart, buildSnap, applySnap, viewStep, hostOp, simScore, SEA: () => SEA, RE: () => RE, startSeasonMatch, endMatch, actSwitch, actAssist, ACT, beginNetMatch };
+window.__bz = { padRumble, AU, SET, PROG, TECH, FORMS, applyStatus, showTeam, showFormation, commitXp, techUsed, showHalf, M, THREE, step: (dt) => { stepFlow(dt); }, startMatch, setupMatch, startKickoff, camera, scene, SET, ST, Player, calcShot, calcPass, aiEncounter, doShoot, doPass, TEAMS, keeper, field, goalPos, DIFF, REC, encOpen, showTitle, showResult, togglePause, IN, KEYS, actCommand, tackle, flightEnd, takeBall, E: () => E, AU, setCam: (m) => { camMode = m; }, NETC, localSeat, seatOf, seasonNew, seasonRecord, seasonFixture, showSeason, showLobby, netHost, netJoin, hostStart, buildSnap, applySnap, viewStep, hostOp, simScore, SEA: () => SEA, RE: () => RE, startSeasonMatch, endMatch, actSwitch, actAssist, ACT, beginNetMatch };
 window.__bzReady = true;
 document.addEventListener('pointerdown', () => AU.init(), { once: true });
 showTitle(); requestAnimationFrame(frame);
