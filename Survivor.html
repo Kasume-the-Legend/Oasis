@@ -305,9 +305,9 @@ const SFX = {
 };
 const UIKEY = { move: 'ui_move', ok: 'ui_ok', back: 'ui_ok', pickup: 'ui_pick', save: 'ui_save', type: 'ui_save' };
 /* ---------- Mod Kit state (early, so sound and combat code can see it; the screen and loaders are further down) ---------- */
-const MOD = { cfg: null, buf: {}, aLoaded: false, models: {}, baseW: {}, sk: null };
+const MOD = { cfg: null, buf: {}, aLoaded: false, models: {}, baseW: {}, sk: null, img: {}, dim: {} };
 try { MOD.cfg = JSON.parse(localStorage.getItem(SK + 'mod') || 'null'); } catch (e) { MOD.cfg = null; }
-MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {} }, MOD.cfg || {}); MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
+MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {}, img: {} }, MOD.cfg || {}); MOD.cfg.img = MOD.cfg.img || {}; MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
 function modSave() { try { localStorage.setItem(SK + 'mod', JSON.stringify(MOD.cfg)); } catch (e) { /* storage */ } }
 function modVol(k) { const c = MOD.cfg.sfx[k.slice(2)]; return c && c.vol ? c.vol : 1; }
 function modPlay(key, vol) { try { const b = MOD.buf[key]; if (!b || !AU.ctx) return false; const s = AU.ctx.createBufferSource(); s.buffer = b; const g = AU.ctx.createGain(); g.gain.value = vol == null ? 1 : vol; s.connect(g); g.connect(AU.out); s.start(); return true; } catch (e) { return false; } }
@@ -910,6 +910,7 @@ function sprayMesh() {
 function worldItem(it, key) {
     if (G.taken[key]) return; const g = RM.group; let m;
     if (it.file) { m = boxM(0.34, 0.03, 0.44, new THREE.MeshBasicMaterial({ color: 0xe8e0c0 })); m.rotation.y = 0.4; }
+    else if (it.item && MOD.img[it.item] && (m = itemCard(it.item))) { /* your own picture */ }
     else if (it.item === 'gil') { m = boxM(0.26, 0.05, 0.26, new THREE.MeshBasicMaterial({ color: 0xffd23a })); const l = new THREE.PointLight(0xffd23a, 0.5, 2.5); l.position.y = 0.2; m.add(l); }
     else if (it.item === 'ammo') { m = keysBox(); const l = new THREE.PointLight(0xff6a3a, 0.5, 2.5); l.position.y = 0.2; m.add(l); }
     else if (['gherb', 'gg', 'rherb', 'mix'].includes(it.item)) { m = herbMesh(it.item); }
@@ -943,8 +944,8 @@ function herbMesh(id) {
 }
 /* any other item: its inventory icon standing up as a little card */
 function itemCard(id) {
-    try { const ic = reIcon(id); if (!ic) return null; const tex = ic.tagName === 'CANVAS' ? new THREE.CanvasTexture(ic) : (() => { const t = new THREE.Texture(ic); if (ic.complete) t.needsUpdate = true; else ic.onload = () => { t.needsUpdate = true; }; return t; })(); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.NearestFilter;
-        const w = 0.5, h = w * (ic.height && ic.width ? ic.height / ic.width : 0.667), p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide })); const gp = new THREE.Group(); gp.add(p); const col = ITEMS[id].type === 'key' ? 0xffaa22 : 0xddddff, l = new THREE.PointLight(col, 0.4, 2.5); l.position.y = 0.2; gp.add(l); return gp;
+    try { const ic = reIcon(id); if (!ic) return null; const tex = ic.tagName === 'CANVAS' ? new THREE.CanvasTexture(ic) : (() => { const t = new THREE.Texture(ic); if (ic.complete) t.needsUpdate = true; else ic.onload = () => { t.needsUpdate = true; }; return t; })(); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = ic.dataset && ic.dataset.mod ? THREE.LinearFilter : THREE.NearestFilter;
+        const dm = MOD.dim[id], w = 0.5, h = w * (dm ? dm[1] / dm[0] : ic.height && ic.width ? ic.height / ic.width : 0.667), p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide })); const gp = new THREE.Group(); gp.add(p); const col = ITEMS[id].type === 'key' ? 0xffaa22 : 0xddddff, l = new THREE.PointLight(col, 0.4, 2.5); l.position.y = 0.2; gp.add(l); return gp;
     } catch (e) { return null; }
 }
 /* the little white glint every two seconds that marks a pickup, like the originals */
@@ -1013,7 +1014,7 @@ function bloodTick(dt) {
     for (let i = BLD.stains.length - 1; i >= 0; i--) if (!BLD.stains[i].parent) BLD.stains.splice(i, 1);
 }
 function hurtPlayer(dmg, fx, fz) {
-    if (PL.state === 'dead' || PL.hurtT > 0) return; G.hp = Math.max(0, G.hp - dmg); PL.hurtT = 0.9; sfx('hurt'); bloodBurst(PL.x, 1.15, PL.z, fx, fz, 16 + Math.round(dmg / 3), 1.2, 1); bloodStain(PL.x + fx * 0.05, PL.z + fz * 0.05, 0.9); const h = $('hurt'); h.style.opacity = 1; setTimeout(() => { h.style.opacity = 0; }, 250);
+    if (PL.state === 'dead' || PL.hurtT > 0) return; G.hp = Math.max(0, G.hp - dmg); PL.hurtT = 0.9; sfx('hurt'); padRumble(0.6, 1, 200 + Math.min(300, dmg * 6)); bloodBurst(PL.x, 1.15, PL.z, fx, fz, 16 + Math.round(dmg / 3), 1.2, 1); bloodStain(PL.x + fx * 0.05, PL.z + fz * 0.05, 0.9); const h = $('hurt'); h.style.opacity = 1; setTimeout(() => { h.style.opacity = 0; }, 250);
     const L = Math.hypot(fx, fz) || 1; moveTo(PL, fx / L * 0.5, fz / L * 0.5, 0.35);
     if (G.hp > 0 && AV.on) { const s = avSetOf(); avAct(s, s === 'gp' ? 'ghit' + (1 + Math.floor(Math.random() * 4)) : s === 'hr' ? 'hhit' + (1 + Math.floor(Math.random() * 2)) : 'f_hhit' + (1 + Math.floor(Math.random() * 2)), { upper: true }); }
     if (G.hp <= 0) { PL.state = 'dead'; PL.st = 0; if (AV.on) { const s = avSetOf(); AC.act = null; avAct(s, s === 'gp' ? 'gdie' + (1 + Math.floor(Math.random() * 3)) : s === 'hr' ? 'hdie1' : 'f_hdie1', { hold: true }); AC.actW = 0; } sfx('die'); musPlay(null); setTimeout(() => { if (PL.state === 'dead' && !(CO.on && CO.rp && CO.rp.state !== 'dead' && CO.rpRoom)) gameOver(); }, 1900); }
@@ -1038,6 +1039,7 @@ function hitEnemy(E, dmg, crit, src, leg) {
     if (leg && E.hp > 0 && E.t === 'z' && !E.boss && !E.tyrant && !E.br && !E.cr) { E.cr = 1; E.hz = null; E.spd = 0.9; E.stun = 1.0; E.atkT = 0; E.hp = Math.min(E.hp, 7); say('Knee shot! It drops and crawls.', 1400); sfx('thud'); }
     const L = Math.hypot(E.x - S.x, E.z - S.z) || 1; if (!E.boss && !E.tyrant) moveTo(E, (E.x - S.x) / L * 0.35, (E.z - S.z) / L * 0.35, E.rad);
     if (E.hp > 0 && E.phases) { const lvl = Math.floor((1 - E.hp / E.hp0) * E.phases); if (lvl > (E.ph2 || 0)) { E.ph2 = lvl; bossPhase(E); } }
+    if (E.hp <= 0 && E.stalker) { stkDowned(E); return; }
     if (E.hp <= 0) { E.st = 'dead'; E.stT = 0; E.deadT = 0; E.hz = null; G.dead[E.key] = 1; G.kills++; try { rollDrop(E); } catch (er) { console.warn('drop', er); } G.rez = G.rez || {}; if (E.t === 'z' && !E.boss && !E.tyrant && /:e\d+$/.test(E.key || '') && !(G.rez[E.key] && G.rez[E.key].used)) G.rez[E.key] = G.rez[E.key] || { n: 0, need: 2 + Math.floor(Math.random() * 3), used: 0 }; if (E.boss) { sfx('roar'); const d = E.drop; if (d) { if (d.flag) setFlag(d.flag); coSend({ t: 'ev', k: 'boss', x: E.x, z: E.z, drop: d }); if (d.item) worldItem({ k: 'drop', item: d.item, n: d.n || 1, x: E.x, z: E.z, y: 0.1 }, d.key); } RM.shake = 0.8; say(d && d.msg ? d.msg : 'It collapses.'); } }
 }
 function bossPhase(E) {   // each lost third of a boss's health: a roar, a faster pace and fresh arrivals
@@ -1046,7 +1048,7 @@ function bossPhase(E) {   // each lost third of a boss's health: a roar, a faste
 }
 /* a step by an enemy: louder and clearer the closer it is, panned a touch by where it is relative to you */
 function enemyStep(E, kind) { const d = Math.hypot(E.x - PL.x, E.z - PL.z); if (d > 16) return; const v = Math.pow(1 - d / 16, 1.4) * (E.t === 'h' ? 0.9 : 1); if (v < 0.04) return; sfx('estep', E.t === 'h' ? 'hound' : kind, v); }
-function updateEnemy(E, dt) { updateEnemy0(E, dt); if (E.mdl.rig) zAnimate(E, dt); else if (E.msp > 0.5 && E.st !== 'dead' && E.st !== 'dorm' && !(E.stun > 0)) { E.stepT = (E.stepT || 0) - dt; if (E.stepT <= 0) { enemyStep(E, E.t === 'h' ? 'hound' : 'shamble'); E.stepT = E.t === 'h' ? 0.22 : 0.55; } } }
+function updateEnemy(E, dt) { if (!(E.stalker && stkUpdate(E, dt))) updateEnemy0(E, dt); if (E.mdl.rig) zAnimate(E, dt); else if (E.msp > 0.5 && E.st !== 'dead' && E.st !== 'dorm' && !(E.stun > 0)) { E.stepT = (E.stepT || 0) - dt; if (E.stepT <= 0) { enemyStep(E, E.t === 'h' ? 'hound' : 'shamble'); E.stepT = E.t === 'h' ? 0.22 : 0.55; } } }
 function updateEnemy0(E, dt) {
     const T = tgt(E), m = E.mdl, P = m.P, dx = T.x - E.x, dz = T.z - E.z, dist = Math.hypot(dx, dz), alive = T.state !== 'dead'; E.ph += dt;
     if (E.st === 'rise') { E.stT += dt; const k = Math.min(1, E.stT / RISE_T); if (!m.rig) { m.root.rotation.x = -Math.PI / 2 * (1 - k); m.root.position.y = 0.2 * (1 - k); } if (E.stT >= RISE_T) { E.st = 'chase'; m.root.rotation.x = 0; m.root.position.y = 0; E.stun = 0; E.cdT = 1; } return; }
@@ -1078,7 +1080,7 @@ function updateEnemy0(E, dt) {
 
 /* the zombies play the Scary Zombie Pack clips; the state machine above decides which */
 function zAnimate(E, dt) {
-    const m = E.mdl, r = m.root; r.rotation.x = E.stun > 0 && E.st !== 'dead' ? -0.12 : E.lk && E.st === 'chase' ? 0.32 : 0; r.position.y = 0; const sp = E.lx === undefined ? 0 : Math.hypot(E.x - E.lx, E.z - E.lz) / Math.max(dt, 1e-3); E.lx = E.x; E.lz = E.z; E.msp = (E.msp || 0) + (Math.min(sp, 6) - (E.msp || 0)) * Math.min(1, dt * 8);
+    const m = E.mdl, r = m.root; r.rotation.x = E.stun > 0 && E.st !== 'dead' ? -0.12 : E.lk && E.st === 'chase' ? 0.32 : 0; r.position.y = E.jy || 0; const sp = E.lx === undefined ? 0 : Math.hypot(E.x - E.lx, E.z - E.lz) / Math.max(dt, 1e-3); E.lx = E.x; E.lz = E.z; E.msp = (E.msp || 0) + (Math.min(sp, 6) - (E.msp || 0)) * Math.min(1, dt * 8);
     const T = tgt(E), alive = T.state !== 'dead', dist = Math.hypot(T.x - E.x, T.z - E.z), dv = (E.key || '').length % 2 ? 'dying' : 'death', moving = E.msp > 0.25;
     if (E.st === 'dead') { zPlay(m, dv, false, 0); zStep(m, dt, 1); return; }
     if (E.st === 'dorm') { zPlay(m, 'death', false); zStep(m, dt, 0, ZR.clips.death.dur); return; }
@@ -1087,7 +1089,9 @@ function zAnimate(E, dt) {
     if (E.stun > 0 && E.hz && !E.cr && E.st !== 'dead') { zPlay(m, E.hz, false, 0); E.hzT = (E.hzT || 0) + dt * 1.9; zStep(m, dt, 1, Math.min(E.hzT, ZR.clips[E.hz].dur - 0.02)); r.rotation.x = 0; return; }
     if (!(E.stun > 0)) E.hz = null;
     if (E.st === 'scream') { zPlay(m, 'scream', false, 0.25); zStep(m, dt, 1); return; }
-    if (E.st === 'tele') { zPlay(m, 'scream', false, 0.25); zStep(m, dt, 1); return; }
+    if (E.st === 'tele' || E.st === 'leapw') { zPlay(m, 'scream', false, 0.25); zStep(m, dt, 1); return; }
+    if (E.st === 'leap') { zPlay(m, 'run', true); zStep(m, dt, 1.6); return; }
+    if (E.st === 'recover' && E.stalker) { zPlay(m, 'idle', true); zStep(m, dt, 0.6); return; }
     if (E.st === 'charge') { zPlay(m, 'run', true); zStep(m, dt, 1.4); return; }
     if (E.atkT > 0) { E.azOn = 1; E.az = (E.wind - E.atkT) / E.wind * 1.0; zPlay(m, 'attack', false, 0); zStep(m, dt, 1, E.az); return; }
     if (E.azOn) { if (moving || E.az > 2.4) E.azOn = 0; else { E.az += dt; zPlay(m, 'attack', false); zStep(m, dt, 1, E.az); return; } }
@@ -1098,7 +1102,7 @@ function zAnimate(E, dt) {
     if (E.cr) { zPlay(m, 'crawl', true); zStep(m, dt, 0.25); return; }
     zPlay(m, 'idle', true); zStep(m, dt, 1);
 }
-function finishEnemy(E) { E.mdl.root.position.x = E.x; E.mdl.root.position.z = E.z; E.mdl.root.rotation.y = E.rot; }
+function finishEnemy(E) { E.mdl.root.position.x = E.x; E.mdl.root.position.z = E.z; E.mdl.root.rotation.y = E.rot; if (E.stalker && !E.mdl.rig) E.mdl.root.position.y = E.jy || 0; }
 function animEnemy(E, sp, wind) {
     if (E.mdl.rig) return; if (E.mdl.cust) return custAnim(E, sp, wind);
     const P = E.mdl.P, s = Math.sin(E.ph * (E.t === 'h' ? 14 : 4) * Math.min(1.6, 0.4 + sp * 0.5));
@@ -1119,9 +1123,16 @@ function reload() {
     const w = curW(); if (PL.state !== 'idle' || !w.gun || G.mag >= w.mag) return false; const have = invCount(w.ammo); if (!have) { sfx('click'); say('Out of ' + ITEMS[w.ammo].n.toLowerCase() + '.', 1500); return false; }
     PL.state = 'reload'; PL.st = 0; PL.relT = w.rel || 1.3; gunRelSnd(G.eq); if (AV.on) avAct('gp', 'gpreload', { rate: 2.0 / PL.relT }); return true;
 }
+/* controller rumble: dual-rumble through the Gamepad API (Chrome/Edge/Opera; silently skipped where unsupported) */
+function padRumble(strong, weak, ms) {
+    try {
+        if (!navigator.getGamepads) return; for (const q of navigator.getGamepads()) { if (!q || !q.connected) continue; const a = q.vibrationActuator || (q.hapticActuators && q.hapticActuators[0]); if (!a) continue;
+        if (a.playEffect) a.playEffect('dual-rumble', { startDelay: 0, duration: ms, strongMagnitude: Math.min(1, strong), weakMagnitude: Math.min(1, weak) }); else if (a.pulse) a.pulse(Math.min(1, strong), ms); break; }
+    } catch (e) { /* no rumble */ }
+}
 function fire() {
     const w = curW(); if (PL.cd > 0 || PL.state !== 'idle') return; if (G.mag <= 0) { if (!reload()) { PL.cd = 0.3; } return; }
-    G.mag--; PL.cd = arSemi() ? Math.max(w.rate, 0.19) : w.rate; gunFireSnd(G.eq); RM.flash = 0.07; PL.shots = (PL.shots | 0) + 1; PL.fl = 0.07;
+    G.mag--; PL.cd = arSemi() ? Math.max(w.rate, 0.19) : w.rate; gunFireSnd(G.eq); padRumble(w.splash ? 1 : w.pellets ? 0.9 : Math.min(0.85, 0.35 + w.dmg / 60), w.splash ? 0.8 : w.pellets ? 0.6 : 0.3, w.splash ? 260 : w.pellets ? 200 : 110); RM.flash = 0.07; PL.shots = (PL.shots | 0) + 1; PL.fl = 0.07;
     const leg = !!PL.low, base = w.dmg * gearMult(G.eq) * (leg ? 0.6 : 1);
     const ray = (ang) => { const fx = Math.sin(ang), fz = Math.cos(ang), hs = []; for (const E of RM.enemies) { if (E.st === 'dead') continue; const dx = E.x - PL.x, dz = E.z - PL.z, t = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx); if (t > 0 && t < w.range && lat < E.rad + (w.splash ? 0.3 : 0.15)) hs.push([t, E]); } hs.sort((a, b) => a[0] - b[0]); return hs; };
     if (w.splash) { const hs = ray(PL.rot), t = hs.length ? hs[0][0] : w.range; explode(PL.x + Math.sin(PL.rot) * t, PL.z + Math.cos(PL.rot) * t, w, base); return; }
@@ -1174,7 +1185,7 @@ function useDoor(d) {
     goRoom(d.to, d.toDoor, d);
 }
 function goRoom(id, doorId, door, fromNet) {
-    if (RM.busy) return; RM.busy = true; musPlay(null); const f = $('fade'); if (CO.role === 'host' && !fromNet) { coSend({ t: 'world', flags: G.flags, taken: G.taken, dead: G.dead }); coSend({ t: 'go', id, doorId, di: door ? RM.def.doors.indexOf(door) : -1 }); }
+    if (RM.busy) return; RM.busy = true; musPlay(null); const f = $('fade'); if (CO.role === 'host' && !fromNet) { coSend({ t: 'world', flags: G.flags, taken: G.taken, dead: G.dead, drops: G.drops || {} }); coSend({ t: 'go', id, doorId, di: door ? RM.def.doors.indexOf(door) : -1 }); }
     const arrive = () => { loadRoom(id, doorId); DC.fading = 0; setTimeout(() => { f.style.transition = 'opacity .6s'; f.style.opacity = 0; RM.busy = false; sfx('door2'); }, 350); };
     if (door && !RM.def.sky) doorCut(door, arrive); else { sfx('door'); f.style.transition = 'opacity .35s'; f.style.opacity = 1; setTimeout(arrive, 1000); }
 }
@@ -1186,7 +1197,7 @@ function freeSpot(x, z, r) {   // never drop anybody inside furniture: spiral ou
 function loadRoom(id, doorId, pos) {
     G.room = id; G.seen = G.seen || {}; G.seen[id] = 1; buildRoom(id); RM.busy = true; const def = ROOMS[id]; let sp = { x: 0, z: 0, rot: 0 };
     if (pos) sp = pos; else if (doorId) { const dd = def.doors.find((q) => q.id === doorId); if (dd) sp = dd.sp; } else sp = { x: G.x, z: G.z, rot: G.rot };
-    if (CO.on && CO.role === 'guest') sp = { x: sp.x + Math.cos(sp.rot) * 0.75, z: sp.z - Math.sin(sp.rot) * 0.75, rot: sp.rot }; if (CO.on && G.hp <= 0) G.hp = 35; { const fs = freeSpot(sp.x, sp.z, 0.4); sp = { x: fs[0], z: fs[1], rot: sp.rot }; } placePlayer(sp.x, sp.z, sp.rot); setWeaponVis(); camPick(true); coRoomLoaded(); RM.entered = performance.now(); RM.musFor = null; escRoomSetup(id);
+    if (CO.on && CO.role === 'guest') sp = { x: sp.x + Math.cos(sp.rot) * 0.75, z: sp.z - Math.sin(sp.rot) * 0.75, rot: sp.rot }; if (CO.on && G.hp <= 0) G.hp = 35; { const fs = freeSpot(sp.x, sp.z, 0.4); sp = { x: fs[0], z: fs[1], rot: sp.rot }; } placePlayer(sp.x, sp.z, sp.rot); setWeaponVis(); camPick(true); coRoomLoaded(); RM.entered = performance.now(); RM.musFor = null; escRoomSetup(id); try { stkRoomSetup(id); } catch (er) { console.warn('stalker', er); }
 }
 /* more angles: a room with one fixed camera gets cameras from the opposite corners. Whichever quadrant you stand in is filmed from the corner across from it. */
 function augCams(def) {
@@ -1934,10 +1945,10 @@ function triggerEvents() {
 }
 function decideMusic() {
     if (!G.started) return; const aliveBoss = RM.enemies.some((e) => e.boss && e.st !== 'dead' && e.st !== 'dorm'), boss = RM.enemies.some((e) => e.boss && e.st !== 'dead');
-    musPlay(PL.state === 'dead' ? null : boss || (escOn() && !isSafeDef(RM.def)) ? 'boss' : RM.def.safe ? 'safe' : 'explore');
+    musPlay(PL.state === 'dead' ? null : boss || RM.enemies.some((e) => e.stalker && e.st !== 'dead' && e.st !== 'rise') || (escOn() && !isSafeDef(RM.def)) ? 'boss' : RM.def.safe ? 'safe' : 'explore');
 }
 function update(dt) {
-    RM.t += dt; bloodTick(dt); G.time += dt; escTick(dt); rezTick(dt); updatePlayer(dt); for (const E of RM.enemies) CO.role === 'guest' ? guestEnemy(E, dt) : updateEnemy(E, dt); coTick(dt); try { qaTick(dt); } catch (e) { if (!qaTick.w) { qaTick.w = 1; console.warn('revive', e); } }
+    RM.t += dt; bloodTick(dt); G.time += dt; escTick(dt); stkTick(dt); rezTick(dt); updatePlayer(dt); for (const E of RM.enemies) CO.role === 'guest' ? guestEnemy(E, dt) : updateEnemy(E, dt); coTick(dt); try { qaTick(dt); } catch (e) { if (!qaTick.w) { qaTick.w = 1; console.warn('revive', e); } }
     camPick(false); triggerEvents();
     if (!RM.musT || RM.t - RM.musT > 0.7) { RM.musT = RM.t; decideMusic(); }
     for (const l of RM.lf) l.pl.intensity = l.b * (l.k === 1 ? 0.88 + 0.12 * Math.sin(RM.t * 7 + l.ph) * Math.sin(RM.t * 2.3) : l.k === 2 ? (Math.sin(RM.t * 31 + l.ph) > 0.93 ? 0.2 : 1) : 0.8 + 0.25 * Math.sin(RM.t * 3 + l.ph));
@@ -2109,6 +2120,19 @@ function modPreview(slot) {
     if (!AU.ctx) auInit(); const k = (/^g[fr]_/.test(slot) ? '' : 's:') + modKey(slot);
     if (MOD.buf[k]) { modPlay(k, modVol('s:' + slot)); return; } if (/^gf_/.test(slot)) gunFireSnd(slot.slice(3)); else if (/^gr_/.test(slot)) gunRelSnd(slot.slice(3)); else sfx(slot);
 }
+/* ---- item pictures: your own image for any weapon, healing item, key item or other pickup (inventory icon and the item lying in the world) ---- */
+async function modLoadImages() {
+    let ks = Object.keys(MOD.cfg.img || {}); try { const d = await idb(); const all = await new Promise((res) => { const q = d.transaction('a').objectStore('a').getAllKeys(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); for (const x of all) if (typeof x === 'string' && x.indexOf('mod:i:') === 0 && !ks.includes(x.slice(6))) ks.push(x.slice(6)); } catch (e) { /* cfg list only */ }
+    for (const k of ks) { try { if (MOD.img[k]) continue; const r = await idbGet('mod:i:' + k); if (r && r.b) { MOD.cfg.img[k] = MOD.cfg.img[k] || { name: r.n }; MOD.img[k] = URL.createObjectURL(new Blob([r.b], { type: r.t || 'image/png' })); try { const im = new Image(); im.src = MOD.img[k]; await im.decode(); MOD.dim[k] = [im.naturalWidth, im.naturalHeight]; } catch (e) { /* ratio guessed */ } } } catch (e) { console.warn('mod image', k, e); } }
+    for (const k in RE_ICONS) delete RE_ICONS[k];
+}
+async function modSetImage(id, file) {
+    const bm = await createImageBitmap(file), sc = Math.min(1, 256 / Math.max(bm.width, bm.height)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bm.width * sc)); c.height = Math.max(1, Math.round(bm.height * sc)); c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height);
+    const blob = await new Promise((res) => c.toBlob(res, 'image/png')); if (!blob) throw new Error('could not read that image'); const b = await blob.arrayBuffer();
+    await idbPut('mod:i:' + id, { n: file.name, b, t: 'image/png' }); if (MOD.img[id]) URL.revokeObjectURL(MOD.img[id]); MOD.img[id] = URL.createObjectURL(blob); MOD.dim[id] = [c.width, c.height]; MOD.cfg.img[id] = { name: file.name }; modSave(); for (const k in RE_ICONS) delete RE_ICONS[k];
+}
+async function modClearImage(id) { if (MOD.img[id]) URL.revokeObjectURL(MOD.img[id]); delete MOD.img[id]; delete MOD.cfg.img[id]; try { await idbDel('mod:i:' + id); } catch (e) { /* none */ } modSave(); for (const k in RE_ICONS) delete RE_ICONS[k]; }
+function modItemImg(id) { const u = MOD.img[id]; if (!u) return null; const i = new Image(); i.src = u; i.className = 'reic'; i.dataset.id = id; i.dataset.mod = 1; return i; }
 /* ---- models ---- */
 async function modParse(buf, name) {
     const isFbx = /\.fbx$/i.test(name || '') || avIsFbx(buf); let sc, clips = [];
@@ -2126,7 +2150,7 @@ async function modSetModel(slot, file) {
 }
 async function modClearModel(slot) { delete MOD.models[slot]; const c = slot[0] === 'e' ? MOD.cfg.en[slot.slice(2)] : MOD.cfg.gun[slot.slice(2)]; if (c) delete c.mf; try { await idbDel('mod:m:' + slot); } catch (e) { /* none */ } modSave(); if (slot[0] === 'g') gunRefreshModels(); }
 async function modBoot() {
-    modApplyGuns();
+    modApplyGuns(); await modLoadImages();
     const slots = []; for (const k of Object.keys(MOD.cfg.en)) if (MOD.cfg.en[k].mf) slots.push('e:' + k); for (const k of Object.keys(MOD.cfg.gun)) if (MOD.cfg.gun[k].mf) slots.push('g:' + k);
     for (const s of slots) { try { const r = await idbGet('mod:m:' + s); if (r && r.b) MOD.models[s] = await modParse(r.b, r.n); } catch (e) { console.warn('mod model', s, e); } }
     if (slots.some((s) => s[0] === 'g')) gunRefreshModels();
@@ -2185,8 +2209,8 @@ function modClose() { if (MODUI.el) { MODUI.el.remove(); MODUI.el = null; } try 
 function modRender() {
     const ov = MODUI.el; if (!ov) return; ov.textContent = ''; const wrap = modEl('div', 'width:min(860px,100%)'); ov.appendChild(wrap);
     const top = modEl('div', 'display:flex;align-items:center;gap:10px;margin-bottom:10px'); top.appendChild(modEl('div', 'font:700 22px Georgia,serif;flex:1;letter-spacing:.06em', 'MOD KIT')); const x = modEl('button', B_CSS, 'Close'); x.onclick = modClose; top.appendChild(x); wrap.appendChild(top);
-    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['snd', 'Sounds'], ['bal', 'Balance & backup']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
-    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, snd: modTabSnd, bal: modTabBal })[MODUI.tab](body);
+    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
+    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, item: modTabItem, stk: modTabStk, snd: modTabSnd, bal: modTabBal })[MODUI.tab](body);
 }
 const B_CSS = 'background:#2a2014;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:5px 11px;font:13px Georgia,serif;cursor:pointer';
 const CARD = 'background:#150f08;border:1px solid #4a3d28;border-radius:8px;padding:10px 12px;margin-bottom:9px';
@@ -2228,6 +2252,38 @@ function modTabGun(body) {
         body.appendChild(card);
     }
 }
+function modTabItem(body) {
+    body.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'Give any item your own picture (png, jpg, gif or webp; a transparent png looks best). It replaces the inventory icon and the item as it lies in the world. Weapons here are the inventory pictures; gun models in your hands are on the Guns tab.'));
+    const groups = [['Weapons', (t) => t === 'weapon'], ['Healing items', (t) => t === 'heal' || t === 'mix'], ['Key items', (t) => t === 'key'], ['Ammo and other items', (t) => t !== 'weapon' && t !== 'heal' && t !== 'mix' && t !== 'key']];
+    for (const [gn, test] of groups) {
+        const card = modEl('div', CARD); card.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:4px', gn)); let any = 0;
+        for (const id of Object.keys(ITEMS)) {
+            const it = ITEMS[id]; if (!test(it.type)) continue; any = 1; const c = MOD.cfg.img[id];
+            const r = modEl('div', 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #2a2014;flex-wrap:wrap'); const pv = modEl('div', 'width:64px;height:44px;display:flex;align-items:center;justify-content:center;background:#0d0804;border:1px solid #2a2014;border-radius:4px');
+            try { const ic = reIcon(id); ic.style.cssText = 'max-width:60px;max-height:40px;object-fit:contain'; pv.appendChild(ic); } catch (e) { /* no preview */ }
+            r.append(pv, modEl('span', 'width:170px;font-size:13px', it.n), modEl('span', 'flex:1;font-size:13px;color:' + (c ? '#9be39b' : '#8a7c5c'), c ? c.name : 'Default'));
+            const b = modEl('button', B_CSS, c ? 'Replace…' : 'Choose image…'); b.onclick = () => modPickFile('image/*', async (f) => { await modSetImage(id, f); modRender(); }); r.appendChild(b);
+            if (c) { const x = modEl('button', B_CSS, 'Reset'); x.onclick = async () => { await modClearImage(id); modRender(); }; r.appendChild(x); }
+            card.appendChild(r);
+        }
+        if (any) body.appendChild(card);
+    }
+}
+function modTabStk(body) {
+    const c = stkCfg(), card = modEl('div', CARD); body.appendChild(card);
+    card.appendChild(modEl('div', 'font:700 15px Georgia,serif;margin-bottom:4px', 'The Stalker'));
+    card.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'A Tyrant hunts you through the main inn. It follows you from room to room, bursts through walls and furniture, and leaps at you from a distance. When you put it down it stays down for 40 seconds, then gets up faster and harder. Beat it three times and it does not come back. It leaves you alone in safe rooms and boss rooms. In co-op the host\'s settings are used.'));
+    const on = modEl('label', 'display:flex;align-items:center;gap:8px;margin:4px 0;font-size:13px'), cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!c.on; cb.onchange = () => { c.on = cb.checked ? 1 : 0; modSave(); }; on.append(cb, modEl('span', '', 'The Stalker is on'));
+    const lp = modEl('label', 'display:flex;align-items:center;gap:8px;margin:4px 0;font-size:13px'), cl = document.createElement('input'); cl.type = 'checkbox'; cl.checked = !!c.leap; cl.onchange = () => { c.leap = cl.checked ? 1 : 0; modSave(); }; lp.append(cl, modEl('span', '', 'It can leap at you'));
+    const mr = modEl('div', 'display:flex;align-items:center;gap:8px;margin:4px 0'); mr.appendChild(modEl('span', 'width:150px;font-size:13px', 'Which Tyrant')); const sel = document.createElement('select'); sel.style.cssText = B_CSS; for (const [id, n] of STK_MODELS) { const o = document.createElement('option'); o.value = id; o.textContent = n; sel.appendChild(o); } sel.value = c.model; sel.onchange = () => { c.model = sel.value; modSave(); }; mr.appendChild(sel);
+    card.append(on, lp, mr); modSlider(card, 'Health', () => c.hp, (v) => { c.hp = v; }, 0.3, 4, 0.05); modSlider(card, 'Speed', () => c.spd, (v) => { c.spd = v; }, 0.6, 1.5, 0.05);
+    card.appendChild(modEl('div', 'font-size:12px;color:#8a7c5c;margin:6px 0', 'Changes apply the next time it appears. You can also replace its body with your own model on the Enemies tab (Tyrant).'));
+    const st = modEl('div', 'font-size:13px;color:#c9b27a;margin:6px 0'), S = G && G.stk; st.textContent = !S ? 'This game: it has not appeared yet. It starts hunting once you beat the boiler room boss and head back up into the inn.' : S.st === 'dead' ? 'This game: defeated for good.' : 'This game: defeated ' + (S.downs | 0) + ' of 3 times' + (S.st === 'down' ? ', down now.' : ', hunting you.'); card.appendChild(st);
+    const row = modEl('div', 'display:flex;gap:8px;flex-wrap:wrap'), a = modEl('button', B_CSS, 'Send it after me now'), b = modEl('button', B_CSS, 'Restart its hunt (0 of 3)');
+    a.onclick = () => { if (!G || !G.started) { alert('Start or load a game first.'); return; } if (!G.stk || G.stk.st === 'dead') { delete G.dead.stalker; G.stk = { st: 'hunt', room: null, x: 0, z: 0, downs: G.stk ? 0 : 0, hp: 0, downT: 0, wait: 4, near: 12 }; G.stk.hp = stkMaxHp(G.stk); } else if (G.stk.st === 'hunt' && G.stk.room == null) G.stk.wait = 4; modRender(); };
+    b.onclick = () => { if (!G) return; delete G.stk; if (G.dead) delete G.dead.stalker; if (G.flags) delete G.flags.stalkerDead; modRender(); };
+    row.append(a, b); card.appendChild(row);
+}
 function modTabSnd(body) {
     body.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'Replace any sound with your own audio file (mp3, wav, ogg). Use ▶ to hear what is playing now.'));
     const slots = []; for (const [id, name] of MOD_GUNS) if (WPN[id] && WPN[id].gun) { slots.push(['gf_' + id, name + ': fire']); slots.push(['gr_' + id, name + ': reload']); } slots.push(...MOD_SFX);
@@ -2256,17 +2312,19 @@ async function modExport() {
     const out = { game: 'oasis-survivor-modkit', v: 1, cfg: MOD.cfg, files: {} };
     for (const k of Object.keys(MOD.cfg.sfx)) { const r = await idbGet('mod:a:' + k); if (r) out.files['a:' + k] = { n: r.n, b: modB64(r.b) }; }
     for (const [g, o] of [['e', MOD.cfg.en], ['g', MOD.cfg.gun]]) for (const k of Object.keys(o)) if (o[k].mf) { const r = await idbGet('mod:m:' + g + ':' + k); if (r) out.files['m:' + g + ':' + k] = { n: r.n, b: modB64(r.b) }; }
+    for (const k of Object.keys(MOD.cfg.img || {})) { const r = await idbGet('mod:i:' + k); if (r) out.files['i:' + k] = { n: r.n, b: modB64(r.b) }; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' })); a.download = 'harbor-inn-modpack.json'; document.body.appendChild(a); a.click(); a.remove();
 }
 async function modReset() {
     for (const k of Object.keys(MOD.cfg.sfx)) { try { await idbDel('mod:a:' + k); } catch (e) { /* none */ } }
     for (const [g, o] of [['e', MOD.cfg.en], ['g', MOD.cfg.gun]]) for (const k of Object.keys(o)) { try { await idbDel('mod:m:' + g + ':' + k); } catch (e) { /* none */ } }
-    MOD.cfg = { v: 1, en: {}, gun: {}, sfx: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }; MOD.buf = {}; MOD.models = {}; modSave(); modApplyGuns(); gunRefreshModels();
+    for (const k of Object.keys(MOD.cfg.img || {})) { try { await idbDel('mod:i:' + k); } catch (e) { /* none */ } } MOD.img = {};
+    MOD.cfg = { v: 1, en: {}, gun: {}, sfx: {}, img: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }; MOD.buf = {}; MOD.models = {}; modSave(); modApplyGuns(); gunRefreshModels();
 }
 async function modImport(f) {
     const o = JSON.parse(await f.text()); if (!o || o.game !== 'oasis-survivor-modkit' || !o.cfg) throw new Error('not a Harbor Inn mod pack'); await modReset();
-    MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }, o.cfg); MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
-    for (const [k, v] of Object.entries(o.files || {})) { if (k.startsWith('a:')) await idbPut('mod:a:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('m:')) await idbPut('mod:m:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); }
+    MOD.cfg = Object.assign({ v: 1, en: {}, gun: {}, sfx: {}, img: {}, glob: { eh: 1, ed: 1, es: 1, pd: 1 } }, o.cfg); MOD.cfg.img = MOD.cfg.img || {}; MOD.cfg.glob = Object.assign({ eh: 1, ed: 1, es: 1, pd: 1 }, MOD.cfg.glob || {});
+    for (const [k, v] of Object.entries(o.files || {})) { if (k.startsWith('a:')) await idbPut('mod:a:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('m:')) await idbPut('mod:m:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('i:')) await idbPut('mod:i:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); }
     modSave(); MOD.aLoaded = false; if (AU.ctx) await modLoadAudio(); await modBoot(); modRender();
 }
 window.__mod = MOD; MOD.fn = { modOpen, modSetModel, modSetSound, modApplyEnemy, modGunInner }; setTimeout(() => { try { modBoot(); } catch (e) { console.warn('mod kit', e); } }, 0);
@@ -2790,6 +2848,7 @@ function guestEnemy(E, dt) {
     if (E.st === 'dead') { if (was !== 'dead') { G.dead[E.key] = 1; G.kills++; E.dT = 0; } E.dT = (E.dT || 0) + dt; const kk = Math.min(1, E.dT / 0.6); if (E.t === 'h') { m.root.rotation.z = kk * 1.4; m.root.position.y = 0; } else { m.root.rotation.x = -kk * Math.PI / 2; m.root.position.y = 0.2 * kk; } m.root.position.x = E.x; m.root.position.z = E.z; m.root.rotation.y = E.rot; return; }
     m.root.rotation.x = E.st === 'dorm' ? -Math.PI / 2 : E.st === 'wake' ? -Math.PI / 2 * (1 - Math.min(1, E.stT / 1.1)) : E.stun ? -0.25 : 0; m.root.position.y = E.st === 'dorm' ? 0.18 : E.st === 'wake' ? 0.18 * (1 - Math.min(1, E.stT / 1.1)) : 0;
     if (E.st !== 'dorm' && E.st !== 'wake') animEnemy(E, Math.hypot(E.x - ox, E.z - oz) / Math.max(dt, 0.001), E.atkT > 0 ? 1 - E.atkT / E.wind : 0); finishEnemy(E);
+    if (E.stalker) { E.jy = n.jy || 0; if (E.mdl.rig) zAnimate(E, dt); }
 }
 /* ---- the partner */
 function coEnsureRP() {
@@ -3028,7 +3087,7 @@ function coRoomLoaded() { if (!CO.on) return; CO.pT = 1; if (CO.rp) CO.rp.g.visi
 function coTick(dt) {
     if (!CO.on || !CO.peer) return; const r = CO.rp;
     CO.pT += dt; if (CO.pT > 0.083) { CO.pT = 0; coSend({ t: 'p', x: r2(PL.x), z: r2(PL.z), r: r2(PL.rot), s: PL.state, a: PL.aim ? 1 : 0, e: G.eq, h: G.hp, w: r2(PL.speed), m: RM.id, f: PL.shots | 0 }); }
-    if (CO.role === 'host') { CO.sT += dt; if (CO.sT > 0.1) { CO.sT = 0; if (RM.enemies.length) coSend({ t: 'en', room: RM.id, l: RM.enemies.map((E) => [E.key, E.t, r2(E.x), r2(E.z), r2(E.rot), E.st, r2(E.stT || 0), r2(E.atkT || 0), Math.round(E.hp * 10) / 10, E.stun > 0 ? 1 : 0, E.cr ? 1 : 0]) }); } }
+    if (CO.role === 'host') { CO.sT += dt; if (CO.sT > 0.1) { CO.sT = 0; if (RM.enemies.length) coSend({ t: 'en', room: RM.id, l: RM.enemies.map((E) => [E.key, E.t, r2(E.x), r2(E.z), r2(E.rot), E.st, r2(E.stT || 0), r2(E.atkT || 0), Math.round(E.hp * 10) / 10, E.stun > 0 ? 1 : 0, E.cr ? 1 : 0, r2(E.jy || 0), E.stalker ? E.tyid : 0]) }); } }
     if (r) { const vis = CO.rpRoom === RM.id; r.g.visible = vis; if (vis) { const k = 1 - Math.exp(-dt * 12), ox = r.x, oz = r.z; r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.rot += wrapA(r.tr - r.rot) * Math.min(1, dt * 12); r.walk += r.speed * dt * 0.75; r.g.position.x = r.x; r.g.position.z = r.z; r.g.rotation.y = r.rot; rpAnim(dt); }
         const b = $('buddy'), f = r.hp / 100, txt = r.state === 'dead' ? 'DEAD' : f > 0.65 ? 'FINE' : f > 0.35 ? 'CAUTION' : 'DANGER', col = r.state === 'dead' ? '#777' : f > 0.65 ? '#3f3' : f > 0.35 ? '#fc3' : '#f33'; b.classList.remove('hide'); b.innerHTML = 'P' + (CO.role === 'host' ? '2' : '1') + ' <b style="color:' + col + '">' + txt + '</b>'; }
     if (PL.state === 'dead' && r && r.state === 'dead' && !CO.overT) { CO.overT = 1; setTimeout(() => { CO.overT = 0; if (PL.state === 'dead') gameOver(); }, 1600); }
@@ -3051,14 +3110,15 @@ function coMsg(id, m) {
         case 'savereq': if (CO.role === 'host') coSave(); break;
         case 'savecopy': coStoreSave(m.blob); say('Game saved for both players.', 2400); break;
         case 'full': CO.state = 'error'; CO.note = 'That game already has two players.'; coRefresh(); break;
-        case 'start': if (CO.role !== 'guest') break; closePanel(); G = Object.assign(newG(), m.bag || {}); G.flags = m.world.flags || {}; G.taken = m.world.taken || {}; G.dead = m.world.dead || {}; G.seen = m.world.seen || G.seen || {}; G.saves = m.world.saves || 0; G.kills = m.world.kills || 0; G.room = m.room; G.time = m.time || 0; beginCo({ x: m.x, z: m.z, rot: m.rot }); break;
+        case 'start': if (CO.role !== 'guest') break; closePanel(); G = Object.assign(newG(), m.bag || {}); G.flags = m.world.flags || {}; G.taken = m.world.taken || {}; G.dead = m.world.dead || {}; G.seen = m.world.seen || G.seen || {}; G.saves = m.world.saves || 0; G.kills = m.world.kills || 0; G.drops = m.world.drops || {}; G.room = m.room; G.time = m.time || 0; beginCo({ x: m.x, z: m.z, rot: m.rot }); break;
         case 'over': if (UI.mode !== 'over') { PL.state = 'dead'; G.hp = 0; gameOver(true); } break;   // the whole party is down
         case 'p': { const r = coEnsureRP(); r.tx = m.x; r.tz = m.z; r.tr = m.r; r.state = m.s; r.aim = !!m.a; r.eq = m.e; r.hp = m.h; r.speed = m.w; CO.rpRoom = m.m; if (r.f !== undefined && m.f !== r.f && m.m === RM.id) { r.kick = 1; if (isGun(m.e)) { r.flash = 0.07; if (!gunFireSnd(m.e)) { /* synthesised fallback played */ } } else { r.swT = 0.35; sfx('swing'); } } r.f = m.f | 0; if (!r.cur) { r.x = m.x; r.z = m.z; r.rot = m.r; r.cur = true; } if (m.m !== RM.id) r.cur = false; break; }
-        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10] }; } break; }
+        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(a[12] ? { t: 'z', ty: a[12], x: a[2], z: a[3], rot: a[4] } : sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[12]) E.stalker = 1; if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10], jy: a[11] || 0 }; } break; }
         case 'hit': { if (CO.role !== 'host') break; const E = RM.enemies.find((q) => q.key === m.key); if (E && CO.rp) hitEnemy(E, Math.min(60, +m.dmg || 0), !!m.crit, CO.rp, !!m.leg); break; }
         case 'hurt': hurtPlayer(+m.dmg || 0, +m.fx || 0, +m.fz || 0); break;
+        case 'dd': { if (CO.role !== 'guest') break; G.drops = G.drops || {}; G.drops[m.ek] = { r: m.r, item: m.item, n: m.n, x: m.x, z: m.z }; const dk = 'dd:' + m.ek; if (RM.id === m.r && !G.taken[dk] && !RM.inter.some((q) => q.key === dk)) { const f = freeSpot(m.x, m.z, 0.3); worldItem({ k: 'dd', item: m.item, n: m.n, x: f[0], z: f[1], y: 0.1 }, dk); } break; }
         case 'flag': if (String(m.k) !== 'escapeDone') G.flags[String(m.k)] = 1; break;
-        case 'world': G.flags = m.flags || G.flags; G.taken = m.taken || G.taken; G.dead = m.dead || G.dead; for (const o of RM.inter.slice()) if (o.key && G.taken[o.key] && o.mesh) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } break;
+        case 'world': if (m.drops) G.drops = m.drops; G.flags = m.flags || G.flags; G.taken = m.taken || G.taken; G.dead = m.dead || G.dead; for (const o of RM.inter.slice()) if (o.key && G.taken[o.key] && o.mesh) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } break;
         case 'take': { if (CO.role !== 'host') break; const o = RM.inter.find((q) => q.key === m.key); if (!G.taken[m.key]) { G.taken[m.key] = 1; if (o) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } coSend({ t: 'taken', key: m.key, by: 'g' }); } else coSend({ t: 'taken', key: m.key, by: 'x' }); break; }
         case 'taken': { const o = RM.inter.find((q) => q.key === m.key); if (m.by === 'g' && CO.role === 'guest' && o) { o.confirmed = 1; interact(o); } else { G.taken[m.key] = 1; if (o) { o.mesh.removeFromParent(); RM.inter.splice(RM.inter.indexOf(o), 1); } } break; }
         case 'door': { if (CO.role !== 'host' || RM.busy) break; const d = RM.def.doors[m.di | 0]; if (d) { if (UI.mode) closePanel(); goRoom(d.to, d.toDoor, d); } break; }
@@ -3074,7 +3134,7 @@ function coPeerGone() {
     if (was === 'guest') { CO.state = 'error'; CO.note = 'The host left the game.'; if (G.started) setTimeout(() => { coLeave(); toTitle(); }, 2500); } else { CO.state = 'waiting'; }
     coRefresh();
 }
-function coSendStart() { if (CO.role === 'host' && CO.peer) coSend({ t: 'start', world: { flags: G.flags, taken: G.taken, dead: G.dead, seen: G.seen, saves: G.saves, kills: G.kills }, bag: (CO.bags || {})[CO.peerPid] || null, room: RM.id || G.room, x: PL.x, z: PL.z, rot: PL.rot, time: G.time }); }
+function coSendStart() { if (CO.role === 'host' && CO.peer) coSend({ t: 'start', world: { flags: G.flags, taken: G.taken, dead: G.dead, seen: G.seen, saves: G.saves, kills: G.kills, drops: G.drops || {} }, bag: (CO.bags || {})[CO.peerPid] || null, room: RM.id || G.room, x: PL.x, z: PL.z, rot: PL.rot, time: G.time }); }
 const coCbs = { peer(id) { if (CO.role === 'guest' && !CO.peer) { CO.peer = id; CO.state = 'connected'; coEnsureRP(); CO.tr.send(id, { t: 'hello', v: 1, pid: PID }); coRefresh(); } }, left(id) { if (id === CO.peer) coPeerGone(); }, msg(id, m) { coMsg(id, m); } };
 async function coHost() {
     coLeave(); CO.role = 'host'; CO.code = newCode(); CO.state = 'opening'; CO.note = ''; CO.on = true; coRefresh();
@@ -3369,6 +3429,7 @@ function rollDrop(E) {
     else n = (10 + Math.floor(Math.random() * 21)) * (big ? 2 : 1);
     G.drops[E.key] = { r: RM.id, item, n, x: E.x, z: E.z };
     worldItem({ k: 'dd', item, n, x: E.x, z: E.z, y: 0.1 }, 'dd:' + E.key);
+    coSend({ t: 'dd', ek: E.key, r: RM.id, item, n, x: E.x, z: E.z });   // the guest never rolls drops; the host tells them
 }
 function restoreDrops(id) {
     const D = G.drops || {};
@@ -3503,6 +3564,118 @@ function boardHeli() {
     setTimeout(() => { f.style.transition = 'opacity .6s'; f.style.opacity = 0; RM.busy = false; UI.go('end'); }, 2200);
 }
 
+/* ==================================================================================================================== *
+ *  THE STALKER: a Tyrant that hunts you through the main inn.
+ *  It wakes after the boiler room fight (random room on the way back up), then follows you from room to room, smashes through walls and furniture, leaps at you, and when you put it down it
+ *  stays down for 40 seconds. Beat it three times and it does not get back up. Choose which Tyrant it is on the
+ *  Mod Kit's Stalker tab. The hunt state lives in G.stk, so it is saved with the game.
+ * ==================================================================================================================== */
+const STK_ROOMS = ['lobby', 'dining', 'kitchen', 'east', 'west', 'library', 'storage', 'pantry', 'laundry', 'lounge', 'ballroom', 'landing', 'corridor', 'suite', 'study'];
+const STK_DOWN_T = 40, STK_MODELS = [['parasite', 'Stalker Tyrant (tall and fast)'], ['skeletonzombie', 'Brute Tyrant (huge and slow)']];
+const STKFX = { list: [], geo: null };
+function stkCfg() { MOD.cfg.stk = Object.assign({ on: 1, model: 'parasite', hp: 1, spd: 1, leap: 1 }, MOD.cfg.stk || {}); return MOD.cfg.stk; }
+function stkMaxHp(S) { const c = stkCfg(); return Math.round((c.model === 'skeletonzombie' ? 80 : 60) * c.hp * (1 + 0.2 * (S.downs | 0))); }
+function stkDebris(x, y, z, n, power) {
+    const g = RM.group; if (!g) return; STKFX.geo = STKFX.geo || new THREE.BoxGeometry(0.16, 0.16, 0.16); const cols = [0x6a5a48, 0x4a4038, 0x8a7a62, 0x3a3430];
+    for (let i = 0; i < n && STKFX.list.length < 140; i++) {
+        const m = new THREE.Mesh(STKFX.geo, new THREE.MeshLambertMaterial({ color: cols[i % 4] })), a = Math.random() * 6.283, sp = (1.2 + Math.random() * 3.2) * (power || 1);
+        m.position.set(x + (Math.random() - 0.5) * 0.4, y + Math.random() * 0.6, z + (Math.random() - 0.5) * 0.4); m.scale.setScalar(0.5 + Math.random() * 1.5); m.rotation.set(Math.random() * 3, Math.random() * 3, 0); g.add(m);
+        STKFX.list.push({ m, vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: 1.5 + Math.random() * 3.5 * (power || 1), t: 0 });
+    }
+}
+function stkFxTick(dt) {
+    for (let i = STKFX.list.length - 1; i >= 0; i--) {
+        const p = STKFX.list[i], m = p.m; p.t += dt; if (m.parent !== RM.group || p.t > 5) { if (m.parent) m.removeFromParent(); m.material.dispose(); STKFX.list.splice(i, 1); continue; }
+        p.vy -= 12 * dt; m.position.x += p.vx * dt; m.position.y += p.vy * dt; m.position.z += p.vz * dt; m.rotation.x += dt * 4; m.rotation.z += dt * 3;
+        if (m.position.y <= 0.08) { m.position.y = 0.08; p.vy = Math.abs(p.vy) * 0.25; p.vx *= 0.6; p.vz *= 0.6; if (p.vy < 0.4) { p.vy = 0; p.vx = p.vz = 0; } }
+    }
+}
+function stkRubble(x, z) {   // the hole he leaves in the wall: a heap of broken stone that stays
+    const g = RM.group; if (!g) return; STKFX.geo = STKFX.geo || new THREE.BoxGeometry(0.16, 0.16, 0.16); const cols = [0x6a5a48, 0x4a4038, 0x8a7a62, 0x3a3430];
+    for (let i = 0; i < 9; i++) { const m = new THREE.Mesh(STKFX.geo, new THREE.MeshLambertMaterial({ color: cols[i % 4] })); m.scale.set(1.5 + Math.random() * 2.5, 0.8 + Math.random() * 1.8, 1.5 + Math.random() * 2.5); m.position.set(x + (Math.random() - 0.5) * 2.2, 0.06 + m.scale.y * 0.08, z + (Math.random() - 0.5) * 2.2); m.rotation.y = Math.random() * 3; g.add(m); }
+}
+function stkSpawn(x, z, rot, chase) {
+    const S = G.stk, c = stkCfg(), f = freeSpot(x, z, 0.5), E = spawnEnemy({ t: 'z', ty: c.model, x: f[0], z: f[1], rot }, 'stalker', chase); if (!E) return null;
+    const big = c.model === 'skeletonzombie', mx = stkMaxHp(S);
+    E.stalker = 1; E.tyid = c.model; E.hp0 = mx; E.hp = S.hp > 0 ? Math.min(S.hp, mx) : mx; E.spd = (big ? 2.6 : 3.3) * c.spd * (1 + 0.06 * (S.downs | 0)); E.reach = big ? 2.3 : 1.9; E.dmg = 24 + 4 * (S.downs | 0); E.cd = 1.2; E.wind = big ? 0.7 : 0.5; E.lcd = 3; E.jy = 0; E.stun = 0;
+    return E;
+}
+function stkBreach() {   // he comes straight through the wall that is farthest from you
+    const S = G.stk, def = RM.def, hw = def.w / 2, hd = def.d / 2, c = [];
+    for (const sg of [-1, 1]) {
+        const z1 = (Math.random() - 0.5) * (def.d - 4), x1 = (Math.random() - 0.5) * (def.w - 4);
+        c.push({ x: sg * (hw - 1.1), z: z1, wx: sg * hw, wz: z1 }); c.push({ x: x1, z: sg * (hd - 1.1), wx: x1, wz: sg * hd });
+    }
+    c.sort((a, b) => Math.hypot(b.x - PL.x, b.z - PL.z) - Math.hypot(a.x - PL.x, a.z - PL.z)); const w = c[0];
+    const E = stkSpawn(w.x, w.z, Math.atan2(PL.x - w.x, PL.z - w.z), true); if (!E) return;
+    stkDebris(w.wx, 1.2, w.wz, 34, 1.5); stkRubble(w.wx - Math.sign(w.wx) * 0.4 * (Math.abs(w.wx) === hw ? 1 : 0), w.wz - Math.sign(w.wz) * 0.4 * (Math.abs(w.wz) === hd ? 1 : 0)); RM.shake = 1.4; RM.flash = 0.1; esfx('boom'); setTimeout(() => esfx('roar'), 350);
+    S.room = RM.id; S.st = 'hunt'; say(S.first ? 'The wall explodes inward. The Tyrant is back.' : 'The wall explodes inward. The Tyrant has found you.', 3200); S.first = 1;
+}
+function stkRise(E) { const S = G.stk; S.st = 'hunt'; S.hp = stkMaxHp(S); E.hp0 = S.hp; E.hp = S.hp; E.spd *= 1.06; E.st = 'rise'; E.stT = 0; E.stun = 0; E.hz = null; E.atkT = 0; E.screamed = 1; esfx('roar'); }
+function stkDowned(E) {
+    const S = G.stk; S.downs = (S.downs | 0) + 1; E.hp = 0; E.st = 'dead'; E.stT = 0; E.deadT = 0; E.hz = null; E.atkT = 0; E.jy = 0; E.mdl.root.position.y = 0; G.kills++; RM.shake = 0.9; sfx('roar'); S.x = E.x; S.z = E.z; S.room = RM.id; S.hp = 0;
+    if (S.downs >= 3) {
+        S.st = 'dead'; G.dead.stalker = 1; setFlag('stalkerDead'); G.drops = G.drops || {};
+        for (const [k, item, n, dx] of [['stalker', 'gil', 300, -0.5], ['stalker2', 'ammo', 20, 0.5]]) { const x = E.x + dx, z = E.z + 0.6; G.drops[k] = { r: RM.id, item, n, x, z }; worldItem({ k: 'dd', item, n, x, z, y: 0.1 }, 'dd:' + k); coSend({ t: 'dd', ek: k, r: RM.id, item, n, x, z }); }
+        say('The Tyrant is finished. It does not get back up.', 5200);
+    } else { S.st = 'down'; S.downT = STK_DOWN_T; say('The Tyrant is down. It will rise again in 40 seconds. (' + S.downs + ' of 3)', 4600); }
+}
+function stkMove(E, dx, dz) {   // he does not go around furniture; he goes through it
+    const nx = E.x + dx, nz = E.z + dz, r = E.rad * 0.8, hit = hitsCol(nx, nz, r);
+    if (inBounds(nx, E.z, E.rad)) E.x = nx; if (inBounds(E.x, nz, E.rad)) E.z = nz;
+    if (hit && !(E.smT > 0)) { E.smT = 0.45; stkDebris(E.x, 0.9, E.z, 8, 0.8); RM.shake = Math.max(RM.shake || 0, 0.35); esfx('thud'); }
+}
+function stkUpdate(E, dt) {   // returns true when it has run this frame; false lets the normal zombie code do dead / rise
+    const st = E.st; if (st === 'dead' || st === 'rise' || st === 'scream' || st === 'dorm' || st === 'wake') return false;
+    const T = tgt(E), m = E.mdl, dx = T.x - E.x, dz = T.z - E.z, dist = Math.hypot(dx, dz), alive = T.state !== 'dead', c = stkCfg(); E.ph += dt; E.smT = Math.max(0, (E.smT || 0) - dt); E.lcd = Math.max(0, (E.lcd == null ? 3 : E.lcd) - dt); E.cdT = Math.max(0, (E.cdT || 0) - dt);
+    const turn = (rate) => { let da = Math.atan2(dx, dz) - E.rot; da = Math.atan2(Math.sin(da), Math.cos(da)); E.rot += clamp(da, -dt * rate, dt * rate); };
+    if (st === 'idle') E.st = 'chase';
+    if (E.stun > 0 && E.st === 'chase') { E.stun -= dt; m.root.rotation.x = -0.25; finishEnemy(E); return true; } m.root.rotation.x = 0;
+    if (st === 'leapw') { E.stT += dt; turn(6); if (E.stT >= 0.55) { E.st = 'leap'; E.stT = 0; E.sx = E.x; E.sz = E.z; E.tx = T.x; E.tz = T.z; esfx('roar'); } finishEnemy(E); return true; }
+    if (st === 'leap') {
+        E.stT += dt; const D = 0.7, k = Math.min(1, E.stT / D); E.x = clamp(E.sx + (E.tx - E.sx) * k, -RM.def.w / 2 + 0.6, RM.def.w / 2 - 0.6); E.z = clamp(E.sz + (E.tz - E.sz) * k, -RM.def.d / 2 + 0.6, RM.def.d / 2 - 0.6); E.jy = Math.sin(k * Math.PI) * 2.3; E.rot = Math.atan2(E.tx - E.sx, E.tz - E.sz);
+        if (k >= 1) { E.jy = 0; RM.shake = 1.1; esfx('boom'); stkDebris(E.x, 0.2, E.z, 16, 1); const T2 = tgt(E); if (T2.state !== 'dead' && Math.hypot(T2.x - E.x, T2.z - E.z) < 1.9) hurtT(T2, Math.round(E.dmg * 1.4), T2.x - E.x, T2.z - E.z); E.st = 'recover'; E.stT = 0; E.lcd = 5 + Math.random() * 3; }
+        finishEnemy(E); return true;
+    }
+    if (st === 'recover') { E.stT += dt; E.jy = 0; if (E.stT > 1.1) { E.st = 'chase'; E.cdT = 0.5; } finishEnemy(E); return true; }
+    E.jy = 0; turn(3.2);
+    if (E.atkT > 0) { E.atkT -= dt; if (E.atkT <= 0) { if (dist < E.reach + 0.5 && alive) hurtT(T, E.dmg, T.x - E.x, T.z - E.z); E.cdT = E.cd; } finishEnemy(E); return true; }
+    if (alive && c.leap && E.lcd <= 0 && dist > 3.3 && dist < 8.5) { E.st = 'leapw'; E.stT = 0; esfx('groan'); finishEnemy(E); return true; }
+    if (dist > E.reach && alive) stkMove(E, Math.sin(E.rot) * E.spd * dt, Math.cos(E.rot) * E.spd * dt); else if (alive && E.cdT <= 0) E.atkT = E.wind;
+    finishEnemy(E); return true;
+}
+function stkHud(S) {
+    let h = $('stkh'); if (!h) { h = document.createElement('div'); h.id = 'stkh'; h.style.cssText = 'position:absolute;top:2%;right:2%;text-align:right;padding:.25em .8em;background:rgba(0,0,0,.6);border:2px solid #4a1a1a;color:#e8c8b0;letter-spacing:.12em;font-weight:900;pointer-events:none;z-index:6;font-size:.8em'; $('hud').appendChild(h); }
+    const on = S && S.st !== 'dead' && S.first, key = on ? (S.downs | 0) + '|' + S.st + '|' + (S.st === 'down' ? Math.ceil(S.downT) : 0) : ''; if (h._k === key) return; h._k = key; h.style.display = on ? '' : 'none'; if (!on) return;
+    h.innerHTML = 'TYRANT &nbsp;' + [0, 1, 2].map((i) => (i < (S.downs | 0) ? '<span style="color:#7a7a7a">●</span>' : '<span style="color:#d84a3a">○</span>')).join(' ') + (S.st === 'down' ? '<br><small style="color:#d9a08a">DOWN · RISES IN ' + Math.ceil(S.downT) + 's</small>' : '');
+}
+function stkTick(dt) {
+    stkFxTick(dt); if (CO.role === 'guest' || !G.started) return; const c = stkCfg(); let S = G.stk; stkHud(S && c.on ? S : null);
+    if (!c.on || PL.state === 'dead' || RM.busy) return;
+    if (!S) {   // it wakes only after the boiler room fight, in a random room on the way back up through the inn
+        if (!G.flags.bossDead || !STK_ROOMS.includes(RM.id) || isSafeDef(RM.def) || UI.mode) return;
+        const T = G.stkT = G.stkT || { at: 1 + Math.floor(Math.random() * 3), n: 0, last: null };   // which room (1st, 2nd or 3rd you enter) is random
+        if (T.last !== RM.id) { T.last = RM.id; T.n++; }
+        if (T.n < T.at) return;
+        G.stk = S = { st: 'hunt', room: null, x: 0, z: 0, downs: 0, hp: 0, downT: 0, wait: 3 + Math.random() * 3, near: 12 }; S.hp = stkMaxHp(S); sfx('roar'); say('Something huge is moving through Harbor Inn. It is coming for you.', 4600); return;
+    }
+    if (S.st === 'dead') return;
+    const E = RM.enemies.find((q) => q.stalker);
+    if (S.st === 'down') {
+        S.downT -= dt; if (S.downT > 0) return;
+        if (E) stkRise(E); else { S.st = 'hunt'; S.hp = stkMaxHp(S); S.room = null; S.wait = 8 + Math.random() * 8; }
+        return;
+    }
+    if (E) { S.room = RM.id; S.x = E.x; S.z = E.z; S.hp = E.hp; S.near = Math.hypot(E.x - PL.x, E.z - PL.z); return; }
+    if (!STK_ROOMS.includes(RM.id) || isSafeDef(RM.def) || RM.enemies.some((q) => q.boss && q.st !== 'dead')) { S.wait = Math.max(S.wait || 0, 6); return; }
+    S.wait = (S.wait == null ? 8 : S.wait) - dt; if (S.wait <= 0) stkBreach();
+}
+function stkRoomSetup(id) {
+    STKFX.list.length = 0; if (CO.role === 'guest') return; const S = G.stk; if (!S || S.st === 'dead' || !stkCfg().on) return;
+    if (S.st === 'down') { if (S.room === id) { const E = stkSpawn(S.x, S.z, 0, false); if (E) { E.st = 'dead'; E.stT = 1; E.deadT = 0; E.hp = 0; G.dead.stalker = 1; } } return; }
+    if (S.room != null) S.wait = 2.5 + Math.min(S.near == null ? 12 : S.near, 20) * 0.4; S.room = null;   // he was after you: he follows through the walls
+}
+
 /* ----- boot ----- */
 (async function main() {
     setInterval(() => { try { if (!G.started || UI.mode === 'title') avSync(); } catch (e) { /* ok */ } }, 2000); R.useLegacyLights = true; initPlayer(); avBoot().then((ok) => { if (ok) { PL.light.removeFromParent(); PL.g.add(PL.light); sfx('pickup'); } try { if (UI.mode === 'menu' && M.tab === 'opts') renderMenu(); } catch (e) { /* ui */ } }); PL.light = new THREE.PointLight(0xffe0a0, 0, 6); PL.light.position.set(0.3, 1.3, 0.8); PL.g.add(PL.light); PL.g.visible = true;
@@ -3532,6 +3705,7 @@ const RE_IMG = (() => { try { return JSON.parse(document.getElementById('sv-icon
 function reImg(id) { const f = RE_IMG[id]; if (!f) return null; const i = new Image(); i.src = f[0]; i.className = 'reic'; i.dataset.id = id; return i; }
 function reSpin(img) { const f = RE_IMG[img.dataset.id]; if (!f) return; let k = 0; clearInterval(UI.spinT); UI.spinT = setInterval(() => { if (!img.isConnected) { clearInterval(UI.spinT); return; } k = (k + 1) % f.length; img.src = f[k]; }, 160); }
 function reIcon(id, big) {
+    const mi = modItemImg(id); if (mi) return mi;
     const im = reImg(id); if (im) return im;
     const key = id + (big ? 'b' : ''); if (RE_ICONS[key]) return RE_ICONS[key].cloneNode ? cloneCanvas(RE_ICONS[key]) : null;
     const W = 96, H = 64, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; const it = ITEMS[id] || {};
