@@ -6546,10 +6546,13 @@ const opsGet = (k) => OPS.find((o) => o.k === k) || null;
 const opsHave = () => OPS.filter((o) => window.__CAST && window.__CAST[o.k]);
 const opsCur = () => { const m = /^op:(\w+)$/.exec(OPT.avatar || ''); return m ? m[1] : null; };
 async function opsAssign(k) {
-    const o = opsGet(k); if (!o) return false; OPT.avatar = 'op:' + k; saveOpt();
+    const o = opsGet(k); if (!o) return false; const prev = OPT.avatar;
+    try { await window.__castBuf(k); } catch (e) { OPS_UI.why = 'COULD NOT LOAD cast/' + k + '.vrm (' + String(e && e.message || e).slice(0, 60) + '). UPLOAD THE cast FOLDER NEXT TO THE GAME.'; return false; }   // never fall back to another character without saying so
+    OPT.avatar = 'op:' + k; saveOpt(); OPS_UI.why = '';
     try { await avBoot(); } catch (e) { /* avBoot reports its own error */ }
+    if (!AV.on || AV.name !== o.name) { OPS_UI.why = AV.err ? String(AV.err).toUpperCase().slice(0, 100) : 'THE MODEL DID NOT LOAD.'; OPT.avatar = prev; saveOpt(); try { await avBoot(); } catch (e) { /* back to the old one */ } return false; }
     try { say('Operative assigned: ' + o.name, 2200); } catch (e) { /* no room yet */ }
-    return AV.on;
+    return true;
 }
 const OPS_IMG = {}; let opsRen = null;
 async function opsShot(k) {   // a head-and-shoulders still, drawn from the model itself
@@ -6628,7 +6631,7 @@ function opsOpen(onClose) {
     };
     let busy = false; const assign = async () => {
         if (busy) return; const o = list[OPS_UI.sel]; if (opsCur() === o.k) return; busy = true; const go = $o('ops-go'); if (go) go.disabled = true; clearInterval(OPS_UI.typer); const tx = $o('ops-tx'); if (tx) tx.textContent = '>> ESTABLISHING LINK TO ' + o.file + ' ...\n>> LOADING FIELD MODEL ...';
-        const ok = await opsAssign(o.k); busy = false; if (!OPS_UI.el) return; mark(); type([ok ? '>> LINK ESTABLISHED.' : '>> LINK FAILED. ' + (AV.err || 'TRY AGAIN.'), ok ? '>> ' + o.name.toUpperCase() + ' ASSIGNED TO YOUR SEAT.' : '', '', ok ? 'GOOD LUCK OUT THERE.' : '']); if (go) go.disabled = ok;
+        const ok = await opsAssign(o.k); busy = false; if (!OPS_UI.el) return; mark(); type([ok ? '>> LINK ESTABLISHED.' : '>> LINK FAILED. ' + (OPS_UI.why || 'TRY AGAIN.'), ok ? '>> ' + o.name.toUpperCase() + ' ASSIGNED TO YOUR SEAT.' : '', '', ok ? 'GOOD LUCK OUT THERE.' : '']); if (go) go.disabled = ok;
     };
     $o('ops-go').onclick = () => { try { auInit(); sfx('ok'); } catch (e) { /* audio */ } assign(); }; $o('ops-x').onclick = () => opsClose();
     show(OPS_UI.sel); ov.focus();
