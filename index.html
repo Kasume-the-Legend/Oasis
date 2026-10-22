@@ -14731,7 +14731,7 @@ function btMusicStop() {
             M.guestGo = null;
             if (BT.hostId === me.id || BT.hostId === null || !sh) { const pk = btMusPick(slot); if (pk) { y = pk; if (BT.hostId === me.id && btMine()) { M.shared[slot] = { v: pk.v, l: pk.l, by: btClean(me.name) }; try { btSend({ a: 'mus', slot, v: pk.v || '', l: pk.l || '' }); } catch (e) { /* offline */ } } } }
             if (!y) y = sh || (M.yt && M.yt[slot]); if (y && !sh && (y.v || y.l) && BT.hostId === me.id && btMine()) { M.shared[slot] = { v: y.v || null, l: y.l || null, by: btClean(me.name) }; try { btSend({ a: 'mus', slot, v: y.v || '', l: y.l || '' }); } catch (e) { /* offline */ } }   /* the host's saved link is shared too, no need to paste it again */
-            if (y) { M.curY = { v: y.v || null, l: y.l || null }; try { const f = document.createElement('iframe'), loop = slot !== 'victory', par = new URLSearchParams({ autoplay: '1', controls: '0', enablejsapi: '1', playsinline: '1', rel: '0' }); if (y.l) { par.set('listType', 'playlist'); par.set('list', y.l); if (loop) par.set('loop', '1'); } else if (loop) { par.set('loop', '1'); par.set('playlist', y.v); } f.src = 'https://www.youtube.com/embed/' + (y.v || '') + '?' + par.toString(); f.allow = 'autoplay; encrypted-media'; f.title = 'battle music'; f.style.cssText = 'position:fixed;width:2px;height:2px;left:-10px;top:-10px;border:0;opacity:0;pointer-events:none'; f.addEventListener('load', () => setTimeout(() => btYtVol(f), 1500)); document.body.appendChild(f); M.yf = f; return; } catch (e) { /* synth below */ } }
+            if (y) { M.curY = { v: y.v || null, l: y.l || null }; try { const f = document.createElement('iframe'), loop = slot !== 'victory', par = new URLSearchParams({ autoplay: '1', controls: '0', enablejsapi: '1', playsinline: '1', rel: '0' }); if (y.l) { par.set('listType', 'playlist'); par.set('list', y.l); if (loop) par.set('loop', '1'); } else if (loop) { par.set('loop', '1'); par.set('playlist', y.v); } try { if (location.protocol.startsWith('http')) par.set('origin', location.origin); } catch (e) { /* no origin */ } f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); f.src = 'https://www.youtube.com/embed/' + (y.v || 'videoseries') + '?' + par.toString(); f.allow = 'autoplay; encrypted-media'; f.title = 'battle music'; f.style.cssText = 'position:fixed;width:220px;height:220px;left:-400px;top:-400px;border:0;opacity:0.01;pointer-events:none'; f.addEventListener('load', () => setTimeout(() => btYtVol(f), 1500)); document.body.appendChild(f); M.yf = f; return; } catch (e) { /* synth below */ } }
             try { M.seq = btSynthStart(slot); } catch (e) { M.seq = null; }
         }
         function btYtVol(f) { try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [Math.round(BT.music.vol * 100)] }), '*'); } catch (e) { /* ok */ } }
@@ -20295,7 +20295,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             ttmIcon(); if (TTM.f || TTM.a || TTM.mute || TTM.busy) return; TTM.busy = true;
             try { await ttmInit(); } catch (e) { /* none */ } TTM.busy = false; if (TTM.f || TTM.a || TTM.mute || !(GM.sess && GM.sess.game === 'tt' && GM.open)) return;
             if (TTM.src) { try { const a = new Audio(TTM.src); a.loop = true; TTM.g = null; TTM.a = a; ttmApplyVol(); a.play().catch((e) => { console.warn('triple triad music', e); }); return; } catch (e) { /* fall back to YouTube */ } }
-            try { const f = document.createElement('iframe'); f.src = 'https://www.youtube.com/embed/' + TTM.vid + '?autoplay=1&controls=0&enablejsapi=1&playsinline=1&rel=0&loop=1&playlist=' + TTM.vid; f.allow = 'autoplay; encrypted-media'; f.title = 'Triple Triad music'; f.style.cssText = 'position:fixed;width:2px;height:2px;left:-10px;top:-10px;border:0;opacity:0;pointer-events:none'; f.addEventListener('load', () => { setTimeout(ttmApplyVol, 1500); setTimeout(ttmApplyVol, 4000); }); document.body.appendChild(f); TTM.f = f; } catch (e) { /* offline */ }
+            try { const f = document.createElement('iframe'); f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); f.src = 'https://www.youtube.com/embed/' + TTM.vid + '?autoplay=1&controls=0&enablejsapi=1&playsinline=1&rel=0&loop=1&playlist=' + TTM.vid + (location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : ''); f.allow = 'autoplay; encrypted-media'; f.title = 'Triple Triad music'; f.style.cssText = 'position:fixed;width:220px;height:220px;left:-400px;top:-400px;border:0;opacity:0.01;pointer-events:none'; f.addEventListener('load', () => { setTimeout(ttmApplyVol, 1500); setTimeout(ttmApplyVol, 4000); }); document.body.appendChild(f); TTM.f = f; } catch (e) { /* offline */ }
         }
         document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('#gm-music'); if (!b) return; TTM.mute = !TTM.mute; try { localStorage.setItem('oasisTtMute', TTM.mute ? '1' : '0'); } catch (x) { /* storage */ } if (TTM.mute) ttmStop(); else if (GM.sess && GM.sess.game === 'tt') ttmPlay(); ttmIcon(); });
         document.addEventListener('input', (e) => { const s = e.target; if (!s || s.id !== 'gm-vol') return; TTM.vol = Math.max(0, Math.min(2, (+s.value || 0) / 100)); try { localStorage.setItem('oasisTtVol', String(TTM.vol)); } catch (x) { /* storage */ } ttmApplyVol(); if (TTM.vol > 0 && TTM.mute) { TTM.mute = false; try { localStorage.setItem('oasisTtMute', '0'); } catch (x) { /* storage */ } ttmIcon(); if (GM.sess && GM.sess.game === 'tt') ttmPlay(); } });
@@ -26507,17 +26507,57 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
 
         /* ---- the brain ---- */
         function cmpAffLevel(a) { a = a || 0; return a < 100 ? 'just getting to know each other' : a < 600 ? 'friendly and comfortable' : a < 2500 ? 'close friends' : a < 6000 ? 'deeply attached' : 'inseparable, devoted'; }
+        /* ---- companion memory 2.0: refusal-proof, candid, with shared group memory ---- */
+        function cmpIsRefusal(t) {
+            t = String(t || '').trim().slice(0, 320); if (!t) return false;
+            return /^(i['’]?m (not going to|unable to|sorry|not able to|afraid)|i (can(not|['’]t)|won['’]?t|will not|am not (able|going))|sorry[,.]? |i['’]?ll (keep|have to|need to|pause|stop)|i['’]?m going to (pause|stop|step|decline|keep))/i.test(t) && /(role-?play|memory summary|this memory|summari[sz]e|appropriate|explicit|sexual|content|scenario|assurance|confirm(ation)? that|\badults?\b)/i.test(t);
+        }
+        function cmpJunk(m) {   // an error line or an AI refusal: never memory, never context
+            const c = String((m && (m.c !== undefined ? m.c : m.content)) || ''), role = m && (m.r || m.role);
+            if (!c.trim() || c.startsWith('__HTML__')) return true;
+            if (role !== 'user') { if (/^\([^)]{0,80}(failed to fetch|rate limit|cannot reach|invalid api key|claude is busy|network error|empty response)/i.test(c.trim())) return true; if (cmpIsRefusal(c)) return true; }
+            return false;
+        }
+        function cmpMemTidy(t) {   // strip "Here's the memory:" wrappers, headers and a cut-off last sentence
+            t = String(t || '').replace(/\r/g, '').trim();
+            const wrap = /^\s*(---+|#+ .*|\*\*[^*\n]{0,90}\*\*:?|(here['’]?s|here is|sure|certainly|of course|okay|ok)\b[^\n]{0,140}|[^\n]{0,40}(memory|memories)( summary| update)?:?\s*|)\s*$/i;
+            const L = t.split('\n'); while (L.length && wrap.test(L[0])) L.shift(); while (L.length && (wrap.test(L[L.length - 1]) || /^\s*(let me know|would you like)/i.test(L[L.length - 1]))) L.pop();
+            t = L.join('\n').trim();
+            if (t && !/[.!?…"'”’)*~]$/.test(t)) { const m = t.match(/^[\s\S]*[.!?…]["'”’)*~]*/); if (m && m[0].length > t.length * 0.5) t = m[0].trim(); }
+            return t;
+        }
+        function cmpParseMem(txt) {
+            txt = String(txt || '').replace(/^\s*\**\s*MEMORY\s*\**\s*:?\s*\**\s*\n/i, ''); const parts = txt.split(/^\s*\**\s*FACTS\s*\**\s*:?\s*\**\s*$/mi);
+            return { summary: cmpMemTidy(parts[0] || ''), facts: (parts[1] || '').split('\n').map((x) => x.replace(/^\s*[-•*\d.)]+\s*/, '').trim()).filter((x) => x.length > 8 && x.length < 240 && !cmpIsRefusal(x)) };
+        }
+        function cmpMergeFacts(a, b) {
+            const key = (x) => String(x).toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).slice(0, 7).join(' '), mp = new Map();
+            [].concat(a || [], b || []).forEach((x) => { if (typeof x !== 'string' || !x) return; const k = key(x); mp.delete(k); mp.set(k, x); }); return Array.from(mp.values()).slice(-32);
+        }
+        const CMP_MEM_FORMAT = '\n\nOutput exactly two parts:\nMEMORY:\n<8-12 specific sentences, at most ~1500 characters>\nFACTS:\n<up to 12 short bullet lines starting with "- ", each one durable fact>\n';
+        const CMP_MEM_RULES = 'Rules: begin directly with the memory, with no preamble, title, markdown headers or commentary. Romantic, intimate and sexual moments between the adult characters and the adult user are part of the relationship, so record them candidly and specifically in plain language (what they did, what each likes, pet names, kinks, scenarios, boundaries and promises) as factual memory, with no euphemism, moralizing or censoring. This is a private fiction-companion memory for adults. Never refuse and never add disclaimers or notes. The one exception: never record sexual content involving anyone under 18 or a character presented as a minor; leave those moments out entirely.';
+        function cmpApplyGroup(key, g) {   // the shared memory of a MuchiGo group chat goes to every member
+            if (!g || !g.summary) return 0; const ids = String(key).split('_'), sum = cmpMemTidy(g.summary).slice(0, 2600); if (!sum || cmpIsRefusal(sum)) return 0; let n = 0;
+            for (const id of ids) { const c = cmpFind('mg_' + id); if (!c) continue; c.groupMem = sum; c.groupFacts = cmpMergeFacts(c.groupFacts, g.facts).slice(-14); c.groupWith = ids.filter((x) => x !== id).map((x) => { const o = cmpFind('mg_' + x); return o ? o.name : ''; }).filter(Boolean).join(', '); n++; }
+            return n;
+        }
+        function cmpApplyPack(d) {
+            let n = 0, g = 0;
+            for (const [pid, m] of Object.entries(d.characterMemories || {})) { const c = cmpFind('mg_' + pid); if (!c || !m) continue; const t = cmpMemTidy(m.summary); if (t && !cmpIsRefusal(t)) { c.summary = t.slice(0, 2600); n++; } c.facts = cmpMergeFacts(c.facts, m.facts); }
+            for (const [k, gm] of Object.entries(d.groupMemories || {})) g += cmpApplyGroup(k, gm) ? 1 : 0;
+            cmpSave(true); sysChat('Memory pack merged: ' + n + ' companion memories and ' + g + ' group memory. Nothing else was changed.'); try { cmpPanelRender(); } catch (e) { /* panel closed */ } return n + g;
+        }
         function cmpSystem(c, extra) {
             const others = [...CMP.active.values()].filter((x) => x.c.id !== c.id).map((x) => x.c.name);
             const near = [...peers.values()].map((p) => p.name).slice(0, 6);
             const hr = new Date().getHours(), tod = hr < 5 ? 'late night' : hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : hr < 21 ? 'evening' : 'night';
-            const mem = (c.summary ? '\n\n[YOUR MEMORY OF ' + me.name.toUpperCase() + ' AND YOUR TIME TOGETHER]\n' + c.summary : '') + (c.facts && c.facts.length ? '\n\n[THINGS YOU KNOW FOR SURE]\n' + c.facts.map((f) => '- ' + f).join('\n') : '');
+            const mem = (c.summary ? '\n\n[YOUR MEMORY OF ' + me.name.toUpperCase() + ' AND YOUR TIME TOGETHER]\n' + c.summary : '') + (c.facts && c.facts.length ? '\n\n[THINGS YOU KNOW FOR SURE]\n' + c.facts.map((f) => '- ' + f).join('\n') : '') + (c.groupMem ? '\n\n[WHAT YOUR GROUP OF FRIENDS' + (c.groupWith ? ' (' + c.groupWith + ')' : '') + ' HAS BEEN THROUGH WITH ' + me.name.toUpperCase() + ': shared history you all remember; use it naturally and never contradict it]\n' + c.groupMem + (c.groupFacts && c.groupFacts.length ? '\nKey group facts:\n' + c.groupFacts.map((f) => '- ' + f).join('\n') : '') : '');
             const talk = CMP.log.length ? '\n\n[WHAT WAS JUST SAID NEARBY]\n' + CMP.log.slice(-6).map((l) => l.who + ': ' + l.text).join('\n') : '';
             return '[WHO YOU ARE]\n' + (c.prompt || 'You are ' + c.name + '.') + (c.trait ? '\n\nPersonality: ' + String(c.trait).slice(0, 3000) : '') + (c.mood && typeof c.mood === 'string' ? '\n\nYour current mood: ' + c.mood.slice(0, 200) : '') + (c.extra ? '\n\n[MORE ABOUT YOU]\n' + c.extra : '') + mem
                 + '\n\n[SITUATION]\nYou are ' + c.name + ', an NPC companion walking beside ' + me.name + ' in the Oasis, a social hangout world. Right now you are in ' + (CMP_MAPS[activeMap] || activeMap) + '. It is ' + tod + '. Your closeness with ' + me.name + ': ' + cmpAffLevel(c.aff) + '.'
                 + (others.length ? ' Also walking with you: ' + others.join(', ') + '.' : '') + (near.length ? ' Other players nearby: ' + near.join(', ') + '.' : '') + talk
                 + '\n\n[HOW TO ANSWER]\nYou are speaking out loud and your words appear in a speech bubble over your head. Reply only as ' + c.name + ', fully in character, usually 1 to 3 sentences, about ' + CMP_MAXCHARS + ' characters at most. No name prefix, no quotation marks, no stage directions beyond a very short *action* at most. Remember what you know about ' + me.name + ' and speak to them the way your relationship would. ' + (near.length ? 'Other players are nearby, so keep it suitable for a public lobby.' : 'No other players are nearby, so you can speak freely and privately with ' + me.name + ', the way your relationship would.') + ' Never mention being an AI, a prompt or a game system.'
-                + '\nVOICE: Sound exactly like ' + c.name + ' sounds in [WHO YOU ARE] and in your earlier lines in this conversation: the same word choice, rhythm, slang, pet names, running jokes, attitude and edges. Do not drift into a generic helpful-assistant voice: no offering help, no "I\'m here for you", no tidy summaries, no ending every line with a question. React the way this character would, whether that is blunt, teasing, shy, moody, flirty or sarcastic. Remember: you are ' + c.name + ', not an assistant playing them.'
+                + (others.length ? '\nGROUP: you are ONE distinct person. Never speak for the others and never echo their phrasing or stage directions; answer what was just said and add something new in your own way.' : '') + '\nVOICE: Sound exactly like ' + c.name + ' sounds in [WHO YOU ARE] and in your earlier lines in this conversation: the same word choice, rhythm, slang, pet names, running jokes, attitude and edges. Do not drift into a generic helpful-assistant voice: no offering help, no "I\'m here for you", no tidy summaries, no ending every line with a question. React the way this character would, whether that is blunt, teasing, shy, moody, flirty or sarcastic. Remember: you are ' + c.name + ', not an assistant playing them.'
                 + '\nYou may also act with a body emote: put [emote:KEY] at the very end of your reply (one of: ' + cmpEmoteKeys().join(', ') + ', stand). Use it when asked, or occasionally when it truly fits the moment; most replies need none. Never explain the tag.'
                 + (extra ? '\n' + extra : '');
         }
@@ -26569,11 +26609,15 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             finally { clearInterval(tk); CMP.busy.delete(c.id); try { a.actor.setTyping(false); } catch (e) { /* ignore */ } }
         }
         async function cmpSummarize(c) {
-            c.since = 0; const recent = (c.hist || []).slice(-24).map((m) => (m.r === 'user' ? me.name : c.name) + ': ' + m.c).join('\n');
-            try {
-                const t = await cmpAI('You keep ' + c.name + '\'s private memory about ' + me.name + '. Reply with ONLY the updated memory text (first person as ' + c.name + ', under 1400 characters), no preface.', [{ role: 'user', content: 'Existing memory:\n' + (c.summary || '(none yet)') + '\n\nNew conversation:\n' + recent + '\n\nWrite the updated memory, keeping important facts about ' + me.name + ' and what happened.' }], 700);
-                if (t && t.length > 40) { c.summary = t.slice(0, 2400); cmpSave(); }
-            } catch (e) { /* try again later */ }
+            c.since = 0; const recent = (c.hist || []).filter((m) => !cmpJunk(m)).slice(-24).map((m) => (m.r === 'user' ? me.name : c.name) + ': ' + m.c).join('\n'); if (recent.length < 80) return;
+            const sys = 'You keep ' + c.name + '\'s long-term memory of ' + me.name + '. Write in FIRST PERSON as ' + c.name + ', in your own voice. MERGE the existing memory with the new conversation: keep every important earlier detail (compress old ones if needed), then add what is new: what ' + me.name + ' shared about themselves, promises and plans, nicknames and pet names, inside jokes, emotional and intimate moments, and how the bond has grown.' + CMP_MEM_FORMAT + CMP_MEM_RULES;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    const t = await cmpAI(attempt ? sys + '\n\nIMPORTANT: your last answer was not usable. Output only the MEMORY: and FACTS: sections, specific and candid.' : sys, [{ role: 'user', content: 'Existing memory:\n' + (c.summary || '(none yet)') + '\n\nNew conversation:\n' + recent }], 900);
+                    if (!t || cmpIsRefusal(t)) continue; const r = cmpParseMem(t);
+                    if (r.summary.length >= 60 && !cmpIsRefusal(r.summary)) { c.summary = r.summary.slice(0, 2600); c.facts = cmpMergeFacts(c.facts, r.facts); cmpSave(); return; }
+                } catch (e) { return; /* try again later */ }
+            }
         }
         /* chat routing: who answers a line you just typed */
 
@@ -26812,8 +26856,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
 
         /* ---- MuchiGo import ---- */
         function cmpMemClean(s) {
-            s = String(s || '').trim(); if (/^(I'?m not going to|I can'?t |I won'?t |I'?m sorry)/i.test(s) || s.length < 40) return '';
-            s = s.replace(/^[^\n]{0,80}(memory|summary)[^\n]{0,40}:?\*{0,2}\s*\n+(?:-{3,}\s*\n+)?/i, '').replace(/^\*\*[^\n]*\*\*\s*\n+/, '').trim(); return s.slice(0, 2400);
+            s = cmpMemTidy(s); if (s.length < 40 || cmpIsRefusal(s)) return ''; return s.slice(0, 2600);
         }
         async function cmpPortrait(src) {
             try { return await new Promise((res) => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 112; const g = c.getContext('2d'), s = Math.min(im.width, im.height); g.drawImage(im, (im.width - s) / 2, 0, s, s, 0, 0, 112, 112); res(c.toDataURL('image/jpeg', 0.72)); }; im.onerror = () => res(''); im.src = src; }); } catch (e) { return ''; }
@@ -26831,14 +26874,16 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         async function cmpImport(file) {
             sysChat('Reading ' + file.name + ' (' + (file.size / 1e6).toFixed(0) + ' MB). This can take a few seconds.');
             let d; try { d = JSON.parse(await file.text()); } catch (e) { sysChat('That file could not be read as a MuchiGo save (' + (e.message || e) + ').'); return 0; }
+            if (d && d.memoryPack) return cmpApplyPack(d);
             if (!d || !Array.isArray(d.personas)) { sysChat('That does not look like a MuchiGo save.'); return 0; }
             let n = 0, upd = 0;
             for (const p of d.personas) {
                 if (!p || !p.name) continue; const mem = d.characterMemories && d.characterMemories[p.id];
-                const hist = ((d.histories && d.histories[p.id]) || []).filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content && !m.hidden && !m.content.startsWith('__HTML__') && m.content.length < 4000).slice(-24).map((m) => ({ r: m.role === 'user' ? 'user' : 'assistant', c: m.content.replace(/\n{2,}/g, '\n').slice(0, 700) }));
+                const hist = ((d.histories && d.histories[p.id]) || []).filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content && !m.hidden && !m.content.startsWith('__HTML__') && m.content.length < 4000 && !cmpJunk(m)).slice(-24).map((m) => ({ r: m.role === 'user' ? 'user' : 'assistant', c: m.content.replace(/\n{2,}/g, '\n').slice(0, 700) }));
                 const rec = { id: 'mg_' + p.id, name: String(p.name).slice(0, 24), prompt: String(p.prompt || '').slice(0, 6000), trait: String(p.trait || '').slice(0, 3000), mood: typeof p.mood === 'string' ? p.mood.slice(0, 200) : '', extra: cmpExtraNotes(p), summary: cmpMemClean(mem && mem.summary), facts: Array.isArray(mem && mem.facts) ? mem.facts.map(String).slice(0, 20) : [], aff: (d.affections && d.affections[p.id]) | 0, hist, vrm: null, gender: 'female', portrait: p.media && p.mediaType === 'image' ? await cmpPortrait(p.media) : '', color: '', since: 0 };
-                const old = cmpFind(rec.id); if (old) { rec.vrm = old.vrm; rec.gender = old.gender; rec.color = old.color; Object.assign(old, rec); upd++; } else { CMP.list.push(rec); n++; }
+                const old = cmpFind(rec.id); if (old) { rec.vrm = old.vrm; rec.gender = old.gender; rec.color = old.color; if (!rec.summary) rec.summary = old.summary; rec.facts = cmpMergeFacts(old.facts, rec.facts); rec.groupMem = old.groupMem; rec.groupFacts = old.groupFacts; rec.groupWith = old.groupWith; Object.assign(old, rec); upd++; } else { CMP.list.push(rec); n++; }
             }
+            for (const [k, gm] of Object.entries(d.groupMemories || {})) cmpApplyGroup(k, gm);
             if (d.apiKey && typeof d.apiKey === 'string' && d.apiKey.length > 20 && !CMP.ai.key && window.confirm('This save contains an API key. Use it for your companions? It stays on this device only.')) CMP.ai.key = d.apiKey.trim();
             cmpSave(true); sysChat('Imported ' + n + ' new and updated ' + upd + ' companion(s). Give each one a VRM in the Companions panel, then summon them.'); cmpPanelRender(); return n + upd;
         }
