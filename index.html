@@ -2434,6 +2434,26 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             else out.set(a.group.position.x, a.group.position.y + 1.5, a.group.position.z);
             return out;
         }
+        /* A-pose / off-axis VRMs: the clips are authored for a T-pose rig, so measure how far each arm and leg bone rests from its T-pose direction and re-aim the clip by that much (q' = pre * q * post). T-pose models measure zero and are left alone. */
+        function vrmFix(vrm) {
+            const out = { list: [] };
+            try {
+                const H = vrm.humanoid, B = (n) => H.getNormalizedBoneNode(n), V = THREE.Vector3, wp = (n) => n.getWorldPosition(new V()); vrm.scene.updateMatrixWorld(true);
+                const hips = B('hips'), head = B('head'); if (!hips || !head || wp(head).sub(wp(hips)).normalize().y < 0.8) return out;
+                const dir = (a, b) => { const x = B(a), y = B(b); if (!x || !y) return null; const d = wp(y).sub(wp(x)); return d.lengthSq() < 1e-10 ? null : d.normalize(); };
+                const I = new THREE.Quaternion(), qf = (d, t) => { if (!d) return I.clone(); const ang = d.angleTo(t); return (ang < 0.03 || d.dot(t) < 0.2) ? I.clone() : new THREE.Quaternion().setFromUnitVectors(d, t); };
+                for (const [s, sx] of [['left', 1], ['right', -1]]) {
+                    const TX = new V(sx, 0, 0), TD = new V(0, -1, 0), du = dir(s + 'UpperArm', s + 'LowerArm'), dl = dir(s + 'LowerArm', s + 'Hand'); if (du && Math.sign(du.x) !== sx && Math.abs(du.x) > 0.05) continue;   // left/right not where the clips expect them
+                    const cu = qf(du, TX), cl = qf(dl, TX);
+                    if (cu.angleTo(I) > 0 || cl.angleTo(I) > 0) { out.list.push({ n: B(s + 'UpperArm'), pre: I.clone(), post: cu }); if (B(s + 'LowerArm')) out.list.push({ n: B(s + 'LowerArm'), pre: cu.clone().invert(), post: cl }); }
+                    const lu = dir(s + 'UpperLeg', s + 'LowerLeg'), ll = dir(s + 'LowerLeg', s + 'Foot'), gu = qf(lu, TD), gl = qf(ll, TD);
+                    if (gu.angleTo(I) > 0 || gl.angleTo(I) > 0) { out.list.push({ n: B(s + 'UpperLeg'), pre: I.clone(), post: gu }); if (B(s + 'LowerLeg')) out.list.push({ n: B(s + 'LowerLeg'), pre: gu.clone().invert(), post: gl }); }
+                }
+            } catch (e) { console.warn('rig fix', e); }
+            out.list = out.list.filter((e) => e.n);
+            return out;
+        }
+        function vrmFixApply(fx) { if (fx) for (const e of fx.list) e.n.quaternion.premultiply(e.pre).multiply(e.post); }
         class Actor {
             constructor(id, name) {
                 this.id = id;
@@ -2515,6 +2535,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     this.hipsBase = this.bones.hips ? this.bones.hips.position.y : 0;
                     this.hipsRest = this.bones.hips ? this.bones.hips.position.clone() : new THREE.Vector3();
                     this.flip = vrm.meta && vrm.meta.metaVersion === '0' ? -1 : 1; // VRM 0.x rigs are mirrored on X/Z
+                    this.fix = vrm.auto ? null : vrmFix(vrm);
                 } else {
                     fitModel(root, { height: 1.8 });
                     this.height = 1.8;
@@ -2970,7 +2991,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 this.holder.position.y = this.tweak.h + p.hop + this.boardLift;
                 this.holder.rotation.z = this.boardRoll || 0;
 
-                if (this.kind === 'vrm' && this.pack) this.updateBase(dt, air);
+                if (this.kind === 'vrm' && this.pack) { this.updateBase(dt, air); vrmFixApply(this.fix); }
 
                 // --- apply pose to whichever rig we have ---
                 if (this.kind === 'vrm') { this.applyVRM(p, dt, now); try { blzBall(this, dt); } catch (er) { if (!window.__blzErr) { window.__blzErr = er; console.error('blzBall', er); } } }
