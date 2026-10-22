@@ -132,7 +132,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#d9cfb4;fon
 @keyframes qapulse{50%{box-shadow:0 0 14px #ffd96a99}}
 .re-eqrow{display:flex;gap:.4em;flex:none}.re-eqrow .re-eq{flex:1;min-width:0}.re-tfa{cursor:pointer}.re-tfa .re-eql{background:linear-gradient(#3f9a5c,#1c4d31);color:#eaffef;font-size:.6em}
 </style>
-</head>
+<script id="sv-cast">window.__CAST = {"ada": 1, "chris": 1, "ethan": 1, "leonnx": 1, "leon": 1, "piers": 1, "rose": 1, "shevanx": 1, "sheva": 1, "wesker": 1};window.__CASTC = {};window.__castBuf = function (k) { if (!window.__CAST[k]) return Promise.reject(new Error('no such operative')); if (window.__CASTC[k]) return window.__CASTC[k];var e = window.__CAST_EMB && window.__CAST_EMB[k]; if (e) { var bin = atob(e), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return (window.__CASTC[k] = Promise.resolve(u.buffer)); }return (window.__CASTC[k] = fetch('cast/' + k + '.vrm').then(function (r) { if (!r.ok) throw new Error('cast/' + k + '.vrm ' + r.status); return r.arrayBuffer(); }).catch(function (x) { delete window.__CASTC[k]; throw x; })); };</script>
+<script>window.__INTRO = "HOPESBURGH. 9:44 PM.\n\nI am still alive. Somehow.\n\nThe Harbor Inn is behind me, and what lived in its cellar was not the only thing Corvane grew. It is in the town now. In the streets. In the houses with the lights still on.\n\nDana Whit says it began with the flu shots. The Resident Care Program. Everyone in Hopesburgh took the booster, and nobody was told there would be a second dose.\n\nMy radio is dead. My ammunition is not enough. But a town is made of doors, and every door has a key somewhere.\n\nIf you find this, keep your back to the wall and your hand on the trigger. Save when you can. Write it down.\n\n- R.";</script></head>
 <body>
 <div id="stage">
 <canvas id="cv"></canvas>
@@ -144,7 +145,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#d9cfb4;fon
 <div id="prompt" class="hide"></div><div id="qa" class="hide"></div></div>
 <div id="msg" class="hide"></div>
 <div id="menu" class="hide"></div>
-<div id="title"><h1>Harbor Inn 3</h1><p>H O P E S B U R G H</p><div id="tmenu"></div></div>
+<div id="title"><h1>Harbor Inn</h1><div id="tmenu"></div></div>
 <div id="touch" class="hide"></div>
 <div id="fade"></div>
 </div>
@@ -1042,10 +1043,12 @@ function buildRoom(id) {
     if (def.typewriter) { const t = boxM(0.5, 0.22, 0.4, mat(0x151515)); t.position.set(def.typewriter.x, 0.9, def.typewriter.z); g.add(t); RM.inter.push({ kind: 'type', x: def.typewriter.x, z: def.typewriter.z, r: 1.7, text: 'Use the typewriter' }); }
     if (def.box) { const b = boxM(1.1, 0.5, 0.7, mat(0x5a2a1a)); b.position.set(def.box.x, 1.05, def.box.z); g.add(b); const b2 = boxM(1.14, 0.08, 0.74, mat(0xaa8a3a)); b2.position.set(def.box.x, 1.34, def.box.z); g.add(b2); RM.inter.push({ kind: 'box', x: def.box.x, z: def.box.z, r: 1.7, text: 'Open the item box' }); }
     for (const it of def.items) worldItem(it, id + ':' + it.k);
+    { const N = coN(); if (N > 1) for (const it of def.items) { const T = it.item && ITEMS[it.item]; if (it.file || !T || T.type === 'key' || T.type === 'misc') continue; for (let j = 1; j < N; j++) { const f = coSpread(it.x, it.z, j, w, d, 0.75); worldItem(Object.assign({}, it, { x: f[0], z: f[1] }), id + ':' + it.k + '~' + j); } } }
     try { restoreDrops(id); } catch (er) { console.warn('drops', er); }
     for (const p of (def.puz || [])) puzObj(p, id);
     def.enemies.forEach((e, i) => { const k2 = id + ':e' + i; if (e.drop && e.drop.item && G.dead[k2] && !G.taken[e.drop.key]) worldItem({ k: 'drop', item: e.drop.item, n: e.drop.n || 1, x: e.x, z: e.z, y: 0.1 }, e.drop.key); });
     const hounds = G.flags.hounds && id === 'east';
+    { const N = coN(); if (N > 1) def.enemies.forEach((e, i) => { if (e.bs) return; for (let j = 1; j < N; j++) { const key = id + ':e' + i + 'x' + j; if (G.dead[key]) continue; const f = coSpread(e.x, e.z, j, w, d, 1.6); spawnEnemy(Object.assign({}, e, { x: f[0], z: f[1], drop: undefined }), key); } }); }
     def.enemies.forEach((e, i) => { const key = id + ':e' + i; if (!G.dead[key]) spawnEnemy(e, key); else if (e.t === 'z' && !e.bs && !e.ty && !e.br && CO.role !== 'guest' && G.rez && G.rez[key] && !G.rez[key].used) { const r = G.rez[key]; r.n++; if (r.n >= r.need) { r.used = 1; delete G.dead[key]; G.kills = Math.max(0, G.kills - 1); const Z = spawnEnemy(e, key, true); riseEnemy(Z, true); } } });
     if (hounds) [[0.5, 1.6], [1.8, 1.8]].forEach(([x, z], i) => { const key = 'east:h' + i; if (!G.dead[key]) spawnEnemy({ t: 'h', x, z, rot: 3 }, key, true); });
     dressRoom(def, g, { id, addCol, placeOnWall, wpos, propNear: (side, at) => def.props.some((p) => !p.nc && p.h > 1.1 && (side === 'N' ? Math.abs(p.z + d / 2) < p.d / 2 + 0.9 && Math.abs(p.x - at) < p.w / 2 + 0.9 : side === 'S' ? Math.abs(p.z - d / 2) < p.d / 2 + 0.9 && Math.abs(p.x - at) < p.w / 2 + 0.9 : side === 'E' ? Math.abs(p.x - w / 2) < p.w / 2 + 0.9 && Math.abs(p.z - at) < p.d / 2 + 0.9 : Math.abs(p.x + w / 2) < p.w / 2 + 0.9 && Math.abs(p.z - at) < p.d / 2 + 0.9)) });
@@ -1124,7 +1127,7 @@ function spawnEnemy(e, key, chase) {
     let mdl, E;
     if (e.bs) {   // a boss: a baked zombie model (or a hound) scaled up, with its own stats, phases and drop
         const b = typeof e.bs === 'string' ? BS[e.bs] : e.bs; if (b.kind === 'hound') { mdl = makeHound(); mdl.root.scale.setScalar(b.sc || 2.4); } else mdl = makeZombie(0, b.v, b.sc);
-        E = { hp: b.hp, spd: b.spd, rad: b.rad || 0.9, dmg: b.dmg, cdmg: b.cdmg, cd: b.cd || 1.5, wind: b.wind || 0.8, reach: b.reach || 2.3, boss: 1, phases: b.phases || 2, drop: e.drop, bname: b.name }; e.t = b.kind === 'hound' ? 'h' : 'z';
+        E = { hp: Math.round(b.hp * (1 + 0.6 * (coN() - 1))), spd: b.spd, rad: b.rad || 0.9, dmg: b.dmg, cdmg: b.cdmg, cd: b.cd || 1.5, wind: b.wind || 0.8, reach: b.reach || 2.3, boss: 1, phases: b.phases || 2, drop: e.drop, bname: b.name }; e.t = b.kind === 'hound' ? 'h' : 'z';
     }
     else if (e.t === 'z' && e.lk) { mdl = makeZombie(0, 'licker', [1.0, 0.94]); E = { hp: 26, spd: 3.4, rad: 0.5, dmg: 18, cd: 1.0, wind: 0.38, reach: 1.55, tyrant: 1, lk: 1 }; }   // licker: skinless, fast, hits hard, shrugs off flinches
     else if (e.t === 'z' && e.br) { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 5 + 2), null, [1.14, 1.16]); E = { hp: 26, spd: 1.55, rad: 0.55, dmg: 22, cd: 1.2, wind: 0.5, reach: 1.45, tyrant: 1 }; }
@@ -1135,7 +1138,7 @@ function spawnEnemy(e, key, chase) {
     else if (e.t === 'z') { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 3 + (e.cr ? 1 : 0))); E = { hp: e.cr ? 7 : 11, spd: e.cr ? 0.9 : 1.35, rad: 0.42, dmg: 14, cd: 1.3, wind: 0.55, reach: 1.15 }; }
     else if (e.t === 'h') { mdl = makeHound(); E = { hp: 6, spd: 5.2, rad: 0.4, dmg: 9, cd: 0.9, wind: 0.3, reach: 1.1 }; }
     else { mdl = makeBoss(); E = { hp: 140, spd: 1.2, rad: 0.95, dmg: 24, cd: 1.6, wind: 0.85, reach: 2.5, boss: 1 }; }
-    try { const rm = modApplyEnemy(e, E, mdl); if (rm) mdl = rm; } catch (er) { console.warn('mod kit', er); }
+    try { const rm = modApplyEnemy(e, E, mdl, key); if (rm) mdl = rm; } catch (er) { console.warn('mod kit', er); }
     Object.assign(E, { t: e.t, key, x: e.x, z: e.z, rot: e.rot || 0, mdl, st: e.dorm ? 'dorm' : chase ? 'chase' : 'idle', stT: 0, stun: 0, atkT: 0, hurt: 0, ph: Math.random() * 6, hp0: E.hp, cr: e.cr ? 1 : 0, charge: 0, chT: 3 + Math.random() * 3, wake: 0 });
     mdl.root.position.set(E.x, 0, E.z); RM.group.add(mdl.root); RM.enemies.push(E); if (E.st === 'dorm') { mdl.root.rotation.x = -Math.PI / 2; mdl.root.position.y = 0.18; } return E;
 }
@@ -2452,7 +2455,7 @@ Object.assign(FILES, {
 });
 R_('h02_main', 'Main Street', 'ht_street', 30, 14, { fl: 12, sky: 1, items: ['ammo:14', 'gherb', 'file:h_custodian'], en: 'zzzzcl', bar: 5 });
 R_('h02_diner', 'Hope Diner', 'ht_diner', 12, 9, { fl: 12, safe: 1, items: ['ribbon:2', 'spray', 'file:h_diner', 'ammo:12'], en: '' });
-R_('h02_hw', 'Hopesburgh Hardware', 'ht_shop', 14, 10, { fl: 12, items: ['file:h_hw', 'h02_fuse', 'ammoS:6', 'gpf:2'], en: 'zzd', bar: 1 });
+R_('h02_hw', 'Hopesburgh Hardware', 'ht_shop', 14, 10, { fl: 12, items: ['file:h_hw', 'h02_fuse', 'shotgun', 'ammoS:6', 'gpf:2'], en: 'zzd', bar: 1 });
 R_('h02_radio', 'WHOP Radio Studio', 'ht_shop', 12, 9, { fl: 12, items: ['file:h_radio', 'ammo:12', 'rherb'], en: 'zd', puz: [{ type: 'use', flag: 'h02_radio', need: ['h02_fuse'], title: 'Broadcast Panel', text: 'Broadcast panel', ask: 'Seat the fuse and bring the transmitter back?', ok: { item: 'h02_tape', msg: 'The transmitter hums. The reel-to-reel spits a tape: Dana\'s last broadcast, repeated on every channel.' }, no: 'The broadcast panel is dead. It needs a 30 amp fuse.', done: 'The transmitter is humming.' }] });
 R_('h02_pharm', 'Corvane Wellness Pharmacy', 'ht_shop', 16, 10, { fl: 12, items: ['file:h_pharm', 'file:h_rx', 'ammo:12', 'spray', 'gpr:2'], en: 'zzcl', bar: 2, puz: [SEQ('h02_disp', 'h02_disp', 'Dispensing Cabinet', 'Four drug drawers. The schedule shows the sequence to dispense them.', ['Rx-A', 'Rx-B', 'Rx-C', 'Rx-D'], [2, 0, 3, 1], { item: 'h02_vial', msg: 'The cabinet unlatches. A single ampoule sits in a velvet slot, a lot number glowing faintly.' }, { done: 'The cabinet is empty.' })] });
 R_('h02_back', 'Cold Chain Alley', 'ht_alley', 20, 6, { fl: 12, sky: 1, items: ['file:h_back', 'ammoS:6', 'ammo:10'], en: 'zzzl', bar: 3 });
@@ -2508,7 +2511,7 @@ R_('h03_dispatch', 'Dispatch Office', 'ht_hall', 12, 9, { fl: 13, items: ['file:
 R_('h03_break', 'Operators\' Break Room', 'ht_hall', 10, 8, { fl: 13, safe: 1, items: ['ribbon:3', 'spray', 'ammo:14'], en: '' });
 R_('h03_wash', 'Wash Bay', 'ht_depot', 14, 10, { fl: 13, items: ['file:h_wash', 'gpf:2', 'spray', 'gps:2'], en: 'zcl', bar: 3 });
 R_('h03_shop', 'Repair Shop', 'ht_depot', 18, 12, { fl: 13, items: ['file:h_shop', 'ammo:14', 'ammoS:6', 'gherb'], en: 'zzcd', bar: 4 });
-R_('h03_roof', 'Depot Roof', 'ht_roof', 20, 8, { fl: 14, sky: 1, items: ['file:h_roof', 'ammoR:30', 'ammoS:8', 'gps:2', 'spray'], en: 'zz', bar: 2 });
+R_('h03_roof', 'Depot Roof', 'ht_roof', 20, 8, { fl: 14, sky: 1, items: ['file:h_roof', 'rifle', 'ammoR:30', 'ammoS:8', 'gps:2', 'spray'], en: 'zz', bar: 2 });
 R_('h03_sub', 'Substation Annex', 'ht_depot', 14, 10, { fl: 13, items: ['ammo:12', 'gherb'], en: 'zc', puz: [SEQ('h03_breakers', 'h03_power', 'Breaker Panel', 'Four feeders on a manual panel. The dispatcher\'s wall chart shows the restart order.', ['Bus A', 'Bus B', 'Bus C', 'Bus D'], [1, 3, 0, 2], { msg: 'The panel hums. Overhead lamps flicker back to life, and deep in the depot something heavy starts to move.' }, { done: 'The substation is running.' })] });
 R_('h03_tunnel', 'Service Tunnel', 'ht_depot', 22, 5, { fl: 13, items: ['file:h_barn', 'ammo:14', 'gps:2'], en: 'zzzcl', bar: 3 });
 R_('h03_barn', 'Car Barn', 'ht_depot', 28, 16, { fl: 13, h: 7.5, items: ['ammo:16', 'ammoS:8', 'spray', 'gherb'], en: 'zz', bar: 6, boss: { bs: BS.custodian, drop: { flag: 'custDead', key: 'h03_barn:cust', msg: 'The Custodian goes down on one knee, sparking. It does not die. It only stops. Behind it, the barn gate rolls open on the platform.' } } });
@@ -2564,7 +2567,7 @@ Object.assign(FILES, {
     h_cold: { n: 'Cold Storage Manifest', t: 'Lot 7 of the Hopesburgh formula. Do NOT thaw. Seat the sample in the vault reader to release the core key. The core key opens the chamber where Prototype is kept.' },
     h_vault: { n: 'Founder\'s Letter', t: 'We told the town the plant would bring jobs. It did. It brought a different kind of work.\n\nIf you are reading this you have the sample. Burn the chamber. Do not let the helicopter take it.' },
     h_core: { n: 'Chamber Door Plate', t: 'PROTOTYPE. Designation: HOPE. Do not look at it for long.' },
-    h_heli: { n: 'Pilot\'s Note', t: 'Helicopter is yours if you can reach the roof. Radio says the highway is still open to the east. Go. Do not look back at the plant.' },
+    h_heli: { n: 'Pilot\'s Note', t: 'The pilot is dead in his seat with a Corvane badge on his lapel. Taped to the dash:\n\n"This bird is for the sample, not for you. Dalton will not wait for the Prototype to finish. At 4:00 AM the basin burns. OPERATION LANTERN. Anybody on the ground is part of the cleanup."\n\nThe radio on the console is still on. A woman is whispering the same message over and over. It is Dana.' },
 });
 R_('h04_bridge', 'Service Bridge', 'ht_street', 26, 8, { fl: 15, sky: 1, items: ['file:h_bridge', 'ammo:14', 'gherb', 'ammoS:6'], en: 'zzzcl', bar: 3 });
 R_('h04_gate', 'Annex Gatehouse', 'ht_shop', 10, 8, { fl: 15, safe: 1, items: ['file:h_gatehouse', 'ribbon:3', 'spray', 'ammo:14'], en: '' });
@@ -2575,8 +2578,8 @@ R_('h04_cold', 'Cold Storage', 'ht_hosp', 14, 10, { fl: 16, items: ['file:h_cold
 R_('h04_hall', 'Sterile Corridor', 'ht_hosp', 22, 5, { fl: 16, items: ['ammo:14', 'gps:2'], en: 'zzzcl', bar: 3 });
 R_('h04_vault', 'Sample Vault', 'ht_hosp', 12, 9, { fl: 16, items: ['file:h_vault', 'ammo:12', 'spray', 'gherb'], en: 'zd', puz: [{ type: 'use', flag: 'h04_vault', need: ['h02_vial'], title: 'Vault Reader', text: 'Vault reader', ask: 'Seat the ampoule from the pharmacy in the reader?', ok: { item: 'h04_reactor', msg: 'The reader accepts the ampoule. A drawer slides out with a heavy key shaped like a syringe barrel.' }, no: 'The vault reader wants a sample. The pharmacy ampoule from Main Street should do.', done: 'The vault is empty.' }] });
 R_('h04_save', 'Staff Lounge', 'ht_hall', 10, 8, { fl: 16, safe: 1, items: ['ribbon:3', 'spray', 'ammo:14', 'gherb'], en: '' });
-R_('h04_core', 'Prototype Chamber', 'ht_depot', 28, 18, { fl: 16, h: 8, items: ['file:h_core', 'ammo:16', 'ammoS:8', 'spray', 'gherb'], en: 'zz', bar: 7, boss: { bs: BS.proto, drop: { flag: 'finalDead', key: 'h04_core:proto', msg: 'The Prototype folds in on itself and goes quiet. A door in the far wall unlocks. The stair leads up to the roof.' } } });
-R_('h04_roof', 'Helipad', 'ht_roof', 22, 10, { fl: 15, sky: 1, items: ['file:h_heli', 'ammo:14', 'spray'], en: '', event: 'end2' });
+R_('h04_core', 'Prototype Chamber', 'ht_depot', 28, 18, { fl: 16, h: 8, items: ['file:h_core', 'ammo:16', 'ammoS:8', 'spray', 'gherb'], en: 'zz', bar: 7, boss: { bs: BS.proto, drop: { flag: 'protoDead', key: 'h04_core:proto', msg: 'The Prototype folds in on itself and goes quiet. A door in the far wall unlocks. The stair leads up to the roof.' } } });
+R_('h04_roof', 'Helipad', 'ht_roof', 22, 10, { fl: 15, sky: 1, items: ['file:h_heli', 'ammo:14', 'spray'], en: '' });
 lnk('h03_platform', 'E', 0, 'h04_bridge', 'W', 0);
 lnk('h04_bridge', 'E', 0, 'h04_gate', 'W', 0);
 lnk('h04_gate', 'E', 0, 'h04_lobby', 'W', 0);
@@ -2602,6 +2605,363 @@ Object.assign(H3_INTRO, {
     h04_core: 'The Prototype Chamber. Vats on every wall. In the centre, something that was meant to be a person, and the door slams behind you. Use the barrels. Use the dodge roll.',
     h04_roof: 'The helipad. A helicopter waits in the rain with its rotors turning. The highway is a thin gold line to the east.',
 });
+
+// ---- Chapter 5: Hope Creek (service road, gas station, motel, pump house, fish market, marina, the landing and the creek beast)
+Object.assign(H3_FLOORS, { 17: 'HOPE CREEK', 18: 'CREEK LANDING' }); H3_FLOOR_ORDER.push(17, 18); H3_TITLES[5] = 'Hope Creek';
+Object.assign(THEME, {
+    ht_creek: { floor: ['stone', 0x2a3034, 6, 5], wall: ['brick', 0x4a4a46, 5, 2.2], amb: [0x2e4864, 1.8], fog: 0x07101a, lc: [0xffb060, 0xa8d0ff], h: 6, pc: [0x3a4448, 0x4a3a2e, 0x2a3e48], pt: 'metal', city: 'alley', stk: 1, deco: { halo: [0x4a7090, 0.12], crates: true, barrels: 0x2a4a5a } },
+});
+Object.assign(ITEMS, {
+    h05_fuel: { n: 'Fuel Can', type: 'key', d: 'A red steel can, heavy with outboard mix. The pump jockey chained it behind the register.' },
+    h05_boatkey: { n: 'Boat Ignition Key', type: 'key', d: 'A key on a cork float marked DOCK 6. It hung inside room 6 of the Creekside Motel.' },
+    h05_valve: { n: 'Pump Wheel', type: 'key', d: 'A cast iron valve wheel for the pump house gate. Somebody carried it to the fish market and left it on the ice.' },
+});
+Object.assign(BS, {
+    creekbeast: { kind: 'hound', sc: 2.7, hp: 210, spd: 4.1, rad: 1.0, dmg: 18, cd: 1.0, wind: 0.4, reach: 2.4, phases: 3, name: 'Corvane Hound Alpha' },
+});
+Object.assign(FILES, {
+    h_road: { n: 'Radio Relay Note', t: 'A field radio sits in a plastic bag, its battery still warm. A card is taped to the handset in Dana Whit\'s handwriting:\n\n"Rhea. If this is you, I am in City Hall with 31 people and the Mayor. He has locked us in the council chamber and he is burning the records. Corvane calls it OPERATION LANTERN. It starts at 4 AM. I do not know what it does. Get here. Take the creek, the roads are full."' },
+    h_gas: { n: 'Pump Jockey Clipboard', t: 'LAST SHIFT\n\n9:02 grey van tanks up, driver pays cash\n9:15 first customer bleeding from the ears\n9:40 I chained the fuel cans behind the counter so nobody takes them. I am not crazy. The boat guy is going to need that fuel.\n\nThe chain key is on the nail by the lottery machine. It is not a secret. Please just bring the can back.' },
+    h_motel: { n: 'Motel Register', t: 'CREEKSIDE MOTEL - GUEST BOOK\n\nRoom 6: "J. Dalton, 5 nights, cash." Same name. Same handwriting. Different cities, stapled to the back: Raccoon, Rockford, Hopesburgh.\n\nBelow it, a line in red: "ROOM 6 SAFE. THE CODE IS THE NUMBER OF HIS ROOM TIMES THE NUMBER OF CITIES." (6 times 3.)' },
+    h_pump: { n: 'Pump House Gauge Log', t: 'HOPE CREEK PUMP STATION 2\n\nPressure in the main is normal. Pressure in the CREEK is not. Something is drawing the water down along the east bank, a hundred gallons a minute, and the intake screens keep clogging with hair.\n\nThe gate to the landing needs the wheel for valve 3. The wheel is in the fish market, I lent it to Gunnar for the ice machine.' },
+    h_fish: { n: 'Fish Market Tally', t: 'GUNNAR\'S FISH & ICE\n\nI sold nothing today. The dogs came in off the creek road before dark. They were Mrs. Pruitt\'s labradors. They were wrong.\n\nI hung the pump wheel on the ice machine so nobody would think of leaving. I am in the freezer. Do not open the freezer.' },
+    h_marina: { n: 'Dock 6 Chalk Board', t: 'WEATHER: rain, no wind.\nTIDE: you are on a creek.\n\nBoat for hire, Capt. Ines Marlowe. Cash. Ines would like it known that she does not go out after dark, except tonight, because the thing under the next dock keeps knocking on her hull.' },
+    h_landing: { n: 'Corvane Field Memo', t: 'HOUND ALPHA - CONTAINMENT FAILURE, FIELD UNIT RECOMMENDS TERMINATION\n\nThe unit escaped through the creek culvert at 8:55 PM. It has been herding its pack toward the water since.\n\nEvidence the pack "helped" them with the Resident Care Program: nobody who takes a dog out in the morning is ever bitten.' },
+    h_steps: { n: 'Landing Steps Sign', t: 'CITY PIER STEPS - CIVIC CENTER, 400 FT. UP THE HILL.\n\nSomebody has scratched under it: "THE CLINIC IS ON THE WAY. THE CLINIC WILL TRY TO HELP YOU. LET IT."' },
+});
+Object.assign(LOCKS, {
+    h05_boat: { flag: 1, no: 'The boat is dead in the water. It needs fuel and a key.' },
+    h05_gate: { flag: 1, no: 'The landing gate is held shut by a valve wheel. The wheel is missing.' },
+    h05_beast: { flag: 1, no: 'The pier gate is chained from the far side. Something has to die first.' },
+});
+Object.assign(H3_INTRO, {
+    h05_road: 'The service road runs down off the annex in a wet black line. A field radio chirps in a plastic bag taped to a stop sign.',
+    h05_gas: 'A gas station with its canopy lights dead. A gutted cashier counter. An unhappy sound from the cooler.',
+    h05_motel: 'A long outdoor corridor, doors in a line. A radio inside room 6 is playing the same four notes over and over.',
+    h05_save: 'The motel office: a desk, a cot, a kettle. The door has two deadbolts and a chair under the handle. A good place to save.',
+    h05_pump: 'The pump station. Wheels and gauges, a boiler-grey hum, and a hole in the floor where something has been dragging the creek down.',
+    h05_fish: 'A fish market. Ice melted to a grey slush. Something paces behind the freezer door.',
+    h05_marina: 'A wet marina, six docks and one boat. A fuel tank at the end of the pier is sweating. The water is moving against the current.',
+    h05_landing: 'The boat landing, concrete steps going down into black water. The dogs are watching from the roofs. The big one is already moving.',
+    h05_steps: 'The city pier steps, slick with rain. Above, a hill of lights. Below, the creek, knocking.',
+});
+Object.assign(H3_LIVE, {
+    h05_marina: { id: 'fueltank', title: 'THE FUEL TANK IS SWEATING', a: 'Shoot the tank', b: 'Siphon it and go', ms: 7000, def: 'b', delay: 4200, fx: {
+        a() { try { RM.shake = Math.max(RM.shake || 0, 1); RM.flash = 0.3; sfx('boom'); for (const E of RM.enemies.slice()) if (E.st !== 'dead' && !E.boss && !E.stalker) dealHit(E, 240, 0, 0); say('The tank goes up. The pier burns, and so does everything on it.', 3200); } catch (e) { console.warn('live a', e); } },
+        b() { try { const l1 = invGive('gpf', 2), l2 = invGive('gps', 2); say(l1 || l2 ? 'You siphon what you can. Your bag is full.' : 'You siphon fuel and strip the boat locker of powder.', 3200); } catch (e) { console.warn('live b', e); } },
+    } },
+});
+R_('h05_road', 'Annex Service Road', 'ht_street', 26, 10, { fl: 17, sky: 1, items: ['file:h_road', 'ammo:14', 'gherb', 'ammoS:6'], en: 'zzzcl', bar: 3 });
+R_('h05_gas', 'Creekside Gas Station', 'ht_shop', 14, 10, { fl: 17, items: ['file:h_gas', 'h05_fuel', 'ammo:12', 'spray'], en: 'zzd', bar: 3 });
+R_('h05_motel', 'Creekside Motel', 'ht_hall', 20, 5, { fl: 17, items: ['file:h_motel', 'ammo:12', 'rherb'], en: 'zzcl', puz: [{ type: 'code', flag: 'h05_room6', code: 18, digits: 2, title: 'Room 6 Safe', desc: 'A hotel safe, bolted to the closet floor. Two digits. The register hinted at a sum.', text: 'Room 6 safe', ok: { item: 'h05_boatkey', msg: 'The safe pops. A boat key on a cork float rests on a stack of Corvane cash.' }, done: 'The safe is empty.' }] });
+R_('h05_save', 'Motel Office', 'ht_apt', 9, 7, { fl: 17, safe: 1, items: ['ribbon:3', 'spray', 'ammo:12', 'gherb'], en: '' });
+R_('h05_pump', 'Pump Station 2', 'ht_depot', 16, 10, { fl: 17, items: ['file:h_pump', 'ammo:14', 'gps:2', 'gherb'], en: 'zcl', bar: 3 });
+R_('h05_fish', "Gunnar's Fish and Ice", 'ht_shop', 16, 10, { fl: 17, items: ['file:h_fish', 'h05_valve', 'ammo:12', 'rherb', 'spray'], en: 'zzdl', bar: 2 });
+R_('h05_marina', 'Hope Creek Marina', 'ht_creek', 26, 14, { fl: 18, sky: 1, items: ['file:h_marina', 'ammo:14', 'gherb', 'ammoS:6', 'spray'], en: 'zzzccl', bar: 5, puz: [{ type: 'use', flag: 'h05_boat', need: ['h05_fuel', 'h05_boatkey'], title: 'Capt. Marlowe\'s Boat', text: 'Boat', ask: 'Fuel the boat and turn the key?', ok: { msg: 'The outboard coughs, catches, and settles into a steady growl.' }, no: 'The boat has no fuel and no key. The fuel can from the gas station and the key from the motel safe.', done: 'The boat is running.' }] });
+R_('h05_landing', 'Boat Landing', 'ht_creek', 24, 12, { fl: 18, sky: 1, items: ['file:h_landing', 'ammo:16', 'ammoS:8', 'spray', 'gherb'], en: 'zz', bar: 4, boss: { bs: BS.creekbeast, drop: { flag: 'h05_beast', key: 'h05_landing:alpha', msg: 'The Alpha goes into the creek and does not come back up. The pack scatters. The pier gate clanks open.' } } });
+R_('h05_steps', 'City Pier Steps', 'ht_street', 20, 8, { fl: 18, sky: 1, items: ['file:h_steps', 'ammo:14', 'spray'], en: '' });
+lnk('h04_roof', 'E', 0, 'h05_road', 'W', 0);
+lnk('h05_road', 'N', -8, 'h05_gas', 'S', 0);
+lnk('h05_road', 'N', 7, 'h05_motel', 'S', -6);
+lnk('h05_motel', 'N', 6, 'h05_save', 'S', 0);
+lnk('h05_road', 'E', 0, 'h05_pump', 'W', 0);
+lnk('h05_pump', 'S', 0, 'h05_fish', 'N', 0);
+lnk('h05_pump', 'E', 0, 'h05_marina', 'W', 0, 'h05_valve');
+lnk('h05_marina', 'E', 0, 'h05_landing', 'W', 0, 'h05_boat');
+lnk('h05_landing', 'E', 0, 'h05_steps', 'W', 0, 'h05_beast');
+
+// ---- Chapter 6: Hope Creek Clinic (entrance, reception, waiting room, exam hall, lab, morgue, recovery ward, surgery with the Matron, ambulance bay)
+Object.assign(H3_FLOORS, { 19: 'HOPE CREEK CLINIC', 20: 'CLINIC LOWER LEVEL' }); H3_FLOOR_ORDER.push(19, 20); H3_TITLES[6] = 'Hope Creek Clinic';
+Object.assign(THEME, {
+    ht_clinic: { floor: ['tile', 0xc4ccc8, 5, 4], wall: ['tile', 0x9cb4ac, 5, 1.4], amb: [0x2e4a48, 1.05], fog: 0x040c0c, lc: [0xe0fff4, 0xb8ffe8], h: 3.8, pc: [0xcad2d4, 0x94a2a4, 0x707e80], pt: 'metal', deco: { halo: [0x80ffd0, 0.08] } },
+    ht_morgue: { floor: ['tile', 0x8c9694, 5, 4], wall: ['tile', 0x6a7c78, 5, 1.4], amb: [0x1c3030, 0.95], fog: 0x030808, lc: [0xb8fff0, 0x88e0d0], h: 3.6, pc: [0x9aa4a4, 0x6a7676, 0x4e5a5a], pt: 'metal', deco: { frost: 0x9ad8e0 } },
+});
+Object.assign(ITEMS, {
+    h06_pass: { n: 'Clinic Staff Pass', type: 'key', d: 'A laminated staff pass, CORVANE WELLNESS - NIGHT SHIFT. It was in the sign-in locker.' },
+    h06_morgkey: { n: 'Morgue Key', type: 'key', d: 'A steel key with a tag: LOWER LEVEL, COLD. It was inside the centrifuge.' },
+    h06_tag: { n: 'Toe Tag 19', type: 'key', d: 'A paper toe tag, number 19, stiff with something dark. The morgue register ties it to the surgery card drawer.' },
+    h06_surgcard: { n: 'Surgery Card', type: 'key', d: 'A magnetic card marked SURGERY / AUTHORISED. It was in the recovery ward drawer.' },
+});
+Object.assign(BS, {
+    matron: { v: 'parasite', sc: [1.7, 1.6], hp: 300, spd: 1.8, rad: 1.0, dmg: 26, cd: 1.4, wind: 0.6, reach: 2.7, phases: 3, name: 'The Matron' },
+});
+Object.assign(FILES, {
+    h_clinic: { n: 'Clinic Door Notice', t: 'HOPE CREEK WELLNESS CLINIC\nOpen 24 hours. Walk-ins welcome.\n\nTonight the walk-ins are the problem. The glass is cracked from the inside. If you are reading this and you are not bleeding, go through the back. The front desk will try to help.' },
+    h_recep: { n: 'Reception Memo', t: 'FROM: DR. ROWE\nTO: NIGHT SHIFT\n\nStaff pass: in the sign-in locker. The locker code is the clinic extension, printed on the flyer in the waiting room.\n\nIf a patient stops breathing and keeps walking, DO NOT treat them. Call Corvane. Do not call 911. 911 has been told it is a flu.' },
+    h_wait: { n: 'Appointment Flyer', t: 'HOPE CREEK WELLNESS - MAKE AN APPOINTMENT TODAY\n\nCall: 555-2207\nEXT. 2207 (STAFF ONLY)\n\nA child has drawn a purple crayon sun on the back. The sun has too many rays.' },
+    h_exam: { n: 'Dr. Rowe Dictation', t: 'This is Dr. Imani Rowe, recording for whoever is left.\n\nThe Resident Care Program is not a vaccine. It is a seed. It lives in the blood and waits for a signal. The signal is a second dose, which Corvane calls the booster.\n\nThe booster is coming at 4:00 AM, by air. Operation Lantern is not a fire. It is a spray.' },
+    h_lab: { n: 'Centrifuge Log', t: 'SPIN ORDER, SERIES B:\n\n1. Plasma (yellow)\n2. Platelet (white)\n3. Red cell (red)\n4. Buffy coat (grey)\n\nThe key to the morgue cabinet is spun inside the rotor. Re-seat the tubes in the same order.' },
+    h_morgue: { n: 'Morgue Register', t: 'LOWER LEVEL REGISTER\n\nBody 19: Mr. Tolliver, 62, Larkspur Court. Cause: "flu complications."\nBody 20: Mrs. Hale. Cause: "flu complications."\nBody 21: a child.\n\nThe toe tag for 19 opens the drawer in the recovery ward where the surgery card is kept. The staff had a system. It did not help them.' },
+    h_ward: { n: 'Recovery Ward Chart', t: 'Bed 4: awake, responding.\nBed 5: awake, responding.\nBed 6: awake, responding.\n\nThe bed straps are cut through from the inside.' },
+    h_surg: { n: 'Surgery Wall Board', t: 'SCHEDULE\n\n11:30 PM: Matron Alder, admitted by herself.\n11:45 PM: Matron Alder, reassigned to the surgery.\n12:00 AM: Matron Alder is the surgery.' },
+    h_bay: { n: 'Ambulance Log', t: 'Unit 3 left for the Civic Center at 9:40 PM with six patients.\nUnit 3 returned at 10:05 PM with none.\n\nThe back doors are open. They are all still open.' },
+});
+Object.assign(LOCKS, {
+    h06_matron: { flag: 1, no: 'The ambulance bay door is sealed. It opens when the surgery goes quiet.' },
+});
+Object.assign(H3_INTRO, {
+    h06_ent: 'The clinic entrance. A wheelchair stands in the doorway, facing out. The automatic doors are open and the sensors are still blinking.',
+    h06_recep: 'Reception. A desk bell, a clipboard, a long smear of red from the door to the hall. A locker bank on the wall is marked STAFF.',
+    h06_wait: 'The waiting room. Forty chairs, a muted TV, and a vending machine humming to itself.',
+    h06_exam: 'The exam hall, a long white corridor of doors. Half of them are closed. All of them are scratched from the inside.',
+    h06_save: 'The nurses\' station. A kettle, a cot, a typewriter somebody smuggled in for patient charts. Safe, for the moment.',
+    h06_lab: 'The clinic lab. A centrifuge in the middle of the bench, rotor open, tubes lined up in the wrong order.',
+    h06_morgue: 'The morgue. Cold steel drawers in a row. Drawer 19 is open. Drawer 19 is empty.',
+    h06_ward: 'The recovery ward. Twelve beds. Every strap cut. The monitors are all still beeping, and none of them is connected to anyone.',
+    h06_surg: 'The surgery. A big round lamp over a table, and something that used to be a nurse standing over it. It has been waiting for you.',
+    h06_bay: 'The ambulance bay. A row of ambulances with doors open. Beyond them, the hill and the lights of the Civic Center.',
+});
+R_('h06_ent', 'Clinic Entrance', 'ht_street', 18, 8, { fl: 19, sky: 1, items: ['file:h_clinic', 'ammo:14', 'gherb'], en: 'zzzc', bar: 2 });
+R_('h06_recep', 'Reception', 'ht_clinic', 14, 10, { fl: 19, items: ['file:h_recep', 'ammo:12', 'rherb'], en: 'zd', puz: [{ type: 'code', flag: 'h06_locker', code: 2207, digits: 4, title: 'Staff Locker', desc: 'A four digit keypad on the staff locker bank. The flyer had a staff extension.', text: 'Staff locker', ok: { item: 'h06_pass', msg: 'The locker opens. A staff pass lies on a folded surgical gown.' }, done: 'The locker is empty.' }] });
+R_('h06_wait', 'Waiting Room', 'ht_clinic', 16, 10, { fl: 19, items: ['file:h_wait', 'ammo:12', 'spray'], en: 'zzcl', bar: 2 });
+R_('h06_exam', 'Exam Hall', 'ht_clinic', 24, 5, { fl: 19, items: ['file:h_exam', 'ammo:14', 'gps:2'], en: 'zzzcl', bar: 2 });
+R_('h06_save', "Nurses' Station", 'ht_clinic', 10, 8, { fl: 19, safe: 1, items: ['ribbon:3', 'spray', 'ammo:14', 'gherb'], en: '' });
+R_('h06_lab', 'Clinic Lab', 'ht_clinic', 14, 10, { fl: 19, items: ['file:h_lab', 'ammo:12', 'gherb', 'ammoS:6'], en: 'zcl', puz: [SEQ('h06_spin', 'h06_spin', 'Centrifuge', 'Four tubes to seat. The log gave the spin order.', ['Plasma', 'Platelet', 'Red cell', 'Buffy'], [0, 1, 2, 3], { item: 'h06_morgkey', msg: 'The rotor locks. A steel key drops out of the centre bucket.' }, { done: 'The rotor is empty.' })] });
+R_('h06_morgue', 'Morgue', 'ht_morgue', 16, 10, { fl: 20, items: ['file:h_morgue', 'h06_tag', 'grenade', 'ammoG:4', 'spray'], en: 'zzddl', bar: 2 });
+R_('h06_ward', 'Recovery Ward', 'ht_clinic', 20, 12, { fl: 20, items: ['file:h_ward', 'ammo:14', 'rherb', 'ammoS:6'], en: 'zzccl', bar: 3, puz: [{ type: 'use', flag: 'h06_drawer', need: ['h06_tag'], title: 'Card Drawer', text: 'Card drawer', ask: 'Match the toe tag to the drawer?', ok: { item: 'h06_surgcard', msg: 'Drawer 19 slides open. A magnetic surgery card is taped inside.' }, no: 'The drawer wants a toe tag. Drawer 19. The morgue register mentioned it.', done: 'The drawer is empty.' }] });
+R_('h06_surg', 'Surgery', 'ht_clinic', 26, 16, { fl: 20, h: 6, items: ['file:h_surg', 'ammo:16', 'ammoS:8', 'spray', 'gherb'], en: 'zz', bar: 4, boss: { bs: BS.matron, drop: { flag: 'h06_matron', key: 'h06_surg:matron', msg: 'The Matron collapses over the table and lies still. Somewhere below, the ambulance bay door unlocks.' } } });
+R_('h06_bay', 'Ambulance Bay', 'ht_street', 22, 8, { fl: 19, sky: 1, items: ['file:h_bay', 'ammo:14', 'spray', 'gherb'], en: '' });
+lnk('h05_steps', 'E', 0, 'h06_ent', 'W', 0);
+lnk('h06_ent', 'E', 0, 'h06_recep', 'W', 0);
+lnk('h06_recep', 'N', -4, 'h06_wait', 'S', -5);
+lnk('h06_recep', 'E', 0, 'h06_exam', 'W', 0, 'h06_pass');
+lnk('h06_exam', 'N', -8, 'h06_save', 'S', 0);
+lnk('h06_exam', 'N', 7, 'h06_lab', 'S', 0);
+lnk('h06_exam', 'S', -8, 'h06_morgue', 'N', 0, 'h06_morgkey');
+lnk('h06_exam', 'S', 6, 'h06_ward', 'N', -6);
+lnk('h06_exam', 'E', 0, 'h06_surg', 'W', 0, 'h06_surgcard');
+lnk('h06_surg', 'E', 0, 'h06_bay', 'W', 0, 'h06_matron');
+
+// ---- Chapter 7: City Hall (civic plaza, lobby, clerk, portrait gallery, archives, grand stair, council chamber, vault, bell tower with Mayor Pruitt)
+Object.assign(H3_FLOORS, { 21: 'CIVIC CENTER', 22: 'CITY HALL' }); H3_FLOOR_ORDER.push(21, 22); H3_TITLES[7] = 'City Hall';
+Object.assign(THEME, {
+    ht_marble: { floor: ['stone', 0x9a9690, 5, 5], wall: ['wall', 0xb6a88c, 5, 1.4], amb: [0x40382c, 1.1], fog: 0x0a0806, lc: [0xffd8a0, 0xffe8c0], h: 4.6, pc: [0x7a6a52, 0x5a4a3a, 0x8a7a62], pt: 'stone', deco: { halo: [0xffc880, 0.07] } },
+    ht_bell: { floor: ['wood', 0x3a2a1c, 5, 5], wall: ['brick', 0x5a4a3a, 4, 2], amb: [0x302418, 1.0], fog: 0x080604, lc: [0xff9a50, 0xffcc80], h: 7, pc: [0x4a3a2a, 0x6a4a2a, 0x3a2e22], pt: 'wood', deco: { fire: true } },
+});
+Object.assign(ITEMS, {
+    h07_archkey: { n: 'Archive Key', type: 'key', d: 'A long iron key on a tag: CLERK OF RECORDS. The clerk\'s desk safe held it.' },
+    h07_seal: { n: "Mayor's Seal", type: 'key', d: 'A brass desk seal, heavy as a brick. It unlocks the Grand Stair, where the Mayor keeps his private office.' },
+    h07_vaultkey: { n: 'Vault Key', type: 'key', d: 'A flat key labelled COUNCIL VAULT. It was in the archive stacks under B for Brandt.' },
+    h07_ledger: { n: 'Council Ledger', type: 'key', d: 'A cloth ledger of sealed contracts between the City of Hopesburgh and Corvane Biologics. On the last page is a set of authorisation codes for Operation Lantern. Keep it.' },
+});
+Object.assign(BS, {
+    pruitt: { v: 'copzombie', sc: [1.95, 1.6], hp: 340, spd: 1.7, rad: 1.0, dmg: 30, cd: 1.5, wind: 0.65, reach: 2.8, phases: 3, name: 'Mayor Pruitt' },
+});
+Object.assign(FILES, {
+    h_plaza: { n: 'Civic Plaza Banner', t: 'HOPESBURGH - A BETTER TOMORROW\nIn partnership with Corvane Biologics.\n\nThe banner hangs from the Hall by one corner. Under it somebody has parked the Mayor\'s black sedan with its engine running. Nobody is in it.' },
+    h_hall: { n: 'Lobby Directory', t: 'CITY HALL\nBasement: Boiler / Services\nGround: Clerk, Records, Portrait Gallery\nFirst: Council Chamber, Mayor\'s Suite\nBell Tower: closed for repairs\n\nUnder the directory is a hand-drawn arrow that points up with the word DANA.' },
+    h_clerk: { n: "Clerk's Roster", t: 'ORDER OF MAYORS, OLDEST FIRST:\n\n1. Whitcombe (the founder)\n2. Alder\n3. Hargrave\n4. Pruitt (current)\n\nThe portraits hang in the gallery in no order at all. The seal is under the one who started it all. Press them in the order of office.' },
+    h_gallery: { n: 'Gallery Plaque', t: 'HOPESBURGH CITY HALL\nCOMPLETED 1871\n\nGifted to the people of Hope Creek by Josiah Whitcombe, founder.' },
+    h_archive: { n: 'Archive Box B', t: 'CONTRACTS, 1987 - PRESENT\n\nCorvane Biologics Plant Lease, 99 years.\nCorvane Resident Care Program Consent (blanket).\nOPERATION LANTERN: PERMIT TO BURN, SIGNED BY THE MAYOR.\n\nThere is a note clipped to the permit: "Dana was right about the vault. The key is under B. Do not open the vault with the lights on."' },
+    h_stair: { n: 'Mayor Pruitt Voicemail', t: 'MESSAGE ON THE STAIR PHONE:\n\n"Dana, listen to me. I did what I could. They told me it was a flu shot and a tax break. I took the booster tonight to prove it was safe. It is not safe. Do not come up the stair. Please do not come up the stair."' },
+    h_council: { n: 'Council Minutes', t: 'LAST ENTRY\n\nMotion to evacuate: DENIED.\nMotion to warn the county: DENIED.\nMotion to accept Corvane\'s offer of "containment services": CARRIED, 5 to 0.\n\nThe doors were locked from the outside at 10:15 PM. Dana was the only one who got out through the vent.' },
+    h_vault: { n: 'Vault Inventory', t: 'COUNCIL VAULT\n\n1 ledger of sealed contracts (with Lantern authorisation codes)\n2 boxes of evidence, Raccoon Incident\n1 antique bell clapper\n\nWithout the ledger nobody can recall Lantern. With it, anybody can.' },
+    h_bell: { n: 'Bell Tower Note', t: 'He went up here at ten and did not come back down. The bell tolls every quarter hour, but nobody is pulling the rope.' },
+});
+Object.assign(LOCKS, {
+    h07_pruitt: { flag: 1, no: 'The service lift is locked. It opens when the Mayor stops ringing the bell.' },
+});
+Object.assign(H3_INTRO, {
+    h07_plaza: 'The Civic Plaza: a fountain choked with ash, a statue of the founder with a rope around its neck, and the Hall at the top of the hill with every window lit.',
+    h07_lobby: 'City Hall lobby. Marble floor, a long red carpet, and a wall of burned binders. Somebody has propped the doors open with a filing cabinet.',
+    h07_clerk: "The Clerk's Office. Stamps, ink pads, a desk safe with a dial. The roster is pinned to the wall.",
+    h07_gallery: 'The portrait gallery. Four mayors on one wall, hung out of order. The plaque below is the only thing in the room not scratched.',
+    h07_save: "The janitor's closet, a mop bucket and a battered typewriter. Safe, for now.",
+    h07_archive: 'The archives: stacks of paper to the ceiling and a sprinkler that is still dripping. The floor is wet with something that is not water.',
+    h07_stair: 'The Grand Stair. A long carpeted flight with a phone on the landing. The phone is off the hook. Somebody is breathing on it.',
+    h07_council: 'The council chamber. Thirty-one chairs, all turned to face the door. A vent in the ceiling is open. Nobody in the room is breathing.',
+    h07_vault: 'The council vault. Iron shelves, dust, and the smell of an old kind of fear.',
+    h07_bell: 'The bell tower, open to the rain. The bell is huge and green and ringing without a rope. Standing under it is Mayor Pruitt. He is taller than he was.',
+});
+R_('h07_plaza', 'Civic Plaza', 'ht_plaza', 30, 16, { fl: 21, sky: 1, items: ['file:h_plaza', 'ammo:14', 'gherb', 'ammoS:8', 'spray'], en: 'zzzzccl', bar: 4 });
+R_('h07_lobby', 'City Hall Lobby', 'ht_marble', 18, 12, { fl: 22, items: ['file:h_hall', 'ammo:12', 'rherb'], en: 'zzd', bar: 2 });
+R_('h07_clerk', "Clerk's Office", 'ht_marble', 12, 9, { fl: 22, items: ['file:h_clerk', 'ammo:12', 'gherb'], en: 'zd', puz: [{ type: 'code', flag: 'h07_safe', code: 1871, digits: 4, title: "Clerk's Safe", desc: 'A four digit dial on the desk safe. The gallery plaque states the year City Hall was completed.', text: "Clerk's safe", ok: { item: 'h07_archkey', msg: 'The safe opens. An iron archive key lies on a stack of stamped forms.' }, done: 'The safe is empty.' }] });
+R_('h07_gallery', 'Portrait Gallery', 'ht_marble', 22, 6, { fl: 22, items: ['file:h_gallery', 'ammo:12', 'spray'], en: 'zzcl', puz: [SEQ('h07_portraits', 'h07_portraits', 'Portraits', 'Four portraits to press. The roster gave the order of office.', ['Alder', 'Pruitt', 'Whitcombe', 'Hargrave'], [2, 0, 3, 1], { item: 'h07_seal', msg: 'The founder\'s portrait swings out. A heavy brass seal sits in the wall behind it.' }, { done: 'The wall is empty.' })] });
+R_('h07_save', "Janitor's Closet", 'ht_marble', 8, 6, { fl: 22, safe: 1, items: ['ribbon:3', 'spray', 'ammo:14', 'gherb'], en: '' });
+R_('h07_archive', 'Archives', 'ht_marble', 16, 10, { fl: 22, items: ['file:h_archive', 'h07_vaultkey', 'ammo:14', 'rherb', 'ammoS:6'], en: 'zzddl', bar: 2 });
+R_('h07_stair', 'Grand Stair', 'ht_marble', 10, 14, { fl: 22, items: ['file:h_stair', 'ammo:12', 'spray'], en: 'zzzc', bar: 2 });
+R_('h07_council', 'Council Chamber', 'ht_marble', 22, 14, { fl: 22, items: ['file:h_council', 'ammo:14', 'ammoS:8', 'gherb', 'spray'], en: 'zzzzcl', bar: 4 });
+R_('h07_vault', 'Council Vault', 'ht_marble', 12, 9, { fl: 22, items: ['file:h_vault', 'h07_ledger', 'ammo:12', 'spray', 'gps:2'], en: 'zd' });
+R_('h07_bell', 'Bell Tower', 'ht_bell', 24, 16, { fl: 22, sky: 1, h: 8, items: ['file:h_bell', 'ammo:16', 'ammoS:8', 'spray', 'gherb'], en: 'zz', bar: 5, boss: { bs: BS.pruitt, drop: { flag: 'h07_pruitt', key: 'h07_bell:pruitt', msg: 'Pruitt falls against the bell and it rings once, long and low, and stops. Dana\'s voice crackles on your radio: "The service lift, Rhea. East side. Hurry."' } } });
+lnk('h06_bay', 'E', 0, 'h07_plaza', 'W', 0);
+lnk('h07_plaza', 'N', -2, 'h07_lobby', 'S', -4);
+lnk('h07_lobby', 'W', 0, 'h07_clerk', 'E', 0);
+lnk('h07_clerk', 'N', 0, 'h07_save', 'S', 0);
+lnk('h07_lobby', 'E', 0, 'h07_gallery', 'W', 0);
+lnk('h07_gallery', 'N', 7, 'h07_archive', 'S', 0, 'h07_archkey');
+lnk('h07_lobby', 'N', 5, 'h07_stair', 'S', 0, 'h07_seal');
+lnk('h07_stair', 'N', 0, 'h07_council', 'S', 0);
+lnk('h07_council', 'E', 0, 'h07_vault', 'W', 0, 'h07_vaultkey');
+lnk('h07_council', 'N', 6, 'h07_bell', 'S', -6);
+
+// ---- Chapter 8: The Waterworks (service lift, maintenance gallery, filter hall, pump gallery, chlorine room, crew lockers, main cistern with the second Custodian, outfall, works intake)
+Object.assign(H3_FLOORS, { 23: 'WATERWORKS', 24: 'OUTFALL' }); H3_FLOOR_ORDER.push(23, 24); H3_TITLES[8] = 'The Waterworks';
+Object.assign(THEME, {
+    ht_sewer: { floor: ['stone', 0x1e2824, 6, 5], wall: ['brick', 0x3a4a40, 5, 2.4], amb: [0x1c3a34, 1.35], fog: 0x040a08, lc: [0x9affd0, 0x60d8a8], h: 4.6, pc: [0x2a3a34, 0x3a4a42, 0x2a3030], pt: 'metal', deco: { pipes: 0x44504a, halo: [0x70ffb0, 0.08], barrels: 0x2a4a3a } },
+});
+Object.assign(ITEMS, {
+    h08_wheel: { n: 'Drain Wheel', type: 'key', d: 'A cast iron wheel from the filter hall. It fits the drain valve in the pump gallery.' },
+    h08_badge: { n: 'Works Badge', type: 'key', d: 'A grey plastic CORVANE WORKS badge with a stranger\'s photo. It was in the chlorine room cabinet.' },
+});
+Object.assign(BS, {
+    custodian2: { v: 'warzombie', sc: [1.95, 1.62], hp: 460, spd: 1.85, rad: 1.05, dmg: 32, cd: 1.5, wind: 0.62, reach: 2.8, phases: 3, name: 'Custodian Unit 5' },
+});
+Object.assign(FILES, {
+    h_lift: { n: 'Lift Placard', t: 'CITY HALL SERVICE LIFT\nBasement to Waterworks.\nMax load: 4 persons or 1 pallet.\n\nDana\'s handwriting underneath: "The Waterworks tunnels run all the way to the Corvane plant. That is how the vans came in. That is how Lantern gets in."' },
+    h_gal: { n: 'Maintenance Schedule', t: 'WATERWORKS CREW\n\nFilters: weekly. Drain: monthly. Chlorine: DO NOT enter without a mask.\n\nThe drain wheel lives in the filter hall. The drain valve is in the pump gallery. Drain the cistern before you try the door.' },
+    h_filter: { n: 'Filter Hall Log', t: 'Filters clogged with hair and fingernails.\nAlarms: 12.\nAnswer: the pumps are fine, the city is fine, report to Corvane.\n\nSomebody is dragging themselves up the pipe on the south wall. We can hear them. We are not going to go and see.' },
+    h_pump: { n: 'Pump Gallery Gauge', t: 'MAIN CISTERN LEVEL: 14 FT AND RISING.\n\nIf the cistern drains, the south door will open by itself. Do not be on the other side of that door when it does.' },
+    h_chlor: { n: 'Chlorine Room Warning', t: 'DANGER - GAS - DANGER\n\nCabinet code is the crew shift (see the locker room whiteboard). Inside: a badge for the Works gate, a mask, and a note: "Wear the mask."' },
+    h_lockers: { n: 'Locker Room Whiteboard', t: 'CREW SHIFT CODE\n\nNights: 3\nWeekends: 9\nHolidays: 4\nOvertime: 1\n\nThe chlorine cabinet is 3941. If you forget it, you are not allowed in the chlorine room.' },
+    h_cistern: { n: 'Custodian Directive (Revised)', t: 'CUSTODIAN UNIT 5 - FIELD DIRECTIVE\n\nUnit 4 was a prototype. Unit 5 is not.\nTARGET: the woman with the ledger, the vial, or the tape.\nTERMINATION CONDITION: none.\n\nA corporate sticky note: "Do not underestimate her. She killed the first one with a barrel."' },
+    h_outfall: { n: 'Outfall Gate Plate', t: 'CORVANE WORKS - PRIVATE INTAKE\n\nAuthorised personnel only. Badge reader on the left. Do not use the creek side. The creek side has been seeded.' },
+    h_intake: { n: 'Intake Log', t: 'WORKS INTAKE\n\nSupply: creek water. Waste: creek water.\nProduct: not for sale.\n\nOn the wall a map of Hopesburgh has been marked with red circles. Every circle is a neighbourhood. At the centre of the map is the plant. At the centre of the plant, a tower. The tower is labelled LANTERN.' },
+});
+Object.assign(LOCKS, {
+    h08_drained: { flag: 1, no: 'The cistern door is sealed against the water pressure. Drain the cistern first.' },
+    h08_custodian: { flag: 1, no: 'The outfall gate is shut. Something heavy is holding the far side.' },
+});
+Object.assign(H3_INTRO, {
+    h08_lift: 'The service lift judders to a stop. The doors open on a landing of wet concrete and the sound of dripping water.',
+    h08_gal: 'A long maintenance gallery. Pipes overhead, a cable tray underfoot, and a green light at the far end that flickers like breath.',
+    h08_filter: 'The filter hall. Great grey tanks, each with a grille across the top. Something is climbing the south pipe.',
+    h08_pump: 'The pump gallery. A ring of dead motors around a drain valve with one wheel missing.',
+    h08_chlor: 'The chlorine room. The air tastes like a swimming pool and a hospital. The tanks are cracked.',
+    h08_save: 'The crew locker room. Benches, steel lockers, a kettle. The door has a bolt. Save here.',
+    h08_cistern: 'The main cistern, drained to a black bowl of wet concrete. At the bottom, something large has stood up. It has been listening.',
+    h08_outfall: 'The outfall tunnel. A long pipe the size of a bus. The creek has been seeded with something that glows.',
+    h08_intake: 'The Works intake: a steel gate, a badge reader, a hum from the other side like a great machine thinking.',
+});
+Object.assign(H3_LIVE, {
+    h08_filter: { id: 'filterpipe', title: 'THE SOUTH PIPE IS COMING DOWN', a: 'Shoot the pipe', b: 'Back away', ms: 6500, def: 'b', delay: 4000, fx: {
+        a() { try { RM.shake = Math.max(RM.shake || 0, 1); RM.flash = 0.3; sfx('boom'); for (const E of RM.enemies.slice()) if (E.st !== 'dead' && !E.boss && !E.stalker) dealHit(E, 220, 0, 0); say('The pipe bursts. The thing inside comes out in pieces.', 3200); } catch (e) { console.warn('live a', e); } },
+        b() { try { say('The pipe tears off the wall and something slides out across the floor. You back away.', 2800); } catch (e) { /* hud */ } },
+    } },
+});
+R_('h08_lift', 'Service Lift Landing', 'ht_sewer', 12, 8, { fl: 23, items: ['file:h_lift', 'ammo:12', 'gherb'], en: 'zz' });
+R_('h08_gal', 'Maintenance Gallery', 'ht_sewer', 24, 5, { fl: 23, items: ['file:h_gal', 'ammo:14', 'spray'], en: 'zzcl', bar: 2 });
+R_('h08_filter', 'Filter Hall', 'ht_sewer', 18, 12, { fl: 23, items: ['file:h_filter', 'h08_wheel', 'ammo:12', 'rherb', 'ammoS:6'], en: 'zzdcl', bar: 3 });
+R_('h08_pump', 'Pump Gallery', 'ht_sewer', 16, 10, { fl: 23, items: ['file:h_pump', 'ammo:12', 'gps:2', 'spray'], en: 'zcl', puz: [{ type: 'use', flag: 'h08_drained', need: ['h08_wheel'], title: 'Drain Valve', text: 'Drain valve', ask: 'Fit the wheel and drain the cistern?', ok: { msg: 'The wheel turns hard. Somewhere below, a thousand tons of water begin to go.' }, no: 'The drain valve has no wheel. There was one in the filter hall.', done: 'The cistern is draining.' }] });
+R_('h08_chlor', 'Chlorine Room', 'ht_sewer', 12, 9, { fl: 23, items: ['file:h_chlor', 'ammo:12', 'gherb'], en: 'zdl', bar: 4, puz: [{ type: 'code', flag: 'h08_cabinet', code: 3941, digits: 4, title: 'Chlorine Cabinet', desc: 'A four digit lock on the safety cabinet. The locker room whiteboard listed a shift code.', text: 'Cabinet', ok: { item: 'h08_badge', msg: 'The cabinet opens. A Corvane Works badge hangs inside beside a gas mask.' }, done: 'The cabinet is empty.' }] });
+R_('h08_save', 'Crew Locker Room', 'ht_sewer', 10, 8, { fl: 23, safe: 1, items: ['file:h_lockers', 'ribbon:3', 'spray', 'ammo:14', 'gherb'], en: '' });
+R_('h08_cistern', 'Main Cistern', 'ht_sewer', 30, 18, { fl: 24, h: 8, items: ['file:h_cistern', 'ammo:16', 'ammoS:8', 'ammoG:4', 'spray', 'gherb'], en: 'zz', bar: 6, boss: { bs: BS.custodian2, drop: { flag: 'h08_custodian', key: 'h08_cistern:cust2', msg: 'Unit 5 goes down on its knees and does not get up. The outfall gate groans open on the far wall.' } } });
+R_('h08_outfall', 'Outfall Tunnel', 'ht_sewer', 26, 5, { fl: 24, items: ['file:h_outfall', 'ammo:14', 'spray'], en: 'zzzcl', bar: 2 });
+R_('h08_intake', 'Works Intake', 'ht_depot', 16, 10, { fl: 24, items: ['file:h_intake', 'ammo:14', 'spray', 'gherb'], en: '' });
+lnk('h07_bell', 'E', 0, 'h08_lift', 'W', 0, 'h07_pruitt');
+lnk('h08_lift', 'E', 0, 'h08_gal', 'W', 0);
+lnk('h08_gal', 'N', -9, 'h08_filter', 'S', -4);
+lnk('h08_gal', 'N', 8, 'h08_pump', 'S', 0);
+lnk('h08_gal', 'S', -8, 'h08_chlor', 'N', 0);
+lnk('h08_gal', 'S', 8, 'h08_save', 'N', 0);
+lnk('h08_gal', 'E', 0, 'h08_cistern', 'W', 0, 'h08_drained');
+lnk('h08_cistern', 'E', 0, 'h08_outfall', 'W', 0, 'h08_custodian');
+lnk('h08_outfall', 'E', 0, 'h08_intake', 'W', 0);
+
+// ---- Chapter 9: Corvane Works (gatehouse, yard, lobby, offices, cold store, production line, lab, vat hall with mutated Brandt, freight lift)
+Object.assign(H3_FLOORS, { 25: 'CORVANE WORKS', 26: 'WORKS LOWER' }); H3_FLOOR_ORDER.push(25, 26); H3_TITLES[9] = 'Corvane Works';
+Object.assign(THEME, {
+    ht_works: { floor: ['tile', 0x8e9a98, 5, 4], wall: ['tile', 0xa4b0ae, 5, 1.4], amb: [0x2a4a4c, 1.15], fog: 0x040c0c, lc: [0xe8fff8, 0xb0f8e8], h: 4.4, pc: [0xb4bcbe, 0x7c8a8c, 0x606c6e], pt: 'metal', deco: { halo: [0x70ffe0, 0.09], pipes: 0x5a6a6a } },
+    ht_vat: { floor: ['tile', 0x5a6664, 5, 4], wall: ['tile', 0x4a5e5a, 5, 1.4], amb: [0x143a30, 1.0], fog: 0x020a08, lc: [0x80ffc0, 0x40e090], h: 9, pc: [0x4a5a58, 0x2e3e3c, 0x1e2a28], pt: 'metal', deco: { halo: [0x60ff9a, 0.14], barrels: 0x2a5a40 } },
+});
+Object.assign(ITEMS, {
+    h09_pass: { n: 'Lab Pass', type: 'key', d: 'A red Corvane lab pass with a hologram sticker. It was in the director\'s desk.' },
+    h09_coldkey: { n: 'Cold Store Key', type: 'key', d: 'A steel key frosted white. It was clipped to the line supervisor\'s belt.' },
+    h09_vialkit: { n: 'Lantern Vial Kit', type: 'key', d: 'A case of sealed vials marked BOOSTER / LANTERN. The cold store kept them at minus twenty. Without the ledger codes nobody can load them. With them, anybody can.' },
+    h09_freight: { n: 'Freight Card', type: 'key', d: 'A freight lift card stamped LOWER TO ROOF. The vat hall guard dropped it.' },
+});
+Object.assign(BS, {
+    brandt: { v: 'warzombie', sc: [2.1, 1.75], hp: 520, spd: 1.9, rad: 1.1, dmg: 34, cd: 1.4, wind: 0.6, reach: 3.0, phases: 3, name: 'Dr. Brandt (Mutated)' },
+});
+Object.assign(FILES, {
+    h_wgate: { n: 'Gatehouse Roster', t: 'CORVANE WORKS - GATE LOG\n\nVisitors tonight: none.\nVans out: 41.\nVans in: 3.\n\nA hand-written line: "Everything that left tonight was going to the hill. Everything that came back was in a bag."' },
+    h_wyard: { n: 'Yard Whiteboard', t: 'LOADING ORDER\n\nVan 1: Larkspur\nVan 2: Civic\nVan 3: Harbor\n\nCOLD STORE KEY: line supervisor, production line.' },
+    h_wlobby: { n: 'Reception Plaque', t: 'CORVANE BIOLOGICS\nEstablished 1987\n\n"Healthier Together."\n\nThe plaque has been smashed with a fire axe. The axe is still lodged in the wall.' },
+    h_woffice: { n: "Director's Memo", t: 'TO: DR. BRANDT\nFROM: J. DALTON\n\nThe Hopesburgh cohort has been out for 14 hours. Booster loads at 3:30 AM. Aircraft out at 4:00.\n\nThe director\'s desk drawer is coded to the plant\'s founding year divided by 1000 and multiplied by 4. If you cannot do the math, you should not be in the job.' },
+    h_wcold: { n: 'Cold Store Placard', t: 'KEEP FROZEN\nBOOSTER SERIES L (LANTERN)\n\nA note on the vial case: "These are the only ones. Smash them and Lantern cannot fly. Dalton knows this. That is why he has the roof."' },
+    h_wline: { n: 'Line Supervisor Log', t: 'SHIFT NOTES\n\nThe line stopped at 11:08. Nobody stopped it. The vials kept filling by themselves.\n\nI took the cold store key and I am going to stand in the corner until it is over.' },
+    h_wlab: { n: 'Brandt Recording', t: 'Dr. Aldous Brandt, last entry.\n\nI took the booster in the lab to see what it feels like. It feels like someone opening every door in the house at once.\n\nI am going to the vat hall. It is the only room warm enough.' },
+    h_wvat: { n: 'Vat Hall Plate', t: 'VAT 1 THROUGH VAT 12\n\nVat 7 is open. Vat 7 has been open since the lights went green.' },
+    h_wlift: { n: 'Freight Lift Plate', t: 'LOWER TO ROOF - AUTHORISED ONLY\n\nThe roof is the Lantern deck. The aircraft will land there at 4:00. There is nothing else on the roof but Dalton.' },
+});
+Object.assign(LOCKS, {
+    h09_brandt: { flag: 1, no: 'The freight lift is locked. It opens when the vat hall goes quiet.' },
+});
+Object.assign(H3_INTRO, {
+    h09_gate: 'The Works gate: a steel barrier, a guard box, forty vans in a neat line with their doors open.',
+    h09_yard: 'The loading yard. Pallets, fork trucks, a loading dock with a single light on. The vans are empty.',
+    h09_lobby: 'The Corvane lobby. A smashed plaque, an axe in the wall, a coffee machine still dripping.',
+    h09_office: 'The director\'s office. A big desk, a window onto the vat hall, and a drawer with a combination dial.',
+    h09_save: 'The first aid room. A cot, a kettle, a typewriter. Somebody has locked the door from the inside. It is open now. Save here.',
+    h09_line: 'The production line: forty metres of belt with vials still filling by themselves. The supervisor hangs against the far wall.',
+    h09_cold: 'The cold store. Frost on every surface, steel racks, a case with a red biohazard seal.',
+    h09_lab: 'The lab. Glass everywhere. A broken sample tray. Something has been through here on all fours.',
+    h09_vat: 'The vat hall. Twelve glass vats, eleven of them dark. The twelfth is open and steaming. Brandt stands in the steam. He is no longer a scientist.',
+    h09_lift: 'The freight lift. A steel cage, a single button. The button is marked ROOF.',
+});
+R_('h09_gate', 'Works Gate', 'ht_street', 22, 8, { fl: 25, sky: 1, items: ['file:h_wgate', 'ammo:14', 'gherb', 'spray'], en: 'zzzc', bar: 2 });
+R_('h09_yard', 'Loading Yard', 'ht_works', 28, 14, { fl: 25, items: ['file:h_wyard', 'ammo:16', 'ammoS:8', 'gherb', 'spray'], en: 'zzzdcl', bar: 4 });
+R_('h09_lobby', 'Corvane Lobby', 'ht_works', 16, 10, { fl: 25, items: ['file:h_wlobby', 'ammo:14', 'rherb'], en: 'zzd', bar: 2 });
+R_('h09_office', "Director's Office", 'ht_works', 14, 10, { fl: 25, items: ['file:h_woffice', 'ammo:12', 'gherb', 'ammoR:6'], en: 'zd', puz: [{ type: 'code', flag: 'h09_desk', code: 7948, digits: 4, title: "Director's Drawer", desc: 'A four digit dial on the desk drawer. The memo gave a puzzle about the plant\'s founding year.', text: 'Drawer', ok: { item: 'h09_pass', msg: 'The drawer opens. A red lab pass lies on a stack of Lantern authorisations.' }, done: 'The drawer is empty.' }] });
+R_('h09_save', 'First Aid Room', 'ht_works', 9, 7, { fl: 25, safe: 1, items: ['ribbon:3', 'spray', 'ammo:14', 'gherb'], en: '' });
+R_('h09_line', 'Production Line', 'ht_works', 26, 8, { fl: 25, items: ['file:h_wline', 'h09_coldkey', 'sniper', 'ammo:14', 'gps:2', 'spray'], en: 'zzzdcl', bar: 3 });
+R_('h09_cold', 'Cold Store', 'ht_works', 16, 10, { fl: 26, items: ['file:h_wcold', 'h09_vialkit', 'ammoR:6', 'ammoG:4', 'spray', 'gherb'], en: 'zzdl', bar: 2 });
+R_('h09_lab', 'Corvane Lab', 'ht_works', 18, 12, { fl: 26, items: ['file:h_wlab', 'ammo:14', 'rherb', 'ammoS:8', 'spray'], en: 'zzccl', bar: 3 });
+R_('h09_vat', 'Vat Hall', 'ht_vat', 30, 20, { fl: 26, h: 9, items: ['file:h_wvat', 'ammo:16', 'ammoS:8', 'ammoR:6', 'spray', 'gherb', 'rherb'], en: 'zz', bar: 6, boss: { bs: BS.brandt, drop: { flag: 'h09_brandt', key: 'h09_vat:brandt', msg: 'Brandt sinks into the steaming vat and does not come out. A freight card slides across the floor from his coat.' } } });
+R_('h09_lift', 'Freight Lift', 'ht_works', 10, 8, { fl: 26, items: ['file:h_wlift', 'ammo:14', 'spray', 'gherb'], en: '' });
+lnk('h08_intake', 'E', 0, 'h09_gate', 'W', 0, 'h08_badge');
+lnk('h09_gate', 'E', 0, 'h09_yard', 'W', 0);
+lnk('h09_yard', 'N', -9, 'h09_lobby', 'S', 0);
+lnk('h09_lobby', 'W', 0, 'h09_office', 'E', 0);
+lnk('h09_office', 'N', 0, 'h09_save', 'S', 0);
+lnk('h09_yard', 'S', 8, 'h09_line', 'N', 6);
+lnk('h09_line', 'S', -8, 'h09_cold', 'N', 0, 'h09_coldkey');
+lnk('h09_lobby', 'E', 0, 'h09_lab', 'W', 0, 'h09_pass');
+lnk('h09_lab', 'E', 0, 'h09_vat', 'W', 0);
+lnk('h09_vat', 'E', 0, 'h09_lift', 'W', 0, 'h09_brandt');
+
+// ---- Chapter 10: Operation Lantern (the tower, control floor, server room, launch deck stair, the roof and Dalton)
+Object.assign(H3_FLOORS, { 27: 'LANTERN TOWER', 28: 'LANTERN DECK' }); H3_FLOOR_ORDER.push(27, 28); H3_TITLES[10] = 'Operation Lantern';
+Object.assign(THEME, {
+    ht_tower: { floor: ['tile', 0x6a7678, 5, 4], wall: ['tile', 0x4a5a5e, 5, 1.4], amb: [0x24404a, 1.1], fog: 0x040a0e, lc: [0xc8f0ff, 0x80d0ff], h: 4.4, pc: [0x8a9aa0, 0x5a6a70, 0x3e4a50], pt: 'metal', deco: { halo: [0x60c0ff, 0.1] } },
+    ht_deck: { floor: ['stone', 0x2a3034, 6, 5], wall: ['brick', 0x3e4448, 5, 2.2], amb: [0x2a3a58, 1.7], fog: 0x070d18, lc: [0xff6040, 0x80b0ff], h: 8, pc: [0x3a4448, 0x4a3a30, 0x2a3a4a], pt: 'metal', city: 'alley', stk: 1, deco: { halo: [0xff5040, 0.12] } },
+});
+Object.assign(ITEMS, {
+    h10_tower: { n: 'Tower Pass', type: 'key', d: 'A black pass for the Lantern tower. It was on the freight lift floor.' },
+    h10_stairkey: { n: 'Deck Key', type: 'key', d: 'A black key for the deck stair. It was in the server room rack.' },
+});
+Object.assign(BS, {
+    dalton: { v: 'copzombie', sc: [2.3, 1.85], hp: 780, spd: 2.0, rad: 1.15, dmg: 38, cd: 1.3, wind: 0.55, reach: 3.2, phases: 3, name: 'J. Dalton' },
+});
+Object.assign(FILES, {
+    h_tfloor: { n: 'Tower Directory', t: 'LANTERN TOWER\n\nGround: Control\nFirst: Server Room\nSecond: Launch Stair\nRoof: Aircraft Deck\n\nA sticker on the directory in Dana\'s hand: "Rhea, you have the ledger. You have the vials. You can stop this. If you do not, the whole county will wake up in the morning and not be people."' },
+    h_tcontrol: { n: 'Control Console', t: 'LANTERN LAUNCH CONSOLE\n\nAUTHORISATION REQUIRED: COUNCIL LEDGER\nAUTHORISATION REQUIRED: BOOSTER KIT\n\nTo abort, enter both. The console will cancel the aircraft. It will also tell Dalton.' },
+    h_tserver: { n: 'Server Room Log', t: 'ALL UNITS HOLD.\nThe aircraft is at 7,000 feet and descending.\nDalton is on the roof. He is not answering the radio. He has not been answering it since the Raccoon contract.' },
+    h_tstair: { n: 'Stairwell Graffiti', t: 'Written in lipstick on the landing, over and over: HE IS NOT HUMAN ANY MORE. HE WAS NEVER ANYTHING ELSE.' },
+    h_tdeck: { n: 'Launch Deck Beacon', t: 'AIRCRAFT INBOUND - ETA 3:58 AM\n\nThe beacon blinks red. Under it, a radio. Dana\'s voice: "Rhea, whatever happens up there, I am proud of you. The helicopter is almost here. Put it down. Put him down."' },
+});
+Object.assign(LOCKS, {
+    h10_abort: { flag: 1, no: 'The deck stair is sealed. Abort the launch at the control console first.' },
+});
+Object.assign(H3_INTRO, {
+    h10_atrium: 'The Lantern tower atrium. A vaulted lobby of glass and steel, Corvane\'s sun logo over the lift, and a hum in the walls like a held breath.',
+    h10_control: 'The control floor. Rows of dead consoles around one live one. A red clock counts down to 4:00 AM.',
+    h10_server: 'The server room. Racks of black machines with green lights, a cold draft, a cart with a thermos of coffee still warm.',
+    h10_save: 'A quiet utility closet. Mops, a cot, a kettle, a typewriter. The last one. Save here before the roof.',
+    h10_stair: 'The deck stair. A steel stairwell, red emergency lights, the sound of rotors from above.',
+    h10_roof: 'The Lantern deck. Rain, red light, a helicopter circling in the dark. On the pad stands Dalton, in a black coat, waiting. He is smiling.',
+});
+R_('h10_atrium', 'Lantern Atrium', 'ht_tower', 22, 14, { fl: 27, items: ['file:h_tfloor', 'ammo:16', 'ammoS:8', 'gherb', 'spray'], en: 'zzzdcl', bar: 4 });
+R_('h10_control', 'Control Floor', 'ht_tower', 24, 12, { fl: 27, items: ['file:h_tcontrol', 'ammo:16', 'rherb', 'ammoR:6', 'spray'], en: 'zzzcl', bar: 4, puz: [{ type: 'use', flag: 'h10_abort', need: ['h07_ledger', 'h09_vialkit'], title: 'Launch Console', text: 'Launch console', ask: 'Enter the ledger codes and load the vial kit to abort Lantern?', ok: { msg: 'The console accepts the ledger. The vials are sealed in the abort chamber. The red clock stops at 3:41 and begins to flash.' }, no: 'The console wants the council ledger and the booster vial kit. One from the vault, one from the cold store.', done: 'The launch is aborted.' }] });
+R_('h10_server', 'Server Room', 'ht_tower', 16, 10, { fl: 27, items: ['file:h_tserver', 'h10_stairkey', 'rocket', 'ammoG:4', 'ammo:14', 'spray'], en: 'zzddl', bar: 3 });
+R_('h10_save', 'Utility Closet', 'ht_tower', 9, 7, { fl: 27, safe: 1, items: ['ribbon:3', 'spray', 'ammo:14', 'gherb', 'rherb'], en: '' });
+R_('h10_stair', 'Deck Stair', 'ht_tower', 10, 16, { fl: 28, items: ['file:h_tstair', 'ammo:14', 'ammoR:6', 'spray', 'gherb'], en: 'zzzc', bar: 2 });
+R_('h10_roof', 'Lantern Deck', 'ht_deck', 32, 20, { fl: 28, sky: 1, items: ['file:h_tdeck', 'ammo:18', 'ammoS:10', 'ammoR:8', 'ammoG:6', 'spray', 'gherb', 'rherb'], en: 'zz', bar: 6, event: 'end2', boss: { bs: BS.dalton, drop: { flag: 'finalDead', key: 'h10_roof:dalton', msg: 'Dalton goes to his knees on the deck. He looks at the helicopter, then at you. He does not say anything. Then he falls.' } } });
+lnk('h09_lift', 'E', 0, 'h10_atrium', 'W', 0);
+lnk('h10_atrium', 'E', 0, 'h10_control', 'W', 0);
+lnk('h10_control', 'N', -8, 'h10_server', 'S', 0);
+lnk('h10_control', 'S', 8, 'h10_save', 'N', 0);
+lnk('h10_server', 'E', 0, 'h10_stair', 'W', 0, 'h10_stairkey');
+lnk('h10_stair', 'E', 0, 'h10_roof', 'W', 0, 'h10_abort');
 
 /* ---- dodge roll: V on a keyboard, R1 / RB on a pad, ROLL on a touch screen.
  * You tumble a few metres in the direction you are holding (or the way you face). Nothing can hurt you for most of the roll. Roll into an attack just as it lands for a
@@ -3170,8 +3530,7 @@ window.__h3 = { get BAR() { return BAR; }, get DG() { return DG; }, LIVE, barBoo
     try {
         const t = document.getElementById('title');
         if (t) {
-            const tag = document.createElement('div'); tag.id = 'h3tag'; tag.textContent = 'Hopesburgh · Population 41,806 · ' + Object.keys(ROOMS).length + ' rooms'; t.appendChild(tag);
-            const cv = document.createElement('canvas'); cv.id = 'h3rain'; t.insertBefore(cv, t.firstChild);
+                        const cv = document.createElement('canvas'); cv.id = 'h3rain'; t.insertBefore(cv, t.firstChild);
             const g = cv.getContext('2d'), dr = []; for (let i = 0; i < 90; i++) dr.push({ x: Math.random(), y: Math.random(), l: 0.02 + Math.random() * 0.04, s: 0.5 + Math.random() * 0.5 });
             let last = performance.now();
             const loop = (tm) => {
@@ -3190,6 +3549,7 @@ window.__h3 = { get BAR() { return BAR; }, get DG() { return DG; }, LIVE, barBoo
     let card = null, cardT = 0;
     const showCard = (n) => {
         try {
+            { const tt = document.getElementById('title'); if (tt && !tt.classList.contains('hide')) return; }   // never over the title screen: the card is for after the game starts
             if (!card) { card = document.createElement('div'); card.id = 'h3card'; document.body.appendChild(card); }
             card.innerHTML = '<small>' + (n === 1 ? 'Harbor Inn 3' : 'Chapter ' + n) + '</small><b>' + (H3_TITLES[n] || '') + '</b><i></i><em>' + (n === 1 ? 'Chapter 1' : 'Hopesburgh') + '</em>';
             card.classList.add('on'); clearTimeout(cardT); cardT = setTimeout(() => card.classList.remove('on'), 3400);
@@ -3636,29 +3996,65 @@ async function modBoot() {
     modApplyGuns(); await modLoadImages();
     const slots = []; for (const k of Object.keys(MOD.cfg.en)) if (MOD.cfg.en[k].mf) slots.push('e:' + k); for (const k of Object.keys(MOD.cfg.gun)) if (MOD.cfg.gun[k].mf) slots.push('g:' + k);
     for (const s of slots) { try { const r = await idbGet('mod:m:' + s); if (r && r.b) MOD.models[s] = await modParse(r.b, r.n); } catch (e) { console.warn('mod model', s, e); } }
+    { const keys = Object.keys(window.__MODELS || {}).filter((k) => !MOD.models['e:' + k]), got = {};   // built-in bodies; your own Mod Kit upload wins. Embedded text, or files in nxmodels/ fetched in parallel
+        await Promise.all(keys.map(async (k) => { try { const v = window.__MODELS[k]; if (typeof v === 'string' && v.length > 8) { const bin = atob(v), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); got[k] = u8.buffer; } else { const r = await fetch((window.__MODEL_DIR || 'nxmodels/') + k + '.glb'); if (!r.ok) throw new Error(k + ' ' + r.status); got[k] = await r.arrayBuffer(); } } catch (e) { console.warn('built-in model', k, e); } }));
+        for (const k of keys) { if (!got[k] || MOD.models['e:' + k]) continue; try { MOD.models['e:' + k] = await modParse(got[k], k + '.glb'); } catch (e) { console.warn('built-in model', k, e); } } }
     if (slots.some((s) => s[0] === 'g')) gunRefreshModels();
 }
 /* ---- enemies: stats and a replacement body that uses the model's own clips (idle / walk / run / attack / death) or simple motion ---- */
-function modApplyEnemy(e, E, mdl) {
-    const k = modClass(e), c = MOD.cfg.en[k] || {}, g = MOD.cfg.glob, sz = c.sz || 1;
+/* a specific built-in body for this enemy: by boss name, or by room + class (window.__MODEL_FOR, built from hi2/models/map.json); null = the class's body */
+function modKeyFor(e, E, key) {
+    const F = window.__MODEL_FOR; if (!F) return null;
+    if (E.bname) { for (const [re, k2] of F.boss || []) if (new RegExp(re).test(E.bname) && MOD.models['e:' + k2]) return k2; return null; }
+    const cls = modClass(e), room = String(key || '').split(':')[0];
+    for (const [re, c2, keys] of F.room || []) if (c2 === cls && new RegExp(re).test(room)) { const ok = keys.filter((k2) => MOD.models['e:' + k2]); if (ok.length) return ok[hashS(String(key)) % ok.length]; }
+    return null;
+}
+function modApplyEnemy(e, E, mdl, key) {
+    const k = modClass(e), c = MOD.cfg.en[k] || {}, g = MOD.cfg.glob, sz = c.sz || 1, mk = modKeyFor(e, E, key), kc = mk && ((window.__MODEL_FOR || {}).cfg || {})[mk] || {};
     E.hp = Math.max(1, Math.round(E.hp * g.eh * (c.hp || 1))); E.spd *= g.es * (c.sp || 1); E.dmg = Math.max(1, Math.round(E.dmg * g.ed * (c.dm || 1))); if (E.cdmg) E.cdmg = Math.max(1, Math.round(E.cdmg * g.ed * (c.dm || 1)));
     E.cd = Math.max(0.2, E.cd / Math.max(0.25, c.ar || 1)); E.rad = (E.rad || 0.5) * Math.max(0.6, sz); E.reach = (E.reach || 1.1) * Math.max(0.7, sz);
-    const m = MOD.models['e:' + k]; if (!m) { if (sz !== 1) mdl.root.scale.multiplyScalar(sz); return null; }
-    const root = new THREE.Group(), inner = new THREE.Group(), body = MOD.sk.clone(m.holder), H = (MOD_EN.find((q) => q[0] === k)[2]) * sz, s = H / m.h;
-    body.scale.setScalar(s); inner.rotation.y = (c.rot || 0) * Math.PI / 180; inner.add(body); root.add(inner); const acts = {}; let mixer = null;
-    if (m.clips.length) {
+    const m = MOD.models['e:' + (mk || k)]; if (!m) { if (sz !== 1) mdl.root.scale.multiplyScalar(sz); return null; }
+    const root = new THREE.Group(), inner = new THREE.Group(), body = MOD.sk.clone(m.holder), H = (kc.h || MOD_EN.find((q) => q[0] === k)[2]) * sz, s = H / m.h;
+    body.scale.setScalar(s); inner.rotation.y = ((mk ? kc.rot : c.rot) || 0) * Math.PI / 180; inner.add(body); root.add(inner); const acts = {}; let mixer = null;
+    const rig = m.clips.some((q) => q.duration > 0.25) ? null : rigInit(body);   // a model with no real clips (or one frozen frame) but a Mixamo-style skeleton gets the procedural body
+    if (m.clips.length && !rig) {
         mixer = new THREE.AnimationMixer(body); const pick = (re) => m.clips.find((q) => re.test(q.name));
         const set = { idle: pick(/idle|stand|breath|wait/i), walk: pick(/walk|shamble|limp|crawl/i), run: pick(/run|sprint|charge/i), attack: pick(/attack|punch|bite|claw|slash|swing|strike|hit/i), death: pick(/death|die|dead|fall/i) };
         if (!set.idle && !set.walk) set.idle = m.clips[0];
         for (const [n, cl] of Object.entries(set)) if (cl) { const a = mixer.clipAction(cl); if (n === 'attack' || n === 'death') { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } acts[n] = a; }
     }
-    return { root, inner, body, P: {}, cust: true, mixer, acts, cur: null, t: performance.now(), v: 0 };
+    return { root, inner, body, P: {}, cust: true, mixer, acts, cur: null, t: performance.now(), v: 0, prig: rig };
+}
+/* procedural animation for a rigged model with no usable clips (Mixamo-style bone names).
+   Everything is expressed in the model's own frame (x = its left/right, y up, z = the way it faces) and applied to the bones by world-space rotation, so bone axes do not matter. */
+function rigInit(body) {
+    const B = {}; body.traverse((n) => { if (n.isBone) B[n.name] = n; }); if (!B.Hips || !B.LeftArm || !B.LeftForeArm) return null;
+    body.updateMatrixWorld(true); const base = {}; for (const k in B) base[k] = B[k].quaternion.clone();
+    const ref = body.parent || body, Q = new THREE.Quaternion(), P = new THREE.Quaternion(), R = new THREE.Quaternion(), RI = new THREE.Quaternion(), v = new THREE.Vector3(), w = new THREE.Vector3(), a = new THREE.Vector3();
+    const wp = (b, o) => b.getWorldPosition(o);
+    const frame = () => ref.getWorldQuaternion(Q);
+    const rotAxis = (name, ax, ang, keep) => { const b = B[name]; if (!b) return; frame(); a.set(ax === 'x' ? 1 : 0, ax === 'y' ? 1 : 0, ax === 'z' ? 1 : 0).applyQuaternion(Q); R.setFromAxisAngle(a, ang); b.parent.getWorldQuaternion(P); const Pi = P.clone().invert(); b.quaternion.copy(Pi.multiply(R).multiply(P).multiply(keep ? b.quaternion : base[name])); b.updateMatrixWorld(true); };
+    // swing a limb so its bone->child direction points along (x,y,z) given in the model frame
+    const aim = (name, child, x, y, z) => { const b = B[name], c = B[child]; if (!b || !c) return; b.updateMatrixWorld(true); wp(b, v); wp(c, w); w.sub(v).normalize(); frame(); a.set(x, y, z).normalize().applyQuaternion(Q); R.setFromUnitVectors(w, a); b.parent.getWorldQuaternion(P); const Pi = P.clone().invert(); b.quaternion.copy(Pi.multiply(R).multiply(P).multiply(b.quaternion)); b.updateMatrixWorld(true); };
+    const reset = () => { for (const k in B) B[k].quaternion.copy(base[k]); body.updateMatrixWorld(true); };
+    return { B, reset, rotAxis, aim, base };
+}
+function rigPose(m, E, sp, wind, dt) {   // a procedural body for a rigged model that has no real clips: arms hang, legs and arms swing with its speed, a two-arm swipe when it attacks, falls over when dead
+    const R = m.prig; R.reset(); const dead = E.st === 'dead';
+    m.ph = (m.ph || 0) + dt * (sp > 0.15 ? 3.2 + sp * 1.5 : 0.8); const s = Math.sin(m.ph), mv = sp > 0.15, sw = mv ? Math.min(0.5, 0.2 + sp * 0.08) : 0.04;
+    if (wind > 0) { const k = Math.sin(Math.min(1, wind) * Math.PI); R.aim('LeftArm', 'LeftForeArm', 0.35 - k * 0.5, 0.25 * k - 0.6 * (1 - k), 0.6 + k); R.aim('RightArm', 'RightForeArm', -0.35 + k * 0.5, 0.25 * k - 0.6 * (1 - k), 0.6 + k); R.aim('LeftForeArm', 'LeftHand', 0.1, -0.2, 1); R.aim('RightForeArm', 'RightHand', -0.1, -0.2, 1); }
+    else { R.aim('LeftArm', 'LeftForeArm', 0.18, -1, 0.35 - (mv ? s * sw : 0)); R.aim('RightArm', 'RightForeArm', -0.18, -1, 0.35 + (mv ? s * sw : 0)); R.aim('LeftForeArm', 'LeftHand', 0.1, -1, 0.9); R.aim('RightForeArm', 'RightHand', -0.1, -1, 0.9); }
+    if (mv && !dead) { R.rotAxis('LeftUpLeg', 'x', s * sw * 0.9, 1); R.rotAxis('RightUpLeg', 'x', -s * sw * 0.9, 1); R.rotAxis('Spine01', 'z', s * 0.04, 1); }
+    if (dead) { m.fall = Math.min(1, (m.fall || 0) + dt * 1.6); m.inner.rotation.x = -Math.PI / 2 * m.fall; m.inner.position.y = 0.25 * m.fall; } else { m.fall = 0; m.inner.rotation.x = wind > 0 ? 0.25 * Math.sin(Math.min(1, wind) * Math.PI) : mv ? 0.06 : 0; m.inner.position.y = 0; }
 }
 function custAnim(E, sp, wind) {
     const m = E.mdl, now = performance.now(), dt = Math.min(0.1, (now - m.t) / 1000); m.t = now; const A = m.acts;
+    if (m.prig) { rigPose(m, E, sp, wind, dt); return; }
     const want = E.st === 'dead' ? 'death' : (wind > 0 || E.atkT > 0) ? 'attack' : sp > 2.6 ? (A.run ? 'run' : 'walk') : sp > 0.15 ? 'walk' : 'idle';
     if (m.mixer && Object.keys(A).length) {
         const use = A[want] ? want : (want === 'run' && A.walk ? 'walk' : A.idle ? 'idle' : Object.keys(A)[0]);
+        if (A[use]) A[use].timeScale = want === 'idle' && use !== 'idle' ? 0.1 : 1;   // a model with only a walk clip stands nearly still instead of marching on the spot
         if (m.cur !== use) { const prev = A[m.cur], next = A[use]; if (prev) prev.fadeOut(0.18); next.reset().fadeIn(0.18).play(); m.cur = use; }
         else if (use === 'attack' && wind > 0 && wind < 0.1 && !A.attack.isRunning()) A.attack.reset().play();
         m.mixer.update(dt); return;
@@ -3683,8 +4079,116 @@ function modGunInner(id) {
 const MODUI = { el: null, tab: 'en' };
 function modEl(t, css, txt) { const e = document.createElement(t); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; }
 function modPickFile(accept, cb) { const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.onchange = async () => { const f = i.files && i.files[0]; if (f) { try { await cb(f); } catch (e) { alert('That file could not be used: ' + (e && e.message || e)); } } }; i.click(); }
+/* OPS:BEGIN operative terminal: the roster and the green-phosphor briefing screen (shared by Harbor Inn 1, 2, 3 and Outbreak Online) */
+const OPS = [
+    { k: 'leon', name: 'Leon S. Kennedy', file: 'KENNEDY, LEON S.', g: 'male', role: 'DSO FIELD OPERATIVE', load: 'M93R / SHOTGUN / COMBAT KNIFE', note: 'Calm under fire. Talks his way out of rooms he has already fought his way into. Standard issue for a first response.' },
+    { k: 'sheva', name: 'Sheva Alomar', file: 'ALOMAR, SHEVA', g: 'female', role: 'FIELD AGENT, REGIONAL RESPONSE', load: 'HANDGUN / SUBMACHINE GUN', note: 'Steady, quick on her feet and hard to rattle. Strong on escort and cover work.' },
+    { k: 'chris', name: 'Chris Redfield', file: 'REDFIELD, CHRIS', g: 'male', role: 'STRIKE TEAM LEAD', load: 'RIFLE / HANDGUN / MELEE', note: 'Heavy hitter. Closes distance and ends the fight. Reads the room before the squad does.' },
+    { k: 'ada', name: 'Ada Wong', file: 'WONG, ADA', g: 'female', role: 'INDEPENDENT / UNVERIFIED', load: 'CROSSBOW / HANDGUN', note: 'Source of this file is not confirmed. Moves light, leaves little trace. Handle with care.' },
+    { k: 'leonnx', name: 'Leon NX', file: 'KENNEDY, LEON (NX)', g: 'male', role: 'ARCTIC OPERATIVE, NX PROGRAM', load: 'M93R / SHOTGUN / KNIFE', note: 'Cold-weather kit. Assigned to the NX series. Keeps working when the lights and the heat go out.' },
+    { k: 'shevanx', name: 'Sheva NX', file: 'ALOMAR, SHEVA (NX)', g: 'female', role: 'WET-WORK RESPONSE, NX PROGRAM', load: 'HANDGUN / SMG', note: 'Water-rescue and flood-zone specialist. Soaked, stubborn, still on task.' },
+    { k: 'piers', name: 'Piers Nivans', file: 'NIVANS, PIERS', g: 'male', role: 'SHARPSHOOTER, ALPHA TEAM', load: 'SNIPER RIFLE / HANDGUN', note: 'Long-range overwatch. Patient, precise and loyal to his team. Keep him high and give him a clear lane.' },
+    { k: 'ethan', name: 'Ethan Winters', file: 'WINTERS, ETHAN', g: 'male', role: 'CIVILIAN / UNVERIFIED RESPONDER', load: 'HANDGUN / SHOTGUN / ANYTHING NEARBY', note: 'No formal training, and he keeps getting back up anyway. Tougher than his file says.' },
+    { k: 'rose', name: 'Rose Winters', file: 'WINTERS, ROSE', g: 'female', role: 'MINOR OF INTEREST', load: 'NONE ASSIGNED', note: 'Young, quiet and watchful. Flagged for observation only. Keep clear of the front line.' },
+    { k: 'wesker', name: 'Albert Wesker', file: 'WESKER, ALBERT', g: 'male', role: 'RESTRICTED FILE / HOSTILE', load: 'HANDGUN / SUPERHUMAN SPEED', note: 'Former team captain, now a known threat. Access to this file is restricted. Do not trust him.' }
+];
+const OPS_DEFAULT = (seat) => (seat && seat % 2 === 0 ? 'sheva' : 'leon');
+const opsBuf = async (k) => { try { return window.__castBuf ? await window.__castBuf(k) : null; } catch (e) { return null; } };   // embedded copy if the build has one, else cast/<key>.vrm next to the page
+const opsGet = (k) => OPS.find((o) => o.k === k) || null;
+const opsHave = () => OPS.filter((o) => window.__CAST && window.__CAST[o.k]);
+const opsCur = () => { const m = /^op:(\w+)$/.exec(OPT.avatar || ''); return m ? m[1] : null; };
+async function opsAssign(k) {
+    const o = opsGet(k); if (!o) return false; OPT.avatar = 'op:' + k; saveOpt();
+    try { await avBoot(); } catch (e) { /* avBoot reports its own error */ }
+    try { say('Operative assigned: ' + o.name, 2200); } catch (e) { /* no room yet */ }
+    return AV.on;
+}
+const OPS_IMG = {}; let opsRen = null;
+async function opsShot(k) {   // a head-and-shoulders still, drawn from the model itself
+    if (OPS_IMG[k]) return OPS_IMG[k]; const buf = await opsBuf(k); if (!buf) return null;
+    const { vrm } = await avParse(buf); vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
+    if (!opsRen) opsRen = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); opsRen.setSize(240, 300); opsRen.setClearColor(0x000000, 0);
+    const sc = new THREE.Scene(); sc.add(vrm.scene); sc.add(new THREE.AmbientLight(0xffffff, 1.25)); const dl = new THREE.DirectionalLight(0xffffff, 1.5); dl.position.set(1, 2, 3); sc.add(dl);
+    vrm.scene.updateMatrixWorld(true); const hd = vrm.humanoid.getNormalizedBoneNode('head'), hp = hd ? hd.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, 0);
+    const cam = new THREE.PerspectiveCamera(24, 240 / 300, 0.05, 20); cam.position.set(0, hp.y - 0.03, hp.z + 1.35); cam.lookAt(0, hp.y - 0.1, hp.z);
+    opsRen.render(sc, cam); const url = opsRen.domElement.toDataURL('image/png');
+    vrm.scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); }); });
+    return (OPS_IMG[k] = url);
+}
+function opsCss() {
+    if (document.getElementById('ops-css')) return; const s = document.createElement('style'); s.id = 'ops-css';
+    s.textContent = `
+#ops,#ops *{box-sizing:border-box}
+#ops{position:fixed;inset:0;z-index:100000;background:#010604;color:#7dff9f;font:15px/1.4 'Courier New',Consolas,monospace;display:flex;align-items:center;justify-content:center;padding:12px;animation:opsOn .35s ease-out}
+#ops:before{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0,rgba(0,0,0,.28) 1px,transparent 1px,transparent 3px);mix-blend-mode:multiply;z-index:3}
+#ops:after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.75) 100%);z-index:3}
+@keyframes opsOn{0%{filter:brightness(2.4) contrast(1.6);transform:scaleY(.02)}60%{transform:scaleY(1.02)}100%{filter:none;transform:none}}
+@keyframes opsBlink{50%{opacity:0}} @keyframes opsFlick{0%,100%{opacity:1}92%{opacity:.93}94%{opacity:1}97%{opacity:.9}}
+#ops .win{position:relative;width:min(980px,100%);max-height:100%;display:flex;flex-direction:column;border:1px solid #2f8f4e;box-shadow:0 0 24px rgba(60,255,120,.28),inset 0 0 40px rgba(20,120,60,.25);background:#021209;text-shadow:0 0 6px rgba(80,255,140,.55);animation:opsFlick 4s infinite}
+#ops .bar{display:flex;justify-content:space-between;gap:10px;padding:6px 12px;border-bottom:1px solid #2f8f4e;background:#04301a;letter-spacing:.14em;font-size:12px;color:#b6ffca}
+#ops .bd{display:flex;gap:0;min-height:0;flex:1;overflow:hidden}
+#ops .ls{width:42%;max-width:380px;border-right:1px solid #2f8f4e;padding:8px 0;overflow:auto}
+#ops .it{display:flex;gap:8px;padding:7px 14px;cursor:pointer;border:0;border-left:3px solid transparent;background:none;color:inherit;font:inherit;text-align:left;width:100%;text-shadow:inherit}
+#ops .it:hover,#ops .it.sel{background:rgba(70,255,140,.12);border-left-color:#7dff9f}
+#ops .it .no{opacity:.65} #ops .it .st{margin-left:auto;font-size:11px;color:#b6ffca}
+#ops .rt{flex:1;display:flex;flex-direction:column;min-width:0}
+#ops .top{display:flex;gap:14px;padding:12px 14px;border-bottom:1px dashed #1f6b3a}
+#ops .pic{width:132px;height:165px;border:1px solid #2f8f4e;background:#031a0c center/cover no-repeat;flex:none;position:relative;overflow:hidden}
+#ops .pic img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) sepia(1) hue-rotate(80deg) saturate(2.6) brightness(1.05) contrast(1.15)}
+#ops .pic:after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,40,10,.45) 0,rgba(0,40,10,.45) 1px,transparent 1px,transparent 3px)}
+#ops .meta{flex:1;min-width:0} #ops .meta b{font-size:18px;letter-spacing:.06em;color:#d4ffe0;display:block;margin-bottom:4px}
+#ops .tx{padding:12px 14px;white-space:pre-wrap;flex:1;overflow:auto;min-height:120px}
+#ops .cur{display:inline-block;width:.6em;height:1em;background:#7dff9f;vertical-align:-2px;margin-left:2px;animation:opsBlink 1s steps(1) infinite}
+#ops .ft{display:flex;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid #2f8f4e;background:#04301a;flex-wrap:wrap}
+#ops .ft .h{flex:1;font-size:11px;opacity:.75;min-width:160px}
+#ops button.b{background:#031a0c;color:#9dffb8;border:1px solid #2f8f4e;font:inherit;padding:6px 14px;cursor:pointer;letter-spacing:.08em;text-shadow:inherit}
+#ops button.b:hover{background:#0a4a26;color:#fff} #ops button.b[disabled]{opacity:.45;cursor:default}
+@media(max-width:640px){#ops .bd{flex-direction:column}#ops .ls{width:100%;max-width:none;border-right:0;border-bottom:1px solid #2f8f4e;max-height:38%}#ops .pic{width:96px;height:120px}}
+#modkit,#modkit *{font-family:'Courier New',Consolas,monospace !important;color:#7dff9f !important;text-shadow:0 0 5px rgba(80,255,140,.4)}
+#modkit{background:rgba(1,8,4,.95) !important}
+#modkit button,#modkit select,#modkit input{background:#031a0c !important;border-color:#2f8f4e !important;border-radius:0 !important}
+#modkit button:hover{background:#0a4a26 !important}
+#modkit [style*="background:#150f08"]{background:#021209 !important;border-color:#1f6b3a !important;border-radius:0 !important}
+#modkit input[type=range]{accent-color:#7dff9f}
+.opsbtn{display:block;width:100%;margin:.4em 0;text-align:left;font-family:'Courier New',Consolas,monospace !important;color:#7dff9f !important;background:#031a0c !important;border:1px solid #2f8f4e !important;padding:.55em .8em;cursor:pointer;letter-spacing:.06em;text-shadow:0 0 5px rgba(80,255,140,.4)}
+.opsbtn:hover{background:#0a4a26 !important}`;
+    document.head.appendChild(s);
+}
+const OPS_UI = { el: null, typer: 0, sel: 0, onClose: null };
+function opsOpen(onClose) {
+    if (OPS_UI.el) return; opsCss(); const list = opsHave(); if (!list.length) { try { say('No operative files on this build.', 2500); } catch (e) { /* ok */ } return; }
+    OPS_UI.onClose = onClose || null; const now = opsCur(); OPS_UI.sel = Math.max(0, list.findIndex((o) => o.k === now));
+    const ov = document.createElement('div'); ov.id = 'ops'; ov.tabIndex = -1; OPS_UI.el = ov;
+    ov.innerHTML = '<div class="win"><div class="bar"><span>DNI SECURE TERMINAL // OPERATIVE ROSTER</span><span id="ops-clk"></span></div><div class="bd"><div class="ls" id="ops-ls"></div><div class="rt"><div class="top"><div class="pic" id="ops-pic"></div><div class="meta" id="ops-meta"></div></div><div class="tx" id="ops-tx"></div></div></div><div class="ft"><span class="h">UP/DOWN select &nbsp; ENTER assign &nbsp; ESC close</span><button class="b" id="ops-go" type="button">ASSIGN</button><button class="b" id="ops-x" type="button">CLOSE</button></div></div>';
+    document.body.appendChild(ov);
+    for (const ev of ['keydown', 'keyup', 'keypress']) ov.addEventListener(ev, (e) => { e.stopPropagation(); if (ev !== 'keydown') return; if (e.key === 'Escape') { e.preventDefault(); opsClose(); } else if (e.key === 'ArrowDown') { e.preventDefault(); show(OPS_UI.sel + 1); } else if (e.key === 'ArrowUp') { e.preventDefault(); show(OPS_UI.sel - 1); } else if (e.key === 'Enter') { e.preventDefault(); assign(); } }, true);
+    ov.addEventListener('pointerdown', (e) => e.stopPropagation());
+    const $o = (id) => document.getElementById(id), ls = $o('ops-ls'), clk = () => { const d = new Date(); $o('ops-clk') && ($o('ops-clk').textContent = 'LINK OK  ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0')); };
+    clk(); OPS_UI.clk = setInterval(clk, 1000);
+    const rows = list.map((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'it'; b.innerHTML = '<span class="no">[' + String(i + 1).padStart(2, '0') + ']</span><span></span><span class="st"></span>'; b.children[1].textContent = o.file; b.onclick = () => show(i); b.ondblclick = () => assign(); ls.appendChild(b); return b; });
+    const mark = () => { const cur = opsCur(); rows.forEach((b, i) => { b.classList.toggle('sel', i === OPS_UI.sel); b.children[2].textContent = list[i].k === cur ? 'ACTIVE' : ''; }); };
+    const type = (lines) => {   // the dossier types itself out
+        clearInterval(OPS_UI.typer); const tx = $o('ops-tx'); if (!tx) return; const full = lines.join('\n'); let n = 0; tx.textContent = ''; const cur = document.createElement('span'); cur.className = 'cur'; const t = document.createTextNode(''); tx.append(t, cur);
+        OPS_UI.typer = setInterval(() => { n = Math.min(full.length, n + 3); t.nodeValue = full.slice(0, n); if (n >= full.length) clearInterval(OPS_UI.typer); }, 16);
+    };
+    const show = (i) => {
+        OPS_UI.sel = (i + list.length) % list.length; const o = list[OPS_UI.sel]; mark(); const meta = $o('ops-meta'), pic = $o('ops-pic'); if (!meta) return;
+        meta.innerHTML = '<b></b><div></div><div></div>'; meta.children[0].textContent = o.file; meta.children[1].textContent = 'ROLE  ' + o.role; meta.children[2].textContent = 'LOAD  ' + o.load; pic.textContent = 'SCANNING...';
+        opsShot(o.k).then((u) => { if (!OPS_UI.el || list[OPS_UI.sel] !== o) return; pic.textContent = ''; if (u) { const im = document.createElement('img'); im.src = u; im.alt = ''; pic.appendChild(im); } }).catch(() => { pic.textContent = 'NO IMAGE'; });
+        const cur = opsCur() === o.k; type(['>> OPENING FILE ' + String(OPS_UI.sel + 1).padStart(2, '0') + ' ... OK', '>> CLEARANCE: GRANTED', '', 'SUBJECT : ' + o.name.toUpperCase(), 'STATUS  : ' + (cur ? 'ACTIVE ON THIS LINK' : 'AVAILABLE'), 'ROLE    : ' + o.role, 'LOADOUT : ' + o.load, '', 'BRIEFING:', o.note, '', cur ? '>> THIS OPERATIVE IS ALREADY ASSIGNED.' : '>> PRESS ENTER TO ASSIGN THIS OPERATIVE TO YOUR SEAT.', '>> IN CO-OP YOUR TEAM SEES THIS CHARACTER.']);
+        const go = $o('ops-go'); if (go) go.disabled = cur;
+    };
+    let busy = false; const assign = async () => {
+        if (busy) return; const o = list[OPS_UI.sel]; if (opsCur() === o.k) return; busy = true; const go = $o('ops-go'); if (go) go.disabled = true; clearInterval(OPS_UI.typer); const tx = $o('ops-tx'); if (tx) tx.textContent = '>> ESTABLISHING LINK TO ' + o.file + ' ...\n>> LOADING FIELD MODEL ...';
+        const ok = await opsAssign(o.k); busy = false; if (!OPS_UI.el) return; mark(); type([ok ? '>> LINK ESTABLISHED.' : '>> LINK FAILED. ' + (AV.err || 'TRY AGAIN.'), ok ? '>> ' + o.name.toUpperCase() + ' ASSIGNED TO YOUR SEAT.' : '', '', ok ? 'GOOD LUCK OUT THERE.' : '']); if (go) go.disabled = ok;
+    };
+    $o('ops-go').onclick = () => { try { auInit(); sfx('ok'); } catch (e) { /* audio */ } assign(); }; $o('ops-x').onclick = () => opsClose();
+    show(OPS_UI.sel); ov.focus();
+}
+function opsClose() { clearInterval(OPS_UI.typer); clearInterval(OPS_UI.clk); if (OPS_UI.el) { OPS_UI.el.remove(); OPS_UI.el = null; } const cb = OPS_UI.onClose; OPS_UI.onClose = null; try { if (cb) cb(); } catch (e) { /* ok */ } }
+/* OPS:END */
 function modOpen() {
-    if (MODUI.el) return; const ov = MODUI.el = modEl('div', 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#e8dcc0;font:14px/1.35 Georgia,serif;display:flex;flex-direction:column;align-items:center;padding:14px;overflow:auto'); document.body.appendChild(ov);
+    if (MODUI.el) return; const ov = MODUI.el = modEl('div', 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#e8dcc0;font:14px/1.35 Georgia,serif;display:flex;flex-direction:column;align-items:center;padding:14px;overflow:auto'); opsCss(); ov.id = 'modkit'; document.body.appendChild(ov);
     for (const ev of ['keydown', 'keyup', 'keypress']) ov.addEventListener(ev, (e) => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') modClose(); }, true);
     ov.addEventListener('pointerdown', (e) => e.stopPropagation()); modRender();
 }
@@ -3692,8 +4196,8 @@ function modClose() { if (MODUI.el) { MODUI.el.remove(); MODUI.el = null; } try 
 function modRender() {
     const ov = MODUI.el; if (!ov) return; ov.textContent = ''; const wrap = modEl('div', 'width:min(860px,100%)'); ov.appendChild(wrap);
     const top = modEl('div', 'display:flex;align-items:center;gap:10px;margin-bottom:10px'); top.appendChild(modEl('div', 'font:700 22px Georgia,serif;flex:1;letter-spacing:.06em', 'MOD KIT')); const x = modEl('button', B_CSS, 'Close'); x.onclick = modClose; top.appendChild(x); wrap.appendChild(top);
-    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['chr', 'Characters'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup'], ['map', 'Maps']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
-    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, item: modTabItem, chr: modTabChr, stk: modTabStk, snd: modTabSnd, bal: modTabBal, map: modTabMap })[MODUI.tab](body);
+    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['ops', 'Operatives'], ['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['chr', 'Characters'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup'], ['map', 'Maps']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
+    const body = modEl('div', ''); wrap.appendChild(body); ({ ops: modTabOps, en: modTabEn, gun: modTabGun, item: modTabItem, chr: modTabChr, stk: modTabStk, snd: modTabSnd, bal: modTabBal, map: modTabMap })[MODUI.tab](body);
 }
 const B_CSS = 'background:#2a2014;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:5px 11px;font:13px Georgia,serif;cursor:pointer';
 const CARD = 'background:#150f08;border:1px solid #4a3d28;border-radius:8px;padding:10px 12px;margin-bottom:9px';
@@ -3706,6 +4210,14 @@ function modFileRow(host, slot, label, accept, setFn, clearFn, nameNow) {
     const r = modEl('div', 'display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap'); r.appendChild(modEl('span', 'width:150px;font-size:13px', label));
     const nm = modEl('span', 'flex:1;font-size:13px;color:' + (nameNow ? '#9be39b' : '#8a7c5c'), nameNow || 'Default'); const b = modEl('button', B_CSS, nameNow ? 'Replace file…' : 'Choose file…'); b.onclick = () => modPickFile(accept, async (f) => { await setFn(f); modRender(); });
     r.append(nm, b); if (nameNow) { const c = modEl('button', B_CSS, 'Reset'); c.onclick = async () => { await clearFn(); modRender(); }; r.appendChild(c); } host.appendChild(r);
+}
+function modTabOps(body) {
+    body.appendChild(modEl('div', 'font-size:13px;margin-bottom:8px', '>> OPERATIVE ROSTER. Pick who you play. In co-op your team sees this character. Kept on this device.'));
+    const open = modEl('button', B_CSS, 'OPEN BRIEFING TERMINAL'); open.onclick = () => opsOpen(() => modRender()); body.appendChild(open);
+    for (const o of opsHave()) {
+        const on = opsCur() === o.k, card = modEl('div', CARD + ';margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'); const t = modEl('div', 'flex:1;min-width:200px'); t.appendChild(modEl('div', 'font-weight:700', o.file)); t.appendChild(modEl('div', 'font-size:12px', o.role + '  //  ' + o.load)); card.appendChild(t);
+        const u = modEl('button', B_CSS, on ? 'ASSIGNED' : 'ASSIGN'); u.disabled = on; u.onclick = async () => { u.textContent = 'LOADING...'; await opsAssign(o.k); modRender(); }; card.appendChild(u); body.appendChild(card);
+    }
 }
 function modTabEn(body) {
     body.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'Pick a model file (.glb, .gltf, .fbx or .vrm) to replace a kind of enemy. If the file has animations named like idle, walk, run, attack or death they are used; otherwise it walks with a bob and lunges when it attacks. Changes apply to enemies that appear from now on (re-enter the room).'));
@@ -4075,6 +4587,28 @@ function avMat(m) {
     if (!m) return m; const n = new THREE.MeshLambertMaterial({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, side: m.side === THREE.BackSide ? THREE.FrontSide : m.side, alphaTest: m.alphaTest || (m.transparent ? 0.45 : 0) });
     if (m.isOutline || m.side === THREE.BackSide || /outline/i.test(m.name || '')) n.visible = false; if (n.map) { n.map.anisotropy = 1; n.map.needsUpdate = true; } n.emissive = new THREE.Color(0x0a0806); return n;
 }
+/* A-pose / off-axis rigs: the clips and the arm poses are authored for a T-pose rig, so measure how far each arm and leg bone rests from its T-pose direction
+   and re-aim the animation by that much (q' = pre * q * post). A T-pose model measures zero and is left alone. */
+function vrmFix(vrm) {
+    const out = { list: [], nat: { R: [REST.R.clone(), REST.R.clone()], L: [REST.L.clone(), REST.L.clone()] } };
+    try {
+        const H = vrm.humanoid, B = (n) => H.getNormalizedBoneNode(n), V = THREE.Vector3, wp = (n) => n.getWorldPosition(new V()); vrm.scene.updateMatrixWorld(true);
+        const hips = B('hips'), head = B('head'); if (!hips || !head || wp(head).sub(wp(hips)).normalize().y < 0.8) return out;
+        const dir = (a, b) => { const x = B(a), y = B(b); if (!x || !y) return null; const d = wp(y).sub(wp(x)); return d.lengthSq() < 1e-10 ? null : d.normalize(); };
+        const I = new THREE.Quaternion(), qf = (d, t) => { if (!d) return I.clone(); const ang = d.angleTo(t); return (ang < 0.03 || d.dot(t) < 0.2) ? I.clone() : new THREE.Quaternion().setFromUnitVectors(d, t); };
+        for (const [s, sx, key] of [['left', 1, 'L'], ['right', -1, 'R']]) {
+            const TX = new V(sx, 0, 0), TD = new V(0, -1, 0);
+            const du = dir(s + 'UpperArm', s + 'LowerArm'), dl = dir(s + 'LowerArm', s + 'Hand'); if (du && Math.sign(du.x) !== sx && Math.abs(du.x) > 0.05) continue;   // left/right not where the animations expect them
+            const cu = qf(du, TX), cl = qf(dl, TX); if (du) out.nat[key][0] = du.clone(); if (dl) out.nat[key][1] = dl.clone();
+            if (cu.angleTo(I) > 0 || cl.angleTo(I) > 0) { out.list.push({ n: B(s + 'UpperArm'), pre: I.clone(), post: cu }); if (B(s + 'LowerArm')) out.list.push({ n: B(s + 'LowerArm'), pre: cu.clone().invert(), post: cl }); }
+            const lu = dir(s + 'UpperLeg', s + 'LowerLeg'), ll = dir(s + 'LowerLeg', s + 'Foot'), gu = qf(lu, TD), gl = qf(ll, TD);
+            if (gu.angleTo(I) > 0 || gl.angleTo(I) > 0) { out.list.push({ n: B(s + 'UpperLeg'), pre: I.clone(), post: gu }); if (B(s + 'LowerLeg')) out.list.push({ n: B(s + 'LowerLeg'), pre: gu.clone().invert(), post: gl }); }
+        }
+    } catch (e) { console.warn('rig fix', e); }
+    out.list = out.list.filter((e) => e.n);
+    return out;
+}
+function vrmFixApply(fx) { if (fx) for (const e of fx.list) e.n.quaternion.premultiply(e.pre).multiply(e.post); }
 async function avLoad(buffer, name) {
     const { vrm, VM } = await avParse(buffer);
     vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
@@ -4106,8 +4640,8 @@ async function avLoad(buffer, name) {
     if (AV.root) { AV.root.removeFromParent(); }
     const boneFor = (n) => vrm.humanoid.getNormalizedBoneNode(n) || vrm.humanoid.getNormalizedBoneNode(n.replace('Pinky', 'Little')); const D = acData(); let names = [];
     if (D) { const ref = (D.male && D.male.idle) || D.gp.gp_idle; names = Object.keys(ref.b).filter((n) => boneFor(n)); }
-    Object.assign(AV, { vrm, root: grp, N, s, name: name || 'Character', on: false, names, nodes: names.map(boneFor), hips0: N.hips.position.y, qs: null, hasClips: names.length > 0 }); AC.cache = {}; AC.cur = AC.prev = AC.act = null;
-    avWeapons(); avAttach(); AV.on = true; return AV;
+    Object.assign(AV, { fix: vrmFix(vrm), vrm, root: grp, N, s, name: name || 'Character', on: false, names, nodes: names.map(boneFor), hips0: N.hips.position.y, qs: null, hasClips: names.length > 0 }); AC.cache = {}; AC.cur = AC.prev = AC.act = null;
+    AV.nat = AV.fix.nat; avWeapons(); avAttach(); AV.on = true; return AV;
 }
 function avWeapons() {
     const inv = 1 / AV.s, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0x000000 }), B = (w, h, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
@@ -4124,7 +4658,7 @@ function avAttach() {
 function avClear() { if (!AV.on) return; AV.on = false; AV.root.removeFromParent(); PL.g.children.forEach((c) => { c.visible = true; }); const h = makePlayer(); }
 /* two-bone limb pointing: shoulder S towards target T inside the chest frame, elbow bends towards a hint */
 function ikArm(side, off, hint, now) {
-    const sd = side === 'R' ? 'right' : 'left', U = AV.N[sd + 'UpperArm'], Lw = AV.N[sd + 'LowerArm'], ch = AV.N.upperChest || AV.N.chest, rest = REST[side];
+    const sd = side === 'R' ? 'right' : 'left', U = AV.N[sd + 'UpperArm'], Lw = AV.N[sd + 'LowerArm'], ch = AV.N.upperChest || AV.N.chest, nt = (AV.nat && AV.nat[side]) || [REST[side], REST[side]];
     const { S, T, C, D, al, pe, u, E, l, hint: H } = _a; const { CQ, PQ, PQ2, Qu, Qd, GQ } = _q;
     U.getWorldPosition(S); ch.getWorldPosition(C); ch.getWorldQuaternion(CQ); PL.g.getWorldQuaternion(GQ);
     T.copy(off).applyQuaternion(GQ).add(C); T.y = C.y + off.y; H.copy(hint).applyQuaternion(GQ);
@@ -4132,8 +4666,8 @@ function ikArm(side, off, hint, now) {
     al.copy(D).normalize(); const cA = clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1), sA = Math.sqrt(1 - cA * cA);
     pe.copy(H).addScaledVector(al, -H.dot(al)); if (pe.lengthSq() < 1e-5) pe.set(0, -1, 0); pe.normalize();
     u.copy(al).multiplyScalar(cA).addScaledVector(pe, sA); E.copy(S).addScaledVector(u, L1); l.copy(T).sub(E).normalize();
-    U.parent.getWorldQuaternion(PQ); PQ2.copy(PQ).invert(); const du = u.clone().applyQuaternion(PQ2); Qu.setFromUnitVectors(rest, du); U.quaternion.copy(Qu);
-    PQ.multiply(Qu); PQ2.copy(PQ).invert(); const dl = l.clone().applyQuaternion(PQ2); Qd.setFromUnitVectors(rest, dl); Lw.quaternion.copy(Qd);
+    U.parent.getWorldQuaternion(PQ); PQ2.copy(PQ).invert(); const du = u.clone().applyQuaternion(PQ2); Qu.setFromUnitVectors(nt[0], du); U.quaternion.copy(Qu);
+    PQ.multiply(Qu); PQ2.copy(PQ).invert(); const dl = l.clone().applyQuaternion(PQ2); Qd.setFromUnitVectors(nt[1], dl); Lw.quaternion.copy(Qd);
     Lw.updateMatrixWorld(true);
 }
 
@@ -4210,6 +4744,7 @@ function avAnim(dt, mv) {
     // an action clip (fire, reload, hit, die) fades in over the base layer: whole body or upper body only
     const A = AC.act; if (A) { A.t += dt * A.rate; const dur = A.c.duration, rem = dur - A.t; AC.actW = Math.min(1, AC.actW + dt / 0.07); const tgt = A.hold ? 1 : (rem < 0.15 ? Math.max(0, rem / 0.15) : 1); const aw = Math.min(AC.actW, tgt); if (A.t >= dur && !A.hold) { AC.act = null; AC.actW = 0; } else { AV.qa.forEach((q) => q.identity()); const h2 = { v: 1 }; acSample(A.c, Math.min(A.t, dur), AV.qa, h2, 1, true); for (let b = 0; b < AV.names.length; b++) { if (A.upper && !UPPER.test(AV.names[b])) continue; AV.qs[b].slerp(AV.qa[b], aw); } if (!A.upper) hyo.v += (h2.v - hyo.v) * aw; } } else AC.actW = 0;
     for (let b = 0; b < AV.names.length; b++) AV.nodes[b].quaternion.copy(AV.qs[b]);
+    vrmFixApply(AV.fix);
     N.hips.position.y = AV.hips0 * hyo.v + (PL.st > 0 && st === 'pick' ? -Math.sin(Math.min(1, PL.st / 0.7) * Math.PI) * 0.3 / AV.s : 0);
     // ---- additive body language on top of the clips
     const hurt = clamp((PL.hurtT - 0.45) / 0.45, 0, 1), crouch = st === 'pick' ? Math.sin(Math.min(1, PL.st / 0.7) * Math.PI) : 0, P = AV.pose;
@@ -4251,8 +4786,10 @@ async function avBoot() {
     const src = OPT.avatar || 'oasis'; let buf = null, name = ''; AV.sig = src === 'oasis' ? oasisSig() : 'x';
     try {
         if (/^slot:P[12]:\d$/.test(src)) { const [, P, ix] = src.split(':'), r = await idbGet('mod:c:' + P + ix); if (r && r.b) { buf = r.b; name = r.n || 'Character'; AV.src = 'slot'; AV.gender = ((chrCfg()[P][+ix]) || {}).g === 'male' ? 'male' : 'female'; } }
+        if (/^op:\w+$/.test(src) && window.__CAST) { const k = src.slice(3), o = opsGet(k), b = await opsBuf(k); if (o && b) { buf = b; name = o.name; AV.src = 'cast'; AV.gender = o.g; } }
         if (src === 'upload') { const r = await idbGet('avatar'); if (r) { buf = await r.arrayBuffer(); name = r.name || 'Uploaded VRM'; } }
         if (!buf && src !== 'none') { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); if (pa && pa.buffer) { buf = new Uint8Array(pa.buffer).slice().buffer; name = pa.name || 'Your Oasis character'; AV.src = 'oasis'; AV.gender = pa.gender === 'female' ? 'female' : 'male'; } }
+        if (!buf && src === 'oasis' && window.__CAST) { try { const k = (CO.on && CO.role === 'guest' && (CO.slot || 2) % 2 === 0) ? 'sheva' : 'leon', b0 = await opsBuf(k); if (b0) { buf = b0; } name = k === 'sheva' ? 'Sheva Alomar' : 'Leon Kennedy'; AV.src = 'cast'; AV.gender = k === 'sheva' ? 'female' : 'male'; } catch (e) { /* default soldier */ } }   // NX ships its own heroes: Leon, and Sheva for the second seat
         if (buf && avIsFbx(buf)) { buf = await avLite(buf); }   // FBX: use the small GLB re-pack for everything (own model, and the copy sent to your partner)
         if (buf) { AV.raw = buf; await avLoad(buf, name); AV.err = ''; try { CO.peers.forEach((Q) => { Q.avFor = null; }); coEach(() => { coSendAvatar(); coSendMusic(); }); } catch (e) { /* no link */ } } else AV.err = src === 'none' ? '' : 'No character found. Equip a VRoid in the Oasis, or upload a .vrm in Options.';
     } catch (e) { AV.err = 'Could not load the character: ' + (e && e.message || e); console.warn('avatar', e); AV.on = false; try { avClear(); } catch (e2) { /* default soldier stays */ } try { say(AV.err.slice(0, 90), 6000); } catch (e3) { /* not in a room yet */ } }
@@ -4335,6 +4872,9 @@ const coFix = () => { CO.cur = coPrimary(); };
 function withPeer(P, fn) { const sv = CO.cur; CO.cur = P; try { return fn(); } finally { CO.cur = sv && CO.peers.includes(sv) ? sv : coPrimary(); } }
 const coEach = (fn) => { for (const P of CO.peers.slice()) if (P.ok) withPeer(P, fn); };
 const coOk = () => CO.peers.filter((p) => p.ok);
+/* CO-SCALE: party size, so enemies and supplies scale one-for-one with the players */
+const coN = () => CO.role === 'host' ? Math.min(4, 1 + coOk().length) : CO.role === 'guest' ? Math.max(1, Math.min(4, (CO.ros || []).length)) : 1;
+const coSpread = (x, z, j, w, d, r) => { const a = j * 2.1 + 0.7; return [Math.max(-w / 2 + 1.2, Math.min(w / 2 - 1.2, x + Math.cos(a) * r * (1 + 0.25 * j))), Math.max(-d / 2 + 1.2, Math.min(d / 2 - 1.2, z + Math.sin(a) * r * (1 + 0.25 * j)))]; };
 const r2 = (v) => Math.round(v * 100) / 100;
 function coSendTo(P, m) { if (CO.tr && P) { try { CO.tr.send(P.peer, m); } catch (e) { /* peer gone */ } } }
 function coAll(m, skip, force) { for (const P of CO.peers.slice()) if (P !== skip && (P.ok || force)) coSendTo(P, m); }
@@ -4529,7 +5069,7 @@ async function rpLoadVRM(buffer, gender, P0) {
     if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
     vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), sc = 1.68 / h; const PW = (n) => n.getWorldPosition(new THREE.Vector3()), ua = PW(N.rightUpperArm).distanceTo(PW(N.rightLowerArm)), la = N.rightHand ? PW(N.rightLowerArm).distanceTo(PW(N.rightHand)) : ua; const grp = new THREE.Group(); grp.add(vrm.scene); grp.scale.setScalar(sc); grp.position.y = -bb.min.y * sc; { const hn = vrm.humanoid.getNormalizedBoneNode('hips'); if (hn) { const hp = hn.getWorldPosition(new THREE.Vector3()); grp.position.x = -hp.x * sc; grp.position.z = -hp.z * sc; } }
     const boneFor = (n) => vrm.humanoid.getNormalizedBoneNode(n) || vrm.humanoid.getNormalizedBoneNode(n.replace('Pinky', 'Little')), D = acData(); let names = []; if (D) { const ref = (D.male && D.male.idle) || D.gp.gp_idle; names = Object.keys(ref.b).filter((n) => boneFor(n)); }
-    const r = withPeer(P, coEnsureRP); Object.assign(r, { names, nodes: names.map(boneFor), qs: names.map(() => new THREE.Quaternion()), qa: names.map(() => new THREE.Quaternion()), cache: {}, cc: null, cp: null, cf: 1, act: null, actW: 0, ua, la, sc, hips0: N.hips.position.y, hy: { v: 1 }, ow: { R: 0, L: 0 }, off: { R: new THREE.Vector3(-0.2, -0.5, 0.2), L: new THREE.Vector3(0.2, -0.5, 0.2) }, pose: { sp: 0, hd: 0 }, gender: gender === 'female' ? 'female' : 'male', lastSt: 'idle' }); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
+    const r = withPeer(P, coEnsureRP); Object.assign(r, { fix: vrmFix(vrm), names, nodes: names.map(boneFor), qs: names.map(() => new THREE.Quaternion()), qa: names.map(() => new THREE.Quaternion()), cache: {}, cc: null, cp: null, cf: 1, act: null, actW: 0, ua, la, sc, hips0: N.hips.position.y, hy: { v: 1 }, ow: { R: 0, L: 0 }, off: { R: new THREE.Vector3(-0.2, -0.5, 0.2), L: new THREE.Vector3(0.2, -0.5, 0.2) }, pose: { sp: 0, hd: 0 }, gender: gender === 'female' ? 'female' : 'male', lastSt: 'idle' }); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
     { const inv = 1 / sc, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0 }), B = (w, h2, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h2 * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
         const pist = new THREE.Group(); pist.add(B(0.19, 0.04, 0.03, 0x1a1c20, -0.15, 0.015, 0), B(0.03, 0.095, 0.032, 0x14110e, -0.08, -0.05, 0), B(0.05, 0.03, 0.024, 0x2a2d33, -0.1, -0.012, 0));
         const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06 * inv, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.9 })); fl.position.set(-0.27 * inv, 0.015 * inv, 0); fl.visible = false; pist.add(fl); pist.userData.fl = fl;
@@ -4547,10 +5087,11 @@ function rpVrmProc(dt) {
     else if (aim && gun) { set(N.rightUpperArm, -0.25 * kick, 1.45, 0); set(N.leftUpperArm, 0, -1.3, 0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0.2, 0); }
     else if (aim) { set(N.rightUpperArm, -0.2, 1.2, 0.2); set(N.leftUpperArm, 0, -0.5, -1.0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0, 0); }
     else { set(N.rightUpperArm, -s * 0.5 * a, 0, 1.2); set(N.leftUpperArm, s * 0.5 * a, 0, -1.2); set(N.rightLowerArm, 0, 0, 0.1); set(N.leftLowerArm, 0, 0, -0.1); }
+    vrmFixApply(r.fix);
     r.bt -= dt; const em = r.vrm.expressionManager; if (em) { if (r.bt < 0) { r.bt = 2.2 + Math.random() * 3; r.bl = 0.14; } r.bl = Math.max(0, (r.bl || 0) - dt); em.setValue('blink', r.bl > 0 ? Math.sin(r.bl / 0.14 * Math.PI) : 0); }
     r.vrm.update(dt);
 }
-function withPuppet(r, fn) { const sv = { N: AV.N, ua: AV.ua, la: AV.la, s: AV.s }, pg = PL.g; AV.N = r.N; AV.ua = r.ua; AV.la = r.la; AV.s = r.sc; PL.g = r.g; try { fn(); } finally { Object.assign(AV, sv); PL.g = pg; } }
+function withPuppet(r, fn) { const sv = { N: AV.N, ua: AV.ua, la: AV.la, s: AV.s, nat: AV.nat }, pg = PL.g; AV.nat = r.fix && r.fix.nat; AV.N = r.N; AV.ua = r.ua; AV.la = r.la; AV.s = r.sc; PL.g = r.g; try { fn(); } finally { Object.assign(AV, sv); PL.g = pg; } }
 function rpClip(r, set, key) {
     const ck = set + '/' + key; if (r.cache[ck] !== undefined) return r.cache[ck]; const D = acData(), d = D && D[set] && D[set][key]; if (!d) return (r.cache[ck] = null);
     const flip = r.vrm.meta && r.vrm.meta.metaVersion === '0' ? -1 : 1;
@@ -4571,6 +5112,7 @@ function rpVrmPose(dt) {   // the partner moves with the same animation clips an
     if (r.state !== r.lastSt) { r.lastSt = r.state; r.act = null; r.actW = 0; if (r.state === 'reload' && isGun(r.eq)) { const c = rpClip(r, 'gp', 'gpreload'); if (c) r.act = { c, t: 0, rate: 2.0 / (WPN[r.eq].rel || 1.3), upper: true }; gunRelSnd(r.eq); } else if (dead) { const c = rpClip(r, set, set === 'gp' ? 'gdie1' : set === 'hr' ? 'hdie1' : 'f_hdie1'); if (c) r.act = { c, t: 0, rate: 1, hold: true }; } }
     const A = r.act; if (A) { A.t += dt * A.rate; const dur = A.c.duration, rem = dur - A.t; r.actW = Math.min(1, r.actW + dt / 0.07); const aw = Math.min(r.actW, A.hold ? 1 : (rem < 0.15 ? Math.max(0, rem / 0.15) : 1)); if (A.t >= dur && !A.hold) { r.act = null; r.actW = 0; } else { r.qa.forEach((q) => q.identity()); const h2 = { v: 1 }; acSample(A.c, Math.min(A.t, dur), r.qa, h2, 1, true); for (let b = 0; b < r.names.length; b++) { if (A.upper && !UPPER.test(r.names[b])) continue; r.qs[b].slerp(r.qa[b], aw); } if (!A.upper) hyo.v += (h2.v - hyo.v) * aw; } }
     for (let b = 0; b < r.names.length; b++) r.nodes[b].quaternion.copy(r.qs[b]);
+    vrmFixApply(r.fix);
     N.hips.position.y = r.hips0 * hyo.v;
     const P = r.pose; let sp = 0, hd = 0; if (low) { sp += 0.24; hd += 0.14; } else if (r.hp < 65) sp += 0.06; if (r.state === 'reload') hd += 0.2; P.sp += (sp - P.sp) * k; P.hd += (hd - P.hd) * k;
     const ar = (n, x, y, z) => { if (!n) return; _e.set(x, y, z); _q.tmp.setFromEuler(_e); n.quaternion.premultiply(_q.tmp); };
@@ -4739,7 +5281,7 @@ function coIn(P, m) {
         case 'start': if (CO.role !== 'guest') break; closePanel(); G = Object.assign(newG(), m.bag || {}); G.flags = m.world.flags || {}; G.taken = m.world.taken || {}; G.dead = m.world.dead || {}; G.seen = m.world.seen || G.seen || {}; G.saves = m.world.saves || 0; G.kills = m.world.kills || 0; G.drops = m.world.drops || {}; G.room = m.room; G.time = m.time || 0; beginCo({ x: m.x, z: m.z, rot: m.rot }); break;
         case 'over': if (UI.mode !== 'over') { PL.state = 'dead'; G.hp = 0; gameOver(true); } break;   // the whole party is down
         case 'p': { const r = coEnsureRP(); r.tx = m.x; r.tz = m.z; r.tr = m.r; r.state = m.s; r.aim = !!m.a; r.eq = m.e; r.hp = m.h; r.speed = m.w; CO.rpRoom = m.m; if (r.f !== undefined && m.f !== r.f && m.m === RM.id) { r.kick = 1; if (isGun(m.e)) { r.flash = 0.07; if (!gunFireSnd(m.e)) { /* synthesised fallback played */ } } else { r.swT = 0.35; sfx('swing'); } } r.f = m.f | 0; if (!r.cur) { r.x = m.x; r.z = m.z; r.rot = m.r; r.cur = true; } if (m.m !== RM.id) r.cur = false; break; }
-        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(a[12] ? { t: 'z', ty: a[12], x: a[2], z: a[3], rot: a[4] } : sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[12]) E.stalker = 1; if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10], jy: a[11] || 0 }; } break; }
+        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)(?:x\d+)?$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(a[12] ? { t: 'z', ty: a[12], x: a[2], z: a[3], rot: a[4] } : sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[12]) E.stalker = 1; if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10], jy: a[11] || 0 }; } break; }
         case 'hit': { if (CO.role !== 'host') break; const E = RM.enemies.find((q) => q.key === m.key); if (E && CO.rp) hitEnemy(E, Math.min(60, +m.dmg || 0), !!m.crit, CO.rp, !!m.leg); break; }
         case 'hurt': hurtPlayer(+m.dmg || 0, +m.fx || 0, +m.fz || 0); break;
         case 'dd': { if (CO.role !== 'guest') break; G.drops = G.drops || {}; G.drops[m.ek] = { r: m.r, item: m.item, n: m.n, x: m.x, z: m.z }; const dk = 'dd:' + m.ek; if (RM.id === m.r && !G.taken[dk] && !RM.inter.some((q) => q.key === dk)) { const f = freeSpot(m.x, m.z, 0.3); worldItem({ k: 'dd', item: m.item, n: m.n, x: f[0], z: f[1], y: 0.1 }, dk); } break; }
@@ -4840,6 +5382,7 @@ function coMenu() {
     }
     setNav(els, 1);
 }
+{ const _cm = coMenu; coMenu = function () { _cm.apply(this, arguments); try { if (UI.mode !== 'co' || !opsHave().length) return; const p = document.querySelector('#menu .panel'); if (!p || p.querySelector('.opsbtn')) return; opsCss(); const o = opsGet(opsCur()), b = document.createElement('button'); b.type = 'button'; b.className = 'opsbtn'; b.textContent = '> OPERATIVE FILE: ' + (o ? o.file : AV.on ? AV.name.toUpperCase() : 'SELECT'); b.onclick = () => { try { auInit(); sfx('ok'); } catch (e) { /* audio */ } opsOpen(() => coMenu()); }; const h = p.querySelector('h2'); if (h && h.nextSibling) p.insertBefore(b, h.nextSibling); else p.appendChild(b); } catch (e) { /* menu gone */ } }; }
 function beginCo(pos) {
     $('title').classList.add('hide'); $('hud').classList.remove('hide'); closePanel(); UI.mode = null; const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; RM.busy = true; musPlay(null); G.started = true;
     loadRoom(G.room, null, { x: pos.x, z: pos.z, rot: pos.rot }); setWeaponVis(); setTimeout(() => { f.style.transition = 'opacity .8s'; f.style.opacity = 0; RM.busy = false; say('Your team is here. Stay together.', 3000); }, 500);
@@ -4981,6 +5524,7 @@ function menuOpts(p) {
     row('Graphics: ' + (OPT.fx === 0 ? 'Classic' : 'Remake') + '  (tap to change)', () => { OPT.fx = OPT.fx === 0 ? 1 : 0; saveOpt(); if (window.NXPost) NXPost.apply(); sizeR(); renderMenu(); });
     row('SFX volume: ' + Math.round(OPT.sfx * 100) + '%  (tap to change)', () => { OPT.sfx = OPT.sfx >= 1 ? 0 : Math.round((OPT.sfx + 0.1) * 10) / 10; saveOpt(); musVol(); renderMenu(); });
     { const w = el('div'); w.style.cssText = 'margin:-.2em 0 .5em;display:flex;gap:.6em;align-items:center'; const sl = document.createElement('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(OPT.sfx * 100); sl.style.cssText = 'flex:1'; sl.oninput = () => { OPT.sfx = sl.value / 100; musVol(); saveOpt(); }; sl.onchange = () => { sfx('click'); renderMenu(); }; w.appendChild(sl); L.appendChild(w); }
+    row('Operative file: ' + (opsGet(opsCur()) ? opsGet(opsCur()).name : (AV.on ? AV.name : 'Default soldier')) + '  (briefing terminal)', () => opsOpen());
     row('Character: ' + (AV.on ? AV.name : 'Default soldier') + (AV.err ? '\n' + AV.err : ''), async () => { const src = OPT.avatar || 'oasis'; OPT.avatar = src === 'oasis' ? 'upload' : src === 'upload' ? 'none' : 'oasis'; saveOpt(); if (OPT.avatar === 'none') { say('Using the default soldier next time you start.', 2200); } else await avBoot(); renderMenu(); });
     row('Character slots (Player 1 / Player 2)...', () => { modOpen(); MODUI.tab = 'chr'; modRender(); });
     row('Upload a VRoid (.vrm)', () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.vrm,.glb'; fi.onchange = async () => { const fl = fi.files[0]; if (!fl) return; await idbPut('avatar', fl); OPT.avatar = 'upload'; saveOpt(); say('Loading ' + fl.name + '...', 2500); await avBoot(); renderMenu(); }; fi.click(); });
@@ -5060,6 +5604,15 @@ function openBox() {
 function writeSave() { const s = JSON.parse(JSON.stringify(G)); s.x = PL.x; s.z = PL.z; s.rot = PL.rot; s.room = RM.id; lsSet('save', s); }
 function continueGame() { const s = lsGet('save', null); if (!s) return startNew(); G = Object.assign(newG(), s); G.hp = Math.max(G.hp, 40); begin(true); }
 function startNew() { G = newG(); begin(false); }
+/* INTRO: a page of text to read before the game loads in (set window.__INTRO to a string, lines split by newlines) */
+function introThen(fn) {
+    const txt = window.__INTRO; if (!txt) return fn();
+    const p = panel(''); p.style.cssText += ';position:fixed;inset:0;width:auto;height:auto;max-width:none;border:0;border-radius:0;box-shadow:none;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:3% 8%;box-sizing:border-box;overflow:auto;text-align:left';
+    const box = el('div', '', ''); box.style.cssText = 'max-width:34em;font-family:Georgia,serif;font-size:.92em;line-height:1.5;color:#cfc6b0;white-space:pre-wrap;min-height:17em'; p.appendChild(box);
+    const go = btn('Continue', () => { done = 1; clearInterval(tm); closePanel(); fn(); }); go.style.marginTop = '.8em'; go.style.flex = '0 0 auto'; go.style.minWidth = '12em'; go.style.visibility = 'hidden'; p.appendChild(go); setNav([go]); UI.back = null;
+    let i = 0, done = 0; const tm = setInterval(() => { if (i >= txt.length) { clearInterval(tm); go.style.visibility = 'visible'; return; } box.textContent += txt[i++]; if (txt[i - 1] !== ' ' && txt[i - 1] !== '\n' && i % 3 === 0) try { sfx('type'); } catch (e) { /* quiet */ } }, 28);
+    p.addEventListener('pointerdown', (ev) => { if (ev.target === go || done) return; if (i < txt.length) { box.textContent = txt; i = txt.length; } });
+}
 function begin(loaded) {
     $('title').classList.add('hide'); $('hud').classList.remove('hide'); closePanel(); UI.mode = null; const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; RM.busy = true; musPlay(null);
     loadRoom(G.room, null, loaded ? { x: G.x, z: G.z, rot: G.rot } : { x: 0, z: 3, rot: Math.PI }); setWeaponVis(); if (CO.role === 'host') coSendStart();
@@ -5068,7 +5621,8 @@ function begin(loaded) {
 function toTitle() { G.started = false; $('hud').classList.add('hide'); $('title').classList.remove('hide'); $('prompt').classList.add('hide'); UI.mode = 'title'; musPlay('title'); titleMenu(); }
 function titleMenu() {
     const t = $('tmenu'); t.innerHTML = ''; { const cl = el('div', 'desc', 'Character: ' + (AV.on ? AV.name : (OPT.avatar || 'oasis') === 'oasis' && !oasisSig() ? 'Default soldier (no Oasis character found)' : 'Default soldier')); cl.style.cssText = 'text-align:center;margin:0 0 .6em;opacity:.75'; t.appendChild(cl); } const els = []; const add = (txt, fn) => { const b = btn(txt, fn); t.appendChild(b); els.push(b); };
-    add('New Game', () => { auInit(); startNew(); }); if (lsGet('save', null)) add('Continue', () => { auInit(); continueGame(); }); add('Sound and options', () => { auInit(); G.started = false; UI.mode = 'menu'; M.tab = 'sound'; renderMenu(); $('menu').style.zIndex = 20; });
+    add('New Game', () => { auInit(); introThen(startNew); }); if (lsGet('save', null)) add('Continue', () => { auInit(); continueGame(); }); add('Sound and options', () => { auInit(); G.started = false; UI.mode = 'menu'; M.tab = 'sound'; renderMenu(); $('menu').style.zIndex = 20; });
+    add('Operative file: ' + (opsGet(opsCur()) ? opsGet(opsCur()).name : AV.on ? AV.name : 'choose'), () => { auInit(); opsOpen(() => titleMenu()); });
     add('Online co-op (up to 4 players)', () => { auInit(); coMenu(); });
     add('Controls', () => { const p = panel('Controls'); p.appendChild(el('div', 'desc', 'Classic: Up/Down walk, Left/Right turn.\nZ or Shift (hold): aim. Space/Enter/E: use, take, open, or fire while aiming.\nQ: quick turn   R: reload   Tab/I: bag, files, sound\n\nTouch: use the on-screen buttons.\n\nFind keys, manage your bag, save at typewriters, and get to the roof.')); const b = btn('Back', () => { closePanel(); UI.mode = 'title'; titleMenu(); }); b.style.marginTop = '1em'; p.appendChild(b); UI.mode = 'ctl'; setNav([b]); UI.back = () => { closePanel(); UI.mode = 'title'; titleMenu(); }; });
     setNav(els, 1); UI.mode = 'title';
@@ -5077,7 +5631,7 @@ function endScreen() {
     musPlay('safe'); const mins = Math.floor(G.time / 60), secs = Math.floor(G.time % 60), rank = G.saves <= 14 && mins < 270 ? 'S' : G.saves <= 26 && mins < 380 ? 'A' : 'B', gil = { S: 3000, A: 1800, B: 900 }[rank];
     if (!G.rewarded) { G.rewarded = 1; try { const og = window.parent && window.parent.oasisGil; if (og && og.add) og.add(gil, true); } catch (e) { /* standalone */ } }
     const p = panel(''); const t = el('div', 'big', 'END OF THE FIRST NIGHT'); t.style.cssText = 'top:14%;font-size:2.4em;letter-spacing:.2em;color:#e0c26a;font-weight:900'; p.appendChild(t);
-    const s = el('div', 'big desc', 'Time ' + mins + ':' + String(secs).padStart(2, '0') + '     Saves ' + G.saves + '     Monsters down ' + G.kills + '\n\nRank ' + rank + '   (+' + gil + ' Gil if you came from the Oasis)\n\nThe depot gates close behind you and the trolley rolls out into the dark. Hopesburgh is still burning, and the Custodian is still out there. The rest of the night is coming. To be continued.'); s.style.cssText += ';top:34%;white-space:pre-line'; p.appendChild(s);
+    const s = el('div', 'big desc', 'Time ' + mins + ':' + String(secs).padStart(2, '0') + '     Saves ' + G.saves + '     Monsters down ' + G.kills + '\n\nRank ' + rank + '   (+' + gil + ' Gil if you came from the Oasis)\n\nDalton is down, the ledger is in your hands, and the Lantern aircraft turns away over the dark county without ever landing. Dana is waiting at the foot of the tower with thirty-one survivors from the council chamber. Hopesburgh will burn until morning, but the booster never flies, and the evidence of everything Corvane did here goes with you. Tell them.'); s.style.cssText += ';top:34%;white-space:pre-line'; p.appendChild(s);
     const b = btn('Back to title', () => { closePanel(); toTitle(); }); b.style.cssText += ';position:absolute;left:35%;right:35%;bottom:12%'; p.appendChild(b); setNav([b]); UI.back = null;
 }
 /* ====================================================================================================================
@@ -5379,7 +5933,7 @@ function stkRoomSetup(id) {
         window.__ps = PS; PS.go = go;
     }
     document.addEventListener('pointerdown', () => { auInit(); if (UI.mode === 'title' && !MUS.cur && PS.musOk) musPlay('title'); }, { once: false });
-    window.__sv = { SHAPE, oasisChars, chrFromOasis, chrCfg, idbGet, modExport, padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
+    window.__sv = { modOpen, MODUI, modRender, opsOpen, opsAssign, opsCur, OPS, SHAPE, oasisChars, chrFromOasis, chrCfg, idbGet, modExport, padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
 })();
 /* ---------- the item screen, laid out like Resident Evil 2: portrait + ECG, equipped weapon, 8 slots, description, command list ---------- */
 /* RE_ICONS lives at the top of the module (item pictures reset it while the game is still booting) */

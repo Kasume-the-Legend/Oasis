@@ -1,0 +1,30 @@
+{
+  "site": "https://kasume-the-legend.github.io/Oasis",
+  "updates": [
+    {
+      "date": "2026-10-17",
+      "title": "🧸 Toy Box Smash Update: Platform fighting with your own avatar, slash trails and muzzle flashes",
+      "text": "Up to four fighters, percent cards with faces, Hero / Fighter / Gunner / Brawler styles, melee and ranged moves, custom slash colours."
+    },
+    {
+      "date": "2026-10-17",
+      "title": "🎃 Harbor Haunt Update: Bubble-pop chat sounds + your own alert tones",
+      "text": "Chat now pops softly as you type, send and receive, with a chime when someone says your name. Pick your own sounds in Start menu > Sounds."
+    },
+    {
+      "date": "2026-10-16",
+      "title": "🏍️ Garage Update: Ride your own bikes, in Oasis and Ryder X",
+      "text": "Import any bike model, size it, set the rider's seat, hands and feet. Other players see your ride. Animated GIFs now work as picture furniture."
+    },
+    {
+      "date": "2026-10-15",
+      "title": "🔨 Owner's Orders Update: Kick and ban from your own room",
+      "text": "Room owners can kick or ban players from their profile card. Log in straight into your Harbor Studio, or pick a default room in Decorate."
+    },
+    {
+      "date": "2026-10-14",
+      "title": "🔫 Gun Workshop Update: Swap any gun for your own model",
+      "text": "Replace each Gunner weapon with a custom model and fit it to the hand."
+    }
+  ]
+}

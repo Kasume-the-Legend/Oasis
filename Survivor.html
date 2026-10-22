@@ -132,6 +132,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#d9cfb4;fon
 @keyframes qapulse{50%{box-shadow:0 0 14px #ffd96a99}}
 .re-eqrow{display:flex;gap:.4em;flex:none}.re-eqrow .re-eq{flex:1;min-width:0}.re-tfa{cursor:pointer}.re-tfa .re-eql{background:linear-gradient(#3f9a5c,#1c4d31);color:#eaffef;font-size:.6em}
 </style>
+<script id="sv-cast">window.__CAST = {"ada": 1, "chris": 1, "ethan": 1, "leonnx": 1, "leon": 1, "piers": 1, "rose": 1, "shevanx": 1, "sheva": 1, "wesker": 1};window.__CASTC = {};window.__castBuf = function (k) { if (!window.__CAST[k]) return Promise.reject(new Error('no such operative')); if (window.__CASTC[k]) return window.__CASTC[k];var e = window.__CAST_EMB && window.__CAST_EMB[k]; if (e) { var bin = atob(e), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return (window.__CASTC[k] = Promise.resolve(u.buffer)); }return (window.__CASTC[k] = fetch('cast/' + k + '.vrm').then(function (r) { if (!r.ok) throw new Error('cast/' + k + '.vrm ' + r.status); return r.arrayBuffer(); }).catch(function (x) { delete window.__CASTC[k]; throw x; })); };</script>
 </head>
 <body>
 <div id="stage">
@@ -1036,10 +1037,12 @@ function buildRoom(id) {
     if (def.typewriter) { const t = boxM(0.5, 0.22, 0.4, mat(0x151515)); t.position.set(def.typewriter.x, 0.9, def.typewriter.z); g.add(t); RM.inter.push({ kind: 'type', x: def.typewriter.x, z: def.typewriter.z, r: 1.7, text: 'Use the typewriter' }); }
     if (def.box) { const b = boxM(1.1, 0.5, 0.7, mat(0x5a2a1a)); b.position.set(def.box.x, 1.05, def.box.z); g.add(b); const b2 = boxM(1.14, 0.08, 0.74, mat(0xaa8a3a)); b2.position.set(def.box.x, 1.34, def.box.z); g.add(b2); RM.inter.push({ kind: 'box', x: def.box.x, z: def.box.z, r: 1.7, text: 'Open the item box' }); }
     for (const it of def.items) worldItem(it, id + ':' + it.k);
+    { const N = coN(); if (N > 1) for (const it of def.items) { const T = it.item && ITEMS[it.item]; if (it.file || !T || T.type === 'key' || T.type === 'misc') continue; for (let j = 1; j < N; j++) { const f = coSpread(it.x, it.z, j, w, d, 0.75); worldItem(Object.assign({}, it, { x: f[0], z: f[1] }), id + ':' + it.k + '~' + j); } } }
     try { restoreDrops(id); } catch (er) { console.warn('drops', er); }
     for (const p of (def.puz || [])) puzObj(p, id);
     def.enemies.forEach((e, i) => { const k2 = id + ':e' + i; if (e.drop && e.drop.item && G.dead[k2] && !G.taken[e.drop.key]) worldItem({ k: 'drop', item: e.drop.item, n: e.drop.n || 1, x: e.x, z: e.z, y: 0.1 }, e.drop.key); });
     const hounds = G.flags.hounds && id === 'east';
+    { const N = coN(); if (N > 1) def.enemies.forEach((e, i) => { if (e.bs) return; for (let j = 1; j < N; j++) { const key = id + ':e' + i + 'x' + j; if (G.dead[key]) continue; const f = coSpread(e.x, e.z, j, w, d, 1.6); spawnEnemy(Object.assign({}, e, { x: f[0], z: f[1], drop: undefined }), key); } }); }
     def.enemies.forEach((e, i) => { const key = id + ':e' + i; if (!G.dead[key]) spawnEnemy(e, key); else if (e.t === 'z' && !e.bs && !e.ty && !e.br && CO.role !== 'guest' && G.rez && G.rez[key] && !G.rez[key].used) { const r = G.rez[key]; r.n++; if (r.n >= r.need) { r.used = 1; delete G.dead[key]; G.kills = Math.max(0, G.kills - 1); const Z = spawnEnemy(e, key, true); riseEnemy(Z, true); } } });
     if (hounds) [[0.5, 1.6], [1.8, 1.8]].forEach(([x, z], i) => { const key = 'east:h' + i; if (!G.dead[key]) spawnEnemy({ t: 'h', x, z, rot: 3 }, key, true); });
     dressRoom(def, g, { id, addCol, placeOnWall, wpos, propNear: (side, at) => def.props.some((p) => !p.nc && p.h > 1.1 && (side === 'N' ? Math.abs(p.z + d / 2) < p.d / 2 + 0.9 && Math.abs(p.x - at) < p.w / 2 + 0.9 : side === 'S' ? Math.abs(p.z - d / 2) < p.d / 2 + 0.9 && Math.abs(p.x - at) < p.w / 2 + 0.9 : side === 'E' ? Math.abs(p.x - w / 2) < p.w / 2 + 0.9 && Math.abs(p.z - at) < p.d / 2 + 0.9 : Math.abs(p.x + w / 2) < p.w / 2 + 0.9 && Math.abs(p.z - at) < p.d / 2 + 0.9)) });
@@ -1118,7 +1121,7 @@ function spawnEnemy(e, key, chase) {
     let mdl, E;
     if (e.bs) {   // a boss: a baked zombie model (or a hound) scaled up, with its own stats, phases and drop
         const b = typeof e.bs === 'string' ? BS[e.bs] : e.bs; if (b.kind === 'hound') { mdl = makeHound(); mdl.root.scale.setScalar(b.sc || 2.4); } else mdl = makeZombie(0, b.v, b.sc);
-        E = { hp: b.hp, spd: b.spd, rad: b.rad || 0.9, dmg: b.dmg, cdmg: b.cdmg, cd: b.cd || 1.5, wind: b.wind || 0.8, reach: b.reach || 2.3, boss: 1, phases: b.phases || 2, drop: e.drop, bname: b.name }; e.t = b.kind === 'hound' ? 'h' : 'z';
+        E = { hp: Math.round(b.hp * (1 + 0.6 * (coN() - 1))), spd: b.spd, rad: b.rad || 0.9, dmg: b.dmg, cdmg: b.cdmg, cd: b.cd || 1.5, wind: b.wind || 0.8, reach: b.reach || 2.3, boss: 1, phases: b.phases || 2, drop: e.drop, bname: b.name }; e.t = b.kind === 'hound' ? 'h' : 'z';
     }
     else if (e.t === 'z' && e.lk) { mdl = makeZombie(0, 'licker', [1.0, 0.94]); E = { hp: 26, spd: 3.4, rad: 0.5, dmg: 18, cd: 1.0, wind: 0.38, reach: 1.55, tyrant: 1, lk: 1 }; }   // licker: skinless, fast, hits hard, shrugs off flinches
     else if (e.t === 'z' && e.br) { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 5 + 2), null, [1.14, 1.16]); E = { hp: 26, spd: 1.55, rad: 0.55, dmg: 22, cd: 1.2, wind: 0.5, reach: 1.45, tyrant: 1 }; }
@@ -1129,7 +1132,7 @@ function spawnEnemy(e, key, chase) {
     else if (e.t === 'z') { mdl = makeZombie(keySeed(key, RM.enemies.length + String(G.room || '').length * 3 + (e.cr ? 1 : 0))); E = { hp: e.cr ? 7 : 11, spd: e.cr ? 0.9 : 1.35, rad: 0.42, dmg: 14, cd: 1.3, wind: 0.55, reach: 1.15 }; }
     else if (e.t === 'h') { mdl = makeHound(); E = { hp: 6, spd: 5.2, rad: 0.4, dmg: 9, cd: 0.9, wind: 0.3, reach: 1.1 }; }
     else { mdl = makeBoss(); E = { hp: 140, spd: 1.2, rad: 0.95, dmg: 24, cd: 1.6, wind: 0.85, reach: 2.5, boss: 1 }; }
-    try { const rm = modApplyEnemy(e, E, mdl); if (rm) mdl = rm; } catch (er) { console.warn('mod kit', er); }
+    try { const rm = modApplyEnemy(e, E, mdl, key); if (rm) mdl = rm; } catch (er) { console.warn('mod kit', er); }
     Object.assign(E, { t: e.t, key, x: e.x, z: e.z, rot: e.rot || 0, mdl, st: e.dorm ? 'dorm' : chase ? 'chase' : 'idle', stT: 0, stun: 0, atkT: 0, hurt: 0, ph: Math.random() * 6, hp0: E.hp, cr: e.cr ? 1 : 0, charge: 0, chT: 3 + Math.random() * 3, wake: 0 });
     mdl.root.position.set(E.x, 0, E.z); RM.group.add(mdl.root); RM.enemies.push(E); if (E.st === 'dorm') { mdl.root.rotation.x = -Math.PI / 2; mdl.root.position.y = 0.18; } return E;
 }
@@ -2601,29 +2604,65 @@ async function modBoot() {
     modApplyGuns(); await modLoadImages();
     const slots = []; for (const k of Object.keys(MOD.cfg.en)) if (MOD.cfg.en[k].mf) slots.push('e:' + k); for (const k of Object.keys(MOD.cfg.gun)) if (MOD.cfg.gun[k].mf) slots.push('g:' + k);
     for (const s of slots) { try { const r = await idbGet('mod:m:' + s); if (r && r.b) MOD.models[s] = await modParse(r.b, r.n); } catch (e) { console.warn('mod model', s, e); } }
+    { const keys = Object.keys(window.__MODELS || {}).filter((k) => !MOD.models['e:' + k]), got = {};   // built-in bodies; your own Mod Kit upload wins. Embedded text, or files in nxmodels/ fetched in parallel
+        await Promise.all(keys.map(async (k) => { try { const v = window.__MODELS[k]; if (typeof v === 'string' && v.length > 8) { const bin = atob(v), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); got[k] = u8.buffer; } else { const r = await fetch((window.__MODEL_DIR || 'nxmodels/') + k + '.glb'); if (!r.ok) throw new Error(k + ' ' + r.status); got[k] = await r.arrayBuffer(); } } catch (e) { console.warn('built-in model', k, e); } }));
+        for (const k of keys) { if (!got[k] || MOD.models['e:' + k]) continue; try { MOD.models['e:' + k] = await modParse(got[k], k + '.glb'); } catch (e) { console.warn('built-in model', k, e); } } }
     if (slots.some((s) => s[0] === 'g')) gunRefreshModels();
 }
 /* ---- enemies: stats and a replacement body that uses the model's own clips (idle / walk / run / attack / death) or simple motion ---- */
-function modApplyEnemy(e, E, mdl) {
-    const k = modClass(e), c = MOD.cfg.en[k] || {}, g = MOD.cfg.glob, sz = c.sz || 1;
+/* a specific built-in body for this enemy: by boss name, or by room + class (window.__MODEL_FOR, built from hi2/models/map.json); null = the class's body */
+function modKeyFor(e, E, key) {
+    const F = window.__MODEL_FOR; if (!F) return null;
+    if (E.bname) { for (const [re, k2] of F.boss || []) if (new RegExp(re).test(E.bname) && MOD.models['e:' + k2]) return k2; return null; }
+    const cls = modClass(e), room = String(key || '').split(':')[0];
+    for (const [re, c2, keys] of F.room || []) if (c2 === cls && new RegExp(re).test(room)) { const ok = keys.filter((k2) => MOD.models['e:' + k2]); if (ok.length) return ok[hashS(String(key)) % ok.length]; }
+    return null;
+}
+function modApplyEnemy(e, E, mdl, key) {
+    const k = modClass(e), c = MOD.cfg.en[k] || {}, g = MOD.cfg.glob, sz = c.sz || 1, mk = modKeyFor(e, E, key), kc = mk && ((window.__MODEL_FOR || {}).cfg || {})[mk] || {};
     E.hp = Math.max(1, Math.round(E.hp * g.eh * (c.hp || 1))); E.spd *= g.es * (c.sp || 1); E.dmg = Math.max(1, Math.round(E.dmg * g.ed * (c.dm || 1))); if (E.cdmg) E.cdmg = Math.max(1, Math.round(E.cdmg * g.ed * (c.dm || 1)));
     E.cd = Math.max(0.2, E.cd / Math.max(0.25, c.ar || 1)); E.rad = (E.rad || 0.5) * Math.max(0.6, sz); E.reach = (E.reach || 1.1) * Math.max(0.7, sz);
-    const m = MOD.models['e:' + k]; if (!m) { if (sz !== 1) mdl.root.scale.multiplyScalar(sz); return null; }
-    const root = new THREE.Group(), inner = new THREE.Group(), body = MOD.sk.clone(m.holder), H = (MOD_EN.find((q) => q[0] === k)[2]) * sz, s = H / m.h;
-    body.scale.setScalar(s); inner.rotation.y = (c.rot || 0) * Math.PI / 180; inner.add(body); root.add(inner); const acts = {}; let mixer = null;
-    if (m.clips.length) {
+    const m = MOD.models['e:' + (mk || k)]; if (!m) { if (sz !== 1) mdl.root.scale.multiplyScalar(sz); return null; }
+    const root = new THREE.Group(), inner = new THREE.Group(), body = MOD.sk.clone(m.holder), H = (kc.h || MOD_EN.find((q) => q[0] === k)[2]) * sz, s = H / m.h;
+    body.scale.setScalar(s); inner.rotation.y = ((mk ? kc.rot : c.rot) || 0) * Math.PI / 180; inner.add(body); root.add(inner); const acts = {}; let mixer = null;
+    const rig = m.clips.some((q) => q.duration > 0.25) ? null : rigInit(body);   // a model with no real clips (or one frozen frame) but a Mixamo-style skeleton gets the procedural body
+    if (m.clips.length && !rig) {
         mixer = new THREE.AnimationMixer(body); const pick = (re) => m.clips.find((q) => re.test(q.name));
         const set = { idle: pick(/idle|stand|breath|wait/i), walk: pick(/walk|shamble|limp|crawl/i), run: pick(/run|sprint|charge/i), attack: pick(/attack|punch|bite|claw|slash|swing|strike|hit/i), death: pick(/death|die|dead|fall/i) };
         if (!set.idle && !set.walk) set.idle = m.clips[0];
         for (const [n, cl] of Object.entries(set)) if (cl) { const a = mixer.clipAction(cl); if (n === 'attack' || n === 'death') { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } acts[n] = a; }
     }
-    return { root, inner, body, P: {}, cust: true, mixer, acts, cur: null, t: performance.now(), v: 0 };
+    return { root, inner, body, P: {}, cust: true, mixer, acts, cur: null, t: performance.now(), v: 0, prig: rig };
+}
+/* procedural animation for a rigged model with no usable clips (Mixamo-style bone names).
+   Everything is expressed in the model's own frame (x = its left/right, y up, z = the way it faces) and applied to the bones by world-space rotation, so bone axes do not matter. */
+function rigInit(body) {
+    const B = {}; body.traverse((n) => { if (n.isBone) B[n.name] = n; }); if (!B.Hips || !B.LeftArm || !B.LeftForeArm) return null;
+    body.updateMatrixWorld(true); const base = {}; for (const k in B) base[k] = B[k].quaternion.clone();
+    const ref = body.parent || body, Q = new THREE.Quaternion(), P = new THREE.Quaternion(), R = new THREE.Quaternion(), RI = new THREE.Quaternion(), v = new THREE.Vector3(), w = new THREE.Vector3(), a = new THREE.Vector3();
+    const wp = (b, o) => b.getWorldPosition(o);
+    const frame = () => ref.getWorldQuaternion(Q);
+    const rotAxis = (name, ax, ang, keep) => { const b = B[name]; if (!b) return; frame(); a.set(ax === 'x' ? 1 : 0, ax === 'y' ? 1 : 0, ax === 'z' ? 1 : 0).applyQuaternion(Q); R.setFromAxisAngle(a, ang); b.parent.getWorldQuaternion(P); const Pi = P.clone().invert(); b.quaternion.copy(Pi.multiply(R).multiply(P).multiply(keep ? b.quaternion : base[name])); b.updateMatrixWorld(true); };
+    // swing a limb so its bone->child direction points along (x,y,z) given in the model frame
+    const aim = (name, child, x, y, z) => { const b = B[name], c = B[child]; if (!b || !c) return; b.updateMatrixWorld(true); wp(b, v); wp(c, w); w.sub(v).normalize(); frame(); a.set(x, y, z).normalize().applyQuaternion(Q); R.setFromUnitVectors(w, a); b.parent.getWorldQuaternion(P); const Pi = P.clone().invert(); b.quaternion.copy(Pi.multiply(R).multiply(P).multiply(b.quaternion)); b.updateMatrixWorld(true); };
+    const reset = () => { for (const k in B) B[k].quaternion.copy(base[k]); body.updateMatrixWorld(true); };
+    return { B, reset, rotAxis, aim, base };
+}
+function rigPose(m, E, sp, wind, dt) {   // a procedural body for a rigged model that has no real clips: arms hang, legs and arms swing with its speed, a two-arm swipe when it attacks, falls over when dead
+    const R = m.prig; R.reset(); const dead = E.st === 'dead';
+    m.ph = (m.ph || 0) + dt * (sp > 0.15 ? 3.2 + sp * 1.5 : 0.8); const s = Math.sin(m.ph), mv = sp > 0.15, sw = mv ? Math.min(0.5, 0.2 + sp * 0.08) : 0.04;
+    if (wind > 0) { const k = Math.sin(Math.min(1, wind) * Math.PI); R.aim('LeftArm', 'LeftForeArm', 0.35 - k * 0.5, 0.25 * k - 0.6 * (1 - k), 0.6 + k); R.aim('RightArm', 'RightForeArm', -0.35 + k * 0.5, 0.25 * k - 0.6 * (1 - k), 0.6 + k); R.aim('LeftForeArm', 'LeftHand', 0.1, -0.2, 1); R.aim('RightForeArm', 'RightHand', -0.1, -0.2, 1); }
+    else { R.aim('LeftArm', 'LeftForeArm', 0.18, -1, 0.35 - (mv ? s * sw : 0)); R.aim('RightArm', 'RightForeArm', -0.18, -1, 0.35 + (mv ? s * sw : 0)); R.aim('LeftForeArm', 'LeftHand', 0.1, -1, 0.9); R.aim('RightForeArm', 'RightHand', -0.1, -1, 0.9); }
+    if (mv && !dead) { R.rotAxis('LeftUpLeg', 'x', s * sw * 0.9, 1); R.rotAxis('RightUpLeg', 'x', -s * sw * 0.9, 1); R.rotAxis('Spine01', 'z', s * 0.04, 1); }
+    if (dead) { m.fall = Math.min(1, (m.fall || 0) + dt * 1.6); m.inner.rotation.x = -Math.PI / 2 * m.fall; m.inner.position.y = 0.25 * m.fall; } else { m.fall = 0; m.inner.rotation.x = wind > 0 ? 0.25 * Math.sin(Math.min(1, wind) * Math.PI) : mv ? 0.06 : 0; m.inner.position.y = 0; }
 }
 function custAnim(E, sp, wind) {
     const m = E.mdl, now = performance.now(), dt = Math.min(0.1, (now - m.t) / 1000); m.t = now; const A = m.acts;
+    if (m.prig) { rigPose(m, E, sp, wind, dt); return; }
     const want = E.st === 'dead' ? 'death' : (wind > 0 || E.atkT > 0) ? 'attack' : sp > 2.6 ? (A.run ? 'run' : 'walk') : sp > 0.15 ? 'walk' : 'idle';
     if (m.mixer && Object.keys(A).length) {
         const use = A[want] ? want : (want === 'run' && A.walk ? 'walk' : A.idle ? 'idle' : Object.keys(A)[0]);
+        if (A[use]) A[use].timeScale = want === 'idle' && use !== 'idle' ? 0.1 : 1;   // a model with only a walk clip stands nearly still instead of marching on the spot
         if (m.cur !== use) { const prev = A[m.cur], next = A[use]; if (prev) prev.fadeOut(0.18); next.reset().fadeIn(0.18).play(); m.cur = use; }
         else if (use === 'attack' && wind > 0 && wind < 0.1 && !A.attack.isRunning()) A.attack.reset().play();
         m.mixer.update(dt); return;
@@ -2648,8 +2687,116 @@ function modGunInner(id) {
 const MODUI = { el: null, tab: 'en' };
 function modEl(t, css, txt) { const e = document.createElement(t); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; }
 function modPickFile(accept, cb) { const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.onchange = async () => { const f = i.files && i.files[0]; if (f) { try { await cb(f); } catch (e) { alert('That file could not be used: ' + (e && e.message || e)); } } }; i.click(); }
+/* OPS:BEGIN operative terminal: the roster and the green-phosphor briefing screen (shared by Harbor Inn 1, 2, 3 and Outbreak Online) */
+const OPS = [
+    { k: 'leon', name: 'Leon S. Kennedy', file: 'KENNEDY, LEON S.', g: 'male', role: 'DSO FIELD OPERATIVE', load: 'M93R / SHOTGUN / COMBAT KNIFE', note: 'Calm under fire. Talks his way out of rooms he has already fought his way into. Standard issue for a first response.' },
+    { k: 'sheva', name: 'Sheva Alomar', file: 'ALOMAR, SHEVA', g: 'female', role: 'FIELD AGENT, REGIONAL RESPONSE', load: 'HANDGUN / SUBMACHINE GUN', note: 'Steady, quick on her feet and hard to rattle. Strong on escort and cover work.' },
+    { k: 'chris', name: 'Chris Redfield', file: 'REDFIELD, CHRIS', g: 'male', role: 'STRIKE TEAM LEAD', load: 'RIFLE / HANDGUN / MELEE', note: 'Heavy hitter. Closes distance and ends the fight. Reads the room before the squad does.' },
+    { k: 'ada', name: 'Ada Wong', file: 'WONG, ADA', g: 'female', role: 'INDEPENDENT / UNVERIFIED', load: 'CROSSBOW / HANDGUN', note: 'Source of this file is not confirmed. Moves light, leaves little trace. Handle with care.' },
+    { k: 'leonnx', name: 'Leon NX', file: 'KENNEDY, LEON (NX)', g: 'male', role: 'ARCTIC OPERATIVE, NX PROGRAM', load: 'M93R / SHOTGUN / KNIFE', note: 'Cold-weather kit. Assigned to the NX series. Keeps working when the lights and the heat go out.' },
+    { k: 'shevanx', name: 'Sheva NX', file: 'ALOMAR, SHEVA (NX)', g: 'female', role: 'WET-WORK RESPONSE, NX PROGRAM', load: 'HANDGUN / SMG', note: 'Water-rescue and flood-zone specialist. Soaked, stubborn, still on task.' },
+    { k: 'piers', name: 'Piers Nivans', file: 'NIVANS, PIERS', g: 'male', role: 'SHARPSHOOTER, ALPHA TEAM', load: 'SNIPER RIFLE / HANDGUN', note: 'Long-range overwatch. Patient, precise and loyal to his team. Keep him high and give him a clear lane.' },
+    { k: 'ethan', name: 'Ethan Winters', file: 'WINTERS, ETHAN', g: 'male', role: 'CIVILIAN / UNVERIFIED RESPONDER', load: 'HANDGUN / SHOTGUN / ANYTHING NEARBY', note: 'No formal training, and he keeps getting back up anyway. Tougher than his file says.' },
+    { k: 'rose', name: 'Rose Winters', file: 'WINTERS, ROSE', g: 'female', role: 'MINOR OF INTEREST', load: 'NONE ASSIGNED', note: 'Young, quiet and watchful. Flagged for observation only. Keep clear of the front line.' },
+    { k: 'wesker', name: 'Albert Wesker', file: 'WESKER, ALBERT', g: 'male', role: 'RESTRICTED FILE / HOSTILE', load: 'HANDGUN / SUPERHUMAN SPEED', note: 'Former team captain, now a known threat. Access to this file is restricted. Do not trust him.' }
+];
+const OPS_DEFAULT = (seat) => (seat && seat % 2 === 0 ? 'sheva' : 'leon');
+const opsBuf = async (k) => { try { return window.__castBuf ? await window.__castBuf(k) : null; } catch (e) { return null; } };   // embedded copy if the build has one, else cast/<key>.vrm next to the page
+const opsGet = (k) => OPS.find((o) => o.k === k) || null;
+const opsHave = () => OPS.filter((o) => window.__CAST && window.__CAST[o.k]);
+const opsCur = () => { const m = /^op:(\w+)$/.exec(OPT.avatar || ''); return m ? m[1] : null; };
+async function opsAssign(k) {
+    const o = opsGet(k); if (!o) return false; OPT.avatar = 'op:' + k; saveOpt();
+    try { await avBoot(); } catch (e) { /* avBoot reports its own error */ }
+    try { say('Operative assigned: ' + o.name, 2200); } catch (e) { /* no room yet */ }
+    return AV.on;
+}
+const OPS_IMG = {}; let opsRen = null;
+async function opsShot(k) {   // a head-and-shoulders still, drawn from the model itself
+    if (OPS_IMG[k]) return OPS_IMG[k]; const buf = await opsBuf(k); if (!buf) return null;
+    const { vrm } = await avParse(buf); vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
+    if (!opsRen) opsRen = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); opsRen.setSize(240, 300); opsRen.setClearColor(0x000000, 0);
+    const sc = new THREE.Scene(); sc.add(vrm.scene); sc.add(new THREE.AmbientLight(0xffffff, 1.25)); const dl = new THREE.DirectionalLight(0xffffff, 1.5); dl.position.set(1, 2, 3); sc.add(dl);
+    vrm.scene.updateMatrixWorld(true); const hd = vrm.humanoid.getNormalizedBoneNode('head'), hp = hd ? hd.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, 0);
+    const cam = new THREE.PerspectiveCamera(24, 240 / 300, 0.05, 20); cam.position.set(0, hp.y - 0.03, hp.z + 1.35); cam.lookAt(0, hp.y - 0.1, hp.z);
+    opsRen.render(sc, cam); const url = opsRen.domElement.toDataURL('image/png');
+    vrm.scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); }); });
+    return (OPS_IMG[k] = url);
+}
+function opsCss() {
+    if (document.getElementById('ops-css')) return; const s = document.createElement('style'); s.id = 'ops-css';
+    s.textContent = `
+#ops,#ops *{box-sizing:border-box}
+#ops{position:fixed;inset:0;z-index:100000;background:#010604;color:#7dff9f;font:15px/1.4 'Courier New',Consolas,monospace;display:flex;align-items:center;justify-content:center;padding:12px;animation:opsOn .35s ease-out}
+#ops:before{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0,rgba(0,0,0,.28) 1px,transparent 1px,transparent 3px);mix-blend-mode:multiply;z-index:3}
+#ops:after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.75) 100%);z-index:3}
+@keyframes opsOn{0%{filter:brightness(2.4) contrast(1.6);transform:scaleY(.02)}60%{transform:scaleY(1.02)}100%{filter:none;transform:none}}
+@keyframes opsBlink{50%{opacity:0}} @keyframes opsFlick{0%,100%{opacity:1}92%{opacity:.93}94%{opacity:1}97%{opacity:.9}}
+#ops .win{position:relative;width:min(980px,100%);max-height:100%;display:flex;flex-direction:column;border:1px solid #2f8f4e;box-shadow:0 0 24px rgba(60,255,120,.28),inset 0 0 40px rgba(20,120,60,.25);background:#021209;text-shadow:0 0 6px rgba(80,255,140,.55);animation:opsFlick 4s infinite}
+#ops .bar{display:flex;justify-content:space-between;gap:10px;padding:6px 12px;border-bottom:1px solid #2f8f4e;background:#04301a;letter-spacing:.14em;font-size:12px;color:#b6ffca}
+#ops .bd{display:flex;gap:0;min-height:0;flex:1;overflow:hidden}
+#ops .ls{width:42%;max-width:380px;border-right:1px solid #2f8f4e;padding:8px 0;overflow:auto}
+#ops .it{display:flex;gap:8px;padding:7px 14px;cursor:pointer;border:0;border-left:3px solid transparent;background:none;color:inherit;font:inherit;text-align:left;width:100%;text-shadow:inherit}
+#ops .it:hover,#ops .it.sel{background:rgba(70,255,140,.12);border-left-color:#7dff9f}
+#ops .it .no{opacity:.65} #ops .it .st{margin-left:auto;font-size:11px;color:#b6ffca}
+#ops .rt{flex:1;display:flex;flex-direction:column;min-width:0}
+#ops .top{display:flex;gap:14px;padding:12px 14px;border-bottom:1px dashed #1f6b3a}
+#ops .pic{width:132px;height:165px;border:1px solid #2f8f4e;background:#031a0c center/cover no-repeat;flex:none;position:relative;overflow:hidden}
+#ops .pic img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) sepia(1) hue-rotate(80deg) saturate(2.6) brightness(1.05) contrast(1.15)}
+#ops .pic:after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,40,10,.45) 0,rgba(0,40,10,.45) 1px,transparent 1px,transparent 3px)}
+#ops .meta{flex:1;min-width:0} #ops .meta b{font-size:18px;letter-spacing:.06em;color:#d4ffe0;display:block;margin-bottom:4px}
+#ops .tx{padding:12px 14px;white-space:pre-wrap;flex:1;overflow:auto;min-height:120px}
+#ops .cur{display:inline-block;width:.6em;height:1em;background:#7dff9f;vertical-align:-2px;margin-left:2px;animation:opsBlink 1s steps(1) infinite}
+#ops .ft{display:flex;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid #2f8f4e;background:#04301a;flex-wrap:wrap}
+#ops .ft .h{flex:1;font-size:11px;opacity:.75;min-width:160px}
+#ops button.b{background:#031a0c;color:#9dffb8;border:1px solid #2f8f4e;font:inherit;padding:6px 14px;cursor:pointer;letter-spacing:.08em;text-shadow:inherit}
+#ops button.b:hover{background:#0a4a26;color:#fff} #ops button.b[disabled]{opacity:.45;cursor:default}
+@media(max-width:640px){#ops .bd{flex-direction:column}#ops .ls{width:100%;max-width:none;border-right:0;border-bottom:1px solid #2f8f4e;max-height:38%}#ops .pic{width:96px;height:120px}}
+#modkit,#modkit *{font-family:'Courier New',Consolas,monospace !important;color:#7dff9f !important;text-shadow:0 0 5px rgba(80,255,140,.4)}
+#modkit{background:rgba(1,8,4,.95) !important}
+#modkit button,#modkit select,#modkit input{background:#031a0c !important;border-color:#2f8f4e !important;border-radius:0 !important}
+#modkit button:hover{background:#0a4a26 !important}
+#modkit [style*="background:#150f08"]{background:#021209 !important;border-color:#1f6b3a !important;border-radius:0 !important}
+#modkit input[type=range]{accent-color:#7dff9f}
+.opsbtn{display:block;width:100%;margin:.4em 0;text-align:left;font-family:'Courier New',Consolas,monospace !important;color:#7dff9f !important;background:#031a0c !important;border:1px solid #2f8f4e !important;padding:.55em .8em;cursor:pointer;letter-spacing:.06em;text-shadow:0 0 5px rgba(80,255,140,.4)}
+.opsbtn:hover{background:#0a4a26 !important}`;
+    document.head.appendChild(s);
+}
+const OPS_UI = { el: null, typer: 0, sel: 0, onClose: null };
+function opsOpen(onClose) {
+    if (OPS_UI.el) return; opsCss(); const list = opsHave(); if (!list.length) { try { say('No operative files on this build.', 2500); } catch (e) { /* ok */ } return; }
+    OPS_UI.onClose = onClose || null; const now = opsCur(); OPS_UI.sel = Math.max(0, list.findIndex((o) => o.k === now));
+    const ov = document.createElement('div'); ov.id = 'ops'; ov.tabIndex = -1; OPS_UI.el = ov;
+    ov.innerHTML = '<div class="win"><div class="bar"><span>DNI SECURE TERMINAL // OPERATIVE ROSTER</span><span id="ops-clk"></span></div><div class="bd"><div class="ls" id="ops-ls"></div><div class="rt"><div class="top"><div class="pic" id="ops-pic"></div><div class="meta" id="ops-meta"></div></div><div class="tx" id="ops-tx"></div></div></div><div class="ft"><span class="h">UP/DOWN select &nbsp; ENTER assign &nbsp; ESC close</span><button class="b" id="ops-go" type="button">ASSIGN</button><button class="b" id="ops-x" type="button">CLOSE</button></div></div>';
+    document.body.appendChild(ov);
+    for (const ev of ['keydown', 'keyup', 'keypress']) ov.addEventListener(ev, (e) => { e.stopPropagation(); if (ev !== 'keydown') return; if (e.key === 'Escape') { e.preventDefault(); opsClose(); } else if (e.key === 'ArrowDown') { e.preventDefault(); show(OPS_UI.sel + 1); } else if (e.key === 'ArrowUp') { e.preventDefault(); show(OPS_UI.sel - 1); } else if (e.key === 'Enter') { e.preventDefault(); assign(); } }, true);
+    ov.addEventListener('pointerdown', (e) => e.stopPropagation());
+    const $o = (id) => document.getElementById(id), ls = $o('ops-ls'), clk = () => { const d = new Date(); $o('ops-clk') && ($o('ops-clk').textContent = 'LINK OK  ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0')); };
+    clk(); OPS_UI.clk = setInterval(clk, 1000);
+    const rows = list.map((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'it'; b.innerHTML = '<span class="no">[' + String(i + 1).padStart(2, '0') + ']</span><span></span><span class="st"></span>'; b.children[1].textContent = o.file; b.onclick = () => show(i); b.ondblclick = () => assign(); ls.appendChild(b); return b; });
+    const mark = () => { const cur = opsCur(); rows.forEach((b, i) => { b.classList.toggle('sel', i === OPS_UI.sel); b.children[2].textContent = list[i].k === cur ? 'ACTIVE' : ''; }); };
+    const type = (lines) => {   // the dossier types itself out
+        clearInterval(OPS_UI.typer); const tx = $o('ops-tx'); if (!tx) return; const full = lines.join('\n'); let n = 0; tx.textContent = ''; const cur = document.createElement('span'); cur.className = 'cur'; const t = document.createTextNode(''); tx.append(t, cur);
+        OPS_UI.typer = setInterval(() => { n = Math.min(full.length, n + 3); t.nodeValue = full.slice(0, n); if (n >= full.length) clearInterval(OPS_UI.typer); }, 16);
+    };
+    const show = (i) => {
+        OPS_UI.sel = (i + list.length) % list.length; const o = list[OPS_UI.sel]; mark(); const meta = $o('ops-meta'), pic = $o('ops-pic'); if (!meta) return;
+        meta.innerHTML = '<b></b><div></div><div></div>'; meta.children[0].textContent = o.file; meta.children[1].textContent = 'ROLE  ' + o.role; meta.children[2].textContent = 'LOAD  ' + o.load; pic.textContent = 'SCANNING...';
+        opsShot(o.k).then((u) => { if (!OPS_UI.el || list[OPS_UI.sel] !== o) return; pic.textContent = ''; if (u) { const im = document.createElement('img'); im.src = u; im.alt = ''; pic.appendChild(im); } }).catch(() => { pic.textContent = 'NO IMAGE'; });
+        const cur = opsCur() === o.k; type(['>> OPENING FILE ' + String(OPS_UI.sel + 1).padStart(2, '0') + ' ... OK', '>> CLEARANCE: GRANTED', '', 'SUBJECT : ' + o.name.toUpperCase(), 'STATUS  : ' + (cur ? 'ACTIVE ON THIS LINK' : 'AVAILABLE'), 'ROLE    : ' + o.role, 'LOADOUT : ' + o.load, '', 'BRIEFING:', o.note, '', cur ? '>> THIS OPERATIVE IS ALREADY ASSIGNED.' : '>> PRESS ENTER TO ASSIGN THIS OPERATIVE TO YOUR SEAT.', '>> IN CO-OP YOUR TEAM SEES THIS CHARACTER.']);
+        const go = $o('ops-go'); if (go) go.disabled = cur;
+    };
+    let busy = false; const assign = async () => {
+        if (busy) return; const o = list[OPS_UI.sel]; if (opsCur() === o.k) return; busy = true; const go = $o('ops-go'); if (go) go.disabled = true; clearInterval(OPS_UI.typer); const tx = $o('ops-tx'); if (tx) tx.textContent = '>> ESTABLISHING LINK TO ' + o.file + ' ...\n>> LOADING FIELD MODEL ...';
+        const ok = await opsAssign(o.k); busy = false; if (!OPS_UI.el) return; mark(); type([ok ? '>> LINK ESTABLISHED.' : '>> LINK FAILED. ' + (AV.err || 'TRY AGAIN.'), ok ? '>> ' + o.name.toUpperCase() + ' ASSIGNED TO YOUR SEAT.' : '', '', ok ? 'GOOD LUCK OUT THERE.' : '']); if (go) go.disabled = ok;
+    };
+    $o('ops-go').onclick = () => { try { auInit(); sfx('ok'); } catch (e) { /* audio */ } assign(); }; $o('ops-x').onclick = () => opsClose();
+    show(OPS_UI.sel); ov.focus();
+}
+function opsClose() { clearInterval(OPS_UI.typer); clearInterval(OPS_UI.clk); if (OPS_UI.el) { OPS_UI.el.remove(); OPS_UI.el = null; } const cb = OPS_UI.onClose; OPS_UI.onClose = null; try { if (cb) cb(); } catch (e) { /* ok */ } }
+/* OPS:END */
 function modOpen() {
-    if (MODUI.el) return; const ov = MODUI.el = modEl('div', 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#e8dcc0;font:14px/1.35 Georgia,serif;display:flex;flex-direction:column;align-items:center;padding:14px;overflow:auto'); document.body.appendChild(ov);
+    if (MODUI.el) return; const ov = MODUI.el = modEl('div', 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);color:#e8dcc0;font:14px/1.35 Georgia,serif;display:flex;flex-direction:column;align-items:center;padding:14px;overflow:auto'); opsCss(); ov.id = 'modkit'; document.body.appendChild(ov);
     for (const ev of ['keydown', 'keyup', 'keypress']) ov.addEventListener(ev, (e) => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') modClose(); }, true);
     ov.addEventListener('pointerdown', (e) => e.stopPropagation()); modRender();
 }
@@ -2657,8 +2804,8 @@ function modClose() { if (MODUI.el) { MODUI.el.remove(); MODUI.el = null; } try 
 function modRender() {
     const ov = MODUI.el; if (!ov) return; ov.textContent = ''; const wrap = modEl('div', 'width:min(860px,100%)'); ov.appendChild(wrap);
     const top = modEl('div', 'display:flex;align-items:center;gap:10px;margin-bottom:10px'); top.appendChild(modEl('div', 'font:700 22px Georgia,serif;flex:1;letter-spacing:.06em', 'MOD KIT')); const x = modEl('button', B_CSS, 'Close'); x.onclick = modClose; top.appendChild(x); wrap.appendChild(top);
-    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['chr', 'Characters'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup'], ['map', 'Maps']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
-    const body = modEl('div', ''); wrap.appendChild(body); ({ en: modTabEn, gun: modTabGun, item: modTabItem, chr: modTabChr, stk: modTabStk, snd: modTabSnd, bal: modTabBal, map: modTabMap })[MODUI.tab](body);
+    const tabs = modEl('div', 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap'); for (const [k, l] of [['ops', 'Operatives'], ['en', 'Enemies'], ['gun', 'Guns'], ['item', 'Item pictures'], ['chr', 'Characters'], ['stk', 'Stalker'], ['snd', 'Sounds'], ['bal', 'Balance & backup'], ['map', 'Maps']]) { const b = modEl('button', B_CSS + (MODUI.tab === k ? ';background:#6b5a3a;color:#fff' : ''), l); b.onclick = () => { MODUI.tab = k; modRender(); }; tabs.appendChild(b); } wrap.appendChild(tabs);
+    const body = modEl('div', ''); wrap.appendChild(body); ({ ops: modTabOps, en: modTabEn, gun: modTabGun, item: modTabItem, chr: modTabChr, stk: modTabStk, snd: modTabSnd, bal: modTabBal, map: modTabMap })[MODUI.tab](body);
 }
 const B_CSS = 'background:#2a2014;color:#e8dcc0;border:1px solid #6b5a3a;border-radius:6px;padding:5px 11px;font:13px Georgia,serif;cursor:pointer';
 const CARD = 'background:#150f08;border:1px solid #4a3d28;border-radius:8px;padding:10px 12px;margin-bottom:9px';
@@ -2671,6 +2818,14 @@ function modFileRow(host, slot, label, accept, setFn, clearFn, nameNow) {
     const r = modEl('div', 'display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap'); r.appendChild(modEl('span', 'width:150px;font-size:13px', label));
     const nm = modEl('span', 'flex:1;font-size:13px;color:' + (nameNow ? '#9be39b' : '#8a7c5c'), nameNow || 'Default'); const b = modEl('button', B_CSS, nameNow ? 'Replace file…' : 'Choose file…'); b.onclick = () => modPickFile(accept, async (f) => { await setFn(f); modRender(); });
     r.append(nm, b); if (nameNow) { const c = modEl('button', B_CSS, 'Reset'); c.onclick = async () => { await clearFn(); modRender(); }; r.appendChild(c); } host.appendChild(r);
+}
+function modTabOps(body) {
+    body.appendChild(modEl('div', 'font-size:13px;margin-bottom:8px', '>> OPERATIVE ROSTER. Pick who you play. In co-op your team sees this character. Kept on this device.'));
+    const open = modEl('button', B_CSS, 'OPEN BRIEFING TERMINAL'); open.onclick = () => opsOpen(() => modRender()); body.appendChild(open);
+    for (const o of opsHave()) {
+        const on = opsCur() === o.k, card = modEl('div', CARD + ';margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'); const t = modEl('div', 'flex:1;min-width:200px'); t.appendChild(modEl('div', 'font-weight:700', o.file)); t.appendChild(modEl('div', 'font-size:12px', o.role + '  //  ' + o.load)); card.appendChild(t);
+        const u = modEl('button', B_CSS, on ? 'ASSIGNED' : 'ASSIGN'); u.disabled = on; u.onclick = async () => { u.textContent = 'LOADING...'; await opsAssign(o.k); modRender(); }; card.appendChild(u); body.appendChild(card);
+    }
 }
 function modTabEn(body) {
     body.appendChild(modEl('div', 'font-size:13px;color:#b9a77f;margin-bottom:8px', 'Pick a model file (.glb, .gltf, .fbx or .vrm) to replace a kind of enemy. If the file has animations named like idle, walk, run, attack or death they are used; otherwise it walks with a bob and lunges when it attacks. Changes apply to enemies that appear from now on (re-enter the room).'));
@@ -3040,6 +3195,28 @@ function avMat(m) {
     if (!m) return m; const n = new THREE.MeshLambertMaterial({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, side: m.side === THREE.BackSide ? THREE.FrontSide : m.side, alphaTest: m.alphaTest || (m.transparent ? 0.45 : 0) });
     if (m.isOutline || m.side === THREE.BackSide || /outline/i.test(m.name || '')) n.visible = false; if (n.map) { n.map.anisotropy = 1; n.map.needsUpdate = true; } n.emissive = new THREE.Color(0x0a0806); return n;
 }
+/* A-pose / off-axis rigs: the clips and the arm poses are authored for a T-pose rig, so measure how far each arm and leg bone rests from its T-pose direction
+   and re-aim the animation by that much (q' = pre * q * post). A T-pose model measures zero and is left alone. */
+function vrmFix(vrm) {
+    const out = { list: [], nat: { R: [REST.R.clone(), REST.R.clone()], L: [REST.L.clone(), REST.L.clone()] } };
+    try {
+        const H = vrm.humanoid, B = (n) => H.getNormalizedBoneNode(n), V = THREE.Vector3, wp = (n) => n.getWorldPosition(new V()); vrm.scene.updateMatrixWorld(true);
+        const hips = B('hips'), head = B('head'); if (!hips || !head || wp(head).sub(wp(hips)).normalize().y < 0.8) return out;
+        const dir = (a, b) => { const x = B(a), y = B(b); if (!x || !y) return null; const d = wp(y).sub(wp(x)); return d.lengthSq() < 1e-10 ? null : d.normalize(); };
+        const I = new THREE.Quaternion(), qf = (d, t) => { if (!d) return I.clone(); const ang = d.angleTo(t); return (ang < 0.03 || d.dot(t) < 0.2) ? I.clone() : new THREE.Quaternion().setFromUnitVectors(d, t); };
+        for (const [s, sx, key] of [['left', 1, 'L'], ['right', -1, 'R']]) {
+            const TX = new V(sx, 0, 0), TD = new V(0, -1, 0);
+            const du = dir(s + 'UpperArm', s + 'LowerArm'), dl = dir(s + 'LowerArm', s + 'Hand'); if (du && Math.sign(du.x) !== sx && Math.abs(du.x) > 0.05) continue;   // left/right not where the animations expect them
+            const cu = qf(du, TX), cl = qf(dl, TX); if (du) out.nat[key][0] = du.clone(); if (dl) out.nat[key][1] = dl.clone();
+            if (cu.angleTo(I) > 0 || cl.angleTo(I) > 0) { out.list.push({ n: B(s + 'UpperArm'), pre: I.clone(), post: cu }); if (B(s + 'LowerArm')) out.list.push({ n: B(s + 'LowerArm'), pre: cu.clone().invert(), post: cl }); }
+            const lu = dir(s + 'UpperLeg', s + 'LowerLeg'), ll = dir(s + 'LowerLeg', s + 'Foot'), gu = qf(lu, TD), gl = qf(ll, TD);
+            if (gu.angleTo(I) > 0 || gl.angleTo(I) > 0) { out.list.push({ n: B(s + 'UpperLeg'), pre: I.clone(), post: gu }); if (B(s + 'LowerLeg')) out.list.push({ n: B(s + 'LowerLeg'), pre: gu.clone().invert(), post: gl }); }
+        }
+    } catch (e) { console.warn('rig fix', e); }
+    out.list = out.list.filter((e) => e.n);
+    return out;
+}
+function vrmFixApply(fx) { if (fx) for (const e of fx.list) e.n.quaternion.premultiply(e.pre).multiply(e.post); }
 async function avLoad(buffer, name) {
     const { vrm, VM } = await avParse(buffer);
     vrm.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = Array.isArray(o.material) ? o.material.map(avMat) : avMat(o.material); } });
@@ -3071,8 +3248,8 @@ async function avLoad(buffer, name) {
     if (AV.root) { AV.root.removeFromParent(); }
     const boneFor = (n) => vrm.humanoid.getNormalizedBoneNode(n) || vrm.humanoid.getNormalizedBoneNode(n.replace('Pinky', 'Little')); const D = acData(); let names = [];
     if (D) { const ref = (D.male && D.male.idle) || D.gp.gp_idle; names = Object.keys(ref.b).filter((n) => boneFor(n)); }
-    Object.assign(AV, { vrm, root: grp, N, s, name: name || 'Character', on: false, names, nodes: names.map(boneFor), hips0: N.hips.position.y, qs: null, hasClips: names.length > 0 }); AC.cache = {}; AC.cur = AC.prev = AC.act = null;
-    avWeapons(); avAttach(); AV.on = true; return AV;
+    Object.assign(AV, { fix: vrmFix(vrm), vrm, root: grp, N, s, name: name || 'Character', on: false, names, nodes: names.map(boneFor), hips0: N.hips.position.y, qs: null, hasClips: names.length > 0 }); AC.cache = {}; AC.cur = AC.prev = AC.act = null;
+    AV.nat = AV.fix.nat; avWeapons(); avAttach(); AV.on = true; return AV;
 }
 function avWeapons() {
     const inv = 1 / AV.s, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0x000000 }), B = (w, h, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
@@ -3089,7 +3266,7 @@ function avAttach() {
 function avClear() { if (!AV.on) return; AV.on = false; AV.root.removeFromParent(); PL.g.children.forEach((c) => { c.visible = true; }); const h = makePlayer(); }
 /* two-bone limb pointing: shoulder S towards target T inside the chest frame, elbow bends towards a hint */
 function ikArm(side, off, hint, now) {
-    const sd = side === 'R' ? 'right' : 'left', U = AV.N[sd + 'UpperArm'], Lw = AV.N[sd + 'LowerArm'], ch = AV.N.upperChest || AV.N.chest, rest = REST[side];
+    const sd = side === 'R' ? 'right' : 'left', U = AV.N[sd + 'UpperArm'], Lw = AV.N[sd + 'LowerArm'], ch = AV.N.upperChest || AV.N.chest, nt = (AV.nat && AV.nat[side]) || [REST[side], REST[side]];
     const { S, T, C, D, al, pe, u, E, l, hint: H } = _a; const { CQ, PQ, PQ2, Qu, Qd, GQ } = _q;
     U.getWorldPosition(S); ch.getWorldPosition(C); ch.getWorldQuaternion(CQ); PL.g.getWorldQuaternion(GQ);
     T.copy(off).applyQuaternion(GQ).add(C); T.y = C.y + off.y; H.copy(hint).applyQuaternion(GQ);
@@ -3097,8 +3274,8 @@ function ikArm(side, off, hint, now) {
     al.copy(D).normalize(); const cA = clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1), sA = Math.sqrt(1 - cA * cA);
     pe.copy(H).addScaledVector(al, -H.dot(al)); if (pe.lengthSq() < 1e-5) pe.set(0, -1, 0); pe.normalize();
     u.copy(al).multiplyScalar(cA).addScaledVector(pe, sA); E.copy(S).addScaledVector(u, L1); l.copy(T).sub(E).normalize();
-    U.parent.getWorldQuaternion(PQ); PQ2.copy(PQ).invert(); const du = u.clone().applyQuaternion(PQ2); Qu.setFromUnitVectors(rest, du); U.quaternion.copy(Qu);
-    PQ.multiply(Qu); PQ2.copy(PQ).invert(); const dl = l.clone().applyQuaternion(PQ2); Qd.setFromUnitVectors(rest, dl); Lw.quaternion.copy(Qd);
+    U.parent.getWorldQuaternion(PQ); PQ2.copy(PQ).invert(); const du = u.clone().applyQuaternion(PQ2); Qu.setFromUnitVectors(nt[0], du); U.quaternion.copy(Qu);
+    PQ.multiply(Qu); PQ2.copy(PQ).invert(); const dl = l.clone().applyQuaternion(PQ2); Qd.setFromUnitVectors(nt[1], dl); Lw.quaternion.copy(Qd);
     Lw.updateMatrixWorld(true);
 }
 
@@ -3175,6 +3352,7 @@ function avAnim(dt, mv) {
     // an action clip (fire, reload, hit, die) fades in over the base layer: whole body or upper body only
     const A = AC.act; if (A) { A.t += dt * A.rate; const dur = A.c.duration, rem = dur - A.t; AC.actW = Math.min(1, AC.actW + dt / 0.07); const tgt = A.hold ? 1 : (rem < 0.15 ? Math.max(0, rem / 0.15) : 1); const aw = Math.min(AC.actW, tgt); if (A.t >= dur && !A.hold) { AC.act = null; AC.actW = 0; } else { AV.qa.forEach((q) => q.identity()); const h2 = { v: 1 }; acSample(A.c, Math.min(A.t, dur), AV.qa, h2, 1, true); for (let b = 0; b < AV.names.length; b++) { if (A.upper && !UPPER.test(AV.names[b])) continue; AV.qs[b].slerp(AV.qa[b], aw); } if (!A.upper) hyo.v += (h2.v - hyo.v) * aw; } } else AC.actW = 0;
     for (let b = 0; b < AV.names.length; b++) AV.nodes[b].quaternion.copy(AV.qs[b]);
+    vrmFixApply(AV.fix);
     N.hips.position.y = AV.hips0 * hyo.v + (PL.st > 0 && st === 'pick' ? -Math.sin(Math.min(1, PL.st / 0.7) * Math.PI) * 0.3 / AV.s : 0);
     // ---- additive body language on top of the clips
     const hurt = clamp((PL.hurtT - 0.45) / 0.45, 0, 1), crouch = st === 'pick' ? Math.sin(Math.min(1, PL.st / 0.7) * Math.PI) : 0, P = AV.pose;
@@ -3216,8 +3394,10 @@ async function avBoot() {
     const src = OPT.avatar || 'oasis'; let buf = null, name = ''; AV.sig = src === 'oasis' ? oasisSig() : 'x';
     try {
         if (/^slot:P[12]:\d$/.test(src)) { const [, P, ix] = src.split(':'), r = await idbGet('mod:c:' + P + ix); if (r && r.b) { buf = r.b; name = r.n || 'Character'; AV.src = 'slot'; AV.gender = ((chrCfg()[P][+ix]) || {}).g === 'male' ? 'male' : 'female'; } }
+        if (/^op:\w+$/.test(src) && window.__CAST) { const k = src.slice(3), o = opsGet(k), b = await opsBuf(k); if (o && b) { buf = b; name = o.name; AV.src = 'cast'; AV.gender = o.g; } }
         if (src === 'upload') { const r = await idbGet('avatar'); if (r) { buf = await r.arrayBuffer(); name = r.name || 'Uploaded VRM'; } }
         if (!buf && src !== 'none') { const pa = window.parent && window.parent !== window && window.parent.oasisAvatar && window.parent.oasisAvatar(); if (pa && pa.buffer) { buf = new Uint8Array(pa.buffer).slice().buffer; name = pa.name || 'Your Oasis character'; AV.src = 'oasis'; AV.gender = pa.gender === 'female' ? 'female' : 'male'; } }
+        if (!buf && src === 'oasis' && window.__CAST) { try { const k = (CO.on && CO.role === 'guest' && (CO.slot || 2) % 2 === 0) ? 'sheva' : 'leon', b0 = await opsBuf(k); if (b0) { buf = b0; } name = k === 'sheva' ? 'Sheva Alomar' : 'Leon Kennedy'; AV.src = 'cast'; AV.gender = k === 'sheva' ? 'female' : 'male'; } catch (e) { /* default soldier */ } }   // NX ships its own heroes: Leon, and Sheva for the second seat
         if (buf && avIsFbx(buf)) { buf = await avLite(buf); }   // FBX: use the small GLB re-pack for everything (own model, and the copy sent to your partner)
         if (buf) { AV.raw = buf; await avLoad(buf, name); AV.err = ''; try { CO.peers.forEach((Q) => { Q.avFor = null; }); coEach(() => { coSendAvatar(); coSendMusic(); }); } catch (e) { /* no link */ } } else AV.err = src === 'none' ? '' : 'No character found. Equip a VRoid in the Oasis, or upload a .vrm in Options.';
     } catch (e) { AV.err = 'Could not load the character: ' + (e && e.message || e); console.warn('avatar', e); AV.on = false; try { avClear(); } catch (e2) { /* default soldier stays */ } try { say(AV.err.slice(0, 90), 6000); } catch (e3) { /* not in a room yet */ } }
@@ -3300,6 +3480,9 @@ const coFix = () => { CO.cur = coPrimary(); };
 function withPeer(P, fn) { const sv = CO.cur; CO.cur = P; try { return fn(); } finally { CO.cur = sv && CO.peers.includes(sv) ? sv : coPrimary(); } }
 const coEach = (fn) => { for (const P of CO.peers.slice()) if (P.ok) withPeer(P, fn); };
 const coOk = () => CO.peers.filter((p) => p.ok);
+/* CO-SCALE: party size, so enemies and supplies scale one-for-one with the players */
+const coN = () => CO.role === 'host' ? Math.min(4, 1 + coOk().length) : CO.role === 'guest' ? Math.max(1, Math.min(4, (CO.ros || []).length)) : 1;
+const coSpread = (x, z, j, w, d, r) => { const a = j * 2.1 + 0.7; return [Math.max(-w / 2 + 1.2, Math.min(w / 2 - 1.2, x + Math.cos(a) * r * (1 + 0.25 * j))), Math.max(-d / 2 + 1.2, Math.min(d / 2 - 1.2, z + Math.sin(a) * r * (1 + 0.25 * j)))]; };
 const r2 = (v) => Math.round(v * 100) / 100;
 function coSendTo(P, m) { if (CO.tr && P) { try { CO.tr.send(P.peer, m); } catch (e) { /* peer gone */ } } }
 function coAll(m, skip, force) { for (const P of CO.peers.slice()) if (P !== skip && (P.ok || force)) coSendTo(P, m); }
@@ -3494,7 +3677,7 @@ async function rpLoadVRM(buffer, gender, P0) {
     if (!N.hips || !N.rightUpperArm || !N.leftUpperLeg) throw new Error('missing humanoid bones');
     vrm.scene.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(vrm.scene), h = Math.max(0.5, bb.max.y - bb.min.y), sc = 1.68 / h; const PW = (n) => n.getWorldPosition(new THREE.Vector3()), ua = PW(N.rightUpperArm).distanceTo(PW(N.rightLowerArm)), la = N.rightHand ? PW(N.rightLowerArm).distanceTo(PW(N.rightHand)) : ua; const grp = new THREE.Group(); grp.add(vrm.scene); grp.scale.setScalar(sc); grp.position.y = -bb.min.y * sc; { const hn = vrm.humanoid.getNormalizedBoneNode('hips'); if (hn) { const hp = hn.getWorldPosition(new THREE.Vector3()); grp.position.x = -hp.x * sc; grp.position.z = -hp.z * sc; } }
     const boneFor = (n) => vrm.humanoid.getNormalizedBoneNode(n) || vrm.humanoid.getNormalizedBoneNode(n.replace('Pinky', 'Little')), D = acData(); let names = []; if (D) { const ref = (D.male && D.male.idle) || D.gp.gp_idle; names = Object.keys(ref.b).filter((n) => boneFor(n)); }
-    const r = withPeer(P, coEnsureRP); Object.assign(r, { names, nodes: names.map(boneFor), qs: names.map(() => new THREE.Quaternion()), qa: names.map(() => new THREE.Quaternion()), cache: {}, cc: null, cp: null, cf: 1, act: null, actW: 0, ua, la, sc, hips0: N.hips.position.y, hy: { v: 1 }, ow: { R: 0, L: 0 }, off: { R: new THREE.Vector3(-0.2, -0.5, 0.2), L: new THREE.Vector3(0.2, -0.5, 0.2) }, pose: { sp: 0, hd: 0 }, gender: gender === 'female' ? 'female' : 'male', lastSt: 'idle' }); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
+    const r = withPeer(P, coEnsureRP); Object.assign(r, { fix: vrmFix(vrm), names, nodes: names.map(boneFor), qs: names.map(() => new THREE.Quaternion()), qa: names.map(() => new THREE.Quaternion()), cache: {}, cc: null, cp: null, cf: 1, act: null, actW: 0, ua, la, sc, hips0: N.hips.position.y, hy: { v: 1 }, ow: { R: 0, L: 0 }, off: { R: new THREE.Vector3(-0.2, -0.5, 0.2), L: new THREE.Vector3(0.2, -0.5, 0.2) }, pose: { sp: 0, hd: 0 }, gender: gender === 'female' ? 'female' : 'male', lastSt: 'idle' }); if (r.vrmGrp) r.vrmGrp.removeFromParent(); r.g.children.forEach((c) => { if (c !== r.light) c.visible = false; }); r.g.add(grp); r.vrmGrp = grp; r.vrm = vrm; r.N = N; grp.visible = true; r.bt = 2.5;
     { const inv = 1 / sc, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0 }), B = (w, h2, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h2 * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
         const pist = new THREE.Group(); pist.add(B(0.19, 0.04, 0.03, 0x1a1c20, -0.15, 0.015, 0), B(0.03, 0.095, 0.032, 0x14110e, -0.08, -0.05, 0), B(0.05, 0.03, 0.024, 0x2a2d33, -0.1, -0.012, 0));
         const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06 * inv, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.9 })); fl.position.set(-0.27 * inv, 0.015 * inv, 0); fl.visible = false; pist.add(fl); pist.userData.fl = fl;
@@ -3512,10 +3695,11 @@ function rpVrmProc(dt) {
     else if (aim && gun) { set(N.rightUpperArm, -0.25 * kick, 1.45, 0); set(N.leftUpperArm, 0, -1.3, 0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0.2, 0); }
     else if (aim) { set(N.rightUpperArm, -0.2, 1.2, 0.2); set(N.leftUpperArm, 0, -0.5, -1.0); set(N.rightLowerArm, 0, 0, 0); set(N.leftLowerArm, 0, 0, 0); }
     else { set(N.rightUpperArm, -s * 0.5 * a, 0, 1.2); set(N.leftUpperArm, s * 0.5 * a, 0, -1.2); set(N.rightLowerArm, 0, 0, 0.1); set(N.leftLowerArm, 0, 0, -0.1); }
+    vrmFixApply(r.fix);
     r.bt -= dt; const em = r.vrm.expressionManager; if (em) { if (r.bt < 0) { r.bt = 2.2 + Math.random() * 3; r.bl = 0.14; } r.bl = Math.max(0, (r.bl || 0) - dt); em.setValue('blink', r.bl > 0 ? Math.sin(r.bl / 0.14 * Math.PI) : 0); }
     r.vrm.update(dt);
 }
-function withPuppet(r, fn) { const sv = { N: AV.N, ua: AV.ua, la: AV.la, s: AV.s }, pg = PL.g; AV.N = r.N; AV.ua = r.ua; AV.la = r.la; AV.s = r.sc; PL.g = r.g; try { fn(); } finally { Object.assign(AV, sv); PL.g = pg; } }
+function withPuppet(r, fn) { const sv = { N: AV.N, ua: AV.ua, la: AV.la, s: AV.s, nat: AV.nat }, pg = PL.g; AV.nat = r.fix && r.fix.nat; AV.N = r.N; AV.ua = r.ua; AV.la = r.la; AV.s = r.sc; PL.g = r.g; try { fn(); } finally { Object.assign(AV, sv); PL.g = pg; } }
 function rpClip(r, set, key) {
     const ck = set + '/' + key; if (r.cache[ck] !== undefined) return r.cache[ck]; const D = acData(), d = D && D[set] && D[set][key]; if (!d) return (r.cache[ck] = null);
     const flip = r.vrm.meta && r.vrm.meta.metaVersion === '0' ? -1 : 1;
@@ -3536,6 +3720,7 @@ function rpVrmPose(dt) {   // the partner moves with the same animation clips an
     if (r.state !== r.lastSt) { r.lastSt = r.state; r.act = null; r.actW = 0; if (r.state === 'reload' && isGun(r.eq)) { const c = rpClip(r, 'gp', 'gpreload'); if (c) r.act = { c, t: 0, rate: 2.0 / (WPN[r.eq].rel || 1.3), upper: true }; gunRelSnd(r.eq); } else if (dead) { const c = rpClip(r, set, set === 'gp' ? 'gdie1' : set === 'hr' ? 'hdie1' : 'f_hdie1'); if (c) r.act = { c, t: 0, rate: 1, hold: true }; } }
     const A = r.act; if (A) { A.t += dt * A.rate; const dur = A.c.duration, rem = dur - A.t; r.actW = Math.min(1, r.actW + dt / 0.07); const aw = Math.min(r.actW, A.hold ? 1 : (rem < 0.15 ? Math.max(0, rem / 0.15) : 1)); if (A.t >= dur && !A.hold) { r.act = null; r.actW = 0; } else { r.qa.forEach((q) => q.identity()); const h2 = { v: 1 }; acSample(A.c, Math.min(A.t, dur), r.qa, h2, 1, true); for (let b = 0; b < r.names.length; b++) { if (A.upper && !UPPER.test(r.names[b])) continue; r.qs[b].slerp(r.qa[b], aw); } if (!A.upper) hyo.v += (h2.v - hyo.v) * aw; } }
     for (let b = 0; b < r.names.length; b++) r.nodes[b].quaternion.copy(r.qs[b]);
+    vrmFixApply(r.fix);
     N.hips.position.y = r.hips0 * hyo.v;
     const P = r.pose; let sp = 0, hd = 0; if (low) { sp += 0.24; hd += 0.14; } else if (r.hp < 65) sp += 0.06; if (r.state === 'reload') hd += 0.2; P.sp += (sp - P.sp) * k; P.hd += (hd - P.hd) * k;
     const ar = (n, x, y, z) => { if (!n) return; _e.set(x, y, z); _q.tmp.setFromEuler(_e); n.quaternion.premultiply(_q.tmp); };
@@ -3704,7 +3889,7 @@ function coIn(P, m) {
         case 'start': if (CO.role !== 'guest') break; closePanel(); G = Object.assign(newG(), m.bag || {}); G.flags = m.world.flags || {}; G.taken = m.world.taken || {}; G.dead = m.world.dead || {}; G.seen = m.world.seen || G.seen || {}; G.saves = m.world.saves || 0; G.kills = m.world.kills || 0; G.drops = m.world.drops || {}; G.room = m.room; G.time = m.time || 0; beginCo({ x: m.x, z: m.z, rot: m.rot }); break;
         case 'over': if (UI.mode !== 'over') { PL.state = 'dead'; G.hp = 0; gameOver(true); } break;   // the whole party is down
         case 'p': { const r = coEnsureRP(); r.tx = m.x; r.tz = m.z; r.tr = m.r; r.state = m.s; r.aim = !!m.a; r.eq = m.e; r.hp = m.h; r.speed = m.w; CO.rpRoom = m.m; if (r.f !== undefined && m.f !== r.f && m.m === RM.id) { r.kick = 1; if (isGun(m.e)) { r.flash = 0.07; if (!gunFireSnd(m.e)) { /* synthesised fallback played */ } } else { r.swT = 0.35; sfx('swing'); } } r.f = m.f | 0; if (!r.cur) { r.x = m.x; r.z = m.z; r.rot = m.r; r.cur = true; } if (m.m !== RM.id) r.cur = false; break; }
-        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(a[12] ? { t: 'z', ty: a[12], x: a[2], z: a[3], rot: a[4] } : sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[12]) E.stalker = 1; if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10], jy: a[11] || 0 }; } break; }
+        case 'en': { if (CO.role !== 'guest' || m.room !== RM.id) break; for (const a of m.l) { let E = RM.enemies.find((q) => q.key === a[0]); if (!E) { if (a[5] === 'dead') continue; if (G.dead[a[0]]) delete G.dead[a[0]]; const mi = /:e(\d+)(?:x\d+)?$/.exec(a[0]), sp0 = mi && RM.def.enemies && RM.def.enemies[+mi[1]]; E = spawnEnemy(a[12] ? { t: 'z', ty: a[12], x: a[2], z: a[3], rot: a[4] } : sp0 ? Object.assign({}, sp0, { x: a[2], z: a[3], rot: a[4], dorm: a[5] === 'dorm' ? 1 : 0 }) : { t: a[1], x: a[2], z: a[3], rot: a[4], cr: a[10] ? 1 : 0 }, a[0], a[5] === 'chase'); if (a[12]) E.stalker = 1; if (a[5] === 'dead') G.dead[a[0]] = 1; } E.net = { x: a[2], z: a[3], rot: a[4], st: a[5], stT: a[6], atk: a[7], hp: a[8], stun: a[9], cr: a[10], jy: a[11] || 0 }; } break; }
         case 'hit': { if (CO.role !== 'host') break; const E = RM.enemies.find((q) => q.key === m.key); if (E && CO.rp) hitEnemy(E, Math.min(60, +m.dmg || 0), !!m.crit, CO.rp, !!m.leg); break; }
         case 'hurt': hurtPlayer(+m.dmg || 0, +m.fx || 0, +m.fz || 0); break;
         case 'dd': { if (CO.role !== 'guest') break; G.drops = G.drops || {}; G.drops[m.ek] = { r: m.r, item: m.item, n: m.n, x: m.x, z: m.z }; const dk = 'dd:' + m.ek; if (RM.id === m.r && !G.taken[dk] && !RM.inter.some((q) => q.key === dk)) { const f = freeSpot(m.x, m.z, 0.3); worldItem({ k: 'dd', item: m.item, n: m.n, x: f[0], z: f[1], y: 0.1 }, dk); } break; }
@@ -3805,6 +3990,7 @@ function coMenu() {
     }
     setNav(els, 1);
 }
+{ const _cm = coMenu; coMenu = function () { _cm.apply(this, arguments); try { if (UI.mode !== 'co' || !opsHave().length) return; const p = document.querySelector('#menu .panel'); if (!p || p.querySelector('.opsbtn')) return; opsCss(); const o = opsGet(opsCur()), b = document.createElement('button'); b.type = 'button'; b.className = 'opsbtn'; b.textContent = '> OPERATIVE FILE: ' + (o ? o.file : AV.on ? AV.name.toUpperCase() : 'SELECT'); b.onclick = () => { try { auInit(); sfx('ok'); } catch (e) { /* audio */ } opsOpen(() => coMenu()); }; const h = p.querySelector('h2'); if (h && h.nextSibling) p.insertBefore(b, h.nextSibling); else p.appendChild(b); } catch (e) { /* menu gone */ } }; }
 function beginCo(pos) {
     $('title').classList.add('hide'); $('hud').classList.remove('hide'); closePanel(); UI.mode = null; const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; RM.busy = true; musPlay(null); G.started = true;
     loadRoom(G.room, null, { x: pos.x, z: pos.z, rot: pos.rot }); setWeaponVis(); setTimeout(() => { f.style.transition = 'opacity .8s'; f.style.opacity = 0; RM.busy = false; say('Your team is here. Stay together.', 3000); }, 500);
@@ -3945,6 +4131,7 @@ function menuOpts(p) {
     row('Volume: ' + Math.round(OPT.vol * 100) + '%  (tap to change)', () => { OPT.vol = OPT.vol >= 1 ? 0.2 : Math.round((OPT.vol + 0.2) * 10) / 10; saveOpt(); musVol(); renderMenu(); });
     row('SFX volume: ' + Math.round(OPT.sfx * 100) + '%  (tap to change)', () => { OPT.sfx = OPT.sfx >= 1 ? 0 : Math.round((OPT.sfx + 0.1) * 10) / 10; saveOpt(); musVol(); renderMenu(); });
     { const w = el('div'); w.style.cssText = 'margin:-.2em 0 .5em;display:flex;gap:.6em;align-items:center'; const sl = document.createElement('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(OPT.sfx * 100); sl.style.cssText = 'flex:1'; sl.oninput = () => { OPT.sfx = sl.value / 100; musVol(); saveOpt(); }; sl.onchange = () => { sfx('click'); renderMenu(); }; w.appendChild(sl); L.appendChild(w); }
+    row('Operative file: ' + (opsGet(opsCur()) ? opsGet(opsCur()).name : (AV.on ? AV.name : 'Default soldier')) + '  (briefing terminal)', () => opsOpen());
     row('Character: ' + (AV.on ? AV.name : 'Default soldier') + (AV.err ? '\n' + AV.err : ''), async () => { const src = OPT.avatar || 'oasis'; OPT.avatar = src === 'oasis' ? 'upload' : src === 'upload' ? 'none' : 'oasis'; saveOpt(); if (OPT.avatar === 'none') { say('Using the default soldier next time you start.', 2200); } else await avBoot(); renderMenu(); });
     row('Character slots (Player 1 / Player 2)...', () => { modOpen(); MODUI.tab = 'chr'; modRender(); });
     row('Upload a VRoid (.vrm)', () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.vrm,.glb'; fi.onchange = async () => { const fl = fi.files[0]; if (!fl) return; await idbPut('avatar', fl); OPT.avatar = 'upload'; saveOpt(); say('Loading ' + fl.name + '...', 2500); await avBoot(); renderMenu(); }; fi.click(); });
@@ -4024,6 +4211,15 @@ function openBox() {
 function writeSave() { const s = JSON.parse(JSON.stringify(G)); s.x = PL.x; s.z = PL.z; s.rot = PL.rot; s.room = RM.id; lsSet('save', s); }
 function continueGame() { const s = lsGet('save', null); if (!s) return startNew(); G = Object.assign(newG(), s); G.hp = Math.max(G.hp, 40); begin(true); }
 function startNew() { G = newG(); begin(false); }
+/* INTRO: a page of text to read before the game loads in (set window.__INTRO to a string, lines split by newlines) */
+function introThen(fn) {
+    const txt = window.__INTRO; if (!txt) return fn();
+    const p = panel(''); p.style.cssText += ';position:fixed;inset:0;width:auto;height:auto;max-width:none;border:0;border-radius:0;box-shadow:none;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:3% 8%;box-sizing:border-box;overflow:auto;text-align:left';
+    const box = el('div', '', ''); box.style.cssText = 'max-width:34em;font-family:Georgia,serif;font-size:.92em;line-height:1.5;color:#cfc6b0;white-space:pre-wrap;min-height:17em'; p.appendChild(box);
+    const go = btn('Continue', () => { done = 1; clearInterval(tm); closePanel(); fn(); }); go.style.marginTop = '.8em'; go.style.flex = '0 0 auto'; go.style.minWidth = '12em'; go.style.visibility = 'hidden'; p.appendChild(go); setNav([go]); UI.back = null;
+    let i = 0, done = 0; const tm = setInterval(() => { if (i >= txt.length) { clearInterval(tm); go.style.visibility = 'visible'; return; } box.textContent += txt[i++]; if (txt[i - 1] !== ' ' && txt[i - 1] !== '\n' && i % 3 === 0) try { sfx('type'); } catch (e) { /* quiet */ } }, 28);
+    p.addEventListener('pointerdown', (ev) => { if (ev.target === go || done) return; if (i < txt.length) { box.textContent = txt; i = txt.length; } });
+}
 function begin(loaded) {
     $('title').classList.add('hide'); $('hud').classList.remove('hide'); closePanel(); UI.mode = null; const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; RM.busy = true; musPlay(null);
     loadRoom(G.room, null, loaded ? { x: G.x, z: G.z, rot: G.rot } : { x: 0, z: 3, rot: Math.PI }); setWeaponVis(); if (CO.role === 'host') coSendStart();
@@ -4032,7 +4228,8 @@ function begin(loaded) {
 function toTitle() { G.started = false; $('hud').classList.add('hide'); $('title').classList.remove('hide'); $('prompt').classList.add('hide'); UI.mode = 'title'; musPlay('title'); titleMenu(); }
 function titleMenu() {
     const t = $('tmenu'); t.innerHTML = ''; { const cl = el('div', 'desc', 'Character: ' + (AV.on ? AV.name : (OPT.avatar || 'oasis') === 'oasis' && !oasisSig() ? 'Default soldier (no Oasis character found)' : 'Default soldier')); cl.style.cssText = 'text-align:center;margin:0 0 .6em;opacity:.75'; t.appendChild(cl); } const els = []; const add = (txt, fn) => { const b = btn(txt, fn); t.appendChild(b); els.push(b); };
-    add('New Game', () => { auInit(); startNew(); }); if (lsGet('save', null)) add('Continue', () => { auInit(); continueGame(); }); add('Sound and options', () => { auInit(); G.started = false; UI.mode = 'menu'; M.tab = 'sound'; renderMenu(); $('menu').style.zIndex = 20; });
+    add('New Game', () => { auInit(); introThen(startNew); }); if (lsGet('save', null)) add('Continue', () => { auInit(); continueGame(); }); add('Sound and options', () => { auInit(); G.started = false; UI.mode = 'menu'; M.tab = 'sound'; renderMenu(); $('menu').style.zIndex = 20; });
+    add('Operative file: ' + (opsGet(opsCur()) ? opsGet(opsCur()).name : AV.on ? AV.name : 'choose'), () => { auInit(); opsOpen(() => titleMenu()); });
     add('Online co-op (up to 4 players)', () => { auInit(); coMenu(); });
     add('Controls', () => { const p = panel('Controls'); p.appendChild(el('div', 'desc', 'Classic: Up/Down walk, Left/Right turn.\nZ or Shift (hold): aim. Space/Enter/E: use, take, open, or fire while aiming.\nQ: quick turn   R: reload   Tab/I: bag, files, sound\n\nTouch: use the on-screen buttons.\n\nFind keys, manage your bag, save at typewriters, and get to the roof.')); const b = btn('Back', () => { closePanel(); UI.mode = 'title'; titleMenu(); }); b.style.marginTop = '1em'; p.appendChild(b); UI.mode = 'ctl'; setNav([b]); UI.back = () => { closePanel(); UI.mode = 'title'; titleMenu(); }; });
     setNav(els, 1); UI.mode = 'title';
@@ -4342,7 +4539,7 @@ function stkRoomSetup(id) {
         window.__ps = PS; PS.go = go;
     }
     document.addEventListener('pointerdown', () => { auInit(); if (UI.mode === 'title' && !MUS.cur && PS.musOk) musPlay('title'); }, { once: false });
-    window.__sv = { SHAPE, oasisChars, chrFromOasis, chrCfg, idbGet, modExport, padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
+    window.__sv = { modOpen, MODUI, modRender, opsOpen, opsAssign, opsCur, OPS, SHAPE, oasisChars, chrFromOasis, chrCfg, idbGet, modExport, padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
 })();
 /* ---------- the item screen, laid out like Resident Evil 2: portrait + ECG, equipped weapon, 8 slots, description, command list ---------- */
 /* RE_ICONS lives at the top of the module (item pictures reset it while the game is still booting) */

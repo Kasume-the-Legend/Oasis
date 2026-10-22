@@ -247,6 +247,7 @@ async function loadFile(file) {
     S.map = found ? { ...found.map } : {};
     show(root); $('opts').hidden = false; $('act').hidden = false; $('mapwrap').hidden = false;
     renderMap();
+    if (!S.bones.length) { $('opts').hidden = true; $('act').hidden = true; $('mapwrap').hidden = true; status('This model has no skeleton (it is a static sculpt with no bones), so it cannot move as an avatar yet. It needs rigging first, for example in Mixamo or Blender.', 'bad'); return; }
     if (!found) status('No humanoid skeleton was recognised (' + S.bones.length + ' bones found). You can still pick the bones by hand below.', 'bad');
     else status('Recognised ' + found.matched + ' of ' + found.total + ' bones.' + (missingReq().length ? '\nSome required bones are missing - fix them below.' : '\nReady to convert.'), missingReq().length ? 'bad' : 'ok');
   } catch (e) { console.error(e); status('Could not read that file: ' + (e.message || e), 'bad'); }

@@ -1945,6 +1945,8 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             { id: 'blitz-01', name: 'Blitzball Arena', tag: 'Play now', map: 'blitz' },
             { id: 'surv-01', name: 'Harbor Inn: Survivor', tag: 'Survival horror', map: 'survivor' },
             { id: 'surv-02', name: 'Harbor Inn 2: NX', tag: 'Survival horror', map: 'survivor2' },
+            { id: 'surv-03', name: 'Harbor Inn 3', tag: 'Survival horror', map: 'survivor3' },
+            { id: 'surv-04', name: 'Outbreak Online', tag: '4-player co-op horror', map: 'outbreak' },
             { id: 'rx-01', name: 'Ryder X', tag: 'Hoverboard racing', map: 'ryderx' },
             { id: 'tbs-01', name: 'Toy Box Smash', tag: 'Platform fighter', map: 'toysmash' },
             { id: 'diner-01', name: "Key's Kitchen Clash", tag: 'Channel 1', map: 'diner' },
@@ -4564,7 +4566,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const pc = presCounts(), pm = presNet ? presNet.describe() : null;
             $('lobby-online').textContent = pm && pm.mode === 'online' || pc.total > 1 ? `${pc.total} player${pc.total === 1 ? '' : 's'} online right now` : pm && (pm.mode === 'connecting' || pm.mode === 'waiting') ? (pm.mode === 'waiting' ? 'You are the only one online right now' : 'Looking for other players...') : 'Online count unavailable (peer-to-peer is blocked here)';
             for (const d of DISTRICTS) {
-                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'budokai' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
+                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'survivor3' && d.map !== 'outbreak' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'budokai' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
                 const seen = dirSeen.get(d.id);
                 let count = Math.max(seen && Date.now() - seen.ts < 6000 ? seen.count : 0, pc.byRoom[d.id] || 0);      // tabs of this browser, and what other players report
                 if (room && room.id === d.id) count = Math.max(count, peers.size + 1);
@@ -4576,10 +4578,10 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 left.children[1].textContent = `${d.tag} \u2022 ${count} online`;
                 const btn = document.createElement('button');
                 btn.className = 'bg-psGlow hover:bg-blue-600 px-4 py-1.5 rounded-lg text-xs font-semibold transition';
-                btn.textContent = d.map === 'blitz' || d.map === 'survivor' || d.map === 'survivor2' || d.map === 'ryderx' ? 'Play' : room && room.id === d.id ? 'Here' : 'Join';
+                btn.textContent = d.map === 'blitz' || d.map === 'survivor' || d.map === 'survivor2' || d.map === 'survivor3' || d.map === 'outbreak' || d.map === 'ryderx' ? 'Play' : room && room.id === d.id ? 'Here' : 'Join';
                 btn.disabled = !!(room && room.id === d.id);
                 if (btn.disabled) btn.classList.add('opacity-50');
-                btn.addEventListener('click', () => { if (d.map === 'toysmash') { try { closeLobby(); tbsOpen(); } catch (e) { sysChat('Could not open Toy Box Smash.'); } return; } if (d.map === 'ryderx') { try { closeLobby(); rxOpen(); } catch (e) { sysChat('Could not open Ryder X.'); } return; } if (d.map === 'survivor2') { try { closeLobby(); svOpen('HarborInn2.html'); } catch (e) { sysChat('Could not open Harbor Inn 2.'); } return; } if (d.map === 'survivor') { try { closeLobby(); svOpen(); } catch (e) { sysChat('Could not open Survivor.'); } return; } if (d.map === 'blitz') { try { closeLobby(); bzOpen(); } catch (e) { sysChat('Could not open Blitzball.'); } return; } joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); });
+                btn.addEventListener('click', () => { if (d.map === 'toysmash') { try { closeLobby(); tbsOpen(); } catch (e) { sysChat('Could not open Toy Box Smash.'); } return; } if (d.map === 'ryderx') { try { closeLobby(); rxOpen(); } catch (e) { sysChat('Could not open Ryder X.'); } return; } if (d.map === 'survivor3') { try { closeLobby(); svOpen('HarborInn3.html'); } catch (e) { sysChat('Could not open Harbor Inn 3.'); } return; } if (d.map === 'outbreak') { try { closeLobby(); svOpen('Outbreak.html'); } catch (e) { sysChat('Could not open Outbreak Online.'); } return; } if (d.map === 'survivor2') { try { closeLobby(); svOpen('HarborInn2.html'); } catch (e) { sysChat('Could not open Harbor Inn 2.'); } return; } if (d.map === 'survivor') { try { closeLobby(); svOpen(); } catch (e) { sysChat('Could not open Survivor.'); } return; } if (d.map === 'blitz') { try { closeLobby(); bzOpen(); } catch (e) { sysChat('Could not open Blitzball.'); } return; } joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); });
                 row.append(left, btn);
                 list.appendChild(row);
             }
@@ -15520,7 +15522,7 @@ function btMusicStop() {
          * ==================================================================================================== */
         const SHIP_X = 4.4, SHIP_ZN = -8.2, SHIP_ZS = 8.0;
         const SHIP = { ready: false, group: null, dock: null, rects: [], stars: null, glow: [], near: null, btn: null, t: 0 };
-        const SHIP_NO = ['btl', 'tag', 'budokai', 'diner', 'bowl', 'blitz', 'survivor', 'survivor2', 'ryderx', 'construct'];
+        const SHIP_NO = ['btl', 'tag', 'budokai', 'diner', 'bowl', 'blitz', 'survivor', 'survivor2', 'survivor3', 'outbreak', 'ryderx', 'construct'];
         try { SHIP.dock = JSON.parse(localStorage.getItem('oasis.ship') || 'null'); } catch (e) { SHIP.dock = null; }
         function myShipCode() { let c = null; try { c = localStorage.getItem('oasis.shipcode'); } catch (e) { /* storage */ } if (!c || !/^H[A-Z0-9]{11}$/.test(c)) { c = makeCode('ship'); try { localStorage.setItem('oasis.shipcode', c); } catch (e) { /* storage */ } } return c; }
         function shipGround() { return 0; }
