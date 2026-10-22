@@ -133,7 +133,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#d9cfb4;fon
 .re-eqrow{display:flex;gap:.4em;flex:none}.re-eqrow .re-eq{flex:1;min-width:0}.re-tfa{cursor:pointer}.re-tfa .re-eql{background:linear-gradient(#3f9a5c,#1c4d31);color:#eaffef;font-size:.6em}
 </style>
 <script id="sv-cast">window.__CAST = {"ada": 1, "chris": 1, "claire": 1, "ethan": 1, "helena": 1, "jill": 1, "leonnx": 1, "leon": 1, "piers": 1, "rose": 1, "shevanx": 1, "sheva": 1, "wesker": 1};window.__CASTC = {};window.__castBuf = function (k) { if (!window.__CAST[k]) return Promise.reject(new Error('no such operative')); if (window.__CASTC[k]) return window.__CASTC[k];var e = window.__CAST_EMB && window.__CAST_EMB[k]; if (e) { var bin = atob(e), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return (window.__CASTC[k] = Promise.resolve(u.buffer)); }return (window.__CASTC[k] = fetch('cast/' + k + '.vrm').then(function (r) { if (!r.ok) throw new Error('cast/' + k + '.vrm ' + r.status); return r.arrayBuffer(); }).catch(function (x) { delete window.__CASTC[k]; throw x; })); };</script>
-</head>
+<script>window.__NO_SHAPE=1;</script></head>
 <body>
 <div id="stage">
 <canvas id="cv"></canvas>
@@ -350,14 +350,23 @@ function musPlay(slot) {
     if (y) {
         try {
             const fr = document.createElement('iframe'), par = new URLSearchParams({ autoplay: '1', controls: '0', enablejsapi: '1', playsinline: '1', rel: '0', loop: '1' });
+            try { if (location.protocol.startsWith('http')) par.set('origin', location.origin); } catch (e) { /* no origin */ }
             if (y.l) { par.set('listType', 'playlist'); par.set('list', y.l); } else par.set('playlist', y.v);
-            fr.src = 'https://www.youtube.com/embed/' + (y.v || '') + '?' + par.toString(); fr.allow = 'autoplay; encrypted-media'; fr.title = 'music'; fr.style.cssText = 'position:fixed;width:2px;height:2px;left:-10px;top:-10px;border:0;opacity:0;pointer-events:none';
+            fr.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');   // YouTube refuses embeds that send no referrer (error 153)
+            fr.src = 'https://www.youtube.com/embed/' + (y.v || 'videoseries') + '?' + par.toString(); fr.allow = 'autoplay; encrypted-media'; fr.title = 'music'; fr.style.cssText = 'position:fixed;width:220px;height:220px;left:-400px;top:-400px;border:0;opacity:0.01;pointer-events:none';
+            fr.addEventListener('load', () => { try { fr.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*'); } catch (e) { /* ok */ } });
             fr.addEventListener('load', () => setTimeout(() => { try { fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [Math.round(OPT.vol * 100)] }), '*'); } catch (e) { /* ok */ } }, 1500));
             document.body.appendChild(fr); MUS.yf = fr; return;
         } catch (e) { /* synth */ }
     }
     musSynth(slot);
 }
+window.addEventListener('message', (ev) => {   // YouTube tells us when it refuses a link: say so and fall back to the built-in music
+    try {
+        if (!MUS.yf || ev.source !== MUS.yf.contentWindow || typeof ev.data !== 'string') return; const d = JSON.parse(ev.data); const code = d.event === 'onError' ? d.info : d.event === 'infoDelivery' && d.info && d.info.errorCode ? d.info.errorCode : 0; if (!code) return;
+        const slot = MUS.cur; musStop(); MUS.cur = slot; say(code === 101 || code === 150 || code === 153 ? 'YouTube will not play that link here (the video does not allow embedding). Try another link or upload a file.' : 'That YouTube link could not be played (error ' + code + ').', 5000); musSynth(slot);
+    } catch (e) { /* not a player message */ }
+});
 function musVol() { if (MUS.el) MUS.el.volume = clamp(OPT.vol, 0, 1); if (AU.out) AU.out.gain.value = OPT.vol * OPT.sfx; if (MUS.yf) try { MUS.yf.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [Math.round(OPT.vol * 100)] }), '*'); } catch (e) { /* ok */ } }
 function musSynth(slot) {
     if (!AU.ctx) return; const nodes = [], mg = AU.ctx.createGain(); mg.gain.value = 0.55; mg.connect(AU.out);
@@ -850,7 +859,7 @@ function disposeGroup(g) { g.traverse((o) => { if (o.geometry) o.geometry.dispos
    A room keeps its outer rectangle, doors, items and enemies; this layer adds full-height wall blocks (L, T and U shapes), stub walls and bays,
    pilasters, colonnades, shelf aisles, balcony pits with railings and stair flights - all as ordinary props, so collisions, cameras and the map editor keep working.
    Every feature is checked: all doors must still reach each other, every item / terminal / enemy must stay reachable, and nothing may sit on a door.  A feature that fails is dropped. */
-const SHAPE = { on: !/[?&]noshape\b/.test(location.search), hand: {}, stats: { rooms: 0, feats: 0, dropped: 0 } };
+const SHAPE = { on: !window.__NO_SHAPE && !/[?&]noshape\b/.test(location.search), hand: {}, stats: { rooms: 0, feats: 0, dropped: 0 } };
 function shDoorSp(def, x) { const w = def.w, d = def.d; return { x: x.side === 'E' ? w / 2 - 1.4 : x.side === 'W' ? -w / 2 + 1.4 : x.at, z: x.side === 'N' ? -d / 2 + 1.4 : x.side === 'S' ? d / 2 - 1.4 : x.at }; }
 function shTargets(def) {
     const T = []; for (const it of def.items || []) T.push([it.x, it.z, 'item']); for (const p of def.puz || []) T.push([p.x, p.z, 'puz']);
@@ -1133,7 +1142,8 @@ function spawnEnemy(e, key, chase) {
     else if (e.t === 'h') { mdl = makeHound(); E = { hp: 6, spd: 5.2, rad: 0.4, dmg: 9, cd: 0.9, wind: 0.3, reach: 1.1 }; }
     else { mdl = makeBoss(); E = { hp: 140, spd: 1.2, rad: 0.95, dmg: 24, cd: 1.6, wind: 0.85, reach: 2.5, boss: 1 }; }
     try { const rm = modApplyEnemy(e, E, mdl, key); if (rm) mdl = rm; } catch (er) { console.warn('mod kit', er); }
-    Object.assign(E, { t: e.t, key, x: e.x, z: e.z, rot: e.rot || 0, mdl, st: e.dorm ? 'dorm' : chase ? 'chase' : 'idle', stT: 0, stun: 0, atkT: 0, hurt: 0, ph: Math.random() * 6, hp0: E.hp, cr: e.cr ? 1 : 0, charge: 0, chT: 3 + Math.random() * 3, wake: 0 });
+    const fsp = freeSpot(e.x, e.z, Math.min(0.45, Math.max(0.3, (E.rad || 0.5) * 0.8)));   // never spawn inside furniture: a body stuck in a prop cannot move and can soft-lock the room
+    Object.assign(E, { t: e.t, key, x: fsp[0], z: fsp[1], rot: e.rot || 0, mdl, st: e.dorm ? 'dorm' : chase ? 'chase' : 'idle', stT: 0, stun: 0, atkT: 0, hurt: 0, ph: Math.random() * 6, hp0: E.hp, cr: e.cr ? 1 : 0, charge: 0, chT: 3 + Math.random() * 3, wake: 0 });
     mdl.root.position.set(E.x, 0, E.z); RM.group.add(mdl.root); RM.enemies.push(E); if (E.st === 'dorm') { mdl.root.rotation.x = -Math.PI / 2; mdl.root.position.y = 0.18; } return E;
 }
 function hitsCol(x, z, r) { for (const c of RM.cols) { const nx = clamp(x, c.x0, c.x1), nz = clamp(z, c.z0, c.z1); if ((x - nx) * (x - nx) + (z - nz) * (z - nz) < r * r) return true; } return false; }
@@ -1353,7 +1363,8 @@ function freeSpot(x, z, r) {   // never drop anybody inside furniture: spiral ou
 function loadRoom(id, doorId, pos) {
     G.room = id; G.seen = G.seen || {}; G.seen[id] = 1; buildRoom(id); RM.busy = true; const def = ROOMS[id]; let sp = { x: 0, z: 0, rot: 0 };
     if (pos) sp = pos; else if (doorId) { const dd = def.doors.find((q) => q.id === doorId); if (dd) sp = dd.sp; } else sp = { x: G.x, z: G.z, rot: G.rot };
-    if (CO.on && CO.role === 'guest') { const sl = Math.max(2, Math.min(4, CO.slot || 2)), lat = [0, 0.85, -0.85, 1.7][sl - 1], fw = [0, 0.4, 0.4, 0.8][sl - 1]; sp = { x: sp.x + Math.cos(sp.rot) * fw + Math.sin(sp.rot) * lat, z: sp.z - Math.sin(sp.rot) * fw + Math.cos(sp.rot) * lat, rot: sp.rot }; }   // the party arrives side by side, not in a queue if (CO.on && G.hp <= 0) G.hp = 35; { const fs = freeSpot(sp.x, sp.z, 0.4); sp = { x: fs[0], z: fs[1], rot: sp.rot }; } placePlayer(sp.x, sp.z, sp.rot); setWeaponVis(); camPick(true); coRoomLoaded(); RM.entered = performance.now(); RM.musFor = null; escRoomSetup(id); try { stkRoomSetup(id); } catch (er) { console.warn('stalker', er); }
+    if (CO.on && CO.role === 'guest') { const sl = Math.max(2, Math.min(4, CO.slot || 2)), lat = [0, 0.85, -0.85, 1.7][sl - 1], fw = [0, 0.4, 0.4, 0.8][sl - 1]; sp = { x: sp.x + Math.cos(sp.rot) * fw + Math.sin(sp.rot) * lat, z: sp.z - Math.sin(sp.rot) * fw + Math.cos(sp.rot) * lat, rot: sp.rot }; }   // the party arrives side by side, not in a queue
+    if (CO.on && G.hp <= 0) G.hp = 35; { const fs = freeSpot(sp.x, sp.z, 0.4); sp = { x: fs[0], z: fs[1], rot: sp.rot }; } placePlayer(sp.x, sp.z, sp.rot); setWeaponVis(); camPick(true); coRoomLoaded(); RM.entered = performance.now(); RM.musFor = null; escRoomSetup(id); try { stkRoomSetup(id); } catch (er) { console.warn('stalker', er); }
 }
 /* more angles: a room with one fixed camera gets cameras from the opposite corners. Whichever quadrant you stand in is filmed from the corner across from it. */
 function augCams(def) {
@@ -3002,7 +3013,7 @@ async function modImport(f) {
     for (const [k, v] of Object.entries(o.files || {})) { if (k.startsWith('a:')) await idbPut('mod:a:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('m:')) await idbPut('mod:m:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (k.startsWith('i:')) await idbPut('mod:i:' + k.slice(2), { n: v.n, b: modUnB64(v.b) }); else if (/^c:P[12]:\d$/.test(k)) await idbPut('mod:c:' + k.slice(2).replace(':', ''), { n: String(v.n || 'Character').slice(0, 60), b: modUnB64(v.b) }); }
     modSave(); MOD.aLoaded = false; if (AU.ctx) await modLoadAudio(); await modBoot(); modRender();
 }
-window.__mod = MOD; MOD.fn = { modOpen, modSetModel, modSetSound, modApplyEnemy, modGunInner }; setTimeout(() => { try { modBoot(); } catch (e) { console.warn('mod kit', e); } }, 0);
+window.__mod = MOD; MOD.fn = { modOpen, modSetModel, modSetSound, modApplyEnemy, modGunInner }; setTimeout(() => { try { Promise.resolve(modBoot()).catch((e) => console.warn('mod kit', e)).finally(() => { MOD.booted = 1; }); } catch (e) { console.warn('mod kit', e); MOD.booted = 1; } }, 0);
 function frame(now) {
     requestAnimationFrame(frame); if (window.__ctxLost || document.hidden) { frame.last = 0; return; }   // nothing is drawn while the tab is hidden or the graphics are gone: keeps a phone cool
     const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
@@ -3492,7 +3503,7 @@ const coSpread = (x, z, j, w, d, r) => { const a = j * 2.1 + 0.7; return [Math.m
 const r2 = (v) => Math.round(v * 100) / 100;
 function coSendTo(P, m) { if (CO.tr && P) { try { CO.tr.send(P.peer, m); } catch (e) { /* peer gone */ } } }
 function coAll(m, skip, force) { for (const P of CO.peers.slice()) if (P !== skip && (P.ok || force)) coSendTo(P, m); }
-const CO_BC = new Set(['p', 'flag', 'sfx', 'world', 'go', 'en', 'dd', 'ev', 'taken', 'over', 'bar', 'savecopy', 'ros', 'bye']), CO_HOSTMSG = new Set(['hit', 'door', 'take', 'bag', 'savereq']);
+const CO_BC = new Set(['p', 'flag', 'sfx', 'world', 'go', 'en', 'dd', 'ev', 'taken', 'over', 'bar', 'savecopy', 'ros', 'rdys', 'bye']), CO_HOSTMSG = new Set(['hit', 'door', 'take', 'bag', 'savereq', 'rdy']);
 /* where a message goes: world news to everybody, requests to the host, everything else to the partner CO.cur points at */
 const coSend = (m) => { if (!CO.tr) return; if (CO_BC.has(m.t)) { coAll(m, null, m.t === 'bye'); return; } if (CO.role === 'guest' && CO_HOSTMSG.has(m.t)) { coSendTo(CO.peers.find((p) => p.pHost), m); return; } if (CO.cur) coSendTo(CO.cur, m); };
 function coPost(o) { try { if (window.parent && window.parent !== window) window.parent.postMessage(o, location.origin && location.origin !== 'null' ? location.origin : '*'); } catch (e) { /* standalone */ } }
@@ -3867,7 +3878,7 @@ function coWelcome(Q, m) {
     if (m.host) { Q.pHost = true; Q.ok = true; Q.pslot = 1; Q.peerName = 'Player 1'; CO.slot = Math.max(2, Math.min(4, m.slot | 0)); CO.state = 'connected'; coFix(); withPeer(Q, coEnsureRP); setTimeout(() => { if (CO.peers.includes(Q)) withPeer(Q, coSendAvatar); }, 600); coApplyRoster(); coRefresh(); } else coApplyRoster();
 }
 /* ---- messages */
-const CO_HOST_ONLY = new Set(['start', 'go', 'en', 'dd', 'ev', 'world', 'taken', 'sfx', 'mus', 'savecopy', 'hurt', 'bagreq', 'ros']);
+const CO_HOST_ONLY = new Set(['start', 'go', 'en', 'dd', 'ev', 'world', 'taken', 'sfx', 'mus', 'savecopy', 'hurt', 'bagreq', 'ros', 'rdys']);
 function coMsg(id, m) {
     if (!m || typeof m !== 'object') return; CO.lastRx = performance.now(); CO.warned = 0;
     const Q = coById(id);
@@ -3891,6 +3902,8 @@ function coIn(P, m) {
         case 'bag': if (CO.role === 'host') { CO.bags = CO.bags || {}; if (CO.peerPid) CO.bags[CO.peerPid] = m.bag; if (CO.bagWait) { CO.bagWait.delete(CO.peerPid); if (!CO.bagWait.size && CO.bagCb) { const cb = CO.bagCb; CO.bagCb = null; cb(true); } } } break;
         case 'savereq': if (CO.role === 'host') coSave(); break;
         case 'savecopy': coStoreSave(m.blob); say('Game saved for both players.', 2400); break;
+        case 'rdy': if (CO.role === 'host') P.rdy = !!m.r; break;
+        case 'rdys': if (P.pHost && m.s && typeof m.s === 'object') { CO.rdys = m.s; CO.rdyMe = !!m.s[CO.slot]; coRefresh(); } break;
         case 'ros': if (P.pHost && Array.isArray(m.l)) { CO.ros = m.l.filter((x) => Array.isArray(x) && typeof x[0] === 'string' && (x[1] | 0) >= 1 && (x[1] | 0) <= 4).map((x) => [x[0].slice(0, 24), x[1] | 0]).slice(0, 4); coApplyRoster(); } break;
         case 'start': if (CO.role !== 'guest') break; closePanel(); G = Object.assign(newG(), m.bag || {}); G.flags = m.world.flags || {}; G.taken = m.world.taken || {}; G.dead = m.world.dead || {}; G.seen = m.world.seen || G.seen || {}; G.saves = m.world.saves || 0; G.kills = m.world.kills || 0; G.drops = m.world.drops || {}; G.room = m.room; G.time = m.time || 0; beginCo({ x: m.x, z: m.z, rot: m.rot }); break;
         case 'over': if (UI.mode !== 'over') { PL.state = 'dead'; G.hp = 0; gameOver(true); } break;   // the whole party is down
@@ -3939,7 +3952,7 @@ async function coJoin(code) {
 function coLeave() {
     try { coAll({ t: 'bye' }, null, true); } catch (e) { /* closed */ } const tr = CO.tr; setTimeout(() => { try { if (tr) tr.close(); } catch (e) { /* closed */ } }, 250);
     for (const Q of CO.peers) if (Q.rp) { try { Q.rp.g.visible = false; scene.remove(Q.rp.g); } catch (e) { /* gone */ } }
-    CO.tr = null; CO.peers = []; CO.cur = null; CO.role = null; CO.on = false; CO.state = 'idle'; CO.code = ''; CO.note = ''; CO.slot = 1; CO.ros = null; CO.auto = 0; CO.autoGo = 0; const b = $('buddy'); if (b) { b.classList.add('hide'); b.dataset.h = ''; }
+    CO.tr = null; CO.peers = []; CO.cur = null; CO.role = null; CO.on = false; CO.state = 'idle'; CO.code = ''; CO.note = ''; CO.slot = 1; CO.ros = null; CO.auto = 0; CO.autoGo = 0; CO.rdyMe = 0; CO.rdys = null; CO.rIds = ''; CO.rSig = ''; const b = $('buddy'); if (b) { b.classList.add('hide'); b.dataset.h = ''; }
 }
 /* ---- quick match: everybody searching joins one public room, and when four are in the four who arrived first are put together */
 const QM = { on: false, tr: null, seen: new Map(), ids: new Set(), iv: 0, t0: 0, state: '', note: '', n: 1, last: '', stable: 0 };
@@ -3971,15 +3984,25 @@ setInterval(() => {
     try {
         if (CO.role !== 'host' || !CO.auto || (G && G.started)) return; const n = coOk().length, now = Date.now();
         if (n >= 3 && !CO.autoGo) CO.autoGo = now;
-        if ((CO.autoGo && now - CO.autoGo > 2500) || (n >= 1 && now - CO.auto > 30000)) { CO.auto = 0; CO.autoGo = 0; closePanel(); UI.mode = null; CO.bags = {}; startNew(); } else if (n === 0 && now - CO.auto > 45000) { CO.auto = 0; coRefresh(); } else if (UI.mode === 'co') coMenu();
+        if (n >= 1 && coRdyAll()) { CO.auto = 0; CO.autoGo = 0; closePanel(); UI.mode = null; CO.bags = {}; startNew(); } else if (n === 0 && now - CO.auto > 45000) { CO.auto = 0; coRefresh(); } else if (UI.mode === 'co') coMenu();
     } catch (e) { /* menu closed */ }
 }, 700);
 /* ---- the lobby screen (title menu: Online) */
 function coRefresh() { if (UI.mode === 'co') coMenu(); }
+/* ready-up: every active player must press Ready before the host is offered Start. A change in who is connected clears everyone's ready. */
+const coRdyAll = () => { const o = coOk(); return !o.length || (!!CO.rdyMe && o.every((q) => q.rdy)); };
+const coRdySlots = () => { const r = { 1: !!CO.rdyMe }; for (const q of coOk()) r[q.pslot] = !!q.rdy; return r; };
+function coToggleReady() { CO.rdyMe = !CO.rdyMe; sfx('click'); if (CO.role === 'guest') { coSend({ t: 'rdy', r: CO.rdyMe ? 1 : 0 }); coRefresh(); } else coRdyTick(); }
+function coRdyTick() {
+    if (CO.role !== 'host' || !CO.tr || (G && G.started)) return; const ids = coOk().map((q) => q.peer).sort().join();
+    if (ids !== CO.rIds) { CO.rIds = ids; CO.rdyMe = 0; for (const q of CO.peers) q.rdy = false; }
+    const sg = JSON.stringify(coRdySlots()); if (sg !== CO.rSig) { CO.rSig = sg; coSend({ t: 'rdys', s: coRdySlots() }); coRefresh(); }
+}
+setInterval(() => { try { coRdyTick(); } catch (e) { /* lobby closed */ } }, 400);
 function coMenu() {
     UI.mode = 'co'; const p = panel('Online (up to 4 players)'), els = []; const add = (t, fn) => { const b = btn(t, fn); b.style.cssText += ';display:block;width:100%;margin:.4em 0;text-align:left'; p.appendChild(b); els.push(b); return b; }; const msg = (t) => { const d = el('div', 'desc', t); d.style.margin = '.6em 0'; p.appendChild(d); };
     const back = () => { qmStop(); coLeave(); closePanel(); UI.mode = 'title'; titleMenu(); };
-    const roster = () => { const d = el('div', 'desc'); d.style.cssText = 'margin:.6em 0;text-align:center;letter-spacing:.05em'; const n = 1 + coOk().length; d.innerHTML = [1, 2, 3, 4].map((sl) => { const on = sl === 1 || sl === CO.slot || coOk().some((q) => q.pslot === sl), me = sl === (CO.role === 'host' ? 1 : CO.slot); return '<span style="margin:0 .5em;color:' + (on ? CO_TXT[sl - 1] : '#555') + '">' + (on ? '●' : '○') + ' P' + sl + (me ? ' (you)' : '') + '</span>'; }).join('') + '<br>' + n + ' / 4 players'; p.appendChild(d); };
+    const roster = () => { const d = el('div', 'desc'); d.style.cssText = 'margin:.6em 0;text-align:center;letter-spacing:.05em'; const n = 1 + coOk().length, rs = CO.role === 'host' ? coRdySlots() : (CO.rdys || {}); d.innerHTML = [1, 2, 3, 4].map((sl) => { const on = sl === 1 || sl === CO.slot || coOk().some((q) => q.pslot === sl), me = sl === (CO.role === 'host' ? 1 : CO.slot); return '<span style="margin:0 .5em;color:' + (on ? CO_TXT[sl - 1] : '#555') + '">' + (on ? '●' : '○') + ' P' + sl + (me ? ' (you)' : '') + (on && n > 1 ? (rs[sl] ? ' \u2714' : ' \u2026') : '') + '</span>'; }).join('') + '<br>' + n + ' / 4 players'; p.appendChild(d); };
     if (QM.on) {
         msg(QM.state === 'opening' ? 'Opening the connection...' : QM.state === 'error' ? 'Could not start: ' + QM.note : 'Searching for players...  ' + QM.n + ' / 4\nThe game starts by itself as soon as four players are in the queue.' + (QM.note ? '\n' + QM.note : '')); add('Cancel', () => { qmStop(); coMenu(); }); UI.back = () => { qmStop(); coMenu(); };
     } else if (!CO.role) {
@@ -3987,12 +4010,13 @@ function coMenu() {
         add('Quick match: public queue, starts at 4 players', () => qmStart()); add('Host a private game', () => coHost()); const row = el('div'); row.style.cssText = 'display:flex;gap:.5em;margin:.4em 0'; const inp = el('input', 'inp'); inp.placeholder = 'Code'; inp.maxLength = 4; inp.style.cssText = 'flex:1;font-size:1.3em;text-transform:uppercase;letter-spacing:.3em'; const jb = btn('Join', () => { const c = inp.value.trim().toUpperCase(); if (/^[A-Z]{4}$/.test(c)) coJoin(c); else say('Enter the 4-letter code.', 1800); }); row.append(inp, jb); p.appendChild(row); els.push(jb); add('Back', back); UI.back = back;
     } else if (CO.role === 'host') {
         const big = el('div', 'big', CO.auto ? 'MATCH FOUND' : CO.code); big.style.cssText = 'position:static;font-size:' + (CO.auto ? '2em' : '3em') + ';letter-spacing:.4em;text-align:center;color:#e0c26a;margin:.3em 0'; p.appendChild(big); if (CO.state !== 'error') roster();
-        const n = coOk().length;
-        msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? 'Could not start: ' + CO.note : CO.auto ? (CO.autoGo ? 'All four are here. Starting...' : 'Waiting for your team to connect...') : n ? 'Start when you are ready. Up to ' + (3 - n) + ' more can join with the code (or an invite if they are in your Oasis room).' : 'Waiting for players. Give them this code, or they get an invite if they are in your Oasis room.' + (CO.note ? '\n' + CO.note : ''));
-        if (CO.state !== 'error') { add('Start new game', () => { CO.auto = 0; closePanel(); UI.mode = null; CO.bags = {}; startNew(); }); if (!CO.auto && lsGet('save', null)) add('Continue saved game', () => { closePanel(); UI.mode = null; continueGame(); });
+        const n = coOk().length, wm = 'Everyone has to ready up before the game can start.\nNot ready: ' + [!CO.rdyMe && 'you'].concat(coOk().filter((q) => !q.rdy).map((q) => q.peerName || 'P' + q.pslot)).filter(Boolean).join(', ');
+        msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? 'Could not start: ' + CO.note : n && !coRdyAll() ? wm : CO.auto ? (n ? 'Everyone is ready. Starting...' : 'Waiting for your team to connect...') : n ? 'Start when you are ready. Up to ' + (3 - n) + ' more can join with the code (or an invite if they are in your Oasis room).' : 'Waiting for players. Give them this code, or they get an invite if they are in your Oasis room.' + (CO.note ? '\n' + CO.note : ''));
+        if (CO.state !== 'error' && n) add(CO.rdyMe ? 'Ready \u2714  (click to cancel)' : 'Ready up', coToggleReady);
+        if (CO.state !== 'error' && coRdyAll()) { add('Start new game', () => { CO.auto = 0; closePanel(); UI.mode = null; CO.bags = {}; startNew(); }); if (!CO.auto && lsGet('save', null)) add('Continue saved game', () => { closePanel(); UI.mode = null; continueGame(); });
             if (!CO.auto) for (const [key, sv] of coSaveList()) { const others = sv.pids.filter((q) => q !== PID), miss = others.filter((o) => !coOk().some((q) => q.peerPid === o)); add('Continue co-op save with ' + others.map(pname).join(', ') + (miss.length ? '  (waiting for ' + miss.map(pname).join(', ') + ')' : '') + '  ' + new Date(sv.ts).toLocaleDateString(), () => { if (miss.length) { sfx('locked'); say('This save needs ' + miss.map(pname).join(', ') + ' to be here. Give them the code above.', 3000); return; } closePanel(); UI.mode = null; hostLoadCo(sv); }); } } add('Leave', back); UI.back = back;
     } else {
-        roster(); msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? CO.note : coOk().length ? 'Connected. Waiting for the host to start...' : 'Looking for game ' + CO.code + '...'); add('Leave', back); UI.back = back;
+        roster(); msg(CO.state === 'opening' ? 'Opening the connection...' : CO.state === 'error' ? CO.note : coOk().length ? (CO.rdyMe ? 'You are ready. Waiting for everyone else and the host to start...' : 'Connected. Press Ready up when you are set; the host can start once everyone is ready.') : 'Looking for game ' + CO.code + '...'); if (coOk().length) add(CO.rdyMe ? 'Ready \u2714  (click to cancel)' : 'Ready up', coToggleReady); add('Leave', back); UI.back = back;
     }
     setNav(els, 1);
 }
@@ -4216,7 +4240,18 @@ function openBox() {
 /* ----- save / load ----- */
 function writeSave() { const s = JSON.parse(JSON.stringify(G)); s.x = PL.x; s.z = PL.z; s.rot = PL.rot; s.room = RM.id; lsSet('save', s); }
 function continueGame() { const s = lsGet('save', null); if (!s) return startNew(); G = Object.assign(newG(), s); G.hp = Math.max(G.hp, 40); begin(true); }
-function startNew() { G = newG(); begin(false); }
+/* un-stick: anyone standing inside a wall or furniture for half a second is moved to the nearest open floor */
+let STK = 0;
+function unstickEnemies() {   // anything that ended up inside a prop (props can be added after the spawn) is lifted to open floor so it can move again
+    if (CO.role === 'guest' || !RM.def || !RM.enemies) return;
+    for (const E of RM.enemies) { if (E.st === 'dead' || !E.mdl || !E.mdl.root) continue; if (!hitsCol(E.x, E.z, 0.28)) continue; const f = freeSpot(E.x, E.z, 0.36); if (f[0] === E.x && f[1] === E.z) continue; E.x = f[0]; E.z = f[1]; E.mdl.root.position.x = E.x; E.mdl.root.position.z = E.z; }
+}
+function unstickTick() { try { unstickEnemies();
+    if (!G || !RM.def || RM.busy || !PL || PL.state === 'dead') { STK = 0; return; }
+    if (hitsCol(PL.x, PL.z, 0.22) || !inBounds(PL.x, PL.z, 0.22)) { if (++STK >= 2) { STK = 0; const f = freeSpot(PL.x, PL.z, 0.4); if (f[0] !== PL.x || f[1] !== PL.z) { placePlayer(f[0], f[1], PL.rot); say('Pushed back onto open floor.', 1500); } } } else STK = 0;
+} catch (e) { STK = 0; } }
+setInterval(unstickTick, 250);
+function startNew() { CO.rdyMe = 0; CO.rIds = ''; CO.rSig = ''; for (const q of CO.peers) q.rdy = false; G = newG(); begin(false); }
 /* INTRO: a page of text to read before the game loads in (set window.__INTRO to a string, lines split by newlines) */
 function introThen(fn) {
     const txt = window.__INTRO; if (!txt) return fn();
@@ -4226,7 +4261,12 @@ function introThen(fn) {
     let i = 0, done = 0; const tm = setInterval(() => { if (i >= txt.length) { clearInterval(tm); go.style.visibility = 'visible'; return; } box.textContent += txt[i++]; if (txt[i - 1] !== ' ' && txt[i - 1] !== '\n' && i % 3 === 0) try { sfx('type'); } catch (e) { /* quiet */ } }, 28);
     p.addEventListener('pointerdown', (ev) => { if (ev.target === go || done) return; if (i < txt.length) { box.textContent = txt; i = txt.length; } });
 }
+/* a new game waits (up to 40 s) until the built-in creature bodies are parsed, so nothing spawns as a stock zombie by accident */
 function begin(loaded) {
+    if (MOD.booted || begin.w > 200) { begin.w = 0; return beginNow(loaded); }
+    begin.w = (begin.w || 0) + 1; if (begin.w === 1) say('Loading creature models...', 3000); setTimeout(() => begin(loaded), 200);
+}
+function beginNow(loaded) {
     $('title').classList.add('hide'); $('hud').classList.remove('hide'); closePanel(); UI.mode = null; const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; RM.busy = true; musPlay(null);
     loadRoom(G.room, null, loaded ? { x: G.x, z: G.z, rot: G.rot } : { x: 0, z: 3, rot: Math.PI }); setWeaponVis(); if (CO.role === 'host') coSendStart();
     setTimeout(() => { f.style.transition = 'opacity .8s'; f.style.opacity = 0; RM.busy = false; if (!loaded) say('Something is wrong with the inn. Find a way out.', 3500); }, 500);
@@ -4545,7 +4585,7 @@ function stkRoomSetup(id) {
         window.__ps = PS; PS.go = go;
     }
     document.addEventListener('pointerdown', () => { auInit(); if (UI.mode === 'title' && !MUS.cur && PS.musOk) musPlay('title'); }, { once: false });
-    window.__sv = { modOpen, MODUI, modRender, opsOpen, opsAssign, opsCur, OPS, SHAPE, oasisChars, chrFromOasis, chrCfg, idbGet, modExport, padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
+    window.__sv = { unstickTick, unstickEnemies, modOpen, MODUI, modRender, opsOpen, opsAssign, opsCur, OPS, SHAPE, oasisChars, chrFromOasis, chrCfg, idbGet, modExport, padRumble, RUMBLE, camPick, spawnEnemy, rezTick, riseEnemy, openBox, UI, M, SFX, AU, sfx, auInit, fire, hitEnemy, CO, coHost, coJoin, dcu: dcUpdate, door: (i) => { const d = RM.def.doors[i || 0]; goRoom(d.to, d.toDoor, d); }, DC, dbg: (c) => { RM.dbgCam = c; }, AV, AC, avLoad, avAct, avBoot, G: () => G, RM: () => RM, PL, startNew, goRoom: (id, d) => loadRoom(id, d), rooms: () => Object.keys(ROOMS), coSave, hostLoadCo, coSaveList, PID, useDoor, R: ROOMS, mkz: makeZombie, zst: zStep, zplay: zPlay, fs: freeSpot, UI, ROOMS, hitEnemy, doAction, KEYS, puzUse, invGive, invHas, invTake, setFlag, ITEMS, LOCKS, spawnEnemy };
 })();
 /* ---------- the item screen, laid out like Resident Evil 2: portrait + ECG, equipped weapon, 8 slots, description, command list ---------- */
 /* RE_ICONS lives at the top of the module (item pictures reset it while the game is still booting) */
