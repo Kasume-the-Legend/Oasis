@@ -12662,11 +12662,18 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 const root = new THREE.Group(); root.visible = false; scene.add(root); NU.group = root; terrain.matrixAutoUpdate = false; terrain.frustumCulled = false; root.add(terrain);
                 // props: one instanced mesh per shape; nothing grows inside the plaza
                 const V = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(); let nInst = 0;
+                let pine = null; try { const pb = await assetBuf(['nuu/pine.glb', 'Nuu/pine.glb', 'pine.glb', 'assets/nuu/pine.glb'], 'glTF'); const pg = await new Promise((ok, no) => new GLTFLoader().parse(pb, '', ok, no)); const ms = {}; pg.scene.traverse((o) => { if (o.isMesh) { ms[o.name] = o; if ('metalness' in o.material) { o.material.metalness = 0; o.material.roughness = 1; } o.material.side = THREE.DoubleSide; } }); if (ms.Pine_LOD0 && ms.Pine_LOD1 && ms.Pine_LOD2) pine = ms; } catch (e) { console.warn('pine.glb not found - keeping the stock trees', e && e.message); }
+                const pineList = [];
                 for (const p of props.values()) {
                     const keep = p.list.filter((m) => { m.decompose(V, Q, S); return Math.hypot(V.x - hub.x, V.z - hub.z) > 17; }); if (!keep.length) continue;
+                    if (pine && /^SM_tree_0[1-6]$/.test(p.top)) { if (p.mat && p.mat.name === 'bark') { p.geo.computeBoundingBox(); const hh = p.geo.boundingBox.max.y - p.geo.boundingBox.min.y; for (const m of keep) { m.decompose(V, Q, S); pineList.push({ x: V.x, y: V.y, z: V.z, h: Math.max(5, hh * S.y * 1.1), r: Math.atan2(2 * (Q.w * Q.y), 1 - 2 * Q.y * Q.y), i: pineList.length }); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); } } continue; }
                     const im = new THREE.InstancedMesh(p.geo, p.mat, keep.length); keep.forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); nInst += keep.length;
                     if (/^SM_tree_0[1-6]$/.test(p.top) && p.mat && p.mat.name === 'bark') for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); }
                     else if (/stone|stump|log/.test(p.top) && !/small/.test(p.top)) { p.geo.computeBoundingBox(); const bb = p.geo.boundingBox; for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, 0.38 * Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * S.x); } }
+                }
+                if (pine && pineList.length) {
+                    const n = pineList.length, ims = [pine.Pine_LOD0, pine.Pine_LOD1, pine.Pine_LOD2].map((o) => { const im = new THREE.InstancedMesh(o.geometry, o.material, n); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); return im; });
+                    NU.pines = { list: pineList, ims, t: 0, last: new THREE.Vector3(1e9, 0, 1e9) }; nInst += n;
                 }
                 NU.nInst = nInst;
                 for (let z = hub.z - 18; z <= hub.z + 18; z += 0.5) for (let x = hub.x - 18; x <= hub.x + 18; x += 0.5) if (Math.hypot(x - hub.x, z - hub.z) < 17 && !(Math.abs(x) > NU_EDGE - 2 || Math.abs(z) > NU_EDGE - 2)) { const bi = Math.floor((x - NU_X0) * 2), bj = Math.floor((z - NU_X0) * 2); NU.nav.b[bj * NU_BW + bi] = 0; }
@@ -13405,19 +13412,44 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 NS.wanted = false; NS.wantT = 0; NS.own.clear(); nuCss(); ensureNuu(); nuHookInput(); try { const ai = PAD_SETS.findIndex((x) => x.name === 'Adventia'); if (ai >= 0 && PAD.set !== ai) { NU.padPrev = PAD.set; PAD.set = ai; PAD.drawKey = ''; } } catch (e) { /* pad not ready */ } NU.lbl.classList.add('on'); nuMusic(true); nuShowBanner('LINK START', 'ADVENTIA · FOREST OF NUU'); NU.grace = 4;
                 const u = nfUi(); u.root.classList.add('on'); try { BTL.load(); } catch (e) { /* later */ }
             } else {
-                try { if (NU.lbl) NU.lbl.classList.remove('on'); } catch (e) { /* dom */ } nuMusic(false); try { chestCss(); if (CH.hint && NU.hintOn) { CH.hint.classList.remove('on'); NU.hintOn = false; } } catch (e) { /* hint */ }
+                nuUiRestore(); try { if (NU.sw !== undefined) { NU.sw = undefined; NU.swPend = false; if (!hcMine() && localActor) hcUndress(localActor); } } catch (e) { /* dress */ } try { if (NU.lbl) NU.lbl.classList.remove('on'); } catch (e) { /* dom */ } nuMusic(false); try { chestCss(); if (CH.hint && NU.hintOn) { CH.hint.classList.remove('on'); NU.hintOn = false; } } catch (e) { /* hint */ }
                 try { if (NF.ui) { NF.ui.root.classList.remove('on'); NF.ui.tele.classList.remove('on'); NF.ui.fate.classList.remove('on'); } } catch (e) { /* dom */ }
                 try { if (NU.padPrev != null) { PAD.set = NU.padPrev; NU.padPrev = null; PAD.drawKey = ''; } } catch (e) { /* pad */ } for (const T of NF.tels) { try { T.g.removeFromParent(); T.m.wind = false; } catch (e) { /* gone */ } } NF.tels.length = 0; nfPetClear(); NF.cast = null; NF.tele = null; NF.tgt = null; NF.comb = 0; for (const m of nfMobs()) m.aggro = false; try { if (NU.fade) NU.fade.style.opacity = '0'; } catch (e) { /* dom */ }
             }
         }
+        /* Adventia draws the sword when a fight starts and sheathes it a few seconds after it ends (the Hero HUD and its touch buttons stay off here: the crossbar is the hotbar) */
+        function nuSword() {
+            const A = localActor; if (!A) return; const C = nfCls(); if (C.w !== 'sword' && C.w !== 'fighter') { if (A.hcVis) hcUndress(A); return; }
+            const want = NF.comb > 0.05; if (NU.sw === undefined) NU.sw = want;
+            if (want && !NU.sw) { NU.sw = true; NU.swPend = false; try { hcSfx('draw'); } catch (e) { /* sfx */ } nuSwordNet(C); }
+            else if (!want && NU.sw && !NU.swPend) { NU.swPend = true; try { if (A.playEmote && HERO_ACTS.hput) A.playEmote('hput'); hcSfx('draw'); } catch (e) { /* clip */ } setTimeout(() => { if (NU.swPend) { NU.sw = false; NU.swPend = false; nuSwordNet(C); } }, 520); }
+            A.heroW = C.w === 'fighter' ? 'hf' : NU.sw ? 'hr' : 'hn'; A.heroSheath = !NU.sw; A.heroSkin = CLS.skin; hcDress(A);
+        }
+        function nuSwordNet(C) { try { HC.sheathed = !NU.sw; net && net.send({ t: 'hero', s: !NU.sw, w: true, f: C.w === 'fighter' }); net && net.send(helloMsg(false)); } catch (e) { /* offline */ } }
+        const _pM = new THREE.Matrix4(), _pQ = new THREE.Quaternion(), _pP = new THREE.Vector3(), _pS = new THREE.Vector3(), _pY = new THREE.Vector3(0, 1, 0);
+        function nuPineLod(dt) {   // three levels of pine, swapped by distance a few times a second (1100 trees)
+            const P = NU.pines; if (!P || !camera) return; P.t -= dt; if (P.t > 0) return; P.t = 0.35; const c = camera.position; if (Math.hypot(c.x - P.last.x, c.z - P.last.z) < 1.5 && P.t0) return; P.last.copy(c); P.t0 = 1;
+            const cnt = [0, 0, 0], ims = P.ims;
+            for (const t of P.list) {
+                const d2 = (t.x - c.x) * (t.x - c.x) + (t.z - c.z) * (t.z - c.z); const L = d2 < 2500 ? 0 : d2 < 14400 ? 1 : d2 < 62500 ? 2 : -1; if (L < 0) continue;
+                _pQ.setFromAxisAngle(_pY, t.r); _pP.set(t.x, t.y, t.z); const w = t.h * 0.62; _pS.set(w, t.h, w); _pM.compose(_pP, _pQ, _pS); ims[L].setMatrixAt(cnt[L]++, _pM);
+            }
+            for (let i = 0; i < 3; i++) { ims[i].count = cnt[i]; ims[i].instanceMatrix.needsUpdate = true; }
+        }
+        /* keep the Oasis overlays out of the Adventia HUD: the party list sits under the HP frame, and a name plate that is nearly on the lens is hidden instead of covering the screen */
+        function nuUiFix() {
+            const ph = document.getElementById('party-hud'); if (ph && ph.dataset.nu !== '1') { ph.dataset.nu = '1'; ph.style.top = '236px'; }
+            if (!camera) return; for (const p of peers.values()) { const lb = p.actor && p.actor.label; if (lb) lb.visible = p.actor.group.position.distanceTo(camera.position) > 2.6; }
+        }
+        function nuUiRestore() { try { const ph = document.getElementById('party-hud'); if (ph) { ph.style.top = ''; delete ph.dataset.nu; } for (const p of peers.values()) { const lb = p.actor && p.actor.label; if (lb) lb.visible = true; } } catch (e) { /* dom */ } }
         function nuUpdate(g, dt) {
             const p = g.position; NU.t += dt; if (NU.grace > 0) NU.grace -= dt;
             if (NU.skyCtx && NU.group && NU.group.visible) { NU.skyCtx.t += dt; cySkyUpdate(dt, p, NU.skyCtx); const night = nuNight(); for (const l of NU.lamps) l.intensity = 14 * night; }
-            if (!NU.ready) return;
+            nuUiFix(); if (!NU.ready) return; nuPineLod(dt);
             if (NU.crystal) { NU.crystal.rotation.y += dt * 0.8; NU.crystal.position.y = 3.1 + Math.sin(NU.t * 1.6) * 0.18; }
             if (activeMap !== 'nuu') return;
             for (const c of NU.cry) if (c.mesh) { c.mesh.rotation.y += dt * 0.9; c.mesh.position.y = 2.2 + Math.sin(NU.t * 1.5 + c.x) * 0.15; }
-            dt = Math.min(dt, 0.1); nfCastTick(dt); nuMobsTick(dt); nuFateTick(dt); nuHuntTick(dt); nuGrassTick(dt); nuChestsTick(dt); nfFxTick(dt); nfTelTick(dt); nfUiTick();
+            dt = Math.min(dt, 0.1); try { nuSword(); } catch (e) { /* weapon model not ready */ } nfCastTick(dt); nuMobsTick(dt); nuFateTick(dt); nuHuntTick(dt); nuGrassTick(dt); nuChestsTick(dt); nfFxTick(dt); nfTelTick(dt); nfUiTick();
             const cn = nuCrystalNear(); if (cn !== NU.cNear) { NU.cNear = cn; if (cn) { try { sysChat(!cn.hub && !NF.att[cn.id] ? 'Press F to attune to the ' + cn.name + ' aether crystal.' : 'Press F or T to open the aether network.'); } catch (e) { /* chat */ } } }
         }
 function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retryAt && Date.now() < NU.retryAt) return; NU.err = null; nuLoad(); }
@@ -25462,7 +25494,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         const HC_RANK = ['', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS'], HC_TH = [0, 8, 24, 50, 90, 150, 230, 340];
         const HC_RCOL = ['#7d8794', '#6aa7ff', '#4fe0a8', '#ffd24a', '#ff9a3c', '#ff5a5a', '#ff3ca8', '#c06bff'];
         const hcRank = () => { let r = 0; for (let i = 1; i < HC_TH.length; i++) if (HC.style.pts >= HC_TH[i]) r = i; return r; };
-        const hcCombatMap = () => activeMap !== 'loft' && activeMap !== 'tag' && activeMap !== 'diner' && activeMap !== 'bowl' && activeMap !== 'btl';      // the only places you cannot fight: your Harbor Studio (and the two minigame arenas, which have their own rules)
+        const hcCombatMap = () => activeMap !== 'nuu' && activeMap !== 'loft' && activeMap !== 'tag' && activeMap !== 'diner' && activeMap !== 'bowl' && activeMap !== 'btl';      // the only places you cannot fight: your Harbor Studio (and the two minigame arenas, which have their own rules)
         const hcMine = () => activeMap === 'construct' || (CLS.wpn !== 'fists' && hcCombatMap());          // a sword in hand (or the Construct): the Hero set and the combat HUD are on
         const hcLive = () => activeMap === 'construct' || (hcMine() && (CLS.wpn === 'pistol' || !HC.sheathed));                       // sword drawn: the combat keys, pad and touch buttons are live
         const hcPadOn = () => hcMine() && hcLive();
