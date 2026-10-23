@@ -761,6 +761,7 @@
 .tt-table:after{content:"✦  ◆  ✦";position:absolute;top:10px;left:50%;transform:translateX(-50%);color:rgba(232,196,104,.6);font-size:11px;letter-spacing:.5em;pointer-events:none}
 .tt-board{display:grid;grid-template-columns:repeat(3,auto);gap:4px;padding:6px;border-radius:12px;background:rgba(5,16,24,.55);box-shadow:0 0 0 2px rgba(232,196,104,.5),0 8px 24px rgba(0,0,0,.5)}
 .tt-cell{width:calc(var(--ch) * .88);height:var(--ch);border-radius:calc(var(--ch) * .09);border:2px dashed rgba(232,196,104,.35);background:rgba(255,255,255,.04);padding:0;position:relative}
+.tt-cell .cel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:calc(var(--ch) * .42);opacity:.55;pointer-events:none}.tc .n.up{color:#7dff9a !important}.tc .n.dn{color:#ff7d7d !important}.tc .elb,.tc .elc{position:absolute;text-decoration:none;font-size:calc(var(--ch) * .15);line-height:1;z-index:3}.tc .elb{right:6%;top:5%}.tc .elc{left:6%;bottom:4%;filter:drop-shadow(0 0 3px #000)}
 .tt-cell.hot{border-color:#ffd24a;background:rgba(255,210,74,.14)}
 .tt-hand{display:grid;grid-template-columns:repeat(2,auto);align-items:center;justify-content:center;gap:4px}
 .tt-side{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
@@ -4586,6 +4587,10 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
 
         function districtGo(d) { if (d.map === 'toysmash') { try { closeLobby(); tbsOpen(); } catch (e) { sysChat('Could not open Toy Box Smash.'); } return; } if (d.map === 'ryderx') { try { closeLobby(); rxOpen(); } catch (e) { sysChat('Could not open Ryder X.'); } return; } if (d.map === 'survivor3') { try { closeLobby(); svOpen('HarborInn3.html'); } catch (e) { sysChat('Could not open Harbor Inn 3.'); } return; } if (d.map === 'outbreak') { try { closeLobby(); svOpen('Outbreak.html'); } catch (e) { sysChat('Could not open Outbreak Online.'); } return; } if (d.map === 'survivor2') { try { closeLobby(); svOpen('HarborInn2.html'); } catch (e) { sysChat('Could not open Harbor Inn 2.'); } return; } if (d.map === 'survivor') { try { closeLobby(); svOpen(); } catch (e) { sysChat('Could not open Survivor.'); } return; } if (d.map === 'blitz') { try { closeLobby(); bzOpen(); } catch (e) { sysChat('Could not open Blitzball.'); } return; } joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); }
 
+        function lobbyCount(d, pc) {   // how many people are in a public lobby right now (this browser's tabs, what other players report, and the room you are standing in)
+            pc = pc || presCounts(); const seen = dirSeen.get(d.id); let count = Math.max(seen && Date.now() - seen.ts < 6000 ? seen.count : 0, pc.byRoom[d.id] || 0);
+            try { if (room && room.id === d.id) count = Math.max(count, peers.size + 1); } catch (e) { /* none */ } return count;
+        }
         function renderDistricts() {
             const list = $('district-list');
             list.innerHTML = '';
@@ -4601,7 +4606,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 const left = document.createElement('div');
                 left.innerHTML = '<div class="text-sm font-semibold"></div><div class="text-[11px] text-gray-400 font-mono"></div>';
                 left.children[0].textContent = d.name;
-                left.children[1].textContent = `${d.tag} \u2022 ${count} online`;
+                left.children[1].textContent = `${d.tag} \u2022 \uD83D\uDC65 ${count} ${count === 1 ? 'person' : 'people'} here`;
                 const btn = document.createElement('button');
                 btn.className = 'bg-psGlow hover:bg-blue-600 px-4 py-1.5 rounded-lg text-xs font-semibold transition';
                 btn.textContent = d.map === 'blitz' || d.map === 'survivor' || d.map === 'survivor2' || d.map === 'survivor3' || d.map === 'outbreak' || d.map === 'ryderx' ? 'Play' : room && room.id === d.id ? 'Here' : 'Join';
@@ -12658,7 +12663,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 gl.scene.traverse((o) => { if (!o.isMesh) return; for (const m of [].concat(o.material)) { mats.add(m); } o.userData.noOutline = true; if (o.name === 'Terrain') { terrain = o; return; } let top = o; while (top.parent && top.parent !== gl.scene) top = top.parent; const key = o.geometry.uuid + ':' + o.material.uuid; if (!props.has(key)) props.set(key, { geo: o.geometry, mat: o.material, top: top.name || '', list: [] }); props.get(key).list.push(o.matrixWorld.clone()); });
                 for (const m of mats) { if ('metalness' in m) { m.metalness = 0; m.roughness = 1; } m.needsUpdate = true; }
                 if (!terrain) throw new Error('no terrain in forest.glb');
-                nuBakeTerrain(terrain); nuPickHub(); const hub = NU.hub; NU.seeds = nuSeeds(); try { nuTintTerrain(terrain.geometry, terrain); nuMoss(terrain.geometry); nuGroundTex(terrain); } catch (e) { console.warn('tint', e); }
+                nuBakeTerrain(terrain); nuPickHub(); const hub = NU.hub; NU.seeds = nuSeeds(); try { nuTintTerrain(terrain.geometry, terrain); nuMoss(terrain.geometry); nuGroundTex(terrain); NU.terrainMesh = terrain; } catch (e) { console.warn('tint', e); }
                 const root = new THREE.Group(); root.visible = false; scene.add(root); NU.group = root; terrain.matrixAutoUpdate = false; terrain.frustumCulled = false; root.add(terrain);
                 // props: one instanced mesh per shape; nothing grows inside the plaza
                 const V = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(); let nInst = 0;
@@ -12666,7 +12671,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     const pb = await assetBuf(['nuu/trees.glb', 'Nuu/trees.glb', 'trees.glb', 'assets/nuu/trees.glb'], 'glTF'); const { MeshoptDecoder: MD } = await import('three/addons/libs/meshopt_decoder.module.js'); await MD.ready; const TL = new GLTFLoader(); TL.setMeshoptDecoder(MD);
                     const pg = await new Promise((ok, no) => TL.parse(pb, '', ok, no)); const ms = {}; let nv = 0; pg.scene.updateMatrixWorld(true); pg.scene.traverse((o) => { const mm = o.isMesh && /^Tree(\d+)_LOD([012])L?$/.exec(o.name); if (mm) { o.updateMatrix(); ms[o.name] = o; nv = Math.max(nv, +mm[1] + 1); } });
                     const gmt = new THREE.DataTexture(new Uint8Array([150,150,150,255, 172,172,172,255, 194,194,194,255, 214,214,214,255, 232,232,232,255, 246,246,246,255, 255,255,255,255, 255,255,255,255]), 8, 1, THREE.RGBAFormat); gmt.minFilter = gmt.magFilter = THREE.LinearFilter; gmt.needsUpdate = true;   /* soft painted shading: a smooth, low-contrast ramp instead of hard cel bands */
-                    const tmat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide }); const lsrc = ms.Tree0_LOD0L && ms.Tree0_LOD0L.material, lmat = lsrc && lsrc.map ? new THREE.MeshToonMaterial({ map: lsrc.map, alphaTest: 0.5, vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide }) : tmat; if (lsrc && lsrc.map) lsrc.map.anisotropy = 4;
+                    const tmat = nuWindPatch(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide }), 'tree'); const lsrc = ms.Tree0_LOD0L && ms.Tree0_LOD0L.material, lmat = lsrc && lsrc.map ? nuWindPatch(new THREE.MeshToonMaterial({ map: lsrc.map, alphaTest: 0.5, vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide }), 'leaf') : tmat; if (lsrc && lsrc.map) lsrc.map.anisotropy = 4;
                     if (nv && ms.Tree0_LOD0 && ms.Tree0_LOD1 && ms.Tree0_LOD2) pine = { ms, nv, tmat, lmat };
                 } catch (e) { console.warn('trees.glb not found - keeping the stock trees', e && e.message); }
                 const pineList = [];
@@ -12789,7 +12794,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             return true;
         }
         function nfXbRun(side, k) {
-            if (side === 'L') nfUse(k); else if (k < 4) nfUse(8 + k); else { const u = NF_UTIL[k - 4][0]; if (u === 'nf_target') nfCycle(); else if (u === 'nf_use') { const c = nuChestNear(); if (c) nuChestOpenNear(); else { const q = nuCrystalNear(); if (q) nfInteractCrystal(q); } } else if (u === 'nf_aether') nfTeleMenu(); else nfClassMenu(); }
+            if (side === 'L') nfUse(k); else if (k < 4) nfUse(8 + k); else { const u = NF_UTIL[k - 4][0]; if (u === 'nf_target') nfCycle(); else if (u === 'nf_use') nfPadUse(); else if (u === 'nf_aether') nfTeleMenu(); else nfClassMenu(); }
             const el = NF.ui && NF.ui.xb.querySelector('.xb-slot[data-s="' + side + '"][data-k="' + k + '"]'); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 200); }
         }
         function nfXbBuild() {
@@ -12895,7 +12900,28 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         const nfDist = (m) => Math.hypot(m.x - nfPos().x, m.z - nfPos().z);
         function nfMobs() { const out = []; for (const g of NU.groups) if (!g.dead) for (const m of g.mobs) if (!m.dead) out.push(m); for (const f of NU.fates) for (const m of f.mobs) if (!m.dead) out.push(m); for (const m of NU.extra) if (!m.dead) out.push(m); return out; }
         function nfTarget(m) { if (NF.tgt === m) return; NF.tgt = m; if (m) { nfBar(m); } }
-        function nfCycle() { const p = nfPos(), list = nfMobs().filter((m) => nfDist(m) < 30).sort((a, b) => (b.aggro ? 1 : 0) - (a.aggro ? 1 : 0) || nfDist(a) - nfDist(b)); if (!list.length) { nfTarget(null); return; } const i = list.indexOf(NF.tgt); nfTarget(list[(i + 1) % list.length]); }
+        function nfCycle(dir) {
+            dir = dir || 1; const p = nfPos(), list = nfMobs().filter((m) => nfDist(m) < 30).sort((a, b) => (b.aggro ? 1 : 0) - (a.aggro ? 1 : 0) || nfDist(a) - nfDist(b)).map((m) => ({ m }));
+            try { [...peers.values()].filter((q) => q.actor.group.parent && q.actor.group.position.distanceTo(p) < 25).sort((a, b) => a.actor.group.position.distanceTo(p) - b.actor.group.position.distanceTo(p)).forEach((q) => list.push({ id: q.id })); } catch (e) { /* no peers */ }
+            if (!list.length) { nfTarget(null); NF.lockOn = false; try { setLookTarget(null, false); } catch (e) { /* none */ } return; }
+            let i = list.findIndex((o) => (o.m ? o.m === NF.tgt : o.id === localActor.lookId)); i = i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length;
+            const o = list[i]; if (o.m) { try { if (localActor.lookId) setLookTarget(null, false); } catch (e) { /* none */ } nfTarget(o.m); NF.lockOn = !!PAD.active; } else { nfTarget(null); NF.lockOn = false; setLookTarget(o.id, false); const q = peers.get(o.id); if (q) padToast('Targeting ' + q.name); }
+        }
+        function nfPadUse() { if (activeMap !== 'nuu') return false; const c = nuChestNear(); if (c) { nuChestOpenNear(); return true; } const k = nuCrystalNear(); if (k) { nfInteractCrystal(k); return true; } return false; }
+        function nfRoll() {
+            if (activeMap !== 'nuu' || !NU.ready || NF.dead || NF.tele || NF.cast || NF.roll) return; const now = performance.now() / 1000; if ((NF.rollCd || 0) > now) return; NF.rollCd = now + 0.9;
+            const g = localActor.group; let ix = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + (padMove.x || 0), iz = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + (padMove.z || 0), dx, dz;
+            if (Math.hypot(ix, iz) > 0.3) { let fx = controls.target.x - camera.position.x, fz = controls.target.z - camera.position.z; const fl = Math.hypot(fx, fz) || 1; fx /= fl; fz /= fl; dx = fx * -iz + -fz * ix; dz = fz * -iz + fx * ix; } else { const a = g.rotation.y + Math.PI; dx = Math.sin(a); dz = Math.cos(a); }
+            const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; g.rotation.y = Math.atan2(dx, dz);
+            NF.roll = { t: 0, dur: 0.55, dx, dz, sx: g.position.x, sz: g.position.z }; NF.inv = 0.5; NF.comb = 6;
+            try { localActor.playEmote('groll'); localActor.emoteDur = 0.55; localActor.emoteRate = 0.8 / 0.55; net && net.send({ t: 'emote', name: 'groll', r: 1 }); } catch (e) { /* no clip */ }
+        }
+        function nfRollTick(dt) {
+            const R = NF.roll; if (NF.inv > 0) NF.inv -= dt; if (!R) return; R.t += dt; const k = Math.min(1, R.t / R.dur), e = 1 - (1 - k) * (1 - k), g = localActor.group, dist = 6.2 * e;
+            let tx = g.position.x, tz = g.position.z; const nx = R.sx + R.dx * dist, nz = R.sz + R.dz * dist; if (!nuBlk(nx, nz)) { tx = nx; tz = nz; } else R.t = R.dur;
+            g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz);
+            if (k >= 1) { NF.roll = null; if (localActor.emote === 'groll') localActor.emote = null; }
+        }
         function nfPick(cx, cy) { const rc = renderer.domElement.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = 1e9; for (const m of nfMobs()) { v.set(m.x, m.node.position.y + (m.node.userData.h || 1.5) * 0.5 * (m.big || 1), m.z).project(camera); if (v.z > 1) continue; const sx = rc.left + (v.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-v.y * 0.5 + 0.5) * rc.height, d = Math.hypot(sx - cx, sy - cy), lim = 54 * (m.big || 1); if (d < lim && d < bd) { bd = d; best = m; } } return best; }
         function nfFace(m) { localActor.group.rotation.y = Math.atan2(m.x - nfPos().x, m.z - nfPos().z); }
         function nfFxAdd(mesh, dur, upd) { NU.group.add(mesh); mesh.userData.noOutline = true; NF.fx.push({ mesh, t: 0, dur, upd }); }
@@ -12921,8 +12947,8 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         function nfUse(i) {
             const s = NF_SK[i]; if (!s || !NU.ready || activeMap !== 'nuu' || NF.tele) return; if (!nfCan(s)) return;
             if (NF_NEEDT[s.k] && !s.back) {
-                if (!NF.tgt || NF.tgt.dead) { const near = nfNear(Math.min(18, s.range || 14)); if (near) nfTarget(near); else { nfPop(nfPos().clone().setY(nfPos().y + 2), 'No target', '#cfd8e0'); return; } }
-                if (nfDist(NF.tgt) > s.range + (NF.tgt.big || 1) * 0.6) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Out of range', '#ffb347'); return; } if (s.k !== 'dash') nfFace(NF.tgt);
+                if (!NF.tgt || NF.tgt.dead) { const near = nfNear(Math.min(18, s.range || 14)); if (near) { nfTarget(near); if (PAD.active) NF.lockOn = true; } else { nfPop(nfPos().clone().setY(nfPos().y + 2), 'No target', '#cfd8e0'); return; } }
+                if (nfDist(NF.tgt) > s.range + (NF.tgt.big || 1) * 0.6) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Out of range', '#ffb347'); return; } if (PAD.active) NF.lockOn = true; if (s.k !== 'dash') nfFace(NF.tgt);
             } else if ((s.k === 'cone' || s.k === 'line') && NF.tgt && !NF.tgt.dead) nfFace(NF.tgt);
             const go = () => nfResolve(s);
             if (s.cast) { NF.cast = { n: s.n, t0: performance.now() / 1000, dur: s.cast, s, x: nfPos().x, z: nfPos().z, go }; if (s.gcd) NF.gcd = 2.2; } else go();
@@ -12980,7 +13006,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
         function nfAggro(m) { m.aggro = true; if (m.group) for (const o of m.group.mobs) if (!o.dead) o.aggro = true; NF.comb = 6; }
         function nfMobDie(m, remote) {
-            if (m.dead) return; m.dead = true; if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
+            if (m.dead) return; m.dead = true; if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); try { if (m.node.visible) nuShatter(m.node, m.big || 1); } catch (e) { /* cosmetic */ } m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
             if (!remote || m.mine) { nfPop(new THREE.Vector3(m.x, m.node.position.y + 1.2, m.z), '+' + Math.round(xp) + ' XP', '#7fd8ff'); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ } }
             const roll = (k, p) => { if ((!remote || m.mine) && Math.random() < p) { try { btBagAdd(k, 1); sysChat('Found ' + BT_ITEMS[k].n + '.'); } catch (e) { /* bag */ } } }; roll('potion', m.boss ? 0.9 : 0.2); roll('ether', m.boss ? 0.8 : 0.08); roll('hipotion', m.boss ? 0.6 : 0.03); roll('phoenix', m.boss ? 0.5 : 0.02); if (m.boss) roll('elixir', 0.4);
@@ -12988,7 +13014,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             if (m.hunt) { try { nuHuntKilled(m, remote); } catch (e) { console.warn('hunt', e); } }
         }
         function nfPlayerHurt(d, from) {
-            if (NF.dead) return; if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
+            if (NF.dead) return; if (NF.inv > 0) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
             if (NF.tele) nfTeleCancel('Teleport interrupted'); if (NF.hp <= 0) nfDie();
         }
         async function nfDie() {
@@ -13321,7 +13347,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             NF.tele = { c, t0: performance.now() / 1000 }; NF.cast = { n: 'Teleport: ' + c.name, t0: performance.now() / 1000, dur: 3, s: { cast: 3 }, x: nfPos().x, z: nfPos().z, go: async () => { NF.tele = null; if (cost) { try { window.oasisGil.add(-cost, true); } catch (e) { /* gil */ } } await nuFade(true, 500); nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.4, 1, c.z); NU.grace = 4; await nuFade(false, 500); nuShowBanner(c.name.toUpperCase(), 'AETHER TELEPORT'); } };
         }
         function nfCastTick(dt) {
-            if (NF.gcd > 0) NF.gcd = Math.max(0, NF.gcd - dt); if (NF.guard > 0) NF.guard -= dt; if (NF.buffT > 0) NF.buffT -= dt; if (NF.comb > 0) NF.comb -= dt; const p = nfPos();
+            nfRollTick(dt); if (NF.gcd > 0) NF.gcd = Math.max(0, NF.gcd - dt); if (NF.guard > 0) NF.guard -= dt; if (NF.buffT > 0) NF.buffT -= dt; if (NF.comb > 0) NF.comb -= dt; const p = nfPos();
             if (NF.hot) { NF.hot.left -= dt; NF.hot.tick -= dt; if (NF.hot.tick <= 0) { NF.hot.tick = 3; const h = Math.round(NF.hpMax * NF.hot.pot + NF.mag * 0.3); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(p.clone().setY(p.y + 2.2), '+' + h, '#7dffa0'); } if (NF.hot.left <= 0) NF.hot = null; }
             for (const m of nfMobs()) if (m.dots && m.dots.length) for (const d of m.dots.slice()) { d.left -= dt; d.tick -= dt; if (d.tick <= 0) { d.tick = 3; nfDealDmg(m, d.pot, d.mag); } if (d.left <= 0 || m.dead) m.dots.splice(m.dots.indexOf(d), 1); }
             nfPetTick(dt);
@@ -13365,6 +13391,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const sw = () => { e.preventDefault(); e.stopImmediatePropagation(); };
             if (/^Digit[1-8]$/.test(k)) { sw(); if (!e.repeat) nfXbRun(e.shiftKey ? 'R' : 'L', +k.slice(5) - 1); }
             else if (k === 'KeyC') { sw(); if (!e.repeat) nfClassMenu(); }
+            else if (k === 'KeyQ' || k === 'AltLeft') { sw(); if (!e.repeat) nfRoll(); }
             else if (k === 'Tab') { sw(); if (!e.repeat) nfCycle(); }
             else if (k === 'KeyT') { sw(); if (!e.repeat) nfTeleMenu(); }
             else if (k === 'KeyF' && !nuChestNear()) { const c = nuCrystalNear(); if (c) { sw(); if (!e.repeat) nfInteractCrystal(c); } }
@@ -13384,13 +13411,13 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 const gl = await new Promise((ok, no) => new GLTFLoader().parse(buf, '', ok, no)); const want = { SM_grass_03: 1, SM_flower_02: 360, SM_flower_3: 360 }; const found = {};
                 gl.scene.traverse((o) => { if (o.isMesh && want[o.name] && !found[o.name]) found[o.name] = o; });
                 for (const nm of Object.keys(want)) {
-                    const o = found[nm]; if (!o) continue; const mats = [].concat(o.material); for (const m of mats) { m.side = THREE.DoubleSide; m.metalness = 0; m.roughness = 1; if (m.map && m.emissive) { m.emissive.set(0x4a6a3a); m.emissiveMap = m.map; m.emissiveIntensity = 0.55; } if (m.alphaTest === 0 && m.map) m.alphaTest = 0.333; m.transparent = false; m.onBeforeCompile = (sh) => { sh.uniforms.uT = NU_GR.uT; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n float sw = sin(uT * 1.7 + instanceMatrix[3].x * 0.9 + instanceMatrix[3].z * 0.6) * 0.16 + sin(uT * 2.9 + instanceMatrix[3].z * 1.3) * 0.05; transformed.x += sw * max(position.y, 0.0); transformed.z += sw * 0.6 * max(position.y, 0.0);'); }; m.needsUpdate = true; }
+                    const o = found[nm]; if (!o) continue; const mats = [].concat(o.material); for (const m of mats) { m.side = THREE.DoubleSide; m.metalness = 0; m.roughness = 1; if (m.map && m.emissive) { m.emissive.set(0x4a6a3a); m.emissiveMap = m.map; m.emissiveIntensity = 0.55; } if (m.alphaTest === 0 && m.map) m.alphaTest = 0.333; m.transparent = false; nuWindPatch(m, 'grass'); m.needsUpdate = true; }
                     const im = new THREE.InstancedMesh(o.geometry, o.material, want[nm]); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, new THREE.Color(1, 1, 1)); im.instanceColor.setUsage(THREE.DynamicDrawUsage); NU.group.add(im); NU_GR.parts.push({ nm, im, cap: want[nm] });
                 }
                 try {   // painted grass clusters (FFXIV style) from undergrowth.glb: they carpet the ground around the player
                     const ub = await assetBuf(['nuu/undergrowth.glb', 'Nuu/undergrowth.glb', 'undergrowth.glb', 'assets/nuu/undergrowth.glb'], 'glTF'); const ug = await new Promise((ok, no) => new GLTFLoader().parse(ub, '', ok, no));
                     const gmt = new THREE.DataTexture(new Uint8Array([150,150,150,255, 172,172,172,255, 194,194,194,255, 214,214,214,255, 232,232,232,255, 246,246,246,255, 255,255,255,255, 255,255,255,255]), 8, 1, THREE.RGBAFormat); gmt.minFilter = gmt.magFilter = THREE.LinearFilter; gmt.needsUpdate = true; let fm = null;
-                    ug.scene.traverse((o) => { if (!o.isMesh || !/^Fern\d$/.test(o.name)) return; fm = fm || new THREE.MeshToonMaterial({ map: o.material.map, alphaTest: 0.45, vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide });
+                    ug.scene.traverse((o) => { if (!o.isMesh || !/^Fern\d$/.test(o.name)) return; fm = fm || nuWindPatch(new THREE.MeshToonMaterial({ map: o.material.map, alphaTest: 0.45, vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide }), 'grass');
                         const im = new THREE.InstancedMesh(o.geometry, fm, 3400); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, new THREE.Color(1, 1, 1)); im.instanceColor.setUsage(THREE.DynamicDrawUsage); NU.group.add(im); NU_GR.parts.push({ nm: o.name, im, cap: 3400 }); });
                 } catch (e) { console.warn('grass clusters', e); }
                 NU_GR.ready = NU_GR.parts.length > 0;
@@ -13408,7 +13435,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 const nm = r2 > 249 ? 'SM_flower_3' : r2 > 244 ? 'SM_flower_02' : by.Fern0 ? ['Fern0', 'Fern0', 'Fern0', 'Fern1', 'Fern2', 'Fern3'][(h >>> 4) % 6] : 'SM_grass_03', q = by[nm]; if (!q || idx[nm] >= q.cap) continue;
                 let nearT = 1; { const tg = NU.tgrid || (NU.tgrid = (() => { const m = new Map(); for (const t of (NU.pines ? NU.pines.list : [])) { const k = Math.floor(t.x / 8) + '_' + Math.floor(t.z / 8); (m.get(k) || m.set(k, []).get(k)).push(t); } return m; })()); const gi = Math.floor(x / 8), gj = Math.floor(z / 8); for (let a = -1; a <= 1 && nearT === 1; a++) for (let b2 = -1; b2 <= 1; b2++) { const L = tg.get((gi + a) + '_' + (gj + b2)); if (L) for (const t of L) if (Math.hypot(t.x - x, t.z - z) < 3.4 + t.h * 0.12) { nearT = 1.45; break; } } }
                 const edge = nuSmooth((R - d) / 12) * nearT, sc = (/^Fern/.test(nm) ? 0.95 + ((h >>> 24) & 255) / 255 * 0.7 : 0.34 + ((h >>> 24) & 255) / 255 * 0.34) * edge * (nm === 'SM_grass_03' ? 1.0 : 0.9); if (sc < 0.05) continue;
-                E.set(0, (h % 628) / 100, 0); Q.setFromEuler(E); V.set(x, y - 0.03, z); S.set(sc, sc * (0.9 + ((h >>> 5) & 15) / 40), sc); M.compose(V, Q, S);
+                E.set(0, (h % 628) / 100, 0); Q.setFromEuler(E); V.set(x, y - 0.08, z); S.set(sc, sc * (0.9 + ((h >>> 5) & 15) / 40), sc); M.compose(V, Q, S);
                 const k = idx[nm]++; q.im.setMatrixAt(k, M); if (/^Fern/.test(nm)) { col.setRGB(0.9 + jx * 0.18, 0.92 + jx * 0.12, 0.88 + jz * 0.14); q.im.setColorAt(k, col); } else if (nm === 'SM_grass_03') { const R0 = NU_REG[nuRegionAt(x, z)]; col.set(R0.accent); col.lerp(w, 0.66); col.multiplyScalar(0.95 + jx * 0.35); q.im.setColorAt(k, col); } else q.im.setColorAt(k, w);
             }
             for (const q of NU_GR.parts) { q.im.count = idx[q.nm]; q.im.instanceMatrix.needsUpdate = true; if (q.im.instanceColor) q.im.instanceColor.needsUpdate = true; }
@@ -13496,25 +13523,112 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         /* painted ground: a tiling grass-stroke texture on the terrain (FFXIV style: the ground is a picture, the foliage stands on it) */
         function nuGroundTex(mesh) {
             const g = mesh.geometry, P = g.attributes.position, uv = new Float32Array(P.count * 2), v = new THREE.Vector3(); mesh.updateMatrix();
-            for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(mesh.matrix); uv[i * 2] = v.x / 7; uv[i * 2 + 1] = v.z / 7; }
+            for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(mesh.matrix); uv[i * 2] = v.x / 6; uv[i * 2 + 1] = v.z / 6; }
             g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-            const cv = document.createElement('canvas'); cv.width = cv.height = 512; const x = cv.getContext('2d'), R = seeded(777); x.fillStyle = '#c4dca4'; x.fillRect(0, 0, 512, 512);
-            const stroke = (cx, cy, len, col, w, a) => { x.strokeStyle = col; x.globalAlpha = a; x.lineWidth = w; x.lineCap = 'round'; x.beginPath(); x.moveTo(cx, cy); x.quadraticCurveTo(cx + a * 0 + (R() - 0.5) * 6, cy - len * 0.55, cx + (R() - 0.5) * 12, cy - len); x.stroke(); };
-            for (let k = 0; k < 7000; k++) { const cx = R() * 512, cy = R() * 512, len = 8 + R() * 18, t = R(); const col = t < 0.35 ? '#86b85c' : t < 0.6 ? '#f2fbc4' : t < 0.85 ? '#6fa653' : '#d6e88e'; for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) if (cx + ox > -20 && cx + ox < 532 && cy + oy > -30 && cy + oy < 540) stroke(cx + ox, cy + oy, len, col, 1.6 + R() * 1.8, 0.6 + R() * 0.4); }
-            for (let k = 0; k < 160; k++) { x.globalAlpha = 0.5; x.fillStyle = R() < 0.5 ? '#fff6c8' : '#ffffff'; x.beginPath(); x.arc(R() * 512, R() * 512, 1 + R() * 1.6, 0, 6.283); x.fill(); }
-            const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.needsUpdate = true;
+            const SZ = 1024, cv = document.createElement('canvas'); cv.width = cv.height = SZ; const x = cv.getContext('2d'), R = seeded(777); x.fillStyle = '#a8c47e'; x.fillRect(0, 0, SZ, SZ);
+            const wrap = (fn, cx, cy, pad) => { for (const ox of [-SZ, 0, SZ]) for (const oy of [-SZ, 0, SZ]) { const X = cx + ox, Y = cy + oy; if (X > -pad && X < SZ + pad && Y > -pad && Y < SZ + pad) fn(X, Y); } };
+            // 1. soft mottling: big blurry patches of darker and lighter green, a little soil and dry grass showing through
+            for (let k = 0; k < 90; k++) { const cx = R() * SZ, cy = R() * SZ, r = 50 + R() * 120, t = R(), c = t < 0.35 ? '95,140,70' : t < 0.6 ? '200,225,140' : t < 0.8 ? '150,185,95' : t < 0.92 ? '176,160,98' : '120,92,62'; wrap((X, Y) => { const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, 'rgba(' + c + ',' + (t > 0.92 ? 0.22 : 0.4) + ')'); g.addColorStop(1, 'rgba(' + c + ',0)'); x.globalAlpha = 1; x.fillStyle = g; x.fillRect(X - r, Y - r, r * 2, r * 2); }, cx, cy, r); }
+            // 2. fine blades in many greens, leaning every way
+            const blade = (X, Y, len, col, w, a, lean) => { x.strokeStyle = col; x.globalAlpha = a; x.lineWidth = w; x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + lean * 0.4, Y - len * 0.55, X + lean, Y - len); x.stroke(); };
+            const GR = ['#4f8a3c', '#6fa34e', '#3f7a38', '#98c35c', '#cfe48a', '#336c32', '#82b552', '#dfe9a0', '#b7c46a', '#8a9a4a'];
+            for (let k = 0; k < 16000; k++) { const cx = R() * SZ, cy = R() * SZ, len = 6 + R() * 20, w = 1.1 + R() * 1.8, col = GR[(R() * GR.length) | 0], a = 0.55 + R() * 0.45, ln = (R() - 0.5) * 16; wrap((X, Y) => blade(X, Y, len, col, w, a, ln), cx, cy, 30); }
+            // 3. clover and little leaves lying on the ground
+            for (let k = 0; k < 700; k++) { const cx = R() * SZ, cy = R() * SZ, r = 3 + R() * 5, col = R() < 0.5 ? '#6aa84f' : '#8cc063', dk = '#3f7a3c'; wrap((X, Y) => { x.globalAlpha = 0.9; for (let l = 0; l < 3; l++) { const an = l * 2.094 + R() * 0.5; x.fillStyle = col; x.beginPath(); x.ellipse(X + Math.cos(an) * r * 0.7, Y + Math.sin(an) * r * 0.7, r * 0.7, r * 0.45, an, 0, 6.283); x.fill(); } x.fillStyle = dk; x.globalAlpha = 0.35; x.beginPath(); x.arc(X, Y, r * 0.2, 0, 6.283); x.fill(); }, cx, cy, 14); }
+            // 4. fallen leaves and tiny wildflowers (orange, yellow, white, pink, violet) scattered like the reference
+            const FL = ['#f08a2b', '#f7c531', '#ffffff', '#f4a6c8', '#b890e8', '#e86a3a'], LV = ['#d98a3a', '#c4602a', '#e8b84a', '#9a6a3a'];
+            for (let k = 0; k < 900; k++) { const cx = R() * SZ, cy = R() * SZ, r = 2.6 + R() * 3.4, col = FL[(R() * FL.length) | 0]; wrap((X, Y) => { x.globalAlpha = 0.95; x.fillStyle = col; for (let l = 0; l < 5; l++) { const an = l * 1.2566 + R() * 0.3; x.beginPath(); x.arc(X + Math.cos(an) * r, Y + Math.sin(an) * r, r * 0.7, 0, 6.283); x.fill(); } x.fillStyle = '#f3d23c'; x.beginPath(); x.arc(X, Y, r * 0.55, 0, 6.283); x.fill(); }, cx, cy, 10); }
+            for (let k = 0; k < 520; k++) { const cx = R() * SZ, cy = R() * SZ, r = 4 + R() * 6, an = R() * 6.283, col = LV[(R() * LV.length) | 0]; wrap((X, Y) => { x.globalAlpha = 0.85; x.fillStyle = col; x.beginPath(); x.ellipse(X, Y, r, r * 0.45, an, 0, 6.283); x.fill(); x.globalAlpha = 0.4; x.strokeStyle = '#6a3d1c'; x.lineWidth = 0.8; x.beginPath(); x.moveTo(X - Math.cos(an) * r, Y - Math.sin(an) * r); x.lineTo(X + Math.cos(an) * r, Y + Math.sin(an) * r); x.stroke(); }, cx, cy, 12); }
+            // 5. the dark roots of grass clumps: little shadows so the foliage planted on top feels rooted
+            for (let k = 0; k < 420; k++) { const cx = R() * SZ, cy = R() * SZ, r = 5 + R() * 9; wrap((X, Y) => { const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, 'rgba(40,78,36,0.45)'); g.addColorStop(1, 'rgba(40,78,36,0)'); x.globalAlpha = 1; x.fillStyle = g; x.fillRect(X - r, Y - r, r * 2, r * 2); for (let b = 0; b < 7; b++) blade(X + (R() - 0.5) * r * 0.8, Y + r * 0.3, 8 + R() * 10, GR[(R() * 4) | 0], 1.4, 0.9, (R() - 0.5) * 10); }, cx, cy, r + 14); }
+            x.globalAlpha = 1;
+            const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.generateMipmaps = true; tex.needsUpdate = true;
             for (const m of [].concat(mesh.material)) { m.map = tex; m.needsUpdate = true; }
         }
         function nuMoss(geo) { const C = geo.attributes.color; if (!C) return; for (let i = 0; i < C.count; i++) { C.setXYZ(i, C.getX(i) * 0.3 + 0.30 * 0.7, C.getY(i) * 0.3 + 0.62 * 0.7, C.getZ(i) * 0.3 + 0.12 * 0.7); } C.needsUpdate = true; }
+        /* ---- Adventia weather on the foliage: snow whitens the ground, grass, bushes and trees; wind draws faint anime-style streaks in the air (only when it is windy) ---- */
+        /* ---- wind in the vegetation: one shared gust field (travelling waves along the wind direction) bends grass, ferns, trunks and crowns; leaves also flutter ---- */
+        const NU_WIND = { uT: { value: 0 }, uW: { value: 0.4 }, uD: { value: new THREE.Vector2(1, 0.3).normalize() } };
+        function nuWindPatch(mat, kind) {
+            if (mat.userData.wp) return mat; mat.userData.wp = kind;
+            mat.onBeforeCompile = (sh) => {
+                sh.uniforms.uT = NU_WIND.uT; sh.uniforms.uW = NU_WIND.uW; sh.uniforms.uD = NU_WIND.uD;
+                const head = 'uniform float uT; uniform float uW; uniform vec2 uD;\n', ph = ' float ph = dot(instanceMatrix[3].xz, uD) * 0.13 - uT * 1.7; float gu = (sin(ph) * 0.6 + sin(ph * 2.3 + 1.7) * 0.4) * 0.5 + 0.5; vec3 c0 = normalize(instanceMatrix[0].xyz), c2 = normalize(instanceMatrix[2].xyz);\n';
+                let body;
+                if (kind === 'grass') body = ph + ' vec2 of = uD * (0.06 + uW * 0.2 * gu) + vec2(sin(uT * 2.3 + instanceMatrix[3].x * 0.9), cos(uT * 1.9 + instanceMatrix[3].z * 0.8)) * 0.035 * (0.4 + uW); float hm = max(position.y, 0.0); vec3 wv = vec3(of.x, 0.0, of.y); transformed.x += dot(wv, c0) * hm; transformed.z += dot(wv, c2) * hm;';
+                else body = ph + ' vec2 of = uD * uW * 0.035 * (0.3 + gu); float hm = pow(smoothstep(0.22, 1.0, position.y), 1.5); vec3 wv = vec3(of.x, 0.0, of.y); transformed.x += dot(wv, c0) * hm; transformed.z += dot(wv, c2) * hm;' + (kind === 'leaf' ? ' float fl = smoothstep(0.3, 1.0, position.y) * (0.3 + uW) * 0.0035; transformed.x += sin(uT * 4.2 + position.x * 50.0 + position.z * 37.0) * fl; transformed.z += cos(uT * 3.6 + position.z * 45.0 + position.y * 20.0) * fl; transformed.y += sin(uT * 5.1 + position.x * 41.0) * fl * 0.5;' : '');
+                sh.vertexShader = head + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n' + body + '\n#endif');
+            };
+            mat.customProgramCacheKey = () => 'nuw' + kind; mat.needsUpdate = true; return mat;
+        }
+        /* ---- Sword-Art-Online style defeat: the enemy holds its shape for a breath as glowing polygon shards, then bursts and drifts away as light ---- */
+        const NU_SH = { fx: [], geo: null };
+        function nuShatter(node, big) {
+            const bx = new THREE.Box3().setFromObject(node); if (bx.isEmpty()) return; const sz = bx.getSize(new THREE.Vector3()), c = bx.getCenter(new THREE.Vector3()), dl = Math.min(8, sz.length()), N = Math.min(120, 56 + Math.round(dl * 14));
+            if (!NU_SH.geo) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.5, 0, -0.43, -0.25, 0, 0.43, -0.25, 0], 3)); NU_SH.geo = g; }
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }), im = new THREE.InstancedMesh(NU_SH.geo, mat, N); im.frustumCulled = false; im.userData.noOutline = true;
+            const cols = [0xffffff, 0xdff6ff, 0x9fe3ff, 0x6fc4ff], col = new THREE.Color(), sh = [];
+            for (let i = 0; i < N; i++) {
+                let x, y, z; do { x = Math.random() * 2 - 1; y = Math.random() * 2 - 1; z = Math.random() * 2 - 1; } while (x * x + y * y + z * z > 1);
+                const p = new THREE.Vector3(c.x + x * sz.x * 0.5, c.y + y * sz.y * 0.5, c.z + z * sz.z * 0.5), d = new THREE.Vector3(x, y * 0.6, z); if (d.lengthSq() < 0.01) d.set(0, 1, 0); d.normalize();
+                sh.push({ p, v: d.multiplyScalar(2.2 + Math.random() * 4.2 * Math.max(0.7, Math.min(1.8, dl * 0.35))).add(new THREE.Vector3(0, 1.4 + Math.random() * 1.6, 0)), a: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(), r: Math.random() * 6.28, rs: (Math.random() - 0.5) * 9, s: (0.1 + Math.random() * 0.2) * (0.7 + dl * 0.22) });
+                col.set(cols[(Math.random() * cols.length) | 0]); im.setColorAt(i, col);
+            }
+            NU.group.add(im); NU_SH.fx.push({ im, mat, sh, t: 0 }); nfFx('ring', new THREE.Vector3(c.x, bx.min.y, c.z), new THREE.Vector3(c.x, bx.min.y, c.z));
+            try { dnBeep(1500, 0.22, 'sine', 0.028, 2600); dnBeep(2300, 0.35, 'triangle', 0.018, 3400); } catch (e) { /* no audio */ }
+        }
+        const _zM = new THREE.Matrix4(), _zQ = new THREE.Quaternion(), _zS = new THREE.Vector3();
+        function nuShatterTick(dt) {
+            for (let n = NU_SH.fx.length - 1; n >= 0; n--) {
+                const F = NU_SH.fx[n]; F.t += dt; const HOLD = 0.22, k = Math.max(0, (F.t - HOLD) / 1.25);
+                if (k >= 1) { F.im.removeFromParent(); F.im.dispose(); F.mat.dispose(); NU_SH.fx.splice(n, 1); continue; }
+                F.sh.forEach((o, i) => {
+                    if (F.t >= HOLD) { o.v.multiplyScalar(Math.exp(-dt * 1.1)); o.v.y += dt * 0.9; o.p.addScaledVector(o.v, dt); }
+                    else { o.p.x += (Math.random() - 0.5) * 0.012; o.p.z += (Math.random() - 0.5) * 0.012; }
+                    o.r += o.rs * dt; _zQ.setFromAxisAngle(o.a, o.r); const sc = o.s * (F.t < HOLD ? 0.85 + 0.15 * Math.sin(F.t * 90 + i) : Math.pow(1 - k, 0.7)); _zS.set(sc, sc, sc); _zM.compose(o.p, _zQ, _zS); F.im.setMatrixAt(i, _zM);
+                });
+                F.im.instanceMatrix.needsUpdate = true; F.mat.opacity = F.t < HOLD ? 1 : 1 - Math.pow(k, 1.6);
+            }
+        }
+        const NU_WF = { snow: 0, mats: null, streaks: null, grp: null, t: 0 };
+        function nuWfMats() {
+            if (NU_WF.mats) return NU_WF.mats; const out = [], seen = new Set(), add = (m, k) => { if (!m || seen.has(m) || !m.color) return; seen.add(m); out.push({ m, k, c: m.color.clone(), e: m.emissive ? m.emissive.clone() : null, ei: m.emissiveIntensity }); };
+            const T = NU.terrain || NU.ground; try { if (NU.terrainMesh) [].concat(NU.terrainMesh.material).forEach((m) => add(m, 1.3)); } catch (e) { /* none */ }
+            try { for (const g of NU.pines.groups) for (const lv of g) for (const part of lv) [].concat(part.im.material).forEach((m) => add(m, part.im.material.alphaTest > 0 ? 0.55 : 0.3)); } catch (e) { /* none */ }
+            try { for (const n in NU.ug.ims) [].concat(NU.ug.ims[n].material).forEach((m) => add(m, 0.6)); } catch (e) { /* none */ }
+            try { for (const q of NU_GR.parts) [].concat(q.im.material).forEach((m) => add(m, 0.75)); } catch (e) { /* none */ }
+            if (out.length > 3) NU_WF.mats = out; return out;
+        }
+        function nuWeatherFx(dt, p) {
+            const on = activeMap === 'nuu'; NU_WF.t += dt;
+            const wnd = NU.windForce != null ? NU.windForce : (WX.wind || 0); NU_WIND.uT.value += dt * (1 + wnd * 0.8); NU_WIND.uW.value += ((0.3 + wnd * 0.95) - NU_WIND.uW.value) * (1 - Math.exp(-dt * 1.2)); { const wx = NU.windDir ? NU.windDir[0] : WX.wdx, wz = NU.windDir ? NU.windDir[1] : WX.wdz, wl = Math.hypot(wx, wz) || 1; NU_WIND.uD.value.set(wx / wl, wz / wl); }
+            const _x0 = 0, snowT = on ? Math.min(1, Math.max(0, (WX.depth || 0) * 1.05 + ((WX.kind === 'snow' || WX.kind === 'sleet') ? (WX.precip || 0) * 0.35 : 0))) : 0, snowTarget = NU.snowForce != null ? NU.snowForce : snowT;
+            NU_WF.snow += (snowTarget - NU_WF.snow) * (1 - Math.exp(-dt * 0.8));
+            if (NU_WF.t > 0.4 || NU_WF.force) { if (Math.abs(NU_WF.snow - (NU_WF.applied || 0)) > 0.01) { NU_WF.applied = NU_WF.snow; const sn = NU_WF.snow; for (const o of nuWfMats()) { const a = Math.min(1, sn * o.k); o.m.color.copy(o.c).lerp(_wfW, a * 0.55); if (o.e) { o.m.emissive.copy(o.e).lerp(_wfS, a); o.m.emissiveIntensity = o.ei + a * 0.5; } else if (o.m.emissive) { o.m.emissive.copy(_wfS).multiplyScalar(a * 0.45); } o.m.needsUpdate = false; } } NU_WF.t = 0; }
+            // wind streaks
+            const amt = on ? Math.max(0, Math.min(1, ((wnd) - 0.3) / 0.45)) : 0;
+            if (!NU_WF.grp) { if (!amt) return; const G = NU_WF.grp = new THREE.Group(), geo = new THREE.PlaneGeometry(1, 0.03); NU_WF.streaks = []; for (let i = 0; i < 26; i++) { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false })); m.visible = false; m.frustumCulled = false; m.userData.noOutline = true; G.add(m); NU_WF.streaks.push({ m, t: 9, life: 1, len: 2, v: 18, x: 0, y: 0, z: 0 }); } scene.add(G); }
+            NU_WF.grp.visible = amt > 0 || NU_WF.streaks.some((s) => s.m.visible); if (!NU_WF.grp.visible) return;
+            let dx = WX.wdx, dz = WX.wdz; if (NU.windDir) { dx = NU.windDir[0]; dz = NU.windDir[1]; } const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl; const cam = camera.position;
+            for (const s of NU_WF.streaks) {
+                s.t += dt;
+                if (s.t >= s.life) { s.m.visible = false; if (amt > 0 && Math.random() < dt * (3 + amt * 14)) { const a = Math.random() * 6.283, r = 3 + Math.random() * 15; s.x = cam.x + Math.cos(a) * r - dx * 6; s.z = cam.z + Math.sin(a) * r - dz * 6; s.y = nuH(s.x, s.z) + 0.6 + Math.random() * 5; s.len = 1.6 + Math.random() * 2.6; s.v = 11 + wnd * 16 + Math.random() * 6; s.life = 0.8 + Math.random() * 0.7; s.t = 0; s.ph = Math.random() * 6; s.m.visible = true; } continue; }
+                const k = s.t / s.life, env = Math.sin(Math.PI * k); s.x += dx * s.v * dt; s.z += dz * s.v * dt; s.y += Math.sin(NU_WF.t * 0 + s.t * 3 + s.ph) * dt * 0.5;
+                _wfX.set(dx, 0, dz); _wfZ.set(cam.x - s.x, 0.0, cam.z - s.z); _wfZ.y = (cam.y - s.y) * 0.9; _wfZ.normalize(); _wfY.crossVectors(_wfZ, _wfX).normalize(); _wfZ.crossVectors(_wfX, _wfY).normalize();
+                _wfM.makeBasis(_wfX.clone().multiplyScalar(s.len * (0.6 + 0.4 * env)), _wfY, _wfZ); _wfM.setPosition(s.x, s.y, s.z); s.m.matrixAutoUpdate = false; s.m.matrix.copy(_wfM); s.m.matrixWorldNeedsUpdate = true;
+                s.m.material.opacity = 0.34 * env * Math.max(0.35, amt);
+            }
+        }
+        const _wfW = new THREE.Color(0.93, 0.97, 1), _wfS = new THREE.Color(0.78, 0.86, 0.98), _wfX = new THREE.Vector3(), _wfY = new THREE.Vector3(), _wfZ = new THREE.Vector3(), _wfM = new THREE.Matrix4();
         function nuPineLod(dt) {   // three levels of every tree, swapped by distance a few times a second (1100 trees)
             const P = NU.pines; if (!P || !camera) return; P.t -= dt; if (P.t > 0) return; P.t = 0.35; const c = camera.position; if (Math.hypot(c.x - P.last.x, c.z - P.last.z) < 1.5 && P.t0) return; P.last.copy(c); P.t0 = 1;
             const cnt = P.groups.map(() => [0, 0, 0]);
             for (const t of P.list) {
                 const d2 = (t.x - c.x) * (t.x - c.x) + (t.z - c.z) * (t.z - c.z); const L = d2 < 2500 ? 0 : d2 < 12100 ? 1 : d2 < 52900 ? 2 : -1; if (L < 0) continue;
-                _pQ.setFromAxisAngle(_pY, t.r); _pP.set(t.x, t.y, t.z); _pS.set(t.h, t.h, t.h); _pM.compose(_pP, _pQ, _pS); const gp = P.groups[t.v][L], ci = cnt[t.v][L]++; for (const part of gp) { _pM2.multiplyMatrices(_pM, part.pm); part.im.setMatrixAt(ci, _pM2); }
+                _pQ.setFromAxisAngle(_pY, t.r); _pP.set(t.x, t.y - 0.16 - t.h * 0.05, t.z); _pS.set(t.h, t.h, t.h); _pM.compose(_pP, _pQ, _pS); const gp = P.groups[t.v][L], ci = cnt[t.v][L]++; for (const part of gp) { _pM2.multiplyMatrices(_pM, part.pm); part.im.setMatrixAt(ci, _pM2); }
             }
             P.groups.forEach((g, v) => g.forEach((parts, i) => { for (const part of parts) { part.im.count = cnt[v][i]; part.im.instanceMatrix.needsUpdate = true; } }));
-            const U = NU.ug; if (U) { const uc = {}; for (const q of U.list) { const d2 = (q.x - c.x) * (q.x - c.x) + (q.z - c.z) * (q.z - c.z); if (d2 > 5625) continue; const im = U.ims[q.n]; if (!im) continue; const k = uc[q.n] || 0; if (k >= im.instanceMatrix.count) continue; _pQ.setFromAxisAngle(_pY, q.r); _pP.set(q.x, q.y, q.z); _pS.set(q.s, q.s, q.s); _pM.compose(_pP, _pQ, _pS); im.setMatrixAt(k, _pM); uc[q.n] = k + 1; } for (const n in U.ims) { U.ims[n].count = uc[n] || 0; U.ims[n].instanceMatrix.needsUpdate = true; } }
+            const U = NU.ug; if (U) { const uc = {}; for (const q of U.list) { const d2 = (q.x - c.x) * (q.x - c.x) + (q.z - c.z) * (q.z - c.z); if (d2 > 5625) continue; const im = U.ims[q.n]; if (!im) continue; const k = uc[q.n] || 0; if (k >= im.instanceMatrix.count) continue; _pQ.setFromAxisAngle(_pY, q.r); _pP.set(q.x, q.y - 0.1, q.z); _pS.set(q.s, q.s, q.s); _pM.compose(_pP, _pQ, _pS); im.setMatrixAt(k, _pM); uc[q.n] = k + 1; } for (const n in U.ims) { U.ims[n].count = uc[n] || 0; U.ims[n].instanceMatrix.needsUpdate = true; } }
         }
         /* keep the Oasis overlays out of the Adventia HUD: the party list sits under the HP frame, and a name plate that is nearly on the lens is hidden instead of covering the screen */
         function nuUiFix() {
@@ -13525,7 +13639,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         function nuUpdate(g, dt) {
             const p = g.position; NU.t += dt; if (NU.grace > 0) NU.grace -= dt;
             if (NU.skyCtx && NU.group && NU.group.visible) { NU.skyCtx.t += dt; cySkyUpdate(dt, p, NU.skyCtx); nuShroud(); const night = nuNight(); for (const l of NU.lamps) l.intensity = 14 * night; }
-            nuUiFix(); if (!NU.ready) return; nuPineLod(dt);
+            nuUiFix(); if (!NU.ready) return; nuPineLod(dt); try { nuShatterTick(dt); } catch (e) { /* cosmetic */ } try { nuWeatherFx(dt, p); } catch (e) { if (!window.__wfErr) { window.__wfErr = e; console.warn('nu weather fx', e); } }
             if (NU.crystal) { NU.crystal.rotation.y += dt * 0.8; NU.crystal.position.y = 3.1 + Math.sin(NU.t * 1.6) * 0.18; }
             if (activeMap !== 'nuu') return;
             for (const c of NU.cry) if (c.mesh) { c.mesh.rotation.y += dt * 0.9; c.mesh.position.y = 2.2 + Math.sin(NU.t * 1.5 + c.x) * 0.15; }
@@ -13619,7 +13733,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
         try { window.__jv = { JV, jvH, jvBlk, jvCollide }; } catch (e) { /* no window */ }
         MAP_DEFS.jv = { id: 'jv', ground: (x, z) => jvH(x, z), clamp: (p) => { if (jvBlk(p.x, p.z) && JV.H) { /* collide handles it */ } }, collide: jvCollide, spawn: jvSpawn, update: jvUpdate };
 
-        window.__nuu = { NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        window.__nuu = { shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
@@ -19182,7 +19296,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         for (let i = 0; i < 12; i++) PAD_ACTS['nfm_' + i] = ['•', 'Move', nfPadOn(() => nfUse(i))];
         Object.assign(PAD_ACTS, {
             nf_target: ['🎯', 'Next target', nfPadOn(() => nfCycle())], nf_aether: ['💠', 'Aether network', nfPadOn(() => nfTeleMenu())], nf_class: ['🎭', 'Change class', nfPadOn(() => nfClassMenu())],
-            nf_use: ['✋', 'Use / open', nfPadOn(() => { const c = nuChestNear(); if (c) nuChestOpenNear(); else { const k = nuCrystalNear(); if (k) nfInteractCrystal(k); } })], nf_untarget: ['✖️', 'Drop target', nfPadOn(() => nfTarget(null))]
+            nf_use: ['✋', 'Use / open', nfPadOn(() => { nfPadUse(); })], nf_roll: ['🤸', 'Dodge Roll', nfPadOn(() => nfRoll())], nf_guard: ['🛡️', 'Guard', nfPadOn(() => { const i = NF_SK.findIndex((q) => q && q.k === 'guard'); if (i >= 0) nfUse(i); })], nf_untarget: ['✖️', 'Drop target', nfPadOn(() => nfTarget(null))]
         });
         PAD_ACTS.estop = ['\uD83E\uDDCD', 'Stand up', () => { try { localActor.playEmote('stand'); net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } }];
         const PAD_SETS_DEF = [
@@ -19375,12 +19489,12 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 if (activeMap !== 'diner') {
                 if (hit(12) && !grace) padCycleParty(-1);
                 if (hit(13) && !grace) padCycleParty(1);
-                if (hit(14) && !grace) cycleLookTarget(-1);
-                if (hit(15) && !grace) cycleLookTarget(1);
+                if (hit(14) && !grace) { if (activeMap === 'nuu') nfCycle(-1); else cycleLookTarget(-1); }
+                if (hit(15) && !grace) { if (activeMap === 'nuu') nfCycle(1); else cycleLookTarget(1); }
                 }
-                if (hit(0) && !grace) { if (activeMap === 'btl') { /* the battle reads the pad itself */ } else if (activeMap === 'bowl') bwPadAct(); else if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
-                if (hit(1) && !grace) { if (activeMap === 'diner' && KC.hold) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (!padCancelAll()) PAD.auto = false; }     // B: cancel (Kitchen Clash: drop the plate)
-                if (hit(2) && !grace) { if (mag > 0.12) tapSprint(); else if (activeMap === 'diner') { /* no map button while cooking */ } else if (localActor.lookId && peers.has(localActor.lookId)) exmMenuOpen(localActor.lookId); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
+                if (hit(0) && !grace) { if (activeMap === 'btl') { /* the battle reads the pad itself */ } else if (activeMap === 'bowl') bwPadAct(); else if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (activeMap === 'nuu' && nfPadUse()) { /* chest / crystal */ } else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
+                if (hit(1) && !grace) { if (activeMap === 'diner' && KC.hold) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (activeMap === 'nuu' && NU.ready && !NF.cast) { PAD.auto = false; nfRoll(); } else if (!padCancelAll()) PAD.auto = false; }     // B: cancel (Kitchen Clash: drop the plate)
+                if (hit(2) && !grace) { if (activeMap === 'nuu' && nfPadUse()) { /* X: open chest */ } else if (mag > 0.12) tapSprint(); else if (activeMap === 'diner') { /* no map button while cooking */ } else if (localActor.lookId && peers.has(localActor.lookId)) exmMenuOpen(localActor.lookId); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y: jump
             }
             if ((PAD.prev[6] || PAD.prev[7]) && !(b[6] || b[7])) PAD.trigUp = nowS();
@@ -19393,15 +19507,25 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             PAD.prev = b;
         }
         const _po = new THREE.Vector3();
+        /* Adventia camera: never inside the ground, rocks or tree trunks. Pulls in at once to the free distance, eases back out to where you had zoomed. */
+        function nuKeepCam(dt) {
+            if (!NU.nav) return; const tg = controls.target, cp = camera.position; let dx = cp.x - tg.x, dy = cp.y - tg.y, dz = cp.z - tg.z; const d = Math.hypot(dx, dy, dz); if (d < 0.05) return;
+            if (NU.camLast == null || Math.abs(d - NU.camLast) > 0.02) NU.camWant = d; const want = NU.camWant; dx /= d; dy /= d; dz /= d;
+            let free = want; for (let t = 0.9; t <= want + 0.001; t += 0.35) { const x = tg.x + dx * t, y = tg.y + dy * t, z = tg.z + dz * t, h = nuH(x, z); if (y < h + 0.6 || (t > 1.6 && nuBlk(x, z) && y < h + 3.2)) { free = Math.max(0.9, t - 0.55); break; } }
+            let nd = free < d ? free : d + (free - d) * (1 - Math.exp(-dt * 3.5)); nd = Math.min(nd, want);
+            cp.set(tg.x + dx * nd, tg.y + dy * nd, tg.z + dz * nd); const gh = nuH(cp.x, cp.z) + 0.55; if (cp.y < gh) cp.y = gh; NU.camLast = cp.distanceTo(tg);
+        }
         function padCamera(dt) {
-            if (!PAD.rx && !PAD.ry && !PAD.zoom && !PAD.lockId) return;
+            const nl = activeMap === 'nuu' && NF.lockOn && NF.tgt && !NF.tgt.dead && !fpOn; if (nl && Math.abs(PAD.rx || 0) > 0.35) NF.lockOn = false;
+            if (!PAD.rx && !PAD.ry && !PAD.zoom && !PAD.lockId && !(nl && NF.lockOn)) return;
             _po.copy(camera.position).sub(controls.target);
             let r = _po.length(), th = Math.atan2(_po.x, _po.z), ph = Math.acos(clamp(_po.y / r, -1, 1));
             const lk = PAD.lockId && peers.get(PAD.lockId);
             if (lk && lk.actor.group.parent && !fpOn) {          // lock-on: swing round behind you so the target stays in front
                 const me3 = localActor.group.position, t3 = lk.actor.group.position;
                 if (Math.hypot(me3.x - t3.x, me3.z - t3.z) > 0.5) { let d = Math.atan2(me3.x - t3.x, me3.z - t3.z) - th; d = Math.atan2(Math.sin(d), Math.cos(d)); th += d * Math.min(1, dt * 5); }
-            } else th -= (PAD.rx || 0) * 2.6 * dt;
+            } else if (nl && NF.lockOn) { const me3 = localActor.group.position, t3 = NF.tgt; if (Math.hypot(me3.x - t3.x, me3.z - t3.z) > 0.5) { let d = Math.atan2(me3.x - t3.x, me3.z - t3.z) - th; d = Math.atan2(Math.sin(d), Math.cos(d)); th += d * Math.min(1, dt * 4); } }
+            else th -= (PAD.rx || 0) * 2.6 * dt;
             ph = clamp(ph - (PAD.ry || 0) * 1.8 * dt, Math.max(0.12, controls.minPolarAngle), controls.maxPolarAngle);   // same limits as the mouse camera (in the studio it may dip below eye level to look up); stick up = look up, like dragging the mouse up
             if (PAD.zoom) r = clamp(r * Math.exp(PAD.zoom * dt * 1.6), controls.minDistance, controls.maxDistance);
             _po.set(Math.sin(ph) * Math.sin(th) * r, Math.cos(ph) * r, Math.sin(ph) * Math.cos(th) * r);
@@ -19923,6 +20047,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (fpOn) { _po.copy(camera.position).sub(controls.target); if (_po.lengthSq() < 1e-8) _po.set(0, 0, 1); _po.setLength(0.06); camera.position.copy(controls.target).add(_po); }
             controls.update();
             if (!fpOn) keepCameraInRoom();
+            if (activeMap === 'nuu' && !fpOn) { try { nuKeepCam(dt); } catch (e) { if (!window.__nuCamErr) { window.__nuCamErr = e; console.error('nu cam', e); } } }
             try { gnKeepCam(dt); } catch (e) { if (!window.__gnErr) { window.__gnErr = e; console.error('gn cam', e); } }
         }
 
@@ -20796,7 +20921,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
          *  GAMES: Triple Triad (2D cards) and Connect 4 (3D). Play the computer, or challenge a player in the room.
          *  The card art is stylized (no game artwork); cards, names and numbers are generated, the same on every device.
          * ==================================================================================================== */
-        const GM = { open: false, view: 'lobby', pick: 'tt', rules: { same: true, plus: true }, lvl: 1, sess: null, ask: null, timers: [], c4: null };
+        const GM = { open: false, view: 'lobby', pick: 'tt', rules: { same: true, plus: true, minus: true, elem: true }, lvl: 1, sess: null, ask: null, timers: [], c4: null };
         // the FFXIV card list (names, stars and the four numbers: top, right, bottom, left) as listed on the community wiki; the 5-star and later cards are not in yet
         const TT_DEF = [
             ["Dodo", "🐦", 1, [4, 2, 3, 4], 1],
@@ -21289,22 +21414,29 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function ttMyDeck() { try { const d = JSON.parse(localStorage.getItem('oasisTTDeck2') || 'null'); if (ttDeckOk(d)) return d; } catch (e) { /* none saved */ } const d = ttAutoDeck(); ttSaveDeck(d); return d; }
         function ttSaveDeck(d) { try { localStorage.setItem('oasisTTDeck2', JSON.stringify(d)); } catch (e) { /* storage unavailable */ } }
         const ttNbrs = (i) => { const x = i % 3, y = (i / 3) | 0, o = []; if (y > 0) o.push([i - 3, 0, 2]); if (x < 2) o.push([i + 1, 1, 3]); if (y < 2) o.push([i + 3, 2, 0]); if (x > 0) o.push([i - 1, 3, 1]); return o; };
-        const ttNew = (decks, rules, first) => ({ b: Array(9).fill(null), h: [decks[0].slice(), decks[1].slice()], turn: first, rules: { same: !!rules.same, plus: !!rules.plus }, n: 0 });
+        const TT_EL = ['🔥', '❄️', '⚡', '🌍', '☠️', '🌪️', '💧', '✨'];
+        const ttElemOf = (id) => { const h = ttHash(TT_CARDS[id].n + '~element'); return h % 100 < 42 ? (h >>> 8) % 8 : -1; };    // about four cards in ten carry an element
+        const ttRules = (r) => ({ same: !!(r && r.same), plus: !!(r && r.plus), minus: !!(r && r.minus), elem: !!(r && r.elem) });
+        function ttBoardEl(rules, seed) { const el = Array(9).fill(-1); if (!rules.elem) return el; const R = ttRng(ttHash(String(seed || 'tt'))), cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]; for (let i = 8; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; } const n = 3 + Math.floor(R() * 3); for (let k = 0; k < n; k++) el[cells[k]] = Math.floor(R() * 8); return el; }
+        const ttNew = (decks, rules, first, seed) => { const r = ttRules(rules); return { b: Array(9).fill(null), h: [decks[0].slice(), decks[1].slice()], turn: first, rules: r, el: ttBoardEl(r, seed), n: 0 }; };
+        // a card's four numbers on a given square: +1 on its own element's square, -1 on any other element's square (Elemental rule)
+        const ttEff = (S, id, cell) => { const v = TT_CARDS[id].v; if (!S.rules.elem || !S.el || S.el[cell] < 0) return v; const d = ttElemOf(id) === S.el[cell] ? 1 : -1; return v.map((x) => Math.max(0, Math.min(11, x + d))); };
         function ttPlay(S, seat, id, cell) {                 // plays a card; returns { flips, ev } or null when the move is not allowed
             if (S.turn !== seat || cell < 0 || cell > 8 || S.b[cell] || !S.h[seat].includes(id)) return null;
             S.h[seat].splice(S.h[seat].indexOf(id), 1); S.b[cell] = { id, o: seat }; S.n++; S.turn = 1 - seat;
-            const C = TT_CARDS[id].v, flips = [], ev = [], nb = ttNbrs(cell).filter(([j]) => S.b[j]), V = (j) => TT_CARDS[S.b[j].id].v;
+            const C = ttEff(S, id, cell), flips = [], ev = [], nb = ttNbrs(cell).filter(([j]) => S.b[j]), V = (j) => ttEff(S, S.b[j].id, j);
             const flip = (j) => { if (S.b[j].o !== seat) { S.b[j].o = seat; flips.push(j); return true; } return false; };
             const special = new Set();
             if (S.rules.same) { const m = nb.filter(([j, a, b]) => C[a] === V(j)[b]); if (m.length >= 2) { for (const [j] of m) if (S.b[j].o !== seat) special.add(j); if (special.size) ev.push('SAME'); } }
             if (S.rules.plus) { const g = {}; for (const [j, a, b] of nb) (g[C[a] + V(j)[b]] = g[C[a] + V(j)[b]] || []).push(j); let pl = false; for (const s in g) if (g[s].length >= 2) for (const j of g[s]) if (S.b[j].o !== seat) { special.add(j); pl = true; } if (pl) ev.push('PLUS'); }
+            if (S.rules.minus) { const g = {}; for (const [j, a, b] of nb) (g[Math.abs(C[a] - V(j)[b])] = g[Math.abs(C[a] - V(j)[b])] || []).push(j); let mn = false; for (const d in g) if (g[d].length >= 2) for (const j of g[d]) if (S.b[j].o !== seat) { special.add(j); mn = true; } if (mn) ev.push('MINUS'); }
             const q = [...special]; for (const j of special) flip(j);
             for (const [j, a, b] of nb) if (S.b[j].o !== seat && C[a] > V(j)[b]) flip(j);
             if (q.length) { while (q.length) { const k = q.shift(), Vk = V(k); for (const [j, a, b] of ttNbrs(k)) if (S.b[j] && S.b[j].o !== seat && Vk[a] > V(j)[b]) { flip(j); q.push(j); if (!ev.includes('COMBO')) ev.push('COMBO'); } } }
             return { flips, ev };
         }
         const ttScore = (S, s) => S.b.reduce((n, c) => n + (c && c.o === s ? 1 : 0), 0) + S.h[s].length;
-        const ttClone = (S) => ({ b: S.b.map((c) => c && { ...c }), h: S.h.map((a) => a.slice()), rules: S.rules, n: S.n, turn: S.turn });
+        const ttClone = (S) => ({ b: S.b.map((c) => c && { ...c }), h: S.h.map((a) => a.slice()), rules: S.rules, el: S.el, n: S.n, turn: S.turn });
         function ttAi(S, seat, lvl) {
             const moves = []; for (const id of S.h[seat]) for (let c = 0; c < 9; c++) if (!S.b[c]) moves.push([id, c]);
             if (!moves.length) return null; let best = null, bs = -1e9;
@@ -21506,6 +21638,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             ttSfx((ac, t, out) => {
                 t += delay || 0;
                 if (name === 'SAME') { ttBell(ac, out, t, 1318.5, 0.2); ttBell(ac, out, t + 0.13, 1760, 0.2); ttBell(ac, out, t + 0.26, 2217.5, 0.14); }
+                else if (name === 'MINUS') { [1046.5, 783.99, 659.25, 523.25].forEach((f, i) => ttTone(ac, out, t + i * 0.06, f, 0.11, { type: 'square', vol: 0.07, a: 0.004, lp: 3000 })); ttBell(ac, out, t + 0.26, 1568, 0.16); }
                 else if (name === 'PLUS') { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => ttTone(ac, out, t + i * 0.06, f, 0.11, { type: 'square', vol: 0.07, a: 0.004, lp: 3000 })); ttBell(ac, out, t + 0.26, 2093, 0.16); }
                 else if (name === 'COMBO') { [392, 494, 587.33, 740, 880, 1175, 1480].forEach((f, i) => ttTone(ac, out, t + i * 0.05, f, 0.12, { type: 'sawtooth', vol: 0.07, a: 0.004, lp: 3500 })); ttHit(ac, out, t, { f: 2600, q: 0.7, vol: 0.2, d: 0.4 }); ttTone(ac, out, t + 0.35, 98, 0.3, { to: 50, vol: 0.4, hold: 0.2 }); ttBell(ac, out, t + 0.38, 2349, 0.14); }
                 else if (name === 'SHUFFLE') { for (let i = 0; i < 7; i++) ttHit(ac, out, t + i * 0.055, { f: 2300 + Math.random() * 1600, q: 1, vol: 0.22, d: 0.05 }); }
@@ -21548,14 +21681,14 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 <button type="button" class="gm-tile ${tt ? 'on' : ''}" data-g="tt"><span class="ico cardback">🎴</span><span><b>Triple Triad</b><small>Place cards on a 3×3 board and capture your rival's cards.</small></span></button>
                 <button type="button" class="gm-tile ${tt ? '' : 'on'}" data-g="c4"><span class="ico">🔴</span><span><b>Connect 4 (3D)</b><small>Drop discs into the board and line up four.</small></span></button></div>
                 <div class="gm-opts"><h4>${tt ? 'Triple Triad' : 'Connect 4'}</h4>
-                ${tt ? `<div class="gm-row"><label class="gm-chk"><input type="checkbox" id="gm-same" ${GM.rules.same ? 'checked' : ''}> Same</label><label class="gm-chk"><input type="checkbox" id="gm-plus" ${GM.rules.plus ? 'checked' : ''}> Plus</label><button type="button" class="gm-btn alt" id="gm-deck">Your deck</button><button type="button" class="gm-btn alt" id="gm-mfile">🎵 Music file</button><input type="file" id="gm-mfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-sfile">🔔 Start sound</button><input type="file" id="gm-sfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-cfile">🃏 Capture sound</button><input type="file" id="gm-cfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-ufile">🖱️ Cursor sound</button><input type="file" id="gm-ufin" accept="audio/*" hidden>${TTU.src && TTU.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-uclr">Remove cursor sound</button>' : ''}${TTC.src && TTC.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-cclr">Remove capture sound</button>' : ''}${TTS.src && TTS.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-sclr">Remove start sound</button>' : ''}${TTM.src && TTM.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-mclr">Use default music</button>' : ''}</div><div class="gm-note">Both hands are open. Same and Plus flip cards and chain into combos.</div>` : '<div class="gm-note">Drag to turn the board. Left / right and Enter drop a disc, or click a column.</div>'}
+                ${tt ? `<div class="gm-row"><label class="gm-chk"><input type="checkbox" id="gm-same" ${GM.rules.same ? 'checked' : ''}> Same</label><label class="gm-chk"><input type="checkbox" id="gm-plus" ${GM.rules.plus ? 'checked' : ''}> Plus</label><label class="gm-chk"><input type="checkbox" id="gm-minus" ${GM.rules.minus ? 'checked' : ''}> Minus</label><label class="gm-chk"><input type="checkbox" id="gm-elem" ${GM.rules.elem ? 'checked' : ''}> Elemental</label><button type="button" class="gm-btn alt" id="gm-deck">Your deck</button><button type="button" class="gm-btn alt" id="gm-mfile">🎵 Music file</button><input type="file" id="gm-mfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-sfile">🔔 Start sound</button><input type="file" id="gm-sfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-cfile">🃏 Capture sound</button><input type="file" id="gm-cfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-ufile">🖱️ Cursor sound</button><input type="file" id="gm-ufin" accept="audio/*" hidden>${TTU.src && TTU.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-uclr">Remove cursor sound</button>' : ''}${TTC.src && TTC.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-cclr">Remove capture sound</button>' : ''}${TTS.src && TTS.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-sclr">Remove start sound</button>' : ''}${TTM.src && TTM.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-mclr">Use default music</button>' : ''}</div><div class="gm-note">Both hands are open. Same and Plus flip cards and chain into combos.</div>` : '<div class="gm-note">Drag to turn the board. Left / right and Enter drop a disc, or click a column.</div>'}
                 ${tt ? '<h4>Your current deck</h4><div class="gm-row">' + ttStrip(ttMyDeck(), 64) + '</div>' : ''}<h4>Play the computer</h4><div class="gm-row"><button type="button" class="gm-btn" data-ai="0">Easy</button><button type="button" class="gm-btn" data-ai="1">Normal</button><button type="button" class="gm-btn" data-ai="2">Hard</button></div>
                 <h4>Challenge a player here</h4><div class="gm-row">${ps.length && net ? ps.map((p) => `<button type="button" class="gm-btn gold" data-peer="${esc(p.id)}">${esc(String(p.name).slice(0, 16))}</button>`).join('') : '<span class="gm-note">Nobody else is in this room right now.</span>'}</div>${gmRecHtml()}</div></div>`;
             const b = gmBody();
             b.querySelectorAll('[data-g]').forEach((e) => e.addEventListener('click', () => { GM.pick = e.dataset.g; gmLobby(); const t = gmBody().querySelector(`[data-g="${GM.pick}"]`); if (t) t.focus(); }));
             b.querySelectorAll('[data-ai]').forEach((e) => e.addEventListener('click', () => { GM.lvl = +e.dataset.ai; gmStart({ game: GM.pick, peer: null, seat: 0, first: Math.random() < 0.5 ? 0 : 1, decks: [ttMyDeck(), ttAutoDeck()], rules: { ...GM.rules } }); }));
             b.querySelectorAll('[data-peer]').forEach((e) => e.addEventListener('click', () => gmChallenge(e.dataset.peer)));
-            const sm = $('gm-same'), pl = $('gm-plus'); if (sm) sm.onchange = () => { GM.rules.same = sm.checked; }; if (pl) pl.onchange = () => { GM.rules.plus = pl.checked; };
+            const sm = $('gm-same'), pl = $('gm-plus'), mi = $('gm-minus'), el = $('gm-elem'); if (sm) sm.onchange = () => { GM.rules.same = sm.checked; }; if (pl) pl.onchange = () => { GM.rules.plus = pl.checked; }; if (mi) mi.onchange = () => { GM.rules.minus = mi.checked; }; if (el) el.onchange = () => { GM.rules.elem = el.checked; };
             const dk = $('gm-deck'); if (dk) dk.onclick = () => gmDeckView();
             { const mf = $('gm-mfile'), fi = $('gm-mfin'), mc = $('gm-mclr'); if (mf && fi) { mf.onclick = () => fi.click(); fi.onchange = async () => { await ttmLoadFile(fi.files[0]); gmLobby(); }; } if (mc) mc.onclick = async () => { await ttmClearFile(); gmLobby(); }; { const uf = $('gm-ufile'), ufi = $('gm-ufin'), uc = $('gm-uclr'); if (uf && ufi) { uf.onclick = () => ufi.click(); ufi.onchange = async () => { await ttuLoadFile(ufi.files[0]); gmLobby(); }; } if (uc) uc.onclick = async () => { await ttuClearFile(); gmLobby(); }; try { ttuInit().then(() => { ttsfxPrep(TTU);  if (TTU.src && TTU.src.startsWith('blob:') && !$('gm-uclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
             { const cf = $('gm-cfile'), cfi = $('gm-cfin'), cc = $('gm-cclr'); if (cf && cfi) { cf.onclick = () => cfi.click(); cfi.onchange = async () => { await ttcLoadFile(cfi.files[0]); gmLobby(); }; } if (cc) cc.onclick = async () => { await ttcClearFile(); gmLobby(); }; try { ttcInit().then(() => { ttsfxPrep(TTC);  if (TTC.src && TTC.src.startsWith('blob:') && !$('gm-cclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
@@ -21606,7 +21739,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             };
             draw();
         }
-        const ttFace = (c) => `<span class="st">${'★'.repeat(c.st)}</span><span class="nm" style="--nl:${Math.max(0.62, Math.min(1, 14 / c.n.length)).toFixed(2)}">${esc(c.n)}</span><i class="art">${c.ic}${TT_ART[c.id] ? '<img class="artimg" loading="lazy" alt="" referrerpolicy="no-referrer" data-id="' + c.id + '" data-i="0" src="' + TT_ART[c.id][0] + '" onerror="ttArtErr(this)">' : ''}</i></i><b class="n t">${c.v[0] === 10 ? 'A' : c.v[0]}</b><b class="n r">${c.v[1] === 10 ? 'A' : c.v[1]}</b><b class="n b">${c.v[2] === 10 ? 'A' : c.v[2]}</b><b class="n l">${c.v[3] === 10 ? 'A' : c.v[3]}</b>`;
+        const ttFace = (c, ef, cellEl) => { const v = ef || c.v, em = ttElemOf(c.id), n = (i) => { const x = v[i], k = ef ? (x > c.v[i] ? ' up' : x < c.v[i] ? ' dn' : '') : ''; return `<b class="n ${'trbl'[i]}${k}">${x >= 10 ? 'A' : x}</b>`; }; return `<span class="st">${'★'.repeat(c.st)}</span><span class="nm" style="--nl:${Math.max(0.62, Math.min(1, 14 / c.n.length)).toFixed(2)}">${esc(c.n)}</span><i class="art">${c.ic}${TT_ART[c.id] ? '<img class="artimg" loading="lazy" alt="" referrerpolicy="no-referrer" data-id="' + c.id + '" data-i="0" src="' + TT_ART[c.id][0] + '" onerror="ttArtErr(this)">' : ''}</i></i>${n(0)}${n(1)}${n(2)}${n(3)}${em >= 0 && TT_ELEM_ON() ? `<s class="elb">${TT_EL[em]}</s>` : ''}${cellEl >= 0 ? `<s class="elc">${TT_EL[cellEl]}</s>` : ''}`; };
+        const TT_ELEM_ON = () => !!(GM.sess ? GM.sess.rules && GM.sess.rules.elem : GM.rules && GM.rules.elem);
         function gmChallenge(peerId) {
             const p = peers.get(peerId); if (!p || !net) { sysChat('That player is not here.'); return; }
             if (GM.sess) { gmEndSession(true); }
@@ -21628,7 +21762,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 const done = (ok) => {
                     ask.classList.add('hidden'); $('gma-yes').onclick = $('gma-no').onclick = null; GM.ask = null; if (!ok) { net.send({ t: 'gm', op: 'ans', to: from, tid, ok: false }); return; }
                     if (GM.sess || !peers.has(from)) { no('busy'); return; }
-                    GM.sess = { tid, peer: from, game: g, phase: 'wait', seat: 1, rules: { same: !!(m.rules && m.rules.same), plus: !!(m.rules && m.rules.plus) }, hostDeck: g === 'tt' ? m.deck.slice() : null, name: p.name };
+                    GM.sess = { tid, peer: from, game: g, phase: 'wait', seat: 1, rules: ttRules(m.rules), hostDeck: g === 'tt' ? m.deck.slice() : null, name: p.name };
                     net.send({ t: 'gm', op: 'ans', to: from, tid, ok: true, deck: g === 'tt' ? ttMyDeck() : null }); gmOpen(); gmSay('Starting…');
                 };
                 $('gma-yes').onclick = () => done(true); $('gma-no').onclick = () => done(false); GM.ask.done = done;
@@ -21656,7 +21790,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function gmStart(o) {
             const prev = GM.sess; GM.timers.forEach(clearTimeout); GM.timers = [];
             const s = GM.sess = { tid: o.tid || (prev && prev.tid) || uid(), peer: o.peer, game: o.game, seat: o.seat, phase: 'live', ai: !o.peer, lvl: GM.lvl, name: o.name || 'Computer', rules: o.rules, over: false, sel: -1 };
-            if (o.game === 'tt') { s.S = ttNew(o.decks, o.rules, o.first); } else { s.cols = [[], [], [], [], [], [], []]; s.turn = o.first; s.last = null; }
+            if (o.game === 'tt') { s.S = ttNew(o.decks, o.rules, o.first, s.tid); } else { s.cols = [[], [], [], [], [], [], []]; s.turn = o.first; s.last = null; }
             gmShowGame(); try { if (o.game === 'tt') { ttsPlay(); ttStinger('SHUFFLE', 0.15); ttmPlay(); } else ttmStop(); } catch (e) { /* music */ }
         }
         function gmShowGame() {
@@ -21685,7 +21819,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const bodyW = gmBody().clientWidth || 800, ch = clamp(Math.min(Math.floor((bodyH - 70) / 3.15), Math.floor((bodyW - 100) / 6.3)), 50, 120), hh = ch;
             const side = (seat, mine) => `<div class="tt-side"><div class="tt-who" style="color:${mine ? '#9fc3ff' : '#ffb3a8'}">${mine ? 'YOU' : esc(String(s.name).slice(0, 12)).toUpperCase()}</div><div class="tt-hand">${S.h[seat].map((id) => { const c = TT_CARDS[id]; return mine ? `<button type="button" class="tc o0 s${c.st} ${s.sel === id ? 'sel' : ''}" data-h="${id}" style="--ch:${hh}px" title="${esc(c.n)}">${ttFace(c)}</button>` : `<div class="tc o1 s${c.st}" style="--ch:${hh}px">${ttFace(c)}</div>`; }).join('')}</div><div class="tt-score" style="color:${mine ? '#9fc3ff' : '#ffb3a8'}">${ttScore(S, seat)}</div></div>`;
             const myTurn = S.turn === me && !s.over;
-            const cells = S.b.map((c, i) => { if (!c) return `<button type="button" class="tt-cell ${myTurn && s.sel >= 0 ? 'hot' : ''}" data-c="${i}" style="--ch:${ch}px" aria-label="Empty space ${i + 1}"></button>`; const cd = TT_CARDS[c.id]; return `<div class="tc ${flips && flips.includes(i) ? (c.o === me ? 'o1' : 'o0') : (c.o === me ? 'o0' : 'o1')} s${cd.st} ${placed === i ? 'drop' : ''}" style="--ch:${ch}px">${ttFace(cd)}</div>`; }).join('');
+            const cells = S.b.map((c, i) => { if (!c) return `<button type="button" class="tt-cell ${myTurn && s.sel >= 0 ? 'hot' : ''}" data-c="${i}" style="--ch:${ch}px" aria-label="Empty space ${i + 1}">${S.el && S.el[i] >= 0 ? `<em class="cel">${TT_EL[S.el[i]]}</em>` : ''}</button>`; const cd = TT_CARDS[c.id]; return `<div class="tc ${flips && flips.includes(i) ? (c.o === me ? 'o1' : 'o0') : (c.o === me ? 'o0' : 'o1')} s${cd.st} ${placed === i ? 'drop' : ''}" style="--ch:${ch}px">${ttFace(cd, ttEff(S, c.id, i), S.el ? S.el[i] : -1)}</div>`; }).join('');
             const old = $('tt-table'), keep = old ? old.querySelector('.gm-banner') : null;
             gmBody().innerHTML = `<div class="tt-table" id="tt-table">${side(1 - me, false)}<div class="tt-board">${cells}</div>${side(me, true)}</div>`;
             if (ev && ev.length) { const f = document.createElement('div'); f.className = 'tt-fx'; f.textContent = ev.join(' · '); $('tt-table').appendChild(f); }
@@ -26642,7 +26776,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             v.objs.forEach((o, i) => {
                 const left = T === 'bow' || (T === 'knuckles' && i === 1), g = left ? -f : f; o.removeFromParent();
                 if (want === 'stow' && T === 'knuckles') { o.visible = false; return; } o.visible = true;
-                if (T === 'sword') { if (!o.userData.saya) { const L = CSW_TYPE.sword.len * c.size, sy = new THREE.Mesh(new THREE.BoxGeometry(0.045, L * 0.82, 0.07), tgMat(0x0d1014, { roughness: 0.4 })); sy.position.y = L * 0.52; sy.userData.noOutline = true; o.userData.saya = sy; o.add(sy); } o.userData.saya.visible = want === 'stow'; }
+                if (T === 'sword') { if (!o.userData.saya) { const L = CSW_TYPE.sword.len * c.size, sy = new THREE.Mesh(new THREE.BoxGeometry(0.045, L * 0.82, 0.07), tgMat(0x0d1014, { roughness: 0.4 })); sy.position.y = L * 0.52; sy.userData.noOutline = true; o.userData.saya = sy; o.add(sy); } o.userData.saya.visible = false; }
                 const parent = want === 'hand' ? H.getNormalizedBoneNode(left ? 'leftHand' : 'rightHand') : (T === 'gun' ? H.getNormalizedBoneNode('hips') : (H.getNormalizedBoneNode('upperChest') || H.getNormalizedBoneNode('chest')));
                 if (!parent) return; parent.add(o); o.scale.setScalar(1 / ws(parent));
                 if (want === 'hand') { o.position.set(-0.04 * g, 0, 0.01); o.rotation.set(c.hroll, c.hry, HC_GRIP.z * g + c.hrz * g); }
@@ -26657,22 +26791,61 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             q('csw-name').value = S.title || S.name || ''; q('csw-pow').max = cswCap(CSW.sel); q('csw-pow').value = S.cfg.pow; q('csw-name').disabled = q('csw-pow').disabled = !!S.cfg.lock; { const st = cswStats(S.type, S.cfg.pow); q('csw-stats').textContent = Object.keys(st).map((k) => k.toUpperCase() + ' +' + st[k]).join(' · ') + ' (Lv 1; grows with class XP)'; }
             q('csw-st').textContent = S.tpl ? '✔ ' + S.name + ' → ' + CSW.sel : 'nothing uploaded for this class';
         }
+        /* ---- weapon placement preview: a small live window on your character (drag to turn, wheel to zoom) with Full / Hand / Back views and a draw / put-away toggle ---- */
+        const PV = { rt: null, cam: new THREE.PerspectiveCamera(32, 0.8, 0.03, 60), mode: 'full', yaw: 0, pitch: 0.12, zoom: 1, run: false, cv: null, ctx: null, buf: null, img: null, lut: null, t: 0, W: 240, H: 300, tv: new THREE.Vector3() };
+        function cswPvPose(drawn) {
+            try { if (CLS.wpn === 'fists') { try { clsStowToggle(); } catch (e) { /* none */ } } HC.sheathed = !drawn; const a = localActor; a.heroSheath = !drawn; if (a.cswVis) a.cswVis.at = ''; if (a.hcVis) a.hcVis.at = ''; hcDress(a); } catch (e) { console.warn('pv pose', e); }
+            const b = document.getElementById('pv-pose'); if (b) b.textContent = HC.sheathed ? 'Put away (back) ▸ draw' : 'Drawn (hand) ▸ put away';
+        }
+        function cswPvMode(m) {
+            PV.mode = m; PV.zoom = 1; PV.pitch = 0.12; PV.yaw = m === 'back' ? Math.PI : m === 'hand' ? 0.9 : 0.35;
+            if (m === 'hand') cswPvPose(true); else if (m === 'back') cswPvPose(false);
+            for (const k of ['full', 'hand', 'back']) { const e = document.getElementById('pv-' + k); if (e) e.style.background = k === m ? 'rgba(125,200,255,.35)' : ''; }
+        }
+        function cswPvFrame() {
+            requestAnimationFrame(cswPvFrame); const cv = PV.cv; if (!cv || !cv.isConnected || !cv.getClientRects().length || !localActor || document.hidden) return;
+            const now = performance.now(); if (now - PV.t < 55) return; PV.t = now;
+            try {
+                const a = localActor, H = a.vrm && a.vrm.humanoid, gp = a.group.position; let d = 3.4, ty = gp.y + 0.9;
+                const sw = (CSW.s[CSW.sel] && CSW.s[CSW.sel].type) || 'sword', bn = PV.mode === 'hand' ? (sw === 'bow' ? 'leftHand' : 'rightHand') : 'upperChest';
+                if (PV.mode === 'full' || !H || !H.getNormalizedBoneNode(bn)) PV.tv.set(gp.x, ty, gp.z); else { H.getNormalizedBoneNode(bn).getWorldPosition(PV.tv); d = PV.mode === 'hand' ? 1.05 : 1.25; }
+                d *= PV.zoom; const ya = a.group.rotation.y + PV.yaw, cp = Math.cos(PV.pitch);
+                PV.cam.position.set(PV.tv.x + Math.sin(ya) * cp * d, PV.tv.y + Math.sin(PV.pitch) * d, PV.tv.z + Math.cos(ya) * cp * d); PV.cam.lookAt(PV.tv); PV.cam.updateMatrixWorld();
+                if (!PV.rt) { PV.rt = new THREE.WebGLRenderTarget(PV.W, PV.H); PV.buf = new Uint8Array(PV.W * PV.H * 4); PV.ctx = cv.getContext('2d'); PV.img = PV.ctx.createImageData(PV.W, PV.H); PV.lut = new Uint8Array(256); for (let i = 0; i < 256; i++) { const l = i / 255; PV.lut[i] = Math.round(255 * (l <= 0.0031308 ? l * 12.92 : 1.055 * Math.pow(l, 1 / 2.4) - 0.055)); } }
+                const lbl = a.label && a.label.visible; if (a.label) a.label.visible = false;
+                const prev = renderer.getRenderTarget(); renderer.setRenderTarget(PV.rt); renderer.render(scene, PV.cam); renderer.readRenderTargetPixels(PV.rt, 0, 0, PV.W, PV.H, PV.buf); renderer.setRenderTarget(prev); if (a.label) a.label.visible = lbl;
+                const o = PV.img.data, W = PV.W, L = PV.lut; for (let y = 0; y < PV.H; y++) { const sr = (PV.H - 1 - y) * W * 4, dr = y * W * 4; for (let x = 0; x < W * 4; x += 4) { o[dr + x] = L[PV.buf[sr + x]]; o[dr + x + 1] = L[PV.buf[sr + x + 1]]; o[dr + x + 2] = L[PV.buf[sr + x + 2]]; o[dr + x + 3] = 255; } }
+                PV.ctx.putImageData(PV.img, 0, 0);
+            } catch (e) { if (!window.__pvErr) { window.__pvErr = e; console.warn('weapon preview', e); } }
+        }
+        function cswPvWire(P) {
+            P.insertAdjacentHTML('afterbegin', '<div id="pv-box" style="position:sticky;top:0;z-index:5;background:#0b1220;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:6px;margin:6px 0;display:flex;gap:6px;align-items:flex-start"><canvas id="pv-cv" width="' + PV.W + '" height="' + PV.H + '" style="width:150px;height:188px;border-radius:8px;touch-action:none;cursor:grab;background:#111"></canvas><div style="font-size:11px;color:#ccc;display:flex;flex-direction:column;gap:4px"><b>Placement preview</b><div style="display:flex;gap:4px"><button id="pv-full" type="button" class="py-1 px-2 rounded-lg bg-white/10">Full</button><button id="pv-hand" type="button" class="py-1 px-2 rounded-lg bg-white/10">Hand</button><button id="pv-back" type="button" class="py-1 px-2 rounded-lg bg-white/10">Back</button></div><button id="pv-pose" type="button" class="py-1 px-2 rounded-lg bg-white/10">Drawn (hand) ▸ put away</button><span class="text-gray-500">Drag to turn around the character, wheel to zoom. Use the sliders below while you watch.</span></div></div>');
+            const cv = PV.cv = document.getElementById('pv-cv'); let dr = null;
+            cv.addEventListener('pointerdown', (e) => { dr = { x: e.clientX, y: e.clientY }; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* none */ } cv.style.cursor = 'grabbing'; });
+            cv.addEventListener('pointermove', (e) => { if (!dr || e.buttons === 0) { dr = null; return; } PV.yaw -= (e.clientX - dr.x) * 0.012; PV.pitch = Math.max(-0.6, Math.min(1.2, PV.pitch + (e.clientY - dr.y) * 0.008)); dr = { x: e.clientX, y: e.clientY }; });
+            const end = () => { dr = null; cv.style.cursor = 'grab'; }; cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end); cv.addEventListener('lostpointercapture', end);
+            cv.addEventListener('wheel', (e) => { e.preventDefault(); PV.zoom = Math.max(0.3, Math.min(2.5, PV.zoom * (e.deltaY > 0 ? 1.1 : 0.9))); }, { passive: false });
+            for (const k of ['full', 'hand', 'back']) document.getElementById('pv-' + k).addEventListener('click', () => cswPvMode(k));
+            document.getElementById('pv-pose').addEventListener('click', () => cswPvPose(HC.sheathed));
+            cswPvMode('full'); if (!PV.run) { PV.run = true; cswPvFrame(); }
+        }
         function cswWire() {
             const P = document.getElementById('csw-panel'); if (!P || P.dataset.w) return; P.dataset.w = 1;
             const rg = (id, lb, lo, hi, st) => `<label class="block">${lb} <input id="${id}" type="range" min="${lo}" max="${hi}" step="${st}" style="width:100%"></label>`, sel = 'style="background:#222;color:#fff"';
             P.innerHTML = `<div class="text-[11px] text-gray-400 mt-2">Your own weapons <span class="text-gray-500">(stay on this device; others see the stock look)</span></div><div class="text-[11px]" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><select id="csw-cls" ${sel}><option value="hero">Hero</option><option value="gunner">Gunner</option><option value="fighter">Fighter</option></select><select id="csw-type" ${sel}>${Object.keys(CSW_TYPE).map((k) => `<option value="${k}">${CSW_TYPE[k].n}</option>`).join('')}</select><span id="csw-st" class="text-gray-400"></span></div><label class="block text-[11px]"><input id="csw-file" type="file" accept=".glb,.gltf,.fbx"></label><div style="font-size:11px;color:#ccc;margin-top:6px"><b>Sword sheath</b> <span class="text-gray-500">(where the sword rests when put away: stock blades and yours)</span>${rg('sh-x', 'Side', -0.3, 0.3, 0.01)}${rg('sh-y', 'Height', -0.4, 0.4, 0.01)}${rg('sh-z', 'Depth', -0.3, 0.3, 0.01)}${rg('sh-t', 'Angle', -1.5, 1.5, 0.05)}<button id="sh-tog" type="button" class="py-1 px-2 rounded-lg bg-white/10 mt-1">Sheathe / draw to preview</button> <button id="sh-reset" type="button" class="py-1 px-2 rounded-lg bg-white/10 mt-1">Reset</button></div><div id="csw-ctl" style="display:none;font-size:11px;color:#ccc"><label class="block">Name <input id="csw-name" maxlength="18" style="background:#222;color:#fff;border-radius:6px;padding:2px 6px"></label>${rg('csw-pow', 'Base power', 4, 154, 1)}<div id="csw-stats" class="text-gray-300"></div><label class="block">Tip points <select id="csw-ax" ${sel}>${Object.keys(CSW_AX).map((k) => `<option value="${k}">${k.toUpperCase()}</option>`).join('')}</select> <span class="text-gray-500">(which way your file's tip faces)</span></label>${rg('csw-size', 'Size', 0.4, 2.5, 0.05)}${rg('csw-grip', 'Grip position', -0.4, 0.4, 0.01)}${rg('csw-hroll', 'Hand roll', -3.14, 3.14, 0.05)}${rg('csw-hry', 'Hand turn', -3.14, 3.14, 0.05)}${rg('csw-hrz', 'Hand tilt', -3.14, 3.14, 0.05)}${rg('csw-btilt', 'Put-away angle', -1.5, 1.5, 0.05)}${rg('csw-bh', 'Put-away height', -0.3, 0.3, 0.01)}<button id="csw-del" type="button" class="py-1 px-2 rounded-lg bg-white/10 mt-1">Remove this weapon</button></div>`;
+            cswPvWire(P);
             const q = (id) => document.getElementById(id);
             q('csw-cls').addEventListener('change', () => { CSW.sel = q('csw-cls').value; cswSync(); });
             q('csw-type').addEventListener('change', () => { CSW.s[CSW.sel].type = q('csw-type').value; cswSaveMeta(); cswSync(); });
             q('csw-name').addEventListener('input', () => { if (CSW.s[CSW.sel].cfg.lock) return; CSW.s[CSW.sel].title = q('csw-name').value.slice(0, 18); cswSaveMeta(); });
             q('csw-pow').addEventListener('input', () => { if (CSW.s[CSW.sel].cfg.lock) return; CSW.s[CSW.sel].cfg.pow = Math.min(+q('csw-pow').value, cswCap(CSW.sel)); cswSaveMeta(); cswSync(); });
             q('csw-ax').addEventListener('change', () => { CSW.s[CSW.sel].cfg.ax = q('csw-ax').value; cswSaveMeta(); });
-            for (const [id, k] of Object.entries({ 'csw-size': 'size', 'csw-grip': 'grip', 'csw-hroll': 'hroll', 'csw-hry': 'hry', 'csw-hrz': 'hrz', 'csw-btilt': 'btilt', 'csw-bh': 'bh' })) q(id).addEventListener('input', () => { CSW.s[CSW.sel].cfg[k] = +q(id).value; cswSaveMeta(); });
+            for (const [id, k] of Object.entries({ 'csw-size': 'size', 'csw-grip': 'grip', 'csw-hroll': 'hroll', 'csw-hry': 'hry', 'csw-hrz': 'hrz', 'csw-btilt': 'btilt', 'csw-bh': 'bh' })) q(id).addEventListener('input', () => { CSW.s[CSW.sel].cfg[k] = +q(id).value; cswSaveMeta(); const back = k === 'btilt' || k === 'bh'; if (PV.mode !== 'full' && (back ? PV.mode !== 'back' : PV.mode !== 'hand')) cswPvMode(back ? 'back' : 'hand'); });
             q('csw-file').addEventListener('change', async (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const ext = (f.name.split('.').pop() || '').toLowerCase(); if (!['glb', 'gltf', 'fbx'].includes(ext)) { sysChat('Use a .glb or .fbx weapon file.'); return; }
                 const cls = CSW.sel; CSW.s[cls].type = q('csw-type').value; try { await cswUse(cls, await f.arrayBuffer(), f.name, ext, true); cswSaveMeta(); cswSync(); if (cls === 'hero') clsSkin(99); else clsRender(); sysChat('Your ' + CSW_TYPE[CSW.s[cls].type].n.toLowerCase() + ' "' + CSW.s[cls].name + '" is set for the ' + cls + ' class. Adjust it with the sliders if it sits wrong.'); } catch (er) { console.warn(er); sysChat('That file could not be read as a weapon. Try a .glb, or an .fbx with embedded textures.'); } e.target.value = ''; });
             q('csw-del').addEventListener('click', async () => { const cls = CSW.sel; await cswDb((s) => s.delete(cls)); CSW.s[cls].tpl = null; CSW.s[cls].name = ''; CSW.s[cls].title = ''; CSW.rev++; cswGear(cls, false); if (cls === 'hero' && CLS.skin === 99) clsSkin(0); cswSync(); clsRender(); });
             for (const k of ['x', 'y', 'z', 't']) { const e = q('sh-' + k); e.value = SHEATH[k]; e.addEventListener('input', () => { SHEATH[k] = +e.value; sheathApply(); }); }
-            q('sh-tog').addEventListener('click', () => { try { clsStowToggle(); } catch (e) { sysChat('Put the weapon away first (L3, or stow it from the class panel).'); } });
+            q('sh-tog').addEventListener('click', () => cswPvPose(HC.sheathed));
             q('sh-reset').addEventListener('click', () => { for (const k of ['x', 'y', 'z', 't']) { SHEATH[k] = 0; q('sh-' + k).value = 0; } sheathApply(); });
             cswSync();
         }
@@ -26700,7 +26873,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             else { s.position.set((0.12 + SHEATH.x) * f, 0.05 + SHEATH.y, (-0.12 + SHEATH.z) * f); s.rotation.set(0, 0, 0); s.rotation.z = (2.2 + SHEATH.t) * f; s.rotation.x = 0; s.userData.blade.visible = !!s.userData.skin; s.userData.saya.visible = !s.userData.skin; }
         }
         const HC_GRIP = { x: 0, y: 0, z: 1.2 };
-        window.__csw = { CSW, cswUse, cswBuild, cswDress, hcDress, get actor() { return localActor; } };
+        window.__csw = { PV, wire: () => cswWire(), CSW, cswUse, cswBuild, cswDress, hcDress, get actor() { return localActor; } };
         setTimeout(() => { try { cswLoadSaved().then(() => forgeRestore()).catch(() => { }); } catch (e) { /* idb */ } }, 1500);
         function hcUndress(actor) { cswClear(actor); const v = actor.hcVis; if (v) { for (const o of v.objs) o.removeFromParent(); actor.hcVis = null; } if (actor.hcGun) { actor.hcGun.removeFromParent(); actor.hcGun = null; } actor.heroW = null; actor.heroGun = 0; }
         function hcGunDress(actor, on) {
@@ -27891,6 +28064,20 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             for (let i = L.length - 1; i >= 0; i--) { const q = L[i], d = Math.hypot(q.x - px, q.z - pz); if (d >= D) { const k = D / (d || 1); return { x: px + (q.x - px) * k, z: pz + (q.z - pz) * k, y: py + (q.y - py) * k }; } D -= d; px = q.x; pz = q.z; py = q.y; }
             return null;
         }
+        /* ---- companions in Adventia: they fight at your side (they go for your target, or whatever is attacking nearby; they cannot be knocked out) ---- */
+        const NF_CMP = { hero: { rng: 2.6, cd: 1.5, pot: 0.5, e: 'hatk' }, fighter: { rng: 2.4, cd: 1.1, pot: 0.42, e: 'f_hatk' }, gunner: { rng: 8, cd: 1.8, pot: 0.5, e: '' } };
+        function nfCmpFoe(r) {
+            const P = localActor.group.position; let m = NF.tgt && !NF.tgt.dead && Math.hypot(NF.tgt.x - P.x, NF.tgt.z - P.z) < 40 ? NF.tgt : null;
+            if (!m) { let bd = 1e9; for (const q of nfMobs()) { if (!q.aggro) continue; const d = Math.hypot(q.x - P.x, q.z - P.z); if (d < 16 && d < bd) { bd = d; m = q; } } }
+            return m;
+        }
+        function nfCmpStep(r, fo, ag, dt) {
+            const cl = (r.c && r.c.cls) || 'hero', K = NF_CMP[cl] || NF_CMP.hero; r.nf = r.nf || { t: 0.6 + Math.random() * 0.8 }; r.nf.t -= dt;
+            const d = Math.hypot(fo.x - ag.position.x, fo.z - ag.position.z); if (d > K.rng + (fo.big || 1) * 0.9 + 0.6 || r.nf.t > 0) return;
+            r.nf.t = K.cd * (0.85 + Math.random() * 0.3); const a = r.actor, tp = new THREE.Vector3(fo.x, fo.node.position.y, fo.z);
+            try { if (K.e) { const nm = K.e + (1 + ((Math.random() * 3) | 0)); if (EMOTES[nm] || (typeof HERO_ACTS !== 'undefined' && HERO_ACTS[nm])) a.playEmote(nm); } } catch (e) { /* no clip */ }
+            nfFx(cl === 'gunner' ? 'bolt' : 'slash', ag.position, tp); nfDealDmg(fo, K.pot * (1 + NF.lv * 0.02), false);
+        }
         function cmpFrame(dt) {
             if (!CMP.active.size) { CMP.trail.length = 0; return; }
             const g = localActor.group, P = g.position; let snap = false;
@@ -27900,12 +28087,15 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             for (const r of CMP.active.values()) {
                 if (!r.actor) { i++; continue; }
                 const ag = r.actor.group, D = 2.0 + 1.3 * i; let t = cmpTrailPoint(D, P); if (!t) { const an = cmpAnchor(i); t = an; }
+                let fo = null; if (activeMap === 'nuu' && NU.ready && !NF.dead) { try { fo = nfCmpFoe(r); } catch (e) { fo = null; } }
+                if (fo) { const K = NF_CMP[(r.c && r.c.cls) || 'hero'] || NF_CMP.hero, fdx = ag.position.x - fo.x, fdz = ag.position.z - fo.z, fl = Math.hypot(fdx, fdz) || 1, stop = K.rng * 0.8 + (fo.big || 1) * 0.7 + i * 0.5; t = { x: fo.x + fdx / fl * stop, z: fo.z + fdz / fl * stop, y: nuH(fo.x + fdx / fl * stop, fo.z + fdz / fl * stop) }; }
                 r.actor.group.visible = activeMap !== 'btl';
                 let dx = t.x - ag.position.x, dz = t.z - ag.position.z, d = Math.hypot(dx, dz);
                 if (snap || d > 45) { const an = cmpAnchor(i); ag.position.set(an.x, an.y, an.z); r.actor.firstFrame = true; dx = dz = d = 0; }
-                let step = 0; if (d > 0.12) { const spd = Math.min(7.2, 0.5 + d * 2.6); step = Math.min(d, spd * dt); ag.position.x += dx / d * step; ag.position.z += dz / d * step; }
+                let step = 0; if (d > 0.12) { const spd = Math.min(fo ? 9 : 7.2, 0.5 + d * 2.6); step = Math.min(d, spd * dt); ag.position.x += dx / d * step; ag.position.z += dz / d * step; }
                 ag.position.y += (t.y - ag.position.y) * (1 - Math.exp(-dt * 10));
-                const want = step > 0.004 ? Math.atan2(dx, dz) : Math.atan2(P.x - ag.position.x, P.z - ag.position.z);
+                const want = fo && d < 3 ? Math.atan2(fo.x - ag.position.x, fo.z - ag.position.z) : step > 0.004 ? Math.atan2(dx, dz) : Math.atan2(P.x - ag.position.x, P.z - ag.position.z);
+                if (fo) { try { nfCmpStep(r, fo, ag, dt); } catch (e) { /* cosmetic */ } }
                 ag.rotation.y = lerpAngle(ag.rotation.y, want, 1 - Math.exp(-dt * (step > 0.004 ? 9 : 4)));
                 r.actor.update(dt); i++;
             }
@@ -28103,7 +28293,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                 const nd = pgNeed(r), el = document.createElement('div'); el.className = 'pg-card' + (i === PG.sel ? ' sel' : '') + (nd.ok ? '' : ' lock');
                 const col = 'hsl(' + pgHue(r.id) + ',90%,62%)';
                 el.innerHTML = '<span class="pg-dot" style="background:' + col + ';color:' + col + '"></span><div><div class="pg-n"></div><div class="pg-t"></div></div><span class="pg-lk">' + (nd.ok ? (PG_NEED[r.id] ? '🔓' : '') : '🔒') + '</span>';
-                el.querySelector('.pg-n').textContent = r.name; el.querySelector('.pg-t').textContent = r.tag;
+                el.querySelector('.pg-n').textContent = r.name; { let n = ''; try { if (r.d) { const c = lobbyCount(r.d); n = ' \u2022 \uD83D\uDC65 ' + c; } } catch (e) { /* no count */ } el.querySelector('.pg-t').textContent = r.tag + n; }
                 el.addEventListener('click', () => { PG.sel = i; pgRender(); }); el.addEventListener('dblclick', () => { PG.sel = i; pgFire(); });
                 list.appendChild(el);
             });
