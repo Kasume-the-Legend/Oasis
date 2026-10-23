@@ -21739,6 +21739,12 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 case 'plead': if (id === partyLeaderId() && m.to === me.id) { PARTY.myLead = true; PARTY.era = partyEra() + 1; partyAnnounce(); } break;
                 case 'pkick': if (id === partyLeaderId() && m.to === me.id) { partyLeave(true); sysChat('The party leader removed you from the party.'); } break;
                 case 'pcs': { if (!cur) break; const t = String(m.text || '').slice(0, 240); if (!t || Date.now() - (cur.lastPcs || 0) < 500) break; cur.lastPcs = Date.now(); const nm = String(m.n || 'Companion').slice(0, 24), col = validHex(m.col) || '#c4b5fd'; addChat(nm + ' (' + cur.name + ')', t, col); const pe = peers.get(id), r = pe && pe.cm && pe.cm.get(String(m.i || '').slice(0, 40)); if (r) r.actor.showBubble(t, col); break; }
+                case 'ppg': {   // a party member opened a portal: show it to us too
+                    if (!cur || !room || m.cr !== room.id || m.m !== activeMap || Date.now() - (cur.lastPpg || 0) < 1500) break; cur.lastPpg = Date.now();
+                    if (![m.x, m.y, m.z, m.yaw].every((v) => Number.isFinite(v) && Math.abs(v) < 1e4)) break; const rr = pgRooms().find((q) => q.id === String(m.rid)); if (!rr || rr.id === room.id) break;
+                    if (!PG.rps) PG.rps = new Map(); const old = PG.rps.get(id); if (old) pgDispose(old);
+                    const rp = pgMakePortal(new THREE.Vector3(m.x, m.y, m.z), m.yaw, pgHue(rr.id), rr); rp.remote = id; PG.rps.set(id, rp); sysParty(cur.name + ' opened a portal to ' + rr.name + '. Walk in to follow.'); break;
+                }
                 case 'pchat': { const t = String(m.text || '').slice(0, 140); if (t && cur) addChat('[Party] ' + cur.name, t, '#c4b5fd'); break; }
                 case 'psum': {
                     const rm = partyRmOk(m.rm); if (!rm || !cur) break;
@@ -28021,6 +28027,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             PG.portal = pgMakePortal(pos, yaw, pgHue(r.id), r); PG.cd = 1.2; pgSound('fire');
             PG.el.classList.remove('fire'); void PG.el.offsetWidth; PG.el.classList.add('fire'); setTimeout(() => pgToggle(false), 380);
             sysChat('Portal open: ' + r.name + '. Walk into it.');
+            try { if (PARTY.net && PARTY.members.size >= 2 && room) PARTY.net.send({ t: 'ppg', rid: r.id, cr: room.id, m: activeMap, x: +pos.x.toFixed(2), y: +pos.y.toFixed(2), z: +pos.z.toFixed(2), yaw: +yaw.toFixed(3) }); } catch (e) { /* party is optional */ }
         }
         function pgTitle(r, cb) {
             PG.trav = true; pgBuild(); const c = PG.card; c.querySelector('.b').textContent = String(r.name).toUpperCase(); c.querySelector('.c').textContent = String(r.tag || '').toUpperCase();
@@ -28035,11 +28042,15 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         function pgFrame(dt) {
             if (PG.cd > 0) PG.cd = Math.max(0, PG.cd - dt);
             if (PG.dying) { const d = PG.dying; d.closing += dt; d.g.scale.setScalar(Math.max(0.01, 1 - d.closing / 0.4)); if (d.closing > 0.4) { pgDispose(d); PG.dying = null; } }
-            const p = PG.portal; if (!p) return;
-            if (p.map !== activeMap || (room && p.rid !== room.id)) { pgDispose(p); PG.portal = null; return; }
+            if (PG.portal) pgStep(PG.portal, dt, true);
+            if (PG.rps) for (const [id, rp] of PG.rps) pgStep(rp, dt, false, id);
+        }
+        function pgStep(p, dt, loc, rpId) {
+            const kill = () => { pgDispose(p); if (loc) PG.portal = null; else PG.rps.delete(rpId); };
+            if (p.map !== activeMap || (room && p.rid !== room.id)) { kill(); return; }
             const now = performance.now() / 1000; p.t += dt; const age = now - p.born;
             let sc = Math.min(1, age / 0.45); sc = 1 - Math.pow(1 - sc, 3); let a = 1;
-            if (age > 40) { const k = Math.min(1, (age - 40) / 0.5); sc *= 1 - k; a = 1 - k; if (k >= 1) { pgDispose(p); PG.portal = null; return; } }
+            if (age > 40) { const k = Math.min(1, (age - 40) / 0.5); sc *= 1 - k; a = 1 - k; if (k >= 1) { kill(); return; } }
             p.g.scale.setScalar(Math.max(0.01, sc * (1 + Math.sin(p.t * 5) * 0.012))); p.disc.material.uniforms.t.value = p.t; p.disc.material.uniforms.a.value = a;
             p.r1.rotation.z += dt * 0.9; p.r2.rotation.z -= dt * 1.4; p.halo.material.opacity = (0.45 + Math.sin(p.t * 7) * 0.1) * a;
             const arr = p.pts.geometry.attributes.position.array;
@@ -28053,7 +28064,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             if (age > 0.6 && !PG.trav) {   // walk into it
                 const q = localActor.group.position, dx = q.x - p.g.position.x, dz = q.z - p.g.position.z, nx = Math.sin(p.g.rotation.y), nz = Math.cos(p.g.rotation.y);
                 const along = dx * nx + dz * nz, lat = dx * nz - dz * nx;
-                if (Math.abs(along) < 0.55 && Math.abs(lat) < p.R * 0.85 && Math.abs(q.y - (p.g.position.y - p.R - 0.15)) < 1.6) pgGo(p.room);
+                if (Math.abs(along) < 0.55 && Math.abs(lat) < p.R * 0.85 && Math.abs(q.y - (p.g.position.y - p.R - 0.15)) < 1.6) { if (loc) pgGo(p.room); else pgTitle(p.room, () => { if (p.room.studio) acHome(); else districtGo(p.room.d); }); }
             }
         }
         window.addEventListener('keydown', (e) => {
