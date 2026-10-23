@@ -12658,23 +12658,42 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 gl.scene.traverse((o) => { if (!o.isMesh) return; for (const m of [].concat(o.material)) { mats.add(m); } o.userData.noOutline = true; if (o.name === 'Terrain') { terrain = o; return; } let top = o; while (top.parent && top.parent !== gl.scene) top = top.parent; const key = o.geometry.uuid + ':' + o.material.uuid; if (!props.has(key)) props.set(key, { geo: o.geometry, mat: o.material, top: top.name || '', list: [] }); props.get(key).list.push(o.matrixWorld.clone()); });
                 for (const m of mats) { if ('metalness' in m) { m.metalness = 0; m.roughness = 1; } m.needsUpdate = true; }
                 if (!terrain) throw new Error('no terrain in forest.glb');
-                nuBakeTerrain(terrain); nuPickHub(); const hub = NU.hub; NU.seeds = nuSeeds(); try { nuTintTerrain(terrain.geometry, terrain); } catch (e) { console.warn('tint', e); }
+                nuBakeTerrain(terrain); nuPickHub(); const hub = NU.hub; NU.seeds = nuSeeds(); try { nuTintTerrain(terrain.geometry, terrain); nuMoss(terrain.geometry); } catch (e) { console.warn('tint', e); }
                 const root = new THREE.Group(); root.visible = false; scene.add(root); NU.group = root; terrain.matrixAutoUpdate = false; terrain.frustumCulled = false; root.add(terrain);
                 // props: one instanced mesh per shape; nothing grows inside the plaza
                 const V = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(); let nInst = 0;
-                let pine = null; try { const pb = await assetBuf(['nuu/pine.glb', 'Nuu/pine.glb', 'pine.glb', 'assets/nuu/pine.glb'], 'glTF'); const pg = await new Promise((ok, no) => new GLTFLoader().parse(pb, '', ok, no)); const ms = {}; pg.scene.traverse((o) => { if (o.isMesh) { ms[o.name] = o; if ('metalness' in o.material) { o.material.metalness = 0; o.material.roughness = 1; } o.material.side = THREE.DoubleSide; } }); if (ms.Pine_LOD0 && ms.Pine_LOD1 && ms.Pine_LOD2) pine = ms; } catch (e) { console.warn('pine.glb not found - keeping the stock trees', e && e.message); }
+                let pine = null; try {
+                    const pb = await assetBuf(['nuu/trees.glb', 'Nuu/trees.glb', 'trees.glb', 'assets/nuu/trees.glb'], 'glTF'); const { MeshoptDecoder: MD } = await import('three/addons/libs/meshopt_decoder.module.js'); await MD.ready; const TL = new GLTFLoader(); TL.setMeshoptDecoder(MD);
+                    const pg = await new Promise((ok, no) => TL.parse(pb, '', ok, no)); const ms = {}; let nv = 0; pg.scene.updateMatrixWorld(true); pg.scene.traverse((o) => { const mm = o.isMesh && /^Tree(\d+)_LOD([012])L?$/.exec(o.name); if (mm) { o.updateMatrix(); ms[o.name] = o; nv = Math.max(nv, +mm[1] + 1); } });
+                    const gmt = new THREE.DataTexture(new Uint8Array([100, 100, 100, 255, 162, 162, 162, 255, 218, 218, 218, 255, 255, 255, 255, 255]), 4, 1, THREE.RGBAFormat); gmt.minFilter = gmt.magFilter = THREE.NearestFilter; gmt.needsUpdate = true;
+                    const tmat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide }); const lsrc = ms.Tree0_LOD0L && ms.Tree0_LOD0L.material, lmat = lsrc && lsrc.map ? new THREE.MeshToonMaterial({ map: lsrc.map, alphaTest: 0.5, vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide }) : tmat; if (lsrc && lsrc.map) lsrc.map.anisotropy = 4;
+                    if (nv && ms.Tree0_LOD0 && ms.Tree0_LOD1 && ms.Tree0_LOD2) pine = { ms, nv, tmat, lmat };
+                } catch (e) { console.warn('trees.glb not found - keeping the stock trees', e && e.message); }
                 const pineList = [];
                 for (const p of props.values()) {
                     const keep = p.list.filter((m) => { m.decompose(V, Q, S); return Math.hypot(V.x - hub.x, V.z - hub.z) > 17; }); if (!keep.length) continue;
-                    if (pine && /^SM_tree_0[1-6]$/.test(p.top)) { if (p.mat && p.mat.name === 'bark') { p.geo.computeBoundingBox(); const hh = p.geo.boundingBox.max.y - p.geo.boundingBox.min.y; for (const m of keep) { m.decompose(V, Q, S); pineList.push({ x: V.x, y: V.y, z: V.z, h: Math.max(5, hh * S.y * 1.1), r: Math.atan2(2 * (Q.w * Q.y), 1 - 2 * Q.y * Q.y), i: pineList.length }); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); } } continue; }
+                    if (pine && /^SM_tree_0[1-6]$/.test(p.top)) { if (p.mat && p.mat.name === 'bark') { p.geo.computeBoundingBox(); const hh = p.geo.boundingBox.max.y - p.geo.boundingBox.min.y; for (const m of keep) { m.decompose(V, Q, S); pineList.push({ v: ({ SM_tree_01: 0, SM_tree_02: 2, SM_tree_03: 3, SM_tree_04: 1, SM_tree_05: 5, SM_tree_06: 4 })[p.top] % pine.nv, x: V.x, y: V.y, z: V.z, h: Math.max(9.5, hh * S.y * 1.4), r: Math.atan2(2 * (Q.w * Q.y), 1 - 2 * Q.y * Q.y), i: pineList.length }); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); } } continue; }
                     const im = new THREE.InstancedMesh(p.geo, p.mat, keep.length); keep.forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); nInst += keep.length;
                     if (/^SM_tree_0[1-6]$/.test(p.top) && p.mat && p.mat.name === 'bark') for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); }
                     else if (/stone|stump|log/.test(p.top) && !/small/.test(p.top)) { p.geo.computeBoundingBox(); const bb = p.geo.boundingBox; for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, 0.38 * Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * S.x); } }
                 }
                 if (pine && pineList.length) {
-                    const n = pineList.length, ims = [pine.Pine_LOD0, pine.Pine_LOD1, pine.Pine_LOD2].map((o) => { const im = new THREE.InstancedMesh(o.geometry, o.material, n); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); return im; });
-                    NU.pines = { list: pineList, ims, t: 0, last: new THREE.Vector3(1e9, 0, 1e9) }; nInst += n;
+                    const n = pineList.length, groups = []; for (let v = 0; v < pine.nv; v++) { const cap = pineList.filter((t) => t.v === v).length; groups.push([0, 1, 2].map((l) => [pine.ms['Tree' + v + '_LOD' + l], pine.ms['Tree' + v + '_LOD' + l + 'L']].filter(Boolean).map((o) => { const im = new THREE.InstancedMesh(o.geometry, o.name.endsWith('L') ? pine.lmat : pine.tmat, Math.max(1, cap)); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); return { im, pm: o.matrix.clone() }; }))); }
+                    NU.pines = { list: pineList, groups, t: 0, last: new THREE.Vector3(1e9, 0, 1e9) }; nInst += n;
                 }
+                if (pine) try {   // ferns and bushes on the forest floor (a few thousand, culled by distance)
+                    const ub = await assetBuf(['nuu/undergrowth.glb', 'Nuu/undergrowth.glb', 'undergrowth.glb', 'assets/nuu/undergrowth.glb'], 'glTF'); const ug = await new Promise((ok, no) => new GLTFLoader().parse(ub, '', ok, no)); const um = {}; ug.scene.traverse((o) => { if (o.isMesh) um[o.name] = o; });
+                    const names = ['Fern0', 'Fern1', 'Fern2', 'Bush0', 'Bush1'].filter((n) => um[n]); if (names.length) {
+                        const R = seeded(4242), items = []; let tries = 0; while (items.length < 2800 && tries++ < 16000) {
+                            let x, z; if (pineList.length && R() < 0.55) { const t = pineList[(R() * pineList.length) | 0], a = R() * 6.283, d = 2.2 + R() * 9; x = t.x + Math.cos(a) * d; z = t.z + Math.sin(a) * d; } else { x = (R() - 0.5) * 2 * (NU_EDGE - 4); z = (R() - 0.5) * 2 * (NU_EDGE - 4); }
+                            if (Math.abs(x) > NU_EDGE - 3 || Math.abs(z) > NU_EDGE - 3 || Math.hypot(x - hub.x, z - hub.z) < 20 || nuBlkR(x, z)) continue;
+                            const bush = R() < 0.3 && um.Bush0, nm = bush ? (um.Bush1 && R() < 0.4 ? 'Bush1' : 'Bush0') : ['Fern0', 'Fern1', 'Fern2'][(R() * 3) | 0]; if (!um[nm]) continue;
+                            items.push({ n: nm, x, y: nuH(x, z) - 0.04, z, r: R() * 6.283, s: bush ? 1.5 + R() * 1.4 : 1.7 + R() * 1.9 });
+                        }
+                        const ims = {}; for (const n of names) { const cap = items.filter((q) => q.n === n).length; if (!cap) continue; const im = new THREE.InstancedMesh(um[n].geometry, pine.tmat, cap); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); ims[n] = im; }
+                        NU.ug = { list: items, ims }; nInst += items.length;
+                    }
+                } catch (e) { console.warn('undergrowth.glb not found', e && e.message); }
                 NU.nInst = nInst;
                 for (let z = hub.z - 18; z <= hub.z + 18; z += 0.5) for (let x = hub.x - 18; x <= hub.x + 18; x += 0.5) if (Math.hypot(x - hub.x, z - hub.z) < 17 && !(Math.abs(x) > NU_EDGE - 2 || Math.abs(z) > NU_EDGE - 2)) { const bi = Math.floor((x - NU_X0) * 2), bj = Math.floor((z - NU_X0) * 2); NU.nav.b[bj * NU_BW + bi] = 0; }
                 nuBuildHub(root); nuMakeSpawners(); nuMakeChestPoints(); nuMakeCrystals(); nuMakeHunts();
@@ -13390,19 +13409,49 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             if (!NU_GR.ready) { if (!NU_GR.loading && NU.ready) nuGrassLoad(); return; } NU_GR.uT.value += dt; const p = nfPos();
             if (!NU_GR.last || Math.hypot(p.x - NU_GR.last.x, p.z - NU_GR.last.z) > 3.5) { NU_GR.last = { x: p.x, z: p.z }; nuGrassScatter(p); }
         }
-        /* ---- chat window: drag any corner to resize it; double-click a corner to reset ---- */
+        /* ---- chat window: behaves like a desktop window. Drag the title bar to move it, grab any edge or corner to resize it,
+                double-click the title bar to enlarge / restore, use the buttons to minimise or reset. It remembers where you left it. ---- */
         (function chatResizeInit() {
-            const P = document.getElementById('chat-panel'); if (!P || P.dataset.rz) return; P.dataset.rz = '1'; const KEY = 'oasis.chatRect';
-            const st = document.createElement('style'); st.textContent = '#chat-panel.home-log #chat-feed,#chat-panel.home-log #chat-input{font-size:var(--crzfs,12.5px) !important}#chat-panel .crz{position:absolute;width:18px;height:18px;z-index:5;touch-action:none;opacity:.28;transition:opacity .15s}#chat-panel:hover .crz,#chat-panel .crz.on{opacity:1}#chat-panel .crz:before{content:"";position:absolute;width:9px;height:9px;border:0 solid rgba(210,230,255,.85)}#chat-panel .crz.tl{left:0;top:0;cursor:nwse-resize}#chat-panel .crz.tl:before{left:3px;top:3px;border-width:2px 0 0 2px}#chat-panel .crz.tr{right:0;top:0;cursor:nesw-resize}#chat-panel .crz.tr:before{right:3px;top:3px;border-width:2px 2px 0 0}#chat-panel .crz.bl{left:0;bottom:0;cursor:nesw-resize}#chat-panel .crz.bl:before{left:3px;bottom:3px;border-width:0 0 2px 2px}#chat-panel .crz.br{right:0;bottom:0;cursor:nwse-resize}#chat-panel .crz.br:before{right:3px;bottom:3px;border-width:0 2px 2px 0}';
+            const P = document.getElementById('chat-panel'); if (!P || P.dataset.rz) return; P.dataset.rz = '1'; const KEY = 'oasis.chatRect', MINW = 240, MINH = 120, BAR = 28;
+            const st = document.createElement('style'); st.textContent = '#chat-panel.home-log #chat-feed,#chat-panel.home-log #chat-input{font-size:var(--crzfs,12.5px) !important}'
+                + '#chat-panel .cwt{position:absolute;left:14px;right:14px;top:6px;height:' + BAR + 'px;z-index:6;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}'
+                + '#chat-panel .crz{position:absolute;z-index:8;touch-action:none}'
+                + '#chat-panel .crz.n,#chat-panel .crz.s{left:14px;right:14px;height:6px;cursor:ns-resize}#chat-panel .crz.n{top:0}#chat-panel .crz.s{bottom:0}'
+                + '#chat-panel .crz.e,#chat-panel .crz.w{top:14px;bottom:14px;width:6px;cursor:ew-resize}#chat-panel .crz.e{right:0}#chat-panel .crz.w{left:0}'
+                + '#chat-panel .crz.nw,#chat-panel .crz.ne,#chat-panel .crz.sw,#chat-panel .crz.se{width:14px;height:14px}#chat-panel .crz.nw{left:0;top:0;cursor:nwse-resize}#chat-panel .crz.se{right:0;bottom:0;cursor:nwse-resize}#chat-panel .crz.ne{right:0;top:0;cursor:nesw-resize}#chat-panel .crz.sw{left:0;bottom:0;cursor:nesw-resize}'
+                + '@media (pointer:coarse){#chat-panel .crz.n,#chat-panel .crz.s{height:16px}#chat-panel .crz.e,#chat-panel .crz.w{width:16px}#chat-panel .crz.nw,#chat-panel .crz.ne,#chat-panel .crz.sw,#chat-panel .crz.se{width:28px;height:28px}}';
             document.head.appendChild(st);
-            const put = (r) => { const w = Math.max(220, Math.min(r.w, innerWidth * 0.95)), h = Math.max(110, Math.min(r.h, innerHeight * 0.85)), l = Math.max(0, Math.min(r.l, innerWidth - 60)), t = Math.max(0, Math.min(r.t, innerHeight - 60)); const sp = (k, v) => P.style.setProperty(k, v, 'important'); sp('left', l + 'px'); sp('top', t + 'px'); sp('bottom', 'auto'); sp('right', 'auto'); sp('width', w + 'px'); sp('height', h + 'px'); sp('max-height', 'none'); sp('--crzfs', Math.max(11, Math.min(18, w / 27)).toFixed(1) + 'px'); return { l, t, w, h }; };
-            const reset = () => { for (const k of ['left', 'top', 'bottom', 'right', 'width', 'height', 'max-height', '--crzfs']) P.style.removeProperty(k); try { localStorage.removeItem(KEY); } catch (e) { /* storage */ } };
-            for (const c of ['tl', 'tr', 'bl', 'br']) {
-                const h = document.createElement('div'); h.className = 'crz ' + c; h.title = 'Drag to resize (double-click to reset)'; P.appendChild(h); let d = null;
-                h.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const r = P.getBoundingClientRect(); d = { x: e.clientX, y: e.clientY, l: r.left, t: r.top, w: r.width, h: r.height }; h.classList.add('on'); try { h.setPointerCapture(e.pointerId); } catch (er) { /* none */ } });
-                h.addEventListener('pointermove', (e) => { if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; let { l, t, w, h: hh } = d; if (c[1] === 'r') w = d.w + dx; else { w = d.w - dx; l = d.l + dx; } if (c[0] === 'b') hh = d.h + dy; else { hh = d.h - dy; t = d.t + dy; } if (w < 220) { if (c[1] === 'l') l -= 220 - w; w = 220; } if (hh < 110) { if (c[0] === 't') t -= 110 - hh; hh = 110; } d.cur = put({ l, t, w, h: hh }); });
-                const end = (e) => { if (!d) return; h.classList.remove('on'); if (d.cur) { try { localStorage.setItem(KEY, JSON.stringify(d.cur)); } catch (er) { /* storage */ } } d = null; try { h.releasePointerCapture(e.pointerId); } catch (er) { /* none */ } };
-                h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end); h.addEventListener('dblclick', (e) => { e.preventDefault(); reset(); });
+            const cur = () => { const r = P.getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height }; };
+            const put = (r, snap) => {
+                const w = Math.max(MINW, Math.min(r.w, innerWidth * 0.96)), h = Math.max(MINH, Math.min(r.h, innerHeight * 0.92)); let l = r.l, t = r.t;
+                if (snap) { const S = 14; if (Math.abs(l) < S) l = 0; if (Math.abs(l + w - innerWidth) < S) l = innerWidth - w; if (Math.abs(t) < S) t = 0; if (Math.abs(t + h - innerHeight) < S) t = innerHeight - h; }
+                l = Math.max(-w + 90, Math.min(l, innerWidth - 90)); t = Math.max(0, Math.min(t, innerHeight - BAR));
+                const sp = (k, v) => P.style.setProperty(k, v, 'important'); sp('left', l + 'px'); sp('top', t + 'px'); sp('bottom', 'auto'); sp('right', 'auto'); sp('width', w + 'px'); sp('height', h + 'px'); sp('max-height', 'none'); return { l, t, w, h };
+            };
+            const save = (r) => { try { localStorage.setItem(KEY, JSON.stringify(r)); } catch (e) { /* storage */ } };
+            const reset = () => { big = null; for (const k of ['left', 'top', 'bottom', 'right', 'width', 'height', 'max-height', '--crzfs']) P.style.removeProperty(k); try { localStorage.removeItem(KEY); } catch (e) { /* storage */ } };
+            let big = null;
+            // title bar
+            const bar = document.createElement('header'); bar.className = 'cwt'; bar.title = 'Drag to move (double-click to enlarge / restore)'; P.appendChild(bar);
+            const toggleBig = () => { if (big) { const r = put(big); big = null; save(r); } else { big = cur(); const w = Math.min(innerWidth * 0.55, 820), h = Math.min(innerHeight * 0.66, 620); save(put({ l: Math.max(8, big.l), t: Math.max(8, Math.min(big.t + big.h - h, innerHeight - h - 8)), w, h })); } };
+            let d = null;
+            bar.addEventListener('pointerdown', (e) => { if (e.button !== undefined && e.button > 0) return; e.preventDefault(); const r = cur(); d = { x: e.clientX, y: e.clientY, r, moved: false }; try { bar.setPointerCapture(e.pointerId); } catch (er) { /* none */ } });
+            bar.addEventListener('pointermove', (e) => { if (!d) return; if (e.buttons === 0) { endMove(e); return; } const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) < 3) return; d.moved = true; d.cur = put({ l: d.r.l + dx, t: d.r.t + dy, w: d.r.w, h: d.r.h }, true); });
+            const endMove = (e) => { if (!d) return; if (d.cur) save(d.cur); d = null; try { bar.releasePointerCapture(e.pointerId); } catch (er) { /* none */ } };
+            bar.addEventListener('pointerup', endMove); bar.addEventListener('pointercancel', endMove); bar.addEventListener('lostpointercapture', endMove); addEventListener('blur', () => { d = null; }); bar.addEventListener('dblclick', (e) => { if (e.target.closest('button')) return; e.preventDefault(); toggleBig(); });
+            // resize: every edge and corner
+            for (const c of ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se']) {
+                const h = document.createElement('div'); h.className = 'crz ' + c; h.title = 'Drag to resize (double-click to reset)'; P.appendChild(h); let q = null;
+                h.addEventListener('pointerdown', (e) => { if (e.button !== undefined && e.button > 0) return; e.preventDefault(); e.stopPropagation(); q = { x: e.clientX, y: e.clientY, r: cur() }; h.classList.add('on'); try { h.setPointerCapture(e.pointerId); } catch (er) { /* none */ } });
+                h.addEventListener('pointermove', (e) => {
+                    if (!q) return; if (e.buttons === 0) { end(e); return; } const dx = e.clientX - q.x, dy = e.clientY - q.y; let { l, t, w, h: hh } = q.r;
+                    if (c.includes('e')) w = q.r.w + dx; if (c.includes('w')) { w = q.r.w - dx; l = q.r.l + dx; } if (c.includes('s')) hh = q.r.h + dy; if (c.includes('n')) { hh = q.r.h - dy; t = q.r.t + dy; }
+                    if (w < MINW) { if (c.includes('w')) l -= MINW - w; w = MINW; } if (hh < MINH) { if (c.includes('n')) t -= MINH - hh; hh = MINH; }
+                    if (l < 0 && c.includes('w')) { w += l; l = 0; } if (t < 0 && c.includes('n')) { hh += t; t = 0; } if (l + w > innerWidth && c.includes('e')) w = innerWidth - l; if (t + hh > innerHeight && c.includes('s')) hh = innerHeight - t;
+                    q.cur = put({ l, t, w, h: hh }); big = null;
+                });
+                const end = (e) => { if (!q) return; h.classList.remove('on'); if (q.cur) save(q.cur); q = null; try { h.releasePointerCapture(e.pointerId); } catch (er) { /* none */ } };
+                h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end); h.addEventListener('lostpointercapture', end); addEventListener('blur', () => { q = null; }); h.addEventListener('dblclick', (e) => { e.preventDefault(); reset(); });
             }
             try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.w > 0 && j.h > 0) put(j); } catch (e) { /* storage */ }
             addEventListener('resize', () => { try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j) put(j); } catch (e) { /* storage */ } });
@@ -13426,15 +13475,24 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             A.heroW = C.w === 'fighter' ? 'hf' : NU.sw ? 'hr' : 'hn'; A.heroSheath = !NU.sw; A.heroSkin = CLS.skin; hcDress(A);
         }
         function nuSwordNet(C) { try { HC.sheathed = !NU.sw; net && net.send({ t: 'hero', s: !NU.sw, w: true, f: C.w === 'fighter' }); net && net.send(helloMsg(false)); } catch (e) { /* offline */ } }
-        const _pM = new THREE.Matrix4(), _pQ = new THREE.Quaternion(), _pP = new THREE.Vector3(), _pS = new THREE.Vector3(), _pY = new THREE.Vector3(0, 1, 0);
-        function nuPineLod(dt) {   // three levels of pine, swapped by distance a few times a second (1100 trees)
+        const _pM2 = new THREE.Matrix4(), _pM = new THREE.Matrix4(), _pQ = new THREE.Quaternion(), _pP = new THREE.Vector3(), _pS = new THREE.Vector3(), _pY = new THREE.Vector3(0, 1, 0);
+        /* the Shroud grade: a hazy emerald light between big trunks, warm sun shafts, and a mossy floor (a nod to Gridania) */
+        const _shF = new THREE.Color(0x76a073), _shH = new THREE.Color(0xd0e8aa), _shG = new THREE.Color(0x3f5428), _shS = new THREE.Color(0xffe6a0), _shA = new THREE.Color(0xc8e4b8);
+        function nuShroud() {
+            const C = NU.skyCtx, T = CYT; if (!C || !scene.fog) return; const a = T.sunAlt, day = Math.max(0, Math.min(1, (a + 2) / 16));
+            scene.fog.color.lerp(_shF, 0.72 * day); if (scene.background && scene.background.isColor) scene.background.copy(scene.fog.color); scene.fog.density = 0.0021 + 0.0016 * day;
+            C.hemi.color.lerp(_shH, 0.45 * day); C.hemi.groundColor.lerp(_shG, 0.55); C.sun.color.lerp(_shS, 0.55 * day); C.amb.color.lerp(_shA, 0.35 * day);
+        }
+        function nuMoss(geo) { const C = geo.attributes.color; if (!C) return; for (let i = 0; i < C.count; i++) { C.setXYZ(i, C.getX(i) * 0.58 + 0.07 * 0.42, C.getY(i) * 0.7 + 0.2 * 0.3, C.getZ(i) * 0.5 + 0.045 * 0.5); } C.needsUpdate = true; }
+        function nuPineLod(dt) {   // three levels of every tree, swapped by distance a few times a second (1100 trees)
             const P = NU.pines; if (!P || !camera) return; P.t -= dt; if (P.t > 0) return; P.t = 0.35; const c = camera.position; if (Math.hypot(c.x - P.last.x, c.z - P.last.z) < 1.5 && P.t0) return; P.last.copy(c); P.t0 = 1;
-            const cnt = [0, 0, 0], ims = P.ims;
+            const cnt = P.groups.map(() => [0, 0, 0]);
             for (const t of P.list) {
-                const d2 = (t.x - c.x) * (t.x - c.x) + (t.z - c.z) * (t.z - c.z); const L = d2 < 2500 ? 0 : d2 < 14400 ? 1 : d2 < 62500 ? 2 : -1; if (L < 0) continue;
-                _pQ.setFromAxisAngle(_pY, t.r); _pP.set(t.x, t.y, t.z); const w = t.h * 0.62; _pS.set(w, t.h, w); _pM.compose(_pP, _pQ, _pS); ims[L].setMatrixAt(cnt[L]++, _pM);
+                const d2 = (t.x - c.x) * (t.x - c.x) + (t.z - c.z) * (t.z - c.z); const L = d2 < 2500 ? 0 : d2 < 12100 ? 1 : d2 < 52900 ? 2 : -1; if (L < 0) continue;
+                _pQ.setFromAxisAngle(_pY, t.r); _pP.set(t.x, t.y, t.z); _pS.set(t.h, t.h, t.h); _pM.compose(_pP, _pQ, _pS); const gp = P.groups[t.v][L], ci = cnt[t.v][L]++; for (const part of gp) { _pM2.multiplyMatrices(_pM, part.pm); part.im.setMatrixAt(ci, _pM2); }
             }
-            for (let i = 0; i < 3; i++) { ims[i].count = cnt[i]; ims[i].instanceMatrix.needsUpdate = true; }
+            P.groups.forEach((g, v) => g.forEach((parts, i) => { for (const part of parts) { part.im.count = cnt[v][i]; part.im.instanceMatrix.needsUpdate = true; } }));
+            const U = NU.ug; if (U) { const uc = {}; for (const q of U.list) { const d2 = (q.x - c.x) * (q.x - c.x) + (q.z - c.z) * (q.z - c.z); if (d2 > 9025) continue; const im = U.ims[q.n]; if (!im) continue; const k = uc[q.n] || 0; if (k >= im.instanceMatrix.count) continue; _pQ.setFromAxisAngle(_pY, q.r); _pP.set(q.x, q.y, q.z); _pS.set(q.s, q.s, q.s); _pM.compose(_pP, _pQ, _pS); im.setMatrixAt(k, _pM); uc[q.n] = k + 1; } for (const n in U.ims) { U.ims[n].count = uc[n] || 0; U.ims[n].instanceMatrix.needsUpdate = true; } }
         }
         /* keep the Oasis overlays out of the Adventia HUD: the party list sits under the HP frame, and a name plate that is nearly on the lens is hidden instead of covering the screen */
         function nuUiFix() {
@@ -13444,7 +13502,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         function nuUiRestore() { try { const ph = document.getElementById('party-hud'); if (ph) { ph.style.top = ''; delete ph.dataset.nu; } for (const p of peers.values()) { const lb = p.actor && p.actor.label; if (lb) lb.visible = true; } } catch (e) { /* dom */ } }
         function nuUpdate(g, dt) {
             const p = g.position; NU.t += dt; if (NU.grace > 0) NU.grace -= dt;
-            if (NU.skyCtx && NU.group && NU.group.visible) { NU.skyCtx.t += dt; cySkyUpdate(dt, p, NU.skyCtx); const night = nuNight(); for (const l of NU.lamps) l.intensity = 14 * night; }
+            if (NU.skyCtx && NU.group && NU.group.visible) { NU.skyCtx.t += dt; cySkyUpdate(dt, p, NU.skyCtx); nuShroud(); const night = nuNight(); for (const l of NU.lamps) l.intensity = 14 * night; }
             nuUiFix(); if (!NU.ready) return; nuPineLod(dt);
             if (NU.crystal) { NU.crystal.rotation.y += dt * 0.8; NU.crystal.position.y = 3.1 + Math.sin(NU.t * 1.6) * 0.18; }
             if (activeMap !== 'nuu') return;
@@ -18907,6 +18965,26 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         document.addEventListener('click', (e) => { const ci = e.target && e.target.closest && e.target.closest('#btn-charimp'); if (ci) { e.preventDefault(); charImpToggle(true); } });
         { const sync = () => { const b = document.getElementById('btn-mapedit'); if (b) b.style.display = scnAllowed() ? '' : 'none'; }; sync(); setInterval(sync, 1500); }   // the Edit Map entry only exists for the two owner accounts
         document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('#btn-mapedit'); if (t) { e.preventDefault(); scnSetEdit(!SCN.edit); } });
+        /* Free the graphics-card memory of big maps the player isn't in. Everything stays in the scene, so nothing is lost: three.js re-uploads
+           geometry and textures by itself the next time a map is shown again. This stops several maps' worth of textures piling up on the GPU. */
+        const GPU_EV = { t: 0 };
+        function gpuEvictGroup(g) {
+            if (!g) return; const seen = new Set(), tex = (t) => { if (t && t.isTexture && !seen.has(t)) { seen.add(t); t.dispose(); } };
+            g.traverse((o) => {
+                if (o.geometry) o.geometry.dispose();
+                if (o.isInstancedMesh) { try { o.dispose(); } catch (e) { /* ok */ } }
+                const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+                for (const m of ms) { for (const k in m) { const v = m[k]; if (v && v.isTexture) tex(v); } m.dispose(); }
+            });
+        }
+        function gpuEvictOthers(id) {
+            clearTimeout(GPU_EV.t);
+            GPU_EV.t = setTimeout(() => {
+                if (activeMap !== id) return;
+                const L = [['city', CITY.group], ['plot', PLOT.group], ['galleria', GAL.group], ['school', SCH.group], ['raimon', RM.group], ['nuu', NU.group], ['jv', JV.group], ['btl', BT.group]];
+                for (const [k, g] of L) if (g && k !== id && !g.visible) gpuEvictGroup(g);
+            }, 1500);
+        }
         function setMap(id) {
             activeMap = id;
             if (id === 'city') ensureCity();
@@ -18931,6 +19009,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (NU.group) NU.group.visible = id === 'nuu';
             if (JV.group) JV.group.visible = id === 'jv';
             if (BT.group) BT.group.visible = id === 'btl';
+            try { gpuEvictOthers(id); } catch (e) { console.warn('gpu evict', e); }
             if (id === 'diner') { try { ensureKitchen(); } catch (e) { console.error('Kitchen failed to build', e); } }
             if (KC.ready && KC.group) KC.group.visible = id === 'diner';
             try { if (id === 'theater') ensureTheater(); if (THEATER.ready && THEATER.group) THEATER.group.visible = id === 'theater'; } catch (e) { console.error('Theater failed to build', e); }
