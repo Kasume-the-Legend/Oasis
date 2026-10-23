@@ -1941,6 +1941,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             { id: 'galleria-01', name: 'Oasis Galleria', tag: 'Channel 1', map: 'galleria' },
             { id: 'school-01', name: 'College Raimon', tag: 'Channel 1', map: 'raimon' },
             { id: 'nuu-01', name: 'Forest of Nuu', tag: 'Field • Floor 1', map: 'nuu' },
+            { id: 'jv-01', name: 'Journey Ville', tag: 'Town • Sky Islands', map: 'jv' },
             { id: 'bowl-01', name: 'Zen Bowl', tag: 'Channel 1', map: 'bowl' },
             { id: 'btl-01', name: 'Warriors of Light', tag: 'Channel 1', map: 'btl' },
             { id: 'blitz-01', name: 'Blitzball Arena', tag: 'Play now', map: 'blitz' },
@@ -4299,6 +4300,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 case 'wxs': { try { wxOnShare(from, m); } catch (e) { console.warn('studio weather', e); } break; }
                 case 'wxq': { try { wxOnQ(from, m); } catch (e) { /* none */ } break; }
                 case 'afk': { const ap = peers.get(from); if (ap && ap.actor) afkSet(ap.actor, m.on === 1 || m.on === true); break; }
+                case 'nu': { try { nsOnMsg(from, m); } catch (e) { console.warn('adventia sync', e); } break; }
                 case 'bt': { try { btOnMsg(from, m); } catch (e) { console.warn('battle message', e); } break; }
                 case 'bw': { try { bwOnMsg(from, m); } catch (e) { console.warn('bowling message', e); } break; }
                 case 'bud': { try { if (m.to === undefined || m.to === me.id) budOnMsg(from, m); } catch (e) { console.warn('budokai message', e); } break; }
@@ -4458,7 +4460,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
 
             if (!MAP_DEFS[map]) map = 'mall';
             room = { id, label, isPrivate, code, map, joinedAt: Date.now() }; setTimeout(() => { try { defRoomRender(); } catch (e) { /* menu */ } }, 0);
-            try { localStorage.setItem('oasis.lastroom', !isPrivate && ['mall', 'city', 'galleria', 'school', 'raimon', 'nuu'].includes(map) ? JSON.stringify({ id, label, map }) : ''); } catch (e) { /* storage */ }      // where you logged out: only public open-world rooms are remembered
+            try { localStorage.setItem('oasis.lastroom', !isPrivate && ['mall', 'city', 'galleria', 'school', 'raimon', 'nuu', 'jv'].includes(map) ? JSON.stringify({ id, label, map }) : ''); } catch (e) { /* storage */ }      // where you logged out: only public open-world rooms are remembered
             setMap(map);
             dcEnter(); try { scnEnter(); } catch (er) { console.warn('map editor', er); }
             try { const pd = !isPrivate && DISTRICTS.find((x) => x.id === id && x.pub); if (pd) pubLoad(pd); } catch (er) { console.warn('published map', er); }
@@ -4590,7 +4592,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const pc = presCounts(), pm = presNet ? presNet.describe() : null;
             $('lobby-online').textContent = pm && pm.mode === 'online' || pc.total > 1 ? `${pc.total} player${pc.total === 1 ? '' : 's'} online right now` : pm && (pm.mode === 'connecting' || pm.mode === 'waiting') ? (pm.mode === 'waiting' ? 'You are the only one online right now' : 'Looking for other players...') : 'Online count unavailable (peer-to-peer is blocked here)';
             for (const d of DISTRICTS) {
-                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'nuu' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'survivor3' && d.map !== 'outbreak' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'budokai' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
+                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'nuu' && d.map !== 'jv' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'survivor3' && d.map !== 'outbreak' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'budokai' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
                 const seen = dirSeen.get(d.id);
                 let count = Math.max(seen && Date.now() - seen.ts < 6000 ? seen.count : 0, pc.byRoom[d.id] || 0);      // tabs of this browser, and what other players report
                 if (room && room.id === d.id) count = Math.max(count, peers.size + 1);
@@ -12574,6 +12576,18 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
          * ------------------------------------------------------------------ */
         const NU = { group: null, ready: false, loading: false, err: null, nav: null, hub: { x: 0, y: 0, z: 0 }, SAFE_R: 22, lamps: [], t: 0, spw: [], groups: [], chests: [], cpts: [], inBattle: false, ending: false, snap: null, enc: null, grace: 0, skyCtx: null, last: new THREE.Vector3(), music: null, musicWant: false, fade: null, banner: null, ov: null, crystal: null, retry: 0, fates: [], extra: [], cry: [], fSlot: -1, seeds: null, cNear: null, hintOn: false, ringT: 0, foeT: 0 };
         const NU_X0 = -256, NU_N = 512, NU_BW = 1024, NU_EDGE = 247, NU_GLB = 'nuu/forest.glb', NU_MUSIC = 'nuu/ancient-watcher.mp3';
+        /* fetch a binary asset, trying several likely paths; a host that answers a missing file with its home page is detected by the glTF magic bytes */
+        async function assetBuf(list, magic) {
+            const tried = [];
+            for (const u of list) {
+                try {
+                    const r = await fetch(u); if (!r.ok) { tried.push(u + ' (' + r.status + ')'); continue; }
+                    const b = await r.arrayBuffer(); if (magic) { const h = new Uint8Array(b, 0, Math.min(4, b.byteLength)); if (String.fromCharCode(...h) !== magic) { tried.push(u + ' (not a ' + magic + ' file - missing?)'); continue; } }
+                    return b;
+                } catch (e) { tried.push(u + ' (' + (e && e.message) + ')'); }
+            }
+            throw new Error('file not found. Tried: ' + tried.join(', '));
+        }
         function nuOverlay(msg) { try { if (!msg) { if (NU.ov) { NU.ov.remove(); NU.ov = null; } return; } if (!NU.ov) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:8200;background:radial-gradient(circle at 50% 40%,#0c2a4a,#030a16);color:#bfeaff;display:flex;align-items:center;justify-content:center;font:700 18px system-ui;letter-spacing:.14em;text-align:center;text-shadow:0 0 14px #36c8ff'; document.body.appendChild(d); NU.ov = d; } NU.ov.textContent = msg; } catch (e) { /* no dom */ } }
         function nuH(x, z) {
             const nv = NU.nav; if (!nv) return 0; const fx = x - NU_X0 - 0.5, fz = z - NU_X0 - 0.5, i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j;
@@ -12638,7 +12652,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         async function nuLoad() {
             if (NU.loading || NU.ready) return; NU.loading = true; nuOverlay('LINK START\nLoading Forest of Nuu...');
             try {
-                const r = await fetch(NU_GLB); if (!r.ok) throw new Error(NU_GLB + ' ' + r.status); const buf = await r.arrayBuffer();
+                const buf = await assetBuf([NU_GLB, 'Nuu/forest.glb', 'forest.glb', 'assets/nuu/forest.glb', 'nuu/Forest_of_Nuu_20k.glb', 'Forest_of_Nuu_20k.glb'], 'glTF');
                 const gl = await new Promise((ok, no) => new GLTFLoader().parse(buf, '', ok, no)); gl.scene.updateMatrixWorld(true);
                 let terrain = null; const props = new Map(); const mats = new Set();
                 gl.scene.traverse((o) => { if (!o.isMesh) return; for (const m of [].concat(o.material)) { mats.add(m); } o.userData.noOutline = true; if (o.name === 'Terrain') { terrain = o; return; } let top = o; while (top.parent && top.parent !== gl.scene) top = top.parent; const key = o.geometry.uuid + ':' + o.material.uuid; if (!props.has(key)) props.set(key, { geo: o.geometry, mat: o.material, top: top.name || '', list: [] }); props.get(key).list.push(o.matrixWorld.clone()); });
@@ -12662,7 +12676,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 const own = cySkyBuild(root, true); NU.skyCtx = { sky: own, sun, hemi, amb, t: 0, sunDist: 120, get group() { return NU.group; }, fogCol: null };
                 NU.ready = true; nuOverlay(null);
                 if (activeMap === 'nuu') { const g = localActor.group.position; g.y = nuH(g.x, g.z); NU.group.visible = true; nuPopAll(); }
-            } catch (e) { NU.err = e; console.error('Forest of Nuu failed', e); nuOverlay('Could not load the Forest of Nuu: ' + (e && e.message)); setTimeout(() => nuOverlay(null), 4500); }
+            } catch (e) { NU.err = e; console.error('Forest of Nuu failed', e); NU.retryAt = Date.now() + 6000; nuOverlay('Could not load the Forest of Nuu\n\n' + (e && e.message) + '\n\n(tap to close - upload the nuu folder next to index.html)'); try { NU.ov.style.fontSize = '14px'; NU.ov.style.whiteSpace = 'pre-wrap'; NU.ov.style.padding = '24px'; NU.ov.onclick = () => nuOverlay(null); } catch (e2) { /* dom */ } setTimeout(() => nuOverlay(null), 30000); }
             NU.loading = false;
         }
         function nuBuildHub(root) {
@@ -12871,7 +12885,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         function nfFxTick(dt) { for (const f of NF.fx.slice()) { f.t += dt; const k = Math.min(1, f.t / f.dur); try { f.upd(k); } catch (e) { /* gone */ } if (k >= 1) { f.mesh.removeFromParent(); f.mesh.geometry && f.mesh.geometry.dispose(); f.mesh.material && f.mesh.material.dispose(); NF.fx.splice(NF.fx.indexOf(f), 1); } } }
         function nfDealDmg(m, mul, mag) {
             if (m.dead) return 0; const crit = Math.random() < 0.1, lvf = Math.max(0.5, Math.min(1.5, 1 + (NF.lv - m.lv) * 0.05)), base = (mag ? NF.mag : NF.atk) * (NF.buffT > 0 ? 1.3 : 1) * mul * (0.9 + Math.random() * 0.2) * lvf * (1 - Math.min(0.35, (NU_CLS[m.cls] ? NU_CLS[m.cls].def : 1) * 0.08)), d = Math.max(1, Math.round(base * (crit ? 1.6 : 1)));
-            m.hp -= d; m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
+            m.hp -= d; m.mine = true; if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
             NF.lb = Math.min(100, NF.lb + (m.boss ? 2 : 3)); if (m.fate) m.fate.hit = true; if (!m.aggro) nfAggro(m); if (m.hp <= 0) nfMobDie(m); return d;
         }
         function nfCan(s) { if (NF.dead) return false; const now = performance.now() / 1000; if (s.gcd && NF.gcd > 0) return false; if (s.cd && (NF.cds[s.id] || 0) > now) return false; if (s.mp && NF.mp < s.mp) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb8ff'); return false; } if (s.lb && NF.lb < 100) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Limit gauge not full', '#ffd24a'); return false; } if (NF.cast) return false; return true; }
@@ -12938,13 +12952,13 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             }
         }
         function nfAggro(m) { m.aggro = true; if (m.group) for (const o of m.group.mobs) if (!o.dead) o.aggro = true; NF.comb = 6; }
-        function nfMobDie(m) {
-            if (m.dead) return; m.dead = true; m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
+        function nfMobDie(m, remote) {
+            if (m.dead) return; m.dead = true; if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
-            nfPop(new THREE.Vector3(m.x, m.node.position.y + 1.2, m.z), '+' + Math.round(xp) + ' XP', '#7fd8ff'); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ }
-            const roll = (k, p) => { if (Math.random() < p) { try { btBagAdd(k, 1); sysChat('Found ' + BT_ITEMS[k].n + '.'); } catch (e) { /* bag */ } } }; roll('potion', m.boss ? 0.9 : 0.2); roll('ether', m.boss ? 0.8 : 0.08); roll('hipotion', m.boss ? 0.6 : 0.03); roll('phoenix', m.boss ? 0.5 : 0.02); if (m.boss) roll('elixir', 0.4);
+            if (!remote || m.mine) { nfPop(new THREE.Vector3(m.x, m.node.position.y + 1.2, m.z), '+' + Math.round(xp) + ' XP', '#7fd8ff'); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ } }
+            const roll = (k, p) => { if ((!remote || m.mine) && Math.random() < p) { try { btBagAdd(k, 1); sysChat('Found ' + BT_ITEMS[k].n + '.'); } catch (e) { /* bag */ } } }; roll('potion', m.boss ? 0.9 : 0.2); roll('ether', m.boss ? 0.8 : 0.08); roll('hipotion', m.boss ? 0.6 : 0.03); roll('phoenix', m.boss ? 0.5 : 0.02); if (m.boss) roll('elixir', 0.4);
             if (m.group && m.group.mobs.every((o) => o.dead)) nuKill(m.group); if (m.fate) { m.fate.kills++; }
-            if (m.hunt) { try { nuHuntKilled(m); } catch (e) { console.warn('hunt', e); } }
+            if (m.hunt) { try { nuHuntKilled(m, remote); } catch (e) { console.warn('hunt', e); } }
         }
         function nfPlayerHurt(d, from) {
             if (NF.dead) return; if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
@@ -12979,32 +12993,37 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         function nuMobBuild(o) {   // o: { reg, cls, lv, boss, x, z, type, name, group, fate, rank, hunt, size, hm, am }
             o.lv = Math.max(1, Math.min(19, o.lv | 0));   // Forest of Nuu monsters are Lv 1-19
             const R = NU_REG[o.reg], C = NU_CLS[o.cls] || NU_CLS.Striker, st = nuMobStats(o.lv, o.cls, o.boss), type0 = 0; if (o.hm) { st.hpMax = Math.round(st.hpMax * o.hm); st.atk *= o.am || 1; } const type = o.type || (o.boss ? R.bossType : nuModelFor(o.reg, o.cls));
-            const m = { cls: o.cls, type, name: o.name || (o.boss ? R.boss : R.pre[Math.floor(Math.random() * R.pre.length)] + ' ' + C.sfx), lv: o.lv, hp: st.hpMax, hpMax: st.hpMax, atk: st.atk, ranged: !!(C.ranged && !o.boss && Math.random() < 0.35), boss: !!o.boss, big: o.size || (o.boss ? 1.9 : 1), size: o.size || (o.boss ? 1.9 : 1), rank: o.rank || null, hunt: o.hunt || null, rankMul: o.rankMul || 0, gilMul: o.gilMul || 0, node: new THREE.Group(), x: o.x, z: o.z, tx: o.x, tz: o.z, wait: Math.random() * 3, ang: Math.random() * 6.28, aggro: false, atkT: 1 + Math.random() * 1.5, dead: false, group: o.group || null, fate: o.fate || null, reg: o.reg, home: { x: o.x, z: o.z }, slamT: 6 };
+            const m = { cls: o.cls, type, name: o.name || (o.boss ? R.boss : R.pre[Math.floor(Math.random() * R.pre.length)] + ' ' + C.sfx), lv: o.lv, hp: st.hpMax, hpMax: st.hpMax, atk: st.atk, ranged: o.rg !== undefined ? !!o.rg : !!(C.ranged && !o.boss && Math.random() < 0.35), sid: o.sid || null, unit: o.unit || null, ax: o.ax, az: o.az, orin: o.orin || 140, orkeep: o.orkeep || 170, boss: !!o.boss, big: o.size || (o.boss ? 1.9 : 1), size: o.size || (o.boss ? 1.9 : 1), rank: o.rank || null, hunt: o.hunt || null, rankMul: o.rankMul || 0, gilMul: o.gilMul || 0, node: new THREE.Group(), x: o.x, z: o.z, tx: o.x, tz: o.z, wait: Math.random() * 3, ang: Math.random() * 6.28, aggro: false, atkT: 1 + Math.random() * 1.5, dead: false, group: o.group || null, fate: o.fate || null, reg: o.reg, home: { x: o.x, z: o.z }, slamT: 6 };
             const d = BT_FOES[type] || {}; let model = null; try { model = btBuildFoe(type); } catch (e) { model = null; } m.stub = !!(model && model.userData && model.userData.stub);
             if (model) { try { if (!d.skin && !m.stub) toonify(model); } catch (e) { /* plain */ } model.rotation.y = 0; m.node.add(model); m.node.userData.h = (model.userData && model.userData.h) || 1.6; }
             m.node.scale.setScalar(m.size); m.node.position.set(o.x, nuH(o.x, o.z), o.z); m.node.userData.noOutline = true; NU.group.add(m.node);
             try { const lb = makeLabel((o.rank ? '[' + o.rank + '] ' : '◆ ') + 'Lv' + o.lv + ' ' + m.name, { size: o.rank ? 26 : 22, border: o.rank === 'S' ? '#ff3a3a' : o.rank === 'A' ? '#ffa33a' : o.rank === 'B' ? '#6fb8ff' : nfConCol(o.lv), plain: true }); lb.position.set(0, ((m.node.userData.h || 1.6) + 0.95) / m.size, 0); m.node.add(lb); m.label = lb; } catch (e) { /* no label */ }
+            m.spec = { reg: o.reg, cls: o.cls, lv: o.lv, boss: !!o.boss, type, name: m.name, size: o.size, rank: o.rank, hm: o.hm, am: o.am, rankMul: o.rankMul, gilMul: o.gilMul, rg: m.ranged }; if (m.sid) NS.mobs.set(m.sid, m);
             return m;
         }
-        function nuMakeGroup(sp, g0) {
+        function nuMakeGroup(sp, g0) { const i = g0.i | 0, cyc = (NS.gs[i] || { cyc: 0 }).cyc; g0.bc = cyc; return nsSeeded(nuHash(i + 3, cyc * 131 + 7), () => nuMakeGroup0(sp, g0)); }
+        function nuMakeGroup0(sp, g0) {
             const n = 2 + (Math.random() < 0.4 ? 1 : 0), g = g0 || { sp, lv: sp.lv, reg: sp.reg, mobs: [], dead: false, respawn: 0, pop: 0.001 }, cls = sp.cls[Math.random() < 0.7 ? 0 : 1];
-            for (let i = 0; i < n; i++) g.mobs.push(nuMobBuild({ reg: sp.reg, cls, lv: sp.lv + (Math.random() < 0.3 ? 1 : 0), x: sp.x + (Math.random() - 0.5) * 5, z: sp.z + (Math.random() - 0.5) * 5, group: g }));
+            for (let i = 0; i < n; i++) g.mobs.push(nuMobBuild({ reg: sp.reg, cls, lv: sp.lv + (Math.random() < 0.3 ? 1 : 0), x: sp.x + (Math.random() - 0.5) * 5, z: sp.z + (Math.random() - 0.5) * 5, group: g, sid: 'G' + g.i + '.' + g.bc + '.' + i, unit: 'G' + g.i, ax: sp.x, az: sp.z }));
             const rg = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.72, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(NU_REG[sp.reg].accent), transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); rg.rotation.x = -Math.PI / 2; rg.position.set(sp.x, nuH(sp.x, sp.z) + 0.06, sp.z); rg.userData.noOutline = true; NU.group.add(rg); g.ring = rg;
             g.built = true; g.dead = false; g.pop = 0.001; return g;
         }
-        function nuDisposeMob(m) { try { if (m.label) disposeSprite(m.label); if (m.bar) disposeSprite(m.bar); } catch (e) { /* gone */ } m.label = null; m.bar = null; m.node.removeFromParent(); }
+        function nuDisposeMob(m) { if (m.sid && NS.mobs.get(m.sid) === m) NS.mobs.delete(m.sid); try { if (m.label) disposeSprite(m.label); if (m.bar) disposeSprite(m.bar); } catch (e) { /* gone */ } m.label = null; m.bar = null; m.node.removeFromParent(); }
         function nuDisposeGroup(g) { for (const m of g.mobs) nuDisposeMob(m); g.mobs = []; g.built = false; if (g.ring) { g.ring.removeFromParent(); g.ring.geometry.dispose(); g.ring.material.dispose(); g.ring = null; } }
-        function nuPopAll() { for (const g of NU.groups) nuDisposeGroup(g); NU.groups = NU.spw.map((sp) => ({ sp, lv: sp.lv, reg: sp.reg, mobs: [], dead: false, respawn: 0, pop: 0, built: false })); }
-        function nuKill(g) { g.dead = true; g.respawn = 60 + Math.random() * 60; for (const m of g.mobs) { m.node.visible = false; } }
+        function nuPopAll() { for (const g of NU.groups) nuDisposeGroup(g); NU.groups = NU.spw.map((sp, i) => ({ i, sp, lv: sp.lv, reg: sp.reg, mobs: [], dead: false, respawn: 0, pop: 0, built: false })); }
+        function nuKill(g) { nsGroupKilled(g); g.dead = true; g.respawn = 60 + Math.random() * 60; for (const m of g.mobs) { m.node.visible = false; } }
         /* ---- telegraphed ground attacks: red zones that fill up, then hit whoever is still standing in them ---- */
         const NU_TELE = { Striker: 'cone', Berserker: 'cone', Guardian: 'self', Sentinel: 'self', Sage: 'circle', Healer: 'circle', Blaster: 'line', Phantom: 'circle', Trickster: 'donut' };
+        function nfTelBuild(m, T) {
+            const kind = T.kind, ang = T.ang; const mat = () => new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), G = new THREE.Group();
+            let fill; if (kind === 'circle' || kind === 'self') { fill = new THREE.Mesh(new THREE.CircleGeometry(T.r, 40), mat()); fill.rotation.x = -Math.PI / 2; } else if (kind === 'donut') { fill = new THREE.Mesh(new THREE.RingGeometry(T.ri, T.r, 44), mat()); fill.rotation.x = -Math.PI / 2; } else if (kind === 'cone') { fill = new THREE.Mesh(new THREE.CircleGeometry(T.r, 28, Math.PI / 2 - T.a / 2, T.a), mat()); fill.rotation.x = Math.PI / 2; } else { const g = new THREE.PlaneGeometry(T.w, T.len); g.translate(0, T.len / 2, 0); fill = new THREE.Mesh(g, mat()); fill.rotation.x = Math.PI / 2; }
+            G.add(fill); G.rotation.y = kind === 'circle' || kind === 'donut' || kind === 'self' ? 0 : ang; G.position.set(T.x, nuH(T.x, T.z) + 0.35, T.z); G.userData.noOutline = true; fill.userData.noOutline = true; NU.group.add(G); T.g = G; T.fill = fill; NF.tels.push(T);
+        }
         function nfTelStart(m, p) {
             const kinds = m.boss ? ['circle', 'cone', 'line', 'self', 'donut'] : [NU_TELE[m.cls] || 'circle']; let kind = kinds[Math.floor(Math.random() * kinds.length)];
             const wind = m.boss ? 1.8 : 1.5, ang = Math.atan2(p.x - m.x, p.z - m.z), sc = m.boss ? 1.3 : 1, T = { kind, t: 0, wind, m, ang, dmg: m.atk * sc, x: m.x, z: m.z };
             if (kind === 'circle') { T.r = m.boss ? 5.5 : 3.6; T.x = p.x; T.z = p.z; T.dmg *= 1.7; } else if (kind === 'self') { T.r = m.boss ? 7.5 : 4.6; T.dmg *= 1.6; } else if (kind === 'donut') { T.r = m.boss ? 11 : 8; T.ri = m.boss ? 4.2 : 3; T.dmg *= 1.8; } else if (kind === 'cone') { T.r = m.boss ? 10 : 7; T.a = 1.15; T.dmg *= 1.9; } else { T.len = m.boss ? 18 : 13; T.w = m.boss ? 3.4 : 2.4; T.dmg *= 2.0; }
-            const mat = () => new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), G = new THREE.Group();
-            let fill; if (kind === 'circle' || kind === 'self') { fill = new THREE.Mesh(new THREE.CircleGeometry(T.r, 40), mat()); fill.rotation.x = -Math.PI / 2; } else if (kind === 'donut') { fill = new THREE.Mesh(new THREE.RingGeometry(T.ri, T.r, 44), mat()); fill.rotation.x = -Math.PI / 2; } else if (kind === 'cone') { fill = new THREE.Mesh(new THREE.CircleGeometry(T.r, 28, Math.PI / 2 - T.a / 2, T.a), mat()); fill.rotation.x = Math.PI / 2; } else { const g = new THREE.PlaneGeometry(T.w, T.len); g.translate(0, T.len / 2, 0); fill = new THREE.Mesh(g, mat()); fill.rotation.x = Math.PI / 2; }
-            G.add(fill); G.rotation.y = kind === 'circle' || kind === 'donut' || kind === 'self' ? 0 : ang; G.position.set(T.x, nuH(T.x, T.z) + 0.35, T.z); G.userData.noOutline = true; fill.userData.noOutline = true; NU.group.add(G); T.g = G; T.fill = fill; NF.tels.push(T);
+            nfTelBuild(m, T); if (m.sid) nsSend({ k: 't', id: m.sid, T: { kind: T.kind, x: nsRound(T.x, 20), z: nsRound(T.z, 20), ang: nsRound(ang, 100), r: T.r, ri: T.ri, a: T.a, len: T.len, w: T.w, dmg: Math.round(T.dmg), wind: T.wind } });
             m.wind = true; m.aoeT = m.boss ? 5 + Math.random() * 3 : 7 + Math.random() * 4; m.atkT = Math.max(m.atkT, 1.2); m.ang = ang; if (m.boss) nfPop(new THREE.Vector3(m.x, m.node.position.y + 3.4, m.z), kind === 'line' ? 'CHARGE!' : kind === 'cone' ? 'CLEAVE!' : kind === 'self' ? 'SHOCKWAVE!' : kind === 'donut' ? 'GET IN!' : 'SLAM!', '#ff6a5a', true);
         }
         function nfTelHit(T, p) {
@@ -13020,24 +13039,125 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 if (T.t >= T.wind) { if (!T.cancel && !NF.dead && nfTelHit(T, p)) nfPlayerHurt(T.dmg * (0.9 + Math.random() * 0.2), T.m); if (!T.cancel) { const fl = new THREE.Mesh(T.fill.geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })); fl.rotation.copy(T.fill.rotation); T.g.add(fl); setTimeout(() => { fl.removeFromParent(); fl.material.dispose(); }, 130); } T.m.wind = false; setTimeout(() => { T.g.removeFromParent(); T.fill.geometry.dispose(); T.fill.material.dispose(); }, 140); NF.tels.splice(NF.tels.indexOf(T), 1); }
             }
         }
+        /* ---- shared world: everyone in Adventia sees the same monsters, FATEs and Hunts ----
+           The player nearest a monster group (lowest id on a tie, and the same owner is kept while still close) runs its AI and tells everyone where
+           the monsters are and how hurt they are, a few times a second. Hits, kills, telegraphs and swings are sent to all players. Each player
+           resolves danger zones against their own character, and only people who hurt a monster get its reward. Groups, FATEs and Hunts are built from
+           shared seeds and clocks, so they match on every screen. Chests, loot and rewards stay personal. ---- */
+        const NS = { mobs: new Map(), own: new Map(), pl: [], gs: {}, fdone: new Set(), snapT: 0, wanted: false, wantT: 0 };
+        const nsRound = (v, k) => Math.round(v * k) / k;
+        const nsSeeded = (seed, fn) => { const R = Math.random; Math.random = seeded(seed); try { return fn(); } finally { Math.random = R; } };
+        function nsLive() { return activeMap === 'nuu' && NU.ready && peers.size > 0; }
+        function nsSend(o) { if (!nsLive()) return; try { net.send({ t: 'nu', ...o }); } catch (e) { /* offline */ } }
+        function nsOwner(key, ax, az, rin, rkeep) {
+            const now = performance.now(), e = NS.own.get(key); if (e && now - e.t < 400) return e.id;
+            const pl = NS.pl, d = (q) => Math.hypot(q.x - ax, q.z - az); let id = e ? e.id : null; const cur = id && pl.find((q) => q.id === id);
+            if (!cur || d(cur) > rkeep) { let best = null; for (const q of pl) if (d(q) < rin && (!best || q.id < best.id)) best = q; id = best ? best.id : null; }
+            NS.own.set(key, { id, t: now }); return id;
+        }
+        const nsIsOwner = (m) => !m.sid || nsOwner(m.unit, m.ax, m.az, m.orin, m.orkeep) === me.id;
+        const nsFateOwner = (f) => nsOwner('F' + f.key, f.x, f.z, 45, 70) === me.id;
+        function nsPickTarget(m, p) {
+            let best = null, bd = 1e9, cur = null;
+            for (const q of NS.pl) { if (q.me && NF.dead) continue; const d = Math.hypot(q.x - m.x, q.z - m.z); if (q.id === m.tid) cur = { q, d }; if (d < bd) { bd = d; best = q; } }
+            let t = best; if (cur && m.aggro && cur.d < bd * 1.3 + 4) t = cur.q; if (!t) return { id: me.id, me: true, pos: p };
+            m.tid = t.id; return t.me ? { id: t.id, me: true, pos: p } : { id: t.id, me: false, pos: new THREE.Vector3(t.x, t.y, t.z) };
+        }
+        function nsReplica(m, dt) {
+            const n = m.net; if (n) { const dx = n.x - m.x, dz = n.z - m.z; if (dx * dx + dz * dz > 144) { m.x = n.x; m.z = n.z; } else { const k = Math.min(1, dt * 10); m.x += dx * k; m.z += dz * k; } m.ang = n.ang; }
+            let tilt = 0, lunge = 0;
+            if (m.swing) { const w = m.swing; w.t += dt; const k = w.t / w.dur; if (k < 0.62) tilt = -0.32 * Math.sin(k / 0.62 * Math.PI / 2); else { tilt = 0.28 * Math.sin((k - 0.62) / 0.38 * Math.PI); if (!w.hit) { w.hit = true; const pp = new THREE.Vector3(m.x, m.node.position.y, m.z), to = new THREE.Vector3(m.x + Math.sin(m.ang) * 3, m.node.position.y, m.z + Math.cos(m.ang) * 3); if (m.ranged) nfFx('bolt', pp, to); else { m.lunge = 0.18; nfFx('slash', pp, to); } } } if (k >= 1) m.swing = null; }
+            if (m.lunge > 0) { m.lunge -= dt; lunge = Math.sin(Math.max(0, m.lunge) / 0.18 * Math.PI) * 0.5; }
+            m.node.position.set(m.x + Math.sin(m.ang) * lunge, nuH(m.x, m.z), m.z + Math.cos(m.ang) * lunge); m.node.rotation.x = tilt; let da = m.ang - m.node.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); m.node.rotation.y += da * Math.min(1, dt * 8);
+            if (m.hurt && performance.now() - m.hurt < 120) m.node.scale.setScalar(m.size * 1.07); else m.node.scale.setScalar(m.size);
+            if (m.bar && m._bhp !== m.hp) { m._bhp = m.hp; m.bar.userData.draw(); }
+            if (!m.bar && (m.aggro || NF.tgt === m)) nfBar(m); if (m.bar && !m.aggro && NF.tgt !== m && m.hp >= m.hpMax) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
+        }
+        function nsSpec(m) { return { sid: m.sid, ...m.spec, x: nsRound(m.x, 10), z: nsRound(m.z, 10), hp: Math.round(m.hp), ang: nsRound(m.ang, 100) }; }
+        function nsBuildFate(f, s) {
+            if (!s || typeof s.sid !== 'string' || NS.mobs.has(s.sid) || f.state === 'done' || !NU_REG[s.reg]) return;
+            const m = nuMobBuild({ reg: s.reg | 0, cls: NU_CLS[s.cls] ? s.cls : 'Striker', lv: s.lv, boss: !!s.boss, type: s.type, name: String(s.name || '').slice(0, 40) || undefined, size: s.size, hm: s.hm, am: s.am, rg: !!s.rg, x: +s.x, z: +s.z, fate: f, sid: s.sid, unit: 'F' + f.key, ax: f.x, az: f.z, orin: 45, orkeep: 70 });
+            m.hp = Math.min(m.hpMax, +s.hp || m.hpMax); m.aggro = true; m.ang = +s.ang || 0; m.net = { x: m.x, z: m.z, ang: m.ang }; f.mobs.push(m); if (s.boss) f.bossSpawned = true; f.nseq = Math.max(f.nseq | 0, (parseInt(String(s.sid).split('.').pop(), 10) || 0));
+            if (f.state === 'wait') f.state = 'live';
+        }
+        function nsGroupKilled(g) {
+            const s = NS.gs[g.i] || (NS.gs[g.i] = { cyc: 0, until: 0 }); if (s.cyc !== (g.bc | 0)) return;
+            const until = Date.now() + (60 + nuHash(g.i + 5, s.cyc) % 60) * 1000; s.cyc++; s.until = until; nsSend({ k: 'gk', i: g.i, c: s.cyc - 1, u: until });
+        }
+        function nsKillVis(g) { g.dead = true; g.respawn = 60; for (const m of g.mobs) { m.dead = true; m.node.visible = false; if (NF.tgt === m) NF.tgt = null; } }
+        function nsGroupSync(g, dt) {
+            const s = NS.gs[g.i], now = Date.now();
+            if (g.dead) { g.respawn -= dt; if (s ? now >= s.until : g.respawn <= 0) { nuDisposeGroup(g); g.dead = false; } return; }
+            if (s && s.until > now) { nsKillVis(g); return; }
+            if (g.built && g.bc !== (s ? s.cyc : 0)) nuDisposeGroup(g);
+        }
+        function nsFrame(dt) {
+            const now = Date.now(), P = nfPos(), pl = [{ id: me.id, x: P.x, y: P.y, z: P.z, me: true }];
+            for (const p of peers.values()) { const t = p.target; if (!t || !Number.isFinite(t.x) || now - (p.last || 0) > 8000) continue; pl.push({ id: p.id, x: t.x, y: t.y, z: t.z }); } NS.pl = pl;
+            if (!peers.size) { NS.wanted = false; return; }
+            if (!NS.wanted) { NS.wantT += dt; if (NS.wantT > 1.2) { NS.wanted = true; NS.wantT = 0; nsSend({ k: 'want' }); } }
+            NS.snapT -= dt; if (NS.snapT > 0) return;
+            const rows = []; let any = false;
+            const add = (key, mobs, ax, az, rin, rk, ex) => { if (!mobs.length || nsOwner(key, ax, az, rin, rk) !== me.id) return; const r = []; for (const m of mobs) { if (!m.sid) continue; if (m.aggro && !m.dead) any = true; r.push([m.sid, nsRound(m.x, 20), nsRound(m.z, 20), nsRound(m.ang, 100), Math.round(m.hp), (m.aggro ? 1 : 0) | (m.reset ? 2 : 0) | (m.dead ? 4 : 0)]); } if (r.length) rows.push(ex === undefined ? [key, r] : [key, r, ex]); };
+            for (const g of NU.groups) if (g.built && !g.dead) add('G' + g.i, g.mobs, g.sp.x, g.sp.z, 140, 170);
+            for (const f of NU.fates) if (f.state === 'live') add('F' + f.key, f.mobs, f.x, f.z, 45, 70, f.kills);
+            for (const h of NU.hunts || []) if (h.m && !h.m.dead) add('H' + h.id, [h.m], h.x, h.z, 140, 170);
+            NS.snapT = any ? 0.2 : 0.5; if (rows.length) nsSend({ k: 's', u: rows });
+        }
+        function nsFull() {
+            const now = Date.now(), fates = NU.fates.filter((f) => f.state !== 'gone').map((f) => [f.key, f.kills, f.bossSpawned ? 1 : 0]), gs = Object.keys(NS.gs).map((i) => [+i, NS.gs[i].cyc, NS.gs[i].until]), hs = Object.keys(NF.hunt).filter((id) => NF.hunt[id] > now).map((id) => [id, NF.hunt[id]]), mobs = [];
+            for (const f of NU.fates) if (f.state === 'live' && nsFateOwner(f)) for (const m of f.mobs) if (!m.dead && m.sid) mobs.push(nsSpec(m));
+            return { k: 'full', fates, gs, hs, fd: [...NS.fdone].filter((k) => String(k).split(':')[1] === String(NU.fSlot)).slice(0, 12), mobs: mobs.slice(0, 40) };
+        }
+        const nsNum = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 0));
+        function nsOnMsg(from, m) {
+            if (m.to && m.to !== me.id) return; if (activeMap !== 'nuu' || !NU.ready) return; const k = m.k;
+            if (k === 's' && Array.isArray(m.u)) {
+                for (const u of m.u.slice(0, 80)) {
+                    if (!Array.isArray(u) || typeof u[0] !== 'string' || !Array.isArray(u[1])) continue; const e = NS.own.get(u[0]);
+                    if (!e || e.id === null || e.id === from || from < e.id) NS.own.set(u[0], { id: from, t: performance.now() }); else continue;
+                    if (typeof u[2] === 'number' && u[0][0] === 'F') { const ff = NU.fates.find((q) => 'F' + q.key === u[0]); if (ff) ff.kills = Math.max(ff.kills, u[2] | 0); }
+                    for (const r of u[1].slice(0, 40)) { const mm = Array.isArray(r) && NS.mobs.get(r[0]); if (!mm || mm.dead) continue; const fl = r[5] | 0;
+                        if (!mm.net) { mm.x = +r[1]; mm.z = +r[2]; } mm.net = { x: +r[1], z: +r[2], ang: +r[3] || 0 }; mm.hp = Math.min(mm.hpMax, +r[4]); mm.aggro = !!(fl & 1); mm.reset = !!(fl & 2); if (fl & 4) nfMobDie(mm, true); }
+                }
+            } else if (k === 'h') {
+                const mm = NS.mobs.get(m.id); if (!mm || mm.dead) return; const d = nsNum(m.d, 0, 99999); mm.hp -= d; mm.hurt = performance.now(); if (mm.fate) mm.fate.hit = mm.fate.hit || false; nfPop(new THREE.Vector3(mm.x, mm.node.position.y + (mm.node.userData.h || 1.5) * (mm.big || 1) + 0.4, mm.z), String(d | 0), '#cfd8e0');
+                if (nsIsOwner(mm)) { nfAggro(mm); if (typeof m.f === 'string') mm.tid = m.f; } else mm.aggro = true; if (mm.hp <= 0) nfMobDie(mm, true);
+            } else if (k === 'x') { const mm = NS.mobs.get(m.id); if (mm && !mm.dead) { mm.hp = 0; nfMobDie(mm, true); } }
+            else if (k === 'w') { const mm = NS.mobs.get(m.id); if (mm && !nsIsOwner(mm) && !mm.dead) mm.swing = { t: 0, dur: mm.ranged ? 0.55 : 0.5, hit: false }; }
+            else if (k === 't' && m.T) { const mm = NS.mobs.get(m.id), q = m.T; if (!mm || mm.dead || nsIsOwner(mm) || !/^(circle|self|donut|cone|line)$/.test(q.kind)) return; const T = { kind: q.kind, t: 0, wind: nsNum(q.wind, 0.5, 4), m: mm, ang: +q.ang || 0, dmg: nsNum(q.dmg, 1, 99999), x: +q.x, z: +q.z, r: nsNum(q.r, 0, 40), ri: nsNum(q.ri, 0, 40), a: nsNum(q.a, 0, 6.3), len: nsNum(q.len, 0, 60), w: nsNum(q.w, 0, 20) }; nfTelBuild(mm, T); mm.wind = true; }
+            else if (k === 'u') { const mm = NS.mobs.get(m.id), P = nfPos(); if (mm && !mm.dead && Math.hypot(mm.x - P.x, mm.z - P.z) < 18) nfPlayerHurt(nsNum(m.d, 1, 99999), mm); }
+            else if (k === 'gk') { const i = m.i | 0, s = NS.gs[i] || (NS.gs[i] = { cyc: 0, until: 0 }), c = m.c | 0; if (s.cyc <= c) { s.cyc = c + 1; s.until = nsNum(m.u, 0, Date.now() + 130000); const g = NU.groups[i]; if (g && !g.dead && g.built) nsKillVis(g); } }
+            else if (k === 'f') { const f = NU.fates.find((q) => q.key === m.fk); if (f) nsBuildFate(f, m.s); }
+            else if (k === 'hk') { const now = Date.now(), cur = NF.hunt[m.id] || 0, u = nsNum(m.u, 0, now + 90 * 3600000); NF.hunt[m.id] = cur > now ? Math.min(cur, u) : u; }
+            else if (k === 'want') { nsSend({ ...nsFull(), to: from }); }
+            else if (k === 'full') {
+                const now = Date.now(); for (const r of (m.fates || []).slice(0, 12)) { const f = NU.fates.find((q) => q.key === r[0]); if (f) { f.kills = Math.max(f.kills, r[1] | 0); if (r[2]) f.bossSpawned = true; } }
+                for (const r of (m.gs || []).slice(0, 400)) { const i = r[0] | 0, s = NS.gs[i] || (NS.gs[i] = { cyc: 0, until: 0 }); if (r[1] > s.cyc || (r[1] === s.cyc && r[2] > s.until)) { s.cyc = r[1] | 0; s.until = nsNum(r[2], 0, now + 130000); } }
+                for (const r of (m.hs || []).slice(0, 20)) { const cur = NF.hunt[r[0]] || 0; NF.hunt[r[0]] = cur > now ? Math.min(cur, r[1]) : r[1]; }
+                for (const key of (m.fd || []).slice(0, 12)) { NS.fdone.add(String(key)); const f = NU.fates.find((q) => q.key === key); if (f && f.state !== 'done' && f.state !== 'fail' && f.state !== 'gone') nuFateEnd(f, 'done'); }
+                for (const sp of (m.mobs || []).slice(0, 40)) { if (!sp || typeof sp.sid !== 'string') continue; const key = sp.sid.slice(1, sp.sid.lastIndexOf('.')), f = NU.fates.find((q) => q.key === key); if (f) nsBuildFate(f, sp); }
+            }
+        }
         function nfMobAI(m, dt, p, safe) {
+            let tg = null; if (m.sid) { if (!nsIsOwner(m)) { nsReplica(m, dt); return; } tg = nsPickTarget(m, p); p = tg.pos; safe = nuSafe(p); } const ded = tg && !tg.me ? false : NF.dead;
             const reg = m.fate ? null : m.group; const leashC = m.fate ? { x: m.fate.x, z: m.fate.z } : m.home, leashR = m.fate ? 44 : 34; let tx, tz, sp = 1.1;
             const dp = Math.hypot(m.x - p.x, m.z - p.z), dh = Math.hypot(m.x - leashC.x, m.z - leashC.z);
             const aggroR = (nuNight() > 0.5 ? 12 : 9) + (m.lv >= NF.lv + 3 ? 0 : 0);
-            if (!m.aggro && !safe && NU.grace <= 0 && !NF.dead && dp < aggroR && (m.fate || m.group || m.hunt) && !(m.lv <= NF.lv - 6 && !m.rank)) { m.aggro = true; if (m.group) for (const o of m.group.mobs) o.aggro = true; try { if (!m.noticed) { m.noticed = true; } } catch (e) { /* ok */ } }
-            if (m.aggro && (safe || NF.dead || dh > leashR || dp > 40)) { m.aggro = false; m.reset = true; }
+            if (!m.aggro && !safe && NU.grace <= 0 && !ded && dp < aggroR && (m.fate || m.group || m.hunt) && !(m.lv <= NF.lv - 6 && !m.rank)) { m.aggro = true; if (m.group) for (const o of m.group.mobs) o.aggro = true; try { if (!m.noticed) { m.noticed = true; } } catch (e) { /* ok */ } }
+            if (m.aggro && (safe || ded || dh > leashR || dp > 40)) { m.aggro = false; m.reset = true; }
             if (m.reset) { m.hp = Math.min(m.hpMax, m.hp + m.hpMax * 0.25 * dt); if (dh < 2 && m.hp >= m.hpMax) m.reset = false; tx = m.home ? m.home.x : leashC.x; tz = m.home ? m.home.z : leashC.z; if (m.fate) { tx = leashC.x + Math.cos(m.ang) * 6; tz = leashC.z + Math.sin(m.ang) * 6; } sp = 3.4; }
             else if (m.aggro) {
                 const reach = m.ranged ? 8.5 : (m.boss ? 4.2 : 2.3); tx = p.x; tz = p.z; sp = 2.6 + Math.min(1.2, m.lv * 0.04);
-                if (dp <= reach) { sp = 0; if (!m.wind) m.atkT -= dt; if (m.atkT <= 0 && !m.wind && !m.swing) { m.atkT = (m.boss ? 2.8 : 2.4) + Math.random() * 0.4; m.swing = { t: 0, dur: m.ranged ? 0.55 : 0.5, hit: false }; if (!NF.tgt || NF.tgt.dead) nfTarget(m); } }
+                if (dp <= reach) { sp = 0; if (!m.wind) m.atkT -= dt; if (m.atkT <= 0 && !m.wind && !m.swing) { m.atkT = (m.boss ? 2.8 : 2.4) + Math.random() * 0.4; m.swing = { t: 0, dur: m.ranged ? 0.55 : 0.5, hit: false }; if (m.sid) nsSend({ k: 'w', id: m.sid }); if ((!tg || tg.me) && (!NF.tgt || NF.tgt.dead)) nfTarget(m); } }
                 if (m.aoeT === undefined) m.aoeT = m.boss ? 3 : 3 + Math.random() * 3; if (!m.wind) { m.aoeT -= dt; if (m.aoeT <= 0 && dp < 22) nfTelStart(m, p); }
             } else { m.wait -= dt; if (dh > 11) { tx = leashC.x; tz = leashC.z; sp = 2.4; } else { if (m.wait <= 0) { m.wait = 2.5 + Math.random() * 4; const a = Math.random() * 6.28, r = Math.random() * 7; m.tx = leashC.x + Math.cos(a) * r; m.tz = leashC.z + Math.sin(a) * r; } tx = m.tx; tz = m.tz; } }
             if (m.wind) sp = 0;
             const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz); if (sp > 0 && d > 0.4) { const st = Math.min(d, sp * dt), nx = m.x + dx / d * st, nz = m.z + dz / d * st; if (!nuBlk(nx, nz) || m.aggro || m.reset) { m.x = nx; m.z = nz; } m.ang = Math.atan2(dx, dz); } else if (m.aggro) m.ang = Math.atan2(p.x - m.x, p.z - m.z);
             let tilt = 0; if (m.swing) {   // normal attack: rear back, then strike (melee lunge + slash, or a bolt for casters)
                 const w = m.swing; w.t += dt; const k = w.t / w.dur;
-                if (k < 0.62) { tilt = -0.32 * Math.sin(k / 0.62 * Math.PI / 2); } else { tilt = 0.28 * Math.sin((k - 0.62) / 0.38 * Math.PI); if (!w.hit) { w.hit = true; const pp = new THREE.Vector3(m.x, m.node.position.y, m.z); if (m.ranged) nfFx('bolt', pp, p.clone().setY(p.y)); else { m.lunge = 0.18; nfFx('slash', pp, p.clone().setY(p.y)); } if (!NF.dead && (m.ranged ? dp < 11 : dp < (m.boss ? 5.6 : 3.4))) nfPlayerHurt(m.atk * (0.85 + Math.random() * 0.3), m); } }
-                if (k >= 1 || m.dead || NF.dead) m.swing = null; if (m.swing) sp = 0;
+                if (k < 0.62) { tilt = -0.32 * Math.sin(k / 0.62 * Math.PI / 2); } else { tilt = 0.28 * Math.sin((k - 0.62) / 0.38 * Math.PI); if (!w.hit) { w.hit = true; const pp = new THREE.Vector3(m.x, m.node.position.y, m.z); if (m.ranged) nfFx('bolt', pp, p.clone().setY(p.y)); else { m.lunge = 0.18; nfFx('slash', pp, p.clone().setY(p.y)); } if (!ded && (m.ranged ? dp < 11 : dp < (m.boss ? 5.6 : 3.4))) { const dmg = m.atk * (0.85 + Math.random() * 0.3); if (!tg || tg.me) nfPlayerHurt(dmg, m); else nsSend({ k: 'u', to: tg.id, d: Math.round(dmg), id: m.sid }); } } }
+                if (k >= 1 || m.dead || ded) m.swing = null; if (m.swing) sp = 0;
             }
             let lunge = 0; if (m.lunge > 0) { m.lunge -= dt; lunge = Math.sin(Math.max(0, m.lunge) / 0.18 * Math.PI) * 0.5; }
             m.node.position.set(m.x + Math.sin(m.ang) * lunge, nuH(m.x, m.z), m.z + Math.cos(m.ang) * lunge); m.node.rotation.x = tilt; let da = m.ang - m.node.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); m.node.rotation.y += da * Math.min(1, dt * 8);
@@ -13062,20 +13182,20 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 if (h.m) { if (h.m.dead) { h.m = null; continue; } if (d > 210 && !h.m.aggro) { nuDisposeMob(h.m); const i = NU.extra.indexOf(h.m); if (i >= 0) NU.extra.splice(i, 1); h.m = null; } continue; }
                 if ((NF.hunt[h.id] || 0) > now || d > 140) continue; if (h.rank === 'S' && !NU_SCOND[h.reg]()) continue;
                 const R = NU_REG[h.reg], lv = R.lv[1] + cfg.lv, boss = h.rank !== 'B', cls = h.rank === 'B' ? NU_CLS_KEYS[(h.reg * 2 + 1) % 9] : 'Berserker', type = h.rank === 'B' ? undefined : NU_HTYPE[h.rank][h.reg];
-                const m = nuMobBuild({ reg: h.reg, cls, lv, boss, x: h.x, z: h.z, type, name: h.name, rank: h.rank, hunt: h, size: cfg.size, hm: cfg.hm, am: cfg.am, rankMul: cfg.xp, gilMul: cfg.gil }); m.ranged = false; NU.extra.push(m); h.m = m;
+                const m = nuMobBuild({ sid: 'H' + h.id, unit: 'H' + h.id, ax: h.x, az: h.z, reg: h.reg, cls, lv, boss, x: h.x, z: h.z, type, name: h.name, rank: h.rank, hunt: h, size: cfg.size, hm: cfg.hm, am: cfg.am, rankMul: cfg.xp, gilMul: cfg.gil }); m.ranged = false; NU.extra.push(m); h.m = m;
                 if (h.rank !== 'B') { try { sysChat('◆ HUNT ' + h.rank + '-RANK: ' + h.name + ' (Lv ' + lv + ') is nearby in the ' + R.name + '.'); } catch (e) { /* chat */ } nuShowBanner(h.rank + '-RANK HUNT', h.name.toUpperCase()); }
             }
         }
-        function nuHuntKilled(m) {
-            const h = m.hunt, cfg = NU_HRANK[h.rank]; NF.hunt[h.id] = Date.now() + cfg.wait(); nfSave(); h.m = null;
+        function nuHuntKilled(m, remote) {
+            const h = m.hunt, cfg = NU_HRANK[h.rank], now0 = Date.now(), u0 = now0 + cfg.wait(); NF.hunt[h.id] = (NF.hunt[h.id] || 0) > now0 ? Math.min(NF.hunt[h.id], u0) : u0; nfSave(); h.m = null; if (!remote) nsSend({ k: 'hk', id: h.id, u: NF.hunt[h.id] }); if (remote && !m.mine) return;
             if (h.rank === 'B') { try { if (Math.random() < 0.5) btBagAdd('potion', 1); } catch (e) { /* bag */ } return; }
             nuShowBanner('HUNT COMPLETE', h.rank + '-RANK · ' + h.name.toUpperCase()); try { sysChat('◆ Hunt complete: ' + h.name + ' (' + h.rank + '-rank). It will not return for a long time.'); btBagAdd('hipotion', h.rank === 'S' ? 3 : 1); btBagAdd('ether', h.rank === 'S' ? 4 : 2); if (h.rank === 'S') { btBagAdd('elixir', 2); btBagAdd('phoenix', 2); } } catch (e) { /* bag */ }
             nuChestSpawn({ x: m.x, z: m.z, d: h.rank === 'S' ? 520 : 260, lv: m.lv, reg: h.reg, cool: 0, on: false, fate: true });
         }
         function nuMobsTick(dt) {
-            const p = nfPos(), safe = nuSafe(p); NU.builds = 0;
+            const p = nfPos(), safe = nuSafe(p); NU.builds = 0; nsFrame(dt);
             for (const g of NU.groups) {
-                if (g.dead) { g.respawn -= dt; if (g.respawn <= 0) { nuDisposeGroup(g); g.dead = false; } continue; }
+                nsGroupSync(g, dt); if (g.dead) continue;
                 const dc = Math.hypot(g.sp.x - p.x, g.sp.z - p.z); if (!g.built) { if (dc < 125 && NU.builds < 3) { NU.builds++; nuMakeGroup(g.sp, g); } else continue; } else if (dc > 190 && !g.mobs.some((m) => m.aggro)) { nuDisposeGroup(g); continue; }
                 const near = dc < 110 || g.mobs.some((m) => m.aggro); for (const m of g.mobs) m.node.visible = near && !m.dead; if (g.ring) { g.ring.visible = dc < 70; g.ring.material.opacity = 0.16 + 0.1 * Math.sin(NU.t * 2 + g.sp.x); }
                 if (!near) continue;
@@ -13107,20 +13227,21 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
         function nuFateSpawnMob(f, boss) {
             const a = Math.random() * 6.28, r = boss ? 0 : 8 + Math.random() * 10, x = f.x + Math.cos(a) * r, z = f.z + Math.sin(a) * r, cls = NU_CLS_KEYS[Math.floor(Math.random() * 9)];
-            const m = nuMobBuild({ reg: f.reg, cls: boss ? 'Berserker' : cls, lv: boss ? f.lv + 2 : f.lv + (Math.random() < 0.3 ? 1 : 0), boss, x, z, fate: f }); m.aggro = true; m.ang = a; f.mobs.push(m); return m;
+            const m = nuMobBuild({ reg: f.reg, cls: boss ? 'Berserker' : cls, lv: boss ? f.lv + 2 : f.lv + (Math.random() < 0.3 ? 1 : 0), boss, x, z, fate: f, sid: 'F' + f.key + '.' + (f.nseq = (f.nseq | 0) + 1), unit: 'F' + f.key, ax: f.x, az: f.z, orin: 45, orkeep: 70 }); m.aggro = true; m.ang = a; f.mobs.push(m); nsSend({ k: 'f', fk: f.key, s: nsSpec(m) }); return m;
         }
         function nuFateTick(dt) {
             const now = Date.now(), slot = Math.floor(now / (NU_SLOT * 1000)), p = nfPos();
-            if (NU.fSlot !== slot) { for (const f of NU.fates) nuFateEnd(f, 'gone'); NU.fates = []; NU.fSlot = slot; for (let r = 0; r < NU_REG.length; r++) { const f = nuFateFor(r, slot); if (f && !NF.done.includes(f.key)) NU.fates.push(f); } }
+            if (NU.fSlot !== slot) { for (const f of NU.fates) nuFateEnd(f, 'gone'); NU.fates = []; NU.fSlot = slot; for (let r = 0; r < NU_REG.length; r++) { const f = nuFateFor(r, slot); if (f && !NF.done.includes(f.key) && !NS.fdone.has(f.key)) { f.nseq = 0; NU.fates.push(f); } } }
             let nearest = null;
             for (const f of NU.fates) {
                 if (f.state === 'done' || f.state === 'fail' || f.state === 'gone') continue;
-                const live = now >= f.t0 && now < f.t1; if (!live) { if (now >= f.t1 && f.state !== 'wait') { nuFateEnd(f, 'fail'); nuShowBanner('FATE FAILED', f.def.title.toUpperCase()); try { sysChat('◆ FATE failed: ' + f.def.title); } catch (e) { /* chat */ } NF.done.push(f.key); nfSave(); } continue; }
+                const live = now >= f.t0 && now < f.t1; if (!live) { if (now >= f.t1 && f.state !== 'wait') { nuFateEnd(f, 'fail'); nuShowBanner('FATE FAILED', f.def.title.toUpperCase()); try { sysChat('◆ FATE failed: ' + f.def.title); } catch (e) { /* chat */ } NF.done.push(f.key); NS.fdone.add(f.key); nfSave(); } continue; }
                 if (!f.g) { nuFateBeacon(f); try { sysChat('◆ A FATE has begun in the ' + NU_REG[f.reg].name + ': ' + f.def.title + ' (Lv ' + f.lv + ')'); } catch (e) { /* chat */ } nuShowBanner('FATE', f.def.title.toUpperCase()); }
                 const d = Math.hypot(p.x - f.x, p.z - f.z); if (!nearest || d < nearest.d) nearest = { f, d };
                 if (f.ring) f.ring.material.opacity = 0.35 + 0.15 * Math.sin(NU.t * 3);
-                if (d < 28 && !NF.dead) {
-                    if (f.state === 'wait') { f.state = 'live'; nuShowBanner('FATE ENGAGED', f.def.title.toUpperCase()); }
+                const eng = NS.pl.some((q) => !(q.me && NF.dead) && Math.hypot(q.x - f.x, q.z - f.z) < 28);
+                if (eng && f.state === 'wait') { f.state = 'live'; if (d < 28) nuShowBanner('FATE ENGAGED', f.def.title.toUpperCase()); }
+                if (eng && nsFateOwner(f)) {
                     if (f.def.k === 'slay') { f.spawnT -= dt; const alive = f.mobs.filter((m) => !m.dead).length; if (alive < 6 && f.spawnT <= 0 && f.kills + alive < f.need) { f.spawnT = 2.2; nuFateSpawnMob(f, false); } }
                     else { if (!f.bossSpawned) { f.bossSpawned = true; nuFateSpawnMob(f, true); } f.addT -= dt; const alive = f.mobs.filter((m) => !m.dead && !m.boss).length; if (f.addT <= 0 && alive < 3) { f.addT = 22; nuFateSpawnMob(f, false); nuFateSpawnMob(f, false); } }
                 }
@@ -13131,7 +13252,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
         function nuFateDone(f) {
             const el = (Date.now() - f.t0) / 1000, rank = el < NU_FDUR * 0.45 ? 'GOLD' : el < NU_FDUR * 0.75 ? 'SILVER' : 'BRONZE', mul = rank === 'GOLD' ? 1.6 : rank === 'SILVER' ? 1.25 : 1, joined = f.hit;
-            const fx = f.x, fz = f.z, lv = f.lv; nuFateEnd(f, 'done'); NF.done.push(f.key); nfSave();
+            const fx = f.x, fz = f.z, lv = f.lv; nuFateEnd(f, 'done'); NF.done.push(f.key); NS.fdone.add(f.key); nfSave();
             nuShowBanner('FATE COMPLETE', f.def.title.toUpperCase() + (joined ? ' · ' + rank : ''));
             if (!joined) { try { sysChat('◆ FATE complete, but you did not take part, so there is no reward.'); } catch (e) { /* chat */ } return; }
             const xp = Math.round((120 + 60 * lv) * mul), gil = Math.round((80 + 45 * lv) * mul); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ }
@@ -13232,7 +13353,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         async function nuGrassLoad() {
             if (NU_GR.loading || NU_GR.ready) return; NU_GR.loading = true;
             try {
-                const r = await fetch('nuu/grass.glb'); if (!r.ok) throw new Error('grass.glb ' + r.status); const buf = await r.arrayBuffer();
+                const buf = await assetBuf(['nuu/grass.glb', 'Nuu/grass.glb', 'grass.glb', 'assets/nuu/grass.glb'], 'glTF');
                 const gl = await new Promise((ok, no) => new GLTFLoader().parse(buf, '', ok, no)); const want = { SM_grass_03: 3400, SM_flower_02: 260, SM_flower_3: 260 }; const found = {};
                 gl.scene.traverse((o) => { if (o.isMesh && want[o.name] && !found[o.name]) found[o.name] = o; });
                 for (const nm of Object.keys(want)) {
@@ -13281,7 +13402,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         })();
         function nuMapChanged(id) {
             if (id === 'nuu') {
-                nuCss(); ensureNuu(); nuHookInput(); try { const ai = PAD_SETS.findIndex((x) => x.name === 'Adventia'); if (ai >= 0 && PAD.set !== ai) { NU.padPrev = PAD.set; PAD.set = ai; PAD.drawKey = ''; } } catch (e) { /* pad not ready */ } NU.lbl.classList.add('on'); nuMusic(true); nuShowBanner('LINK START', 'ADVENTIA · FOREST OF NUU'); NU.grace = 4;
+                NS.wanted = false; NS.wantT = 0; NS.own.clear(); nuCss(); ensureNuu(); nuHookInput(); try { const ai = PAD_SETS.findIndex((x) => x.name === 'Adventia'); if (ai >= 0 && PAD.set !== ai) { NU.padPrev = PAD.set; PAD.set = ai; PAD.drawKey = ''; } } catch (e) { /* pad not ready */ } NU.lbl.classList.add('on'); nuMusic(true); nuShowBanner('LINK START', 'ADVENTIA · FOREST OF NUU'); NU.grace = 4;
                 const u = nfUi(); u.root.classList.add('on'); try { BTL.load(); } catch (e) { /* later */ }
             } else {
                 try { if (NU.lbl) NU.lbl.classList.remove('on'); } catch (e) { /* dom */ } nuMusic(false); try { chestCss(); if (CH.hint && NU.hintOn) { CH.hint.classList.remove('on'); NU.hintOn = false; } } catch (e) { /* hint */ }
@@ -13301,7 +13422,92 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
 function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retryAt && Date.now() < NU.retryAt) return; NU.err = null; nuLoad(); }
         MAP_DEFS.nuu = { id: 'nuu', ground: (x, z) => nuH(x, z), clamp: nuClamp, collide: nuCollide, spawn: nuSpawn, update: nuUpdate };
-        window.__nuu = { cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        /* ================= Journey Ville: sky-island town (jv/Journey_Ville.glb) ================= */
+        const JV = { group: null, ready: false, loading: false, err: null, retryAt: 0, H: null, ex: null, cols: [], last: new THREE.Vector3(), sky: null, ov: null, t: 0 };
+        const JV_X0 = -150, JV_Z0 = -90, JV_NX = 600, JV_NZ = 480, JV_CELL = 0.5;
+        function jvOverlay(msg, sticky) {
+            try {
+                if (!msg) { if (JV.ov) { JV.ov.remove(); JV.ov = null; } return; }
+                if (!JV.ov) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:8200;background:radial-gradient(circle at 50% 40%,#1a1850,#050818);color:#d8e6ff;display:flex;align-items:center;justify-content:center;font:700 18px system-ui;letter-spacing:.14em;text-align:center;text-shadow:0 0 14px #7a6bff;white-space:pre-wrap;padding:24px'; document.body.appendChild(d); JV.ov = d; }
+                JV.ov.textContent = msg; if (sticky) { JV.ov.style.fontSize = '14px'; JV.ov.onclick = () => jvOverlay(null); }
+            } catch (e) { /* no dom */ }
+        }
+        function jvCell(x, z) { return (Math.floor((z - JV_Z0) / JV_CELL)) * JV_NX + Math.floor((x - JV_X0) / JV_CELL); }
+        function jvH(x, z) {
+            const H = JV.H; if (!H) return 0; const fx = (x - JV_X0) / JV_CELL - 0.5, fz = (z - JV_Z0) / JV_CELL - 0.5, i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j;
+            if (i < 0 || j < 0 || i >= JV_NX - 1 || j >= JV_NZ - 1) return 0;
+            const a = H[j * JV_NX + i], b = H[j * JV_NX + i + 1], c = H[(j + 1) * JV_NX + i], d = H[(j + 1) * JV_NX + i + 1];
+            if (a > -1e8 && b > -1e8 && c > -1e8 && d > -1e8) return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+            const v = [a, b, c, d].filter((q) => q > -1e8); return v.length ? Math.max(...v) : 0;
+        }
+        function jvBlk(x, z) { const H = JV.H; if (!H) return false; const i = Math.floor((x - JV_X0) / JV_CELL), j = Math.floor((z - JV_Z0) / JV_CELL); if (i < 0 || j < 0 || i >= JV_NX || j >= JV_NZ) return true; return H[j * JV_NX + i] < -1e8; }
+        function jvBake(meshes) {
+            const H = new Float32Array(JV_NX * JV_NZ).fill(-1e9), v = new THREE.Vector3();
+            for (const mesh of meshes) {
+                mesh.updateWorldMatrix(true, false); const P = mesh.geometry.attributes.position, I = mesh.geometry.index ? mesh.geometry.index.array : null, M = mesh.matrixWorld, n = I ? I.length : P.count, W = new Float32Array(P.count * 3);
+                for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(M); W[i * 3] = v.x; W[i * 3 + 1] = v.y; W[i * 3 + 2] = v.z; }
+                for (let t = 0; t < n; t += 3) {
+                    const a = (I ? I[t] : t) * 3, b = (I ? I[t + 1] : t + 1) * 3, c = (I ? I[t + 2] : t + 2) * 3;
+                    const ny = (W[b + 2] - W[a + 2]) * (W[c] - W[a]) - (W[b] - W[a]) * (W[c + 2] - W[a + 2]); if (Math.abs(ny) < 1e-6) continue;   // vertical sliver
+                    const e = Math.max(Math.hypot(W[b] - W[a], W[b + 2] - W[a + 2]), Math.hypot(W[c] - W[a], W[c + 2] - W[a + 2]), Math.hypot(W[c] - W[b], W[c + 2] - W[b + 2])), nn = Math.max(1, Math.ceil(e / 0.3));
+                    for (let i = 0; i <= nn; i++) for (let j = 0; j <= nn - i; j++) {
+                        const u = i / nn, w2 = j / nn, w = 1 - u - w2, x = W[a] * w + W[b] * u + W[c] * w2, y = W[a + 1] * w + W[b + 1] * u + W[c + 1] * w2, z = W[a + 2] * w + W[b + 2] * u + W[c + 2] * w2;
+                        const ci = Math.floor((x - JV_X0) / JV_CELL), cj = Math.floor((z - JV_Z0) / JV_CELL); if (ci < 0 || cj < 0 || ci >= JV_NX || cj >= JV_NZ) continue; const k = cj * JV_NX + ci; if (y > H[k]) H[k] = y;
+                    }
+                }
+            }
+            // fill 1-cell pinholes between sample points, then pull the walkable edge in one cell and drop steep cells
+            for (let pass = 0; pass < 2; pass++) { const nh = H.slice(); for (let j = 1; j < JV_NZ - 1; j++) for (let i = 1; i < JV_NX - 1; i++) { const k = j * JV_NX + i; if (H[k] > -1e8) continue; const q = [H[k - 1], H[k + 1], H[k - JV_NX], H[k + JV_NX]].filter((y) => y > -1e8); if (q.length >= 3) nh[k] = q.reduce((a, b) => a + b, 0) / q.length; } H.set(nh); }
+            const out = H.slice();
+            for (let j = 1; j < JV_NZ - 1; j++) for (let i = 1; i < JV_NX - 1; i++) {
+                const k = j * JV_NX + i; if (H[k] < -1e8) continue; const nb = [H[k - 1], H[k + 1], H[k - JV_NX], H[k + JV_NX]];
+                if (nb.some((y) => y < -1e8) || nb.some((y) => Math.abs(y - H[k]) > 0.9)) out[k] = -1e9;
+            }
+            return out;
+        }
+        function jvCollide(pos) {
+            if (!JV.H) return; const L = JV.last; if (Math.hypot(pos.x - L.x, pos.z - L.z) > 4 || L.y === 0) L.set(pos.x, 1, pos.z);
+            const R = 0.35;
+            for (const c of JV.cols) {
+                if (c[0] === 'd') { const dx = pos.x - c[1], dz = pos.z - c[2], rr = c[3] + R, d2 = dx * dx + dz * dz; if (d2 < rr * rr) { const d = Math.sqrt(d2) || 1e-3; pos.x = c[1] + dx / d * rr; pos.z = c[2] + dz / d * rr; } }
+                else {
+                    const dx = pos.x - c[1], dz = pos.z - c[2]; if (dx * dx + dz * dz > (c[3] + c[4] + 2) * (c[3] + c[4] + 2)) continue;
+                    const cs = Math.cos(c[5]), sn = Math.sin(c[5]), lx = dx * cs - dz * sn, lz = dx * sn + dz * cs, hx = c[3] / 2 + R, hz = c[4] / 2 + R;
+                    if (Math.abs(lx) < hx && Math.abs(lz) < hz) { let nx = lx, nz = lz; if (hx - Math.abs(lx) < hz - Math.abs(lz)) nx = Math.sign(lx || 1) * hx; else nz = Math.sign(lz || 1) * hz; pos.x = c[1] + nx * cs + nz * sn; pos.z = c[2] - nx * sn + nz * cs; }
+                }
+            }
+            if (!jvBlk(pos.x, pos.z)) { L.set(pos.x, 1, pos.z); return; }
+            if (!jvBlk(pos.x, L.z)) pos.z = L.z; else if (!jvBlk(L.x, pos.z)) pos.x = L.x; else { pos.x = L.x; pos.z = L.z; }
+        }
+        function jvSpawn() { const x = (Math.random() - 0.5) * 6, z = -52 + (Math.random() - 0.5) * 3; JV.last.set(x, 1, z); return { x, y: JV.H ? jvH(x, z) : 0, z, ry: 0 }; }
+        async function jvLoad() {
+            if (JV.loading || JV.ready) return; JV.loading = true; jvOverlay('JOURNEY VILLE\nLoading the sky islands...');
+            try {
+                const buf = await assetBuf(['jv/Journey_Ville.glb', 'Jv/Journey_Ville.glb', 'Journey_Ville.glb', 'assets/jv/Journey_Ville.glb', 'maps/Journey_Ville.glb'], 'glTF');
+                const gl = await new Promise((ok, no) => new GLTFLoader().parse(buf, '', ok, no)); gl.scene.updateMatrixWorld(true);
+                const walk = [], skyM = []; const root = new THREE.Group(); root.visible = false;
+                gl.scene.traverse((o) => {
+                    if (!o.isMesh) return; o.userData.noOutline = true;
+                    if (o.name === 'Terrain' || o.name === 'Streets') walk.push(o);
+                    if (o.name === 'Sky') { skyM.push(o); o.frustumCulled = false; o.renderOrder = -10; }
+                    for (const m of [].concat(o.material)) { if (o.name === 'Sky') { m.fog = false; m.depthWrite = false; } else if ('metalness' in m) { m.metalness = Math.min(m.metalness, 0.15); m.roughness = Math.max(m.roughness, 0.7); } m.needsUpdate = true; }
+                });
+                if (!walk.length) throw new Error('no Terrain mesh in Journey_Ville.glb');
+                JV.H = jvBake(walk); JV.ex = (gl.scene.userData && gl.scene.userData.kind) ? gl.scene.userData : (gl.scenes[0] && gl.scenes[0].userData) || {};
+                JV.cols = Array.isArray(JV.ex.colliders) ? JV.ex.colliders : [];
+                root.add(gl.scene); JV.sky = skyM[0] || null;
+                const sun = new THREE.DirectionalLight(0xffe2b8, 1.5); sun.position.set(-60, 90, -40); const hemi = new THREE.HemisphereLight(0x8fa4f0, 0x3a3258, 0.8 * Math.PI), amb = new THREE.AmbientLight(0xb8aaf0, 0.1 * Math.PI); root.add(sun, sun.target, hemi, amb);
+                scene.add(root); JV.group = root; JV.ready = true; jvOverlay(null);
+                if (activeMap === 'jv') { const g = localActor.group.position; g.y = jvH(g.x, g.z); root.visible = true; }
+            } catch (e) { JV.err = e; JV.retryAt = Date.now() + 6000; console.error('Journey Ville failed', e); jvOverlay('Could not load Journey Ville\n\n' + (e && e.message) + '\n\n(tap to close - upload jv/Journey_Ville.glb next to index.html)', true); setTimeout(() => jvOverlay(null), 30000); }
+            JV.loading = false;
+        }
+        function ensureJv() { if (JV.ready || JV.loading) return; if (JV.err && JV.retryAt && Date.now() < JV.retryAt) return; JV.err = null; jvLoad(); }
+        function jvUpdate(g, dt) { JV.t += dt; if (JV.sky && camera) JV.sky.position.copy(camera.position); }
+        try { window.__jv = { JV, jvH, jvBlk, jvCollide }; } catch (e) { /* no window */ }
+        MAP_DEFS.jv = { id: 'jv', ground: (x, z) => jvH(x, z), clamp: (p) => { if (jvBlk(p.x, p.z) && JV.H) { /* collide handles it */ } }, collide: jvCollide, spawn: jvSpawn, update: jvUpdate };
+
+        window.__nuu = { NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
@@ -16114,7 +16320,7 @@ function btMusicStop() {
 
 
         /* ---- Sign-in gate: after the splash you either log in or sign up. Sign up -> make your character -> your Harbor Studio. Log in -> your studio, or the open-world room you last left. Never someone else's room. ---- */
-        const AC_OW = ['mall', 'city', 'galleria', 'school', 'raimon', 'nuu'];
+        const AC_OW = ['mall', 'city', 'galleria', 'school', 'raimon', 'nuu', 'jv'];
         const acGateOn = () => !acSess() && !!acApi() && !csGet('oasis.nogate', '') && !sessionStorage.getItem('oasis.guest');
         function acHome() { const code = myLoftCode(); joinRoom('private-' + code, { label: 'My Harbor Studio', isPrivate: true, code, map: 'loft' }); }
         function acLand() {
@@ -17909,7 +18115,7 @@ window.__ts = TSK;
 const SCN = { edit: false, owner: false, items: new Map(), obj: new Map(), objKey: new WeakMap(), meta: new WeakMap(), sel: null, depth: 1, hist: [], hi: -1, holes: [], solids: [], box: null, ghost: null, drag: null, saveT: null, bcT: null, ui: null, tab: 'obj', hit: null, snap: true, step: 0.25, hinted: false, prim: { sh: 'box', w: 1, h: 1, d: 1, col: '#9aa7b8', f: 'matte' } };
 const SCN_LIM = 1500;
 function scnRoot() {
-    try { const m = { mall: mallGroup, loft: loftGroup, city: CITY.group, plot: PLOT.group, galleria: GAL.group, school: SCH.group, bowl: BW.group, raimon: RM.group, nuu: NU.group, btl: BT.group, diner: KC.group, theater: THEATER.group, ship: SHIP.group, tag: TG.group, construct: HC.group }; return m[activeMap] || null; } catch (e) { return null; }
+    try { const m = { mall: mallGroup, loft: loftGroup, city: CITY.group, plot: PLOT.group, galleria: GAL.group, school: SCH.group, bowl: BW.group, raimon: RM.group, nuu: NU.group, jv: JV.group, btl: BT.group, diner: KC.group, theater: THEATER.group, ship: SHIP.group, tag: TG.group, construct: HC.group }; return m[activeMap] || null; } catch (e) { return null; }
 }
 const SCN_ALLOWED = ['kasumex', 'royalreina'];
 function scnAllowed() { try { const u = acSess(); return !!(u && SCN_ALLOWED.includes(chestNorm(u.u))); } catch (e) { return false; } }
@@ -18677,6 +18883,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (id === 'school') { try { ensureSchool(); } catch (e) { console.error('School failed to build', e); } }
             if (id === 'raimon') { try { ensureRaimon(); } catch (e) { console.error('College Raimon failed to build', e); } }
             if (id === 'nuu') { try { ensureNuu(); } catch (e) { console.error('Forest of Nuu failed to build', e); } }
+            if (id === 'jv') { try { ensureJv(); } catch (e) { console.error('Journey Ville failed to build', e); } }
             if (id === 'bowl') { try { ensureBowl(); } catch (e) { console.error('Zen Bowl failed to build', e); } }
             if (id === 'btl') { try { ensureBtl(); } catch (e) { console.error('Warriors of Light failed to build', e); } }
             if (id === 'loft') { try { loftForestEnsure(); } catch (e) { console.warn('forest edge', e); } }
@@ -18690,6 +18897,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (BW.group) BW.group.visible = id === 'bowl';
             if (RM.group) RM.group.visible = id === 'raimon';
             if (NU.group) NU.group.visible = id === 'nuu';
+            if (JV.group) JV.group.visible = id === 'jv';
             if (BT.group) BT.group.visible = id === 'btl';
             if (id === 'diner') { try { ensureKitchen(); } catch (e) { console.error('Kitchen failed to build', e); } }
             if (KC.ready && KC.group) KC.group.visible = id === 'diner';
@@ -18698,13 +18906,14 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             try { if (id === 'tag') ensureTagArena(); if (TG.ready && TG.group) TG.group.visible = id === 'tag'; } catch (e) { console.error('Laser tag arena failed to build', e); }
             try { if (id === 'budokai') ensureBudokai(); if (BUD.ready && BUD.group) BUD.group.visible = id === 'budokai'; } catch (e) { console.error('Budokai arena failed to build', e); }
             { const host = id === 'plot' ? PLOT.group : loftGroup; if (DC.root && host && DC.root.parent !== host) host.add(DC.root); if (DC.wallG) DC.wallG.visible = id !== 'plot'; BP.dirty = true; }
-            if (camera) { camera.far = id === 'loft' ? 1000 : id === 'city' ? 1900 : id === 'plot' ? 3400 : id === 'raimon' ? 900 : id === 'nuu' ? 800 : (id === 'galleria' || id === 'school') ? 2000 : 400; camera.updateProjectionMatrix(); }
+            if (camera) { camera.far = id === 'loft' ? 1000 : id === 'city' ? 1900 : id === 'plot' ? 3400 : id === 'raimon' ? 900 : id === 'nuu' ? 800 : id === 'jv' ? 1500 : (id === 'galleria' || id === 'school') ? 2000 : 400; camera.updateProjectionMatrix(); }
             if (id === 'loft') { scene.background = new THREE.Color(0xe9dcc0); scene.fog = new THREE.FogExp2(0xcfe8f0, 0.0021); }
             else if (id === 'city') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0011); }
             else if (id === 'galleria') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0011); }
             else if (id === 'btl') { scene.background = new THREE.Color(0x070b1c); scene.fog = new THREE.FogExp2(0x070b1c, 0.006); }
             else if (id === 'raimon') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0012); }
             else if (id === 'nuu') { scene.background = new THREE.Color(0xbfdcee); scene.fog = new THREE.FogExp2(0xc4e0ee, 0.0016); }
+            else if (id === 'jv') { scene.background = new THREE.Color(0x0b1236); scene.fog = new THREE.FogExp2(0x1a2a5c, 0.0011); }
             else if (id === 'bowl') { scene.background = new THREE.Color(0x0b0a1a); scene.fog = new THREE.FogExp2(0x0b0a1a, 0.012); }
             else if (id === 'school') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0009); }
             else if (id === 'plot') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.00085); }
@@ -18715,7 +18924,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             else if (id === 'ship') { scene.background = new THREE.Color(0x02030a); scene.fog = new THREE.FogExp2(0x02030a, 0.004); }
             else if (id === 'construct') { scene.background = new THREE.Color(0xf4f6f8); scene.fog = new THREE.FogExp2(0xf4f6f8, 0.011); }
             else { scene.background = new THREE.Color(0x030712); scene.fog = new THREE.FogExp2(0x030712, 0.011); }
-            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'nuu' ? 18 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'budokai' ? 14 : id === 'construct' ? 15 : id === 'ship' ? 9 : id === 'theater' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
+            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'nuu' ? 18 : id === 'jv' ? 18 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'budokai' ? 14 : id === 'construct' ? 15 : id === 'ship' ? 9 : id === 'theater' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
             if (typeof fpOn !== 'undefined' && fpOn && controls) { if (fpSaved) fpSaved.polar = controls.maxPolarAngle; controls.maxPolarAngle = Math.PI - 0.05; controls.minPolarAngle = 0.05; }
             if ((id === 'loft' || id === 'diner' || id === 'tag' || id === 'construct' || id === 'bowl' || id === 'btl' || id === 'ship' || id === 'theater') && typeof hbSet === 'function' && hbOn) hbSet(false, true);
             if (typeof BK !== 'undefined' && BK.on && !BK_OUT.includes(id)) bkSet(false, true);
@@ -22061,6 +22270,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 }
                 case 'raimon': k = 'concrete'; outdoors = true; break;
                 case 'nuu': k = 'grass'; outdoors = true; break;
+                case 'jv': k = 'stone'; outdoors = true; break;
                 case 'mall': k = 'tile'; break;
                 case 'diner': k = 'tile'; break;
                 case 'bowl': k = (z > 0.1 && z < 6) ? 'wood' : 'tile'; break;
@@ -27675,7 +27885,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         function pgSaveStore(o) { try { localStorage.setItem(PG_K, JSON.stringify(o)); } catch (e) { /* storage */ } }
         function pgGive(mat, n) { const o = pgStore(); o.mats[mat] = Math.max(0, (o.mats[mat] || 0) + (n == null ? 1 : n)); pgSaveStore(o); if (PG.open) pgRender(); }
         function pgRooms() {
-            const PGM = ['city', 'galleria', 'school', 'raimon', 'nuu', 'bowl', 'btl', 'blitz', 'survivor', 'survivor2', 'survivor3', 'outbreak', 'ryderx', 'diner', 'tag', 'budokai', 'construct'];
+            const PGM = ['city', 'galleria', 'school', 'raimon', 'nuu', 'jv', 'bowl', 'btl', 'blitz', 'survivor', 'survivor2', 'survivor3', 'outbreak', 'ryderx', 'diner', 'tag', 'budokai', 'construct'];
             const out = DISTRICTS.filter((d) => d.id === 'plaza-01' || d.pub || PGM.includes(d.map)).map((d) => ({ id: d.id, name: d.name, tag: d.id === 'plaza-01' ? 'The main hub' : d.tag, d }));
             out.splice(1, 0, { id: 'studio', name: 'Harbor Studio', tag: 'Your private home', studio: true });
             return out;
