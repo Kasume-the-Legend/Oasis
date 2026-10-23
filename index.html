@@ -12658,7 +12658,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 gl.scene.traverse((o) => { if (!o.isMesh) return; for (const m of [].concat(o.material)) { mats.add(m); } o.userData.noOutline = true; if (o.name === 'Terrain') { terrain = o; return; } let top = o; while (top.parent && top.parent !== gl.scene) top = top.parent; const key = o.geometry.uuid + ':' + o.material.uuid; if (!props.has(key)) props.set(key, { geo: o.geometry, mat: o.material, top: top.name || '', list: [] }); props.get(key).list.push(o.matrixWorld.clone()); });
                 for (const m of mats) { if ('metalness' in m) { m.metalness = 0; m.roughness = 1; } m.needsUpdate = true; }
                 if (!terrain) throw new Error('no terrain in forest.glb');
-                nuBakeTerrain(terrain); nuPickHub(); const hub = NU.hub; NU.seeds = nuSeeds(); try { nuTintTerrain(terrain.geometry, terrain); nuMoss(terrain.geometry); } catch (e) { console.warn('tint', e); }
+                nuBakeTerrain(terrain); nuPickHub(); const hub = NU.hub; NU.seeds = nuSeeds(); try { nuTintTerrain(terrain.geometry, terrain); nuMoss(terrain.geometry); nuGroundTex(terrain); } catch (e) { console.warn('tint', e); }
                 const root = new THREE.Group(); root.visible = false; scene.add(root); NU.group = root; terrain.matrixAutoUpdate = false; terrain.frustumCulled = false; root.add(terrain);
                 // props: one instanced mesh per shape; nothing grows inside the plaza
                 const V = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(); let nInst = 0;
@@ -12683,14 +12683,14 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 }
                 if (pine) try {   // ferns and bushes on the forest floor (a few thousand, culled by distance)
                     const ub = await assetBuf(['nuu/undergrowth.glb', 'Nuu/undergrowth.glb', 'undergrowth.glb', 'assets/nuu/undergrowth.glb'], 'glTF'); const ug = await new Promise((ok, no) => new GLTFLoader().parse(ub, '', ok, no)); const um = {}; ug.scene.traverse((o) => { if (o.isMesh) um[o.name] = o; });
-                    const names = ['Fern0', 'Fern1', 'Fern2', 'Bush0', 'Bush1'].filter((n) => um[n]); if (names.length) {
-                        const R = seeded(4242), items = []; let tries = 0; while (items.length < 7500 && tries++ < 40000) {
+                    const names = ['Fern0', 'Fern1', 'Fern2', 'Fern3', 'Bush0', 'Bush1'].filter((n) => um[n]); if (names.length) {
+                        const R = seeded(4242), items = []; let tries = 0; while (items.length < 700 && tries++ < 6000) {
                             let x, z; if (pineList.length && R() < 0.25) { const t = pineList[(R() * pineList.length) | 0], a = R() * 6.283, d = 2.2 + R() * 9; x = t.x + Math.cos(a) * d; z = t.z + Math.sin(a) * d; } else { x = (R() - 0.5) * 2 * (NU_EDGE - 4); z = (R() - 0.5) * 2 * (NU_EDGE - 4); }
                             if (Math.abs(x) > NU_EDGE - 3 || Math.abs(z) > NU_EDGE - 3 || Math.hypot(x - hub.x, z - hub.z) < 20 || nuBlkR(x, z)) continue;
-                            const bush = R() < 0.05 && um.Bush0, nm = bush ? (um.Bush1 && R() < 0.4 ? 'Bush1' : 'Bush0') : ['Fern0', 'Fern1', 'Fern2'][(R() * 3) | 0]; if (!um[nm]) continue;
-                            items.push({ n: nm, x, y: nuH(x, z) - 0.04, z, r: R() * 6.283, s: bush ? 1.5 + R() * 1.4 : 1.0 + R() * 1.1 });
+                            const bush = !!um.Bush0, nm = bush ? (um.Bush1 && R() < 0.4 ? 'Bush1' : 'Bush0') : ['Fern0', 'Fern0', 'Fern1', 'Fern2', 'Fern3', 'Fern0'][(R() * 6) | 0]; if (!um[nm]) continue;
+                            items.push({ n: nm, x, y: nuH(x, z) - 0.04, z, r: R() * 6.283, s: bush ? 1.5 + R() * 1.4 : 1.5 + R() * 1.3 });
                         }
-                        const ims = {}; for (const n of names) { const cap = items.filter((q) => q.n === n).length; if (!cap) continue; const im = new THREE.InstancedMesh(um[n].geometry, pine.tmat, cap); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); ims[n] = im; }
+                        const ims = {}; for (const n of names) { const cap = items.filter((q) => q.n === n).length; if (!cap) continue; const fm = /^Fern/.test(n) ? (NU.grassMat || (NU.grassMat = new THREE.MeshToonMaterial({ map: um[n].material.map, alphaTest: 0.45, vertexColors: true, gradientMap: pine.tmat.gradientMap, side: THREE.DoubleSide }))) : pine.tmat; const im = new THREE.InstancedMesh(um[n].geometry, fm, cap); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); ims[n] = im; }
                         NU.ug = { list: items, ims }; nInst += items.length;
                     }
                 } catch (e) { console.warn('undergrowth.glb not found', e && e.message); }
@@ -12813,7 +12813,8 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             u.tele.classList.add('on'); u.tele.querySelectorAll('button').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const id = b.dataset.cls; nfTeleClose(); if (id) nfApplyClass(id); }));
         }
         function nfUiTick() {
-            const u = NF.ui; if (!u) return; const q = (k) => u.pf.querySelector('[data-k="' + k + '"]'); u.pf.querySelector('b').textContent = (me && me.name ? String(me.name).toUpperCase() : 'YOU') + '   LV ' + NF.lv;
+            const u = NF.ui; if (!u) return; try { if (u.xb) u.xb.style.display = PAD.active ? 'none' : ''; } catch (e) { /* no pad yet */ }   // a connected controller uses its own LT/RT hotbar: no on-screen touch hotbar underneath it
+ const q = (k) => u.pf.querySelector('[data-k="' + k + '"]'); u.pf.querySelector('b').textContent = (me && me.name ? String(me.name).toUpperCase() : 'YOU') + '   LV ' + NF.lv;
             q('hp').style.width = Math.max(0, NF.hp / NF.hpMax * 100) + '%'; q('mp').style.width = Math.max(0, NF.mp / NF.mpMax * 100) + '%'; q('lb').style.width = NF.lb + '%'; q('hpt').textContent = Math.max(0, Math.round(NF.hp)) + '/' + NF.hpMax; q('mpt').textContent = Math.round(NF.mp); q('xpt').textContent = NF.lv >= NF_MAX ? 'MAX' : NF.xp + '/' + nfNeed(NF.lv) + ' xp';
             const t = NF.tgt; if (t && !t.dead) { u.tf.classList.add('on'); u.tf.querySelector('b').textContent = '◆ LV ' + t.lv + '  ' + t.name.toUpperCase(); u.tf.querySelector('b').style.color = nfConCol(t.lv); u.tf.querySelector('[data-k="th"]').style.width = Math.max(0, t.hp / t.hpMax * 100) + '%'; } else u.tf.classList.remove('on');
             const now = performance.now() / 1000; nfXbTick(now);
@@ -13375,7 +13376,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             cv.addEventListener('pointerup', (e) => { if (!dn || activeMap !== 'nuu' || !NU.ready) return; const mv = Math.hypot(e.clientX - dn.x, e.clientY - dn.y); dn = null; if (mv > 6) return; const m = nfPick(e.clientX, e.clientY); if (m) nfTarget(m); }, true);
         }
         /* ---- grass and flowers: the original map's own tufts (nuu/grass.glb), instanced and re-scattered around the player as they walk ---- */
-        const NU_GR = { R: 44, CELL: 1.55, ready: false, loading: false, last: null, parts: [], uT: { value: 0 } };
+        const NU_GR = { R: 42, CELL: 1.05, ready: false, loading: false, last: null, parts: [], uT: { value: 0 } };
         async function nuGrassLoad() {
             if (NU_GR.loading || NU_GR.ready) return; NU_GR.loading = true;
             try {
@@ -13386,6 +13387,12 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     const o = found[nm]; if (!o) continue; const mats = [].concat(o.material); for (const m of mats) { m.side = THREE.DoubleSide; m.metalness = 0; m.roughness = 1; if (m.map && m.emissive) { m.emissive.set(0x4a6a3a); m.emissiveMap = m.map; m.emissiveIntensity = 0.55; } if (m.alphaTest === 0 && m.map) m.alphaTest = 0.333; m.transparent = false; m.onBeforeCompile = (sh) => { sh.uniforms.uT = NU_GR.uT; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n float sw = sin(uT * 1.7 + instanceMatrix[3].x * 0.9 + instanceMatrix[3].z * 0.6) * 0.16 + sin(uT * 2.9 + instanceMatrix[3].z * 1.3) * 0.05; transformed.x += sw * max(position.y, 0.0); transformed.z += sw * 0.6 * max(position.y, 0.0);'); }; m.needsUpdate = true; }
                     const im = new THREE.InstancedMesh(o.geometry, o.material, want[nm]); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, new THREE.Color(1, 1, 1)); im.instanceColor.setUsage(THREE.DynamicDrawUsage); NU.group.add(im); NU_GR.parts.push({ nm, im, cap: want[nm] });
                 }
+                try {   // painted grass clusters (FFXIV style) from undergrowth.glb: they carpet the ground around the player
+                    const ub = await assetBuf(['nuu/undergrowth.glb', 'Nuu/undergrowth.glb', 'undergrowth.glb', 'assets/nuu/undergrowth.glb'], 'glTF'); const ug = await new Promise((ok, no) => new GLTFLoader().parse(ub, '', ok, no));
+                    const gmt = new THREE.DataTexture(new Uint8Array([150,150,150,255, 172,172,172,255, 194,194,194,255, 214,214,214,255, 232,232,232,255, 246,246,246,255, 255,255,255,255, 255,255,255,255]), 8, 1, THREE.RGBAFormat); gmt.minFilter = gmt.magFilter = THREE.LinearFilter; gmt.needsUpdate = true; let fm = null;
+                    ug.scene.traverse((o) => { if (!o.isMesh || !/^Fern\d$/.test(o.name)) return; fm = fm || new THREE.MeshToonMaterial({ map: o.material.map, alphaTest: 0.45, vertexColors: true, gradientMap: gmt, side: THREE.DoubleSide });
+                        const im = new THREE.InstancedMesh(o.geometry, fm, 3400); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, new THREE.Color(1, 1, 1)); im.instanceColor.setUsage(THREE.DynamicDrawUsage); NU.group.add(im); NU_GR.parts.push({ nm: o.name, im, cap: 3400 }); });
+                } catch (e) { console.warn('grass clusters', e); }
                 NU_GR.ready = NU_GR.parts.length > 0;
             } catch (e) { console.warn('grass', e); }
             NU_GR.loading = false;
@@ -13393,15 +13400,16 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         const nuSmooth = (a) => a <= 0 ? 0 : a >= 1 ? 1 : a * a * (3 - 2 * a);
         function nuGrassScatter(p) {
             const C = NU_GR.CELL, R = NU_GR.R, i0 = Math.floor((p.x - R) / C), i1 = Math.floor((p.x + R) / C), j0 = Math.floor((p.z - R) / C), j1 = Math.floor((p.z + R) / C), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3(), E = new THREE.Euler(), col = new THREE.Color(), w = new THREE.Color(1, 1, 1);
-            const idx = { SM_grass_03: 0, SM_flower_02: 0, SM_flower_3: 0 }, by = {}; for (const q of NU_GR.parts) by[q.nm] = q;
+            const idx = { SM_grass_03: 0, SM_flower_02: 0, SM_flower_3: 0 }, by = {}; for (const q of NU_GR.parts) { by[q.nm] = q; idx[q.nm] = 0; }
             for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
                 const h = nuHash(i + 7919, j + 104729), jx = (h & 255) / 255, jz = ((h >>> 8) & 255) / 255, x = (i + jx) * C, z = (j + jz) * C, d = Math.hypot(x - p.x, z - p.z); if (d > R) continue;
-                const r2 = (h >>> 16) & 255; if (r2 < 40) continue; if (Math.hypot(x - NU.hub.x, z - NU.hub.z) < 9) continue; if (nuBlk(x, z) || nuBlk(x + 0.6, z) || nuBlk(x, z + 0.6)) continue;
+                const r2 = (h >>> 16) & 255; if (r2 < 12) continue; if (Math.hypot(x - NU.hub.x, z - NU.hub.z) < 9) continue; if (nuBlk(x, z) || nuBlk(x + 0.6, z) || nuBlk(x, z + 0.6)) continue;
                 const y = nuH(x, z); if (Math.abs(nuH(x + 1, z) - y) > 0.8 || Math.abs(nuH(x, z + 1) - y) > 0.8) continue;
-                const nm = r2 > 245 ? 'SM_flower_3' : r2 > 236 ? 'SM_flower_02' : 'SM_grass_03', q = by[nm]; if (!q || idx[nm] >= q.cap) continue;
-                const edge = nuSmooth((R - d) / 12), sc = (0.34 + ((h >>> 24) & 255) / 255 * 0.34) * edge * (nm === 'SM_grass_03' ? 1.0 : 0.9); if (sc < 0.05) continue;
+                const nm = r2 > 249 ? 'SM_flower_3' : r2 > 244 ? 'SM_flower_02' : by.Fern0 ? ['Fern0', 'Fern0', 'Fern0', 'Fern1', 'Fern2', 'Fern3'][(h >>> 4) % 6] : 'SM_grass_03', q = by[nm]; if (!q || idx[nm] >= q.cap) continue;
+                let nearT = 1; { const tg = NU.tgrid || (NU.tgrid = (() => { const m = new Map(); for (const t of (NU.pines ? NU.pines.list : [])) { const k = Math.floor(t.x / 8) + '_' + Math.floor(t.z / 8); (m.get(k) || m.set(k, []).get(k)).push(t); } return m; })()); const gi = Math.floor(x / 8), gj = Math.floor(z / 8); for (let a = -1; a <= 1 && nearT === 1; a++) for (let b2 = -1; b2 <= 1; b2++) { const L = tg.get((gi + a) + '_' + (gj + b2)); if (L) for (const t of L) if (Math.hypot(t.x - x, t.z - z) < 3.4 + t.h * 0.12) { nearT = 1.45; break; } } }
+                const edge = nuSmooth((R - d) / 12) * nearT, sc = (/^Fern/.test(nm) ? 0.95 + ((h >>> 24) & 255) / 255 * 0.7 : 0.34 + ((h >>> 24) & 255) / 255 * 0.34) * edge * (nm === 'SM_grass_03' ? 1.0 : 0.9); if (sc < 0.05) continue;
                 E.set(0, (h % 628) / 100, 0); Q.setFromEuler(E); V.set(x, y - 0.03, z); S.set(sc, sc * (0.9 + ((h >>> 5) & 15) / 40), sc); M.compose(V, Q, S);
-                const k = idx[nm]++; q.im.setMatrixAt(k, M); if (nm === 'SM_grass_03') { const R0 = NU_REG[nuRegionAt(x, z)]; col.set(R0.accent); col.lerp(w, 0.66); col.multiplyScalar(0.95 + jx * 0.35); q.im.setColorAt(k, col); } else q.im.setColorAt(k, w);
+                const k = idx[nm]++; q.im.setMatrixAt(k, M); if (/^Fern/.test(nm)) { col.setRGB(0.9 + jx * 0.18, 0.92 + jx * 0.12, 0.88 + jz * 0.14); q.im.setColorAt(k, col); } else if (nm === 'SM_grass_03') { const R0 = NU_REG[nuRegionAt(x, z)]; col.set(R0.accent); col.lerp(w, 0.66); col.multiplyScalar(0.95 + jx * 0.35); q.im.setColorAt(k, col); } else q.im.setColorAt(k, w);
             }
             for (const q of NU_GR.parts) { q.im.count = idx[q.nm]; q.im.instanceMatrix.needsUpdate = true; if (q.im.instanceColor) q.im.instanceColor.needsUpdate = true; }
         }
@@ -13484,6 +13492,18 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             const C = NU.skyCtx, T = CYT; if (!C || !scene.fog) return; const a = T.sunAlt, day = Math.max(0, Math.min(1, (a + 2) / 16));
             scene.fog.color.lerp(_shF, 0.8 * day); if (scene.background && scene.background.isColor) scene.background.copy(scene.fog.color); scene.fog.density = 0.0016 + 0.0004 * day;
             C.hemi.color.lerp(_shH, 0.6 * day); C.hemi.groundColor.lerp(_shG, 0.7); C.sun.color.lerp(_shS, 0.7 * day); C.amb.color.lerp(_shA, 0.5 * day);
+        }
+        /* painted ground: a tiling grass-stroke texture on the terrain (FFXIV style: the ground is a picture, the foliage stands on it) */
+        function nuGroundTex(mesh) {
+            const g = mesh.geometry, P = g.attributes.position, uv = new Float32Array(P.count * 2), v = new THREE.Vector3(); mesh.updateMatrix();
+            for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(mesh.matrix); uv[i * 2] = v.x / 7; uv[i * 2 + 1] = v.z / 7; }
+            g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+            const cv = document.createElement('canvas'); cv.width = cv.height = 512; const x = cv.getContext('2d'), R = seeded(777); x.fillStyle = '#c4dca4'; x.fillRect(0, 0, 512, 512);
+            const stroke = (cx, cy, len, col, w, a) => { x.strokeStyle = col; x.globalAlpha = a; x.lineWidth = w; x.lineCap = 'round'; x.beginPath(); x.moveTo(cx, cy); x.quadraticCurveTo(cx + a * 0 + (R() - 0.5) * 6, cy - len * 0.55, cx + (R() - 0.5) * 12, cy - len); x.stroke(); };
+            for (let k = 0; k < 7000; k++) { const cx = R() * 512, cy = R() * 512, len = 8 + R() * 18, t = R(); const col = t < 0.35 ? '#86b85c' : t < 0.6 ? '#f2fbc4' : t < 0.85 ? '#6fa653' : '#d6e88e'; for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) if (cx + ox > -20 && cx + ox < 532 && cy + oy > -30 && cy + oy < 540) stroke(cx + ox, cy + oy, len, col, 1.6 + R() * 1.8, 0.6 + R() * 0.4); }
+            for (let k = 0; k < 160; k++) { x.globalAlpha = 0.5; x.fillStyle = R() < 0.5 ? '#fff6c8' : '#ffffff'; x.beginPath(); x.arc(R() * 512, R() * 512, 1 + R() * 1.6, 0, 6.283); x.fill(); }
+            const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.needsUpdate = true;
+            for (const m of [].concat(mesh.material)) { m.map = tex; m.needsUpdate = true; }
         }
         function nuMoss(geo) { const C = geo.attributes.color; if (!C) return; for (let i = 0; i < C.count; i++) { C.setXYZ(i, C.getX(i) * 0.3 + 0.30 * 0.7, C.getY(i) * 0.3 + 0.62 * 0.7, C.getZ(i) * 0.3 + 0.12 * 0.7); } C.needsUpdate = true; }
         function nuPineLod(dt) {   // three levels of every tree, swapped by distance a few times a second (1100 trees)
