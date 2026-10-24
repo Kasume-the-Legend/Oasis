@@ -2112,9 +2112,9 @@ function kbModel(THREE, mk) {
             { id: 'btl-01', name: 'Warriors of Light', tag: 'Channel 1', map: 'btl' },
             { id: 'blitz-01', name: 'Blitzball Arena', tag: 'Play now', map: 'blitz' },
             { id: 'surv-01', name: 'Harbor Inn: Survivor', tag: 'Survival horror', map: 'survivor' },
-            { id: 'surv-02', name: 'Harbor Inn 2: NX', tag: 'Survival horror', map: 'survivor2' },
-            { id: 'surv-03', name: 'Harbor Inn 3', tag: 'Survival horror', map: 'survivor3' },
-            { id: 'surv-04', name: 'Outbreak Online', tag: '4-player co-op horror', map: 'outbreak' },
+            /* coming later: { id: 'surv-02', name: 'Harbor Inn 2: NX', tag: 'Survival horror', map: 'survivor2' } */
+            /* { id: 'surv-03', name: 'Harbor Inn 3', tag: 'Survival horror', map: 'survivor3' } */
+            /* { id: 'surv-04', name: 'Outbreak Online', tag: '4-player co-op horror', map: 'outbreak' } */
             { id: 'rx-01', name: 'Ryder X', tag: 'Hoverboard racing', map: 'ryderx' },
             { id: 'tbs-01', name: 'Toy Box Smash', tag: 'Platform fighter', map: 'toysmash' },
             { id: 'diner-01', name: "Key's Kitchen Clash", tag: 'Channel 1', map: 'diner' },
@@ -13019,7 +13019,7 @@ function kbModel(THREE, mk) {
             if (NF.ui) return NF.ui; nuCss(); const st = document.createElement('style');
             st.textContent = '#nf-root{position:fixed;inset:0;z-index:58;pointer-events:none;display:none;font-family:Nunito,system-ui,sans-serif;color:#dff6ff}#nf-root.on{display:block}#nf-root *{box-sizing:border-box}'
                 + '#nf-pf{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:min(430px,92vw);display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;pointer-events:none;text-shadow:0 1px 3px #000}#nf-pf .c{min-width:0}#nf-pf .nfl{display:flex;align-items:baseline;gap:7px;line-height:1}#nf-pf .nfl span{font:800 12px Nunito,system-ui,sans-serif;color:#efe4c4;letter-spacing:.06em}#nf-pf .nfl em{font:800 36px/1 Nunito,system-ui,sans-serif;font-style:normal;color:#fff;letter-spacing:.02em;text-shadow:0 2px 0 #000,0 0 8px rgba(0,0,0,.95)}#nf-pf .nfg{height:8px;margin-top:2px;border-radius:5px;border:1.5px solid #cdbb8c;background:#0e100b;box-shadow:inset 0 0 0 1px #2e2818,0 2px 5px rgba(0,0,0,.65);overflow:hidden}#nf-pf .nfg i{display:block;height:100%;width:50%;transition:width .15s;box-shadow:inset 0 2px 0 rgba(255,255,255,.28)}#nf-pf .nfg i.hp{background:linear-gradient(180deg,#c6f592,#72d03c 45%,#3b9420)}#nf-pf .nfg i.mp{background:linear-gradient(180deg,#ffb6ea,#e63fb2 45%,#9d1479)}#nf-pf .nfg i.lb{background:linear-gradient(180deg,#ffe9a0,#f0b429 55%,#b3770c)}#nf-pf .nfg.sm{height:4px;border-width:1px;margin-top:0;border-radius:3px}#nf-pf .w{grid-column:1/3;display:flex;align-items:center;gap:8px}#nf-pf .w .nfg{flex:1}#nf-pf .nfx{font:700 10px Nunito,system-ui,sans-serif;color:#e9dfc0;opacity:.9;white-space:nowrap}.nfbar{flex:1;height:7px;background:rgba(0,0,0,.55);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,.25)}.nfbar i{display:block;height:100%;width:50%}@media (max-width:640px){#nf-pf{bottom:14px;width:min(340px,94vw)}#nf-pf .nfl em{font-size:28px}}'
-                + '#nf-tf{position:absolute;left:50%;top:12px;transform:translateX(-50%);min-width:210px;padding:6px 14px;border:1px solid rgba(255,255,255,.35);background:rgba(6,18,36,.78);text-align:center;display:none;border-radius:4px;text-shadow:0 1px 2px #000}#nf-tf.on{display:block}#nf-tf b{font-size:12px;letter-spacing:.1em}#nf-tf .nfbar{margin-top:4px;height:9px;flex:none}'
+                + '#nf-tf{position:absolute;left:50%;top:12px;transform:translateX(-50%);min-width:210px;padding:6px 14px;border:1px solid rgba(255,255,255,.35);background:rgba(6,18,36,.78);text-align:center;display:none;border-radius:4px;text-shadow:0 1px 2px #000}#nf-tf.on{display:block}#nf-tf b{font-size:12px;letter-spacing:.1em}#nf-tf .nfbar{margin-top:4px;height:9px;flex:none}#nf-tf #nf-en{height:5px;margin-top:5px}#nf-et{display:block;font-size:10px;letter-spacing:.08em;margin-top:2px;color:#cfd8e0}#nf-pl .pr.agg{box-shadow:inset 3px 0 0 #ff5a3a;background:linear-gradient(90deg,rgba(255,90,58,.22),transparent 60%)}'
                 + '#nf-hb{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto}.nfsk{position:relative;width:48px;height:48px;border-radius:8px;border:2px solid #8fd8ff;background:linear-gradient(180deg,rgba(20,50,90,.9),rgba(6,16,36,.95));color:#fff;font:800 18px system-ui;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;user-select:none;touch-action:manipulation}.nfsk small{position:absolute;left:3px;top:1px;font-size:9px;opacity:.8}.nfsk em{position:absolute;inset:0;background:rgba(0,0,0,.62);font:700 11px system-ui;display:flex;align-items:center;justify-content:center;font-style:normal}.nfsk.off{opacity:.45}.nfsk .nm{position:absolute;bottom:0;left:0;right:0;font-size:7px;text-align:center;background:rgba(0,0,0,.45);letter-spacing:.04em}'
                 + '#nf-pl{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:min(176px,38vw);display:none;font-family:Nunito,system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000;pointer-events:none}#nf-pl.on{display:block}#nf-pl h4{margin:0 0 2px 3px;font:800 11px Nunito,system-ui,sans-serif;letter-spacing:.14em;color:#f3e6bd}#nf-pl .pr{display:grid;grid-template-columns:12px 17px 1fr;gap:3px;align-items:center;margin:2px 0;padding:2px 5px 2px 1px;background:linear-gradient(90deg,rgba(10,16,30,.78),rgba(10,16,30,.35));border-radius:4px;border:1px solid rgba(205,187,140,.35)}#nf-pl .pr.me{border-color:rgba(243,217,138,.8)}#nf-pl .pr.dead{opacity:.55}#nf-pl .sn{font:800 10px system-ui;color:#f3e6bd;text-align:center}#nf-pl .ri{width:17px;height:17px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;border:1px solid rgba(255,255,255,.4)}#nf-pl .ri.tank{background:linear-gradient(180deg,#5b8cf0,#27479a)}#nf-pl .ri.healer{background:linear-gradient(180deg,#6fd36f,#2b7a35)}#nf-pl .ri.dps{background:linear-gradient(180deg,#e8695c,#8e2a22)}#nf-pl .nm{font:800 10px Nunito,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.02em}#nf-pl .nm i{font-style:normal;color:#ffe9a8;margin-right:4px;font-size:9px}#nf-pl .bs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:1px}#nf-pl .bb{position:relative;height:6px;border-radius:4px;background:#0e100b;border:1px solid #cdbb8c;overflow:hidden}#nf-pl .bb u{position:absolute;left:0;top:0;bottom:0;display:block}#nf-pl .bb u.hp{background:linear-gradient(180deg,#c6f592,#72d03c 45%,#3b9420)}#nf-pl .bb u.mp{background:linear-gradient(180deg,#ffb6ea,#e63fb2 45%,#9d1479)}#nf-pl .bn{display:grid;grid-template-columns:1fr 1fr;gap:6px;font:700 9px Nunito,system-ui,sans-serif;text-align:right;color:#f4ead0;margin-top:-1px}'
                 + '#nf-cast{position:absolute;left:50%;bottom:232px;transform:translateX(-50%);width:230px;display:none;text-align:center;font-size:11px;letter-spacing:.1em;text-shadow:0 1px 2px #000}#nf-cast.on{display:block}#nf-cast .nfbar{height:8px;margin-top:3px}'
@@ -13034,7 +13034,7 @@ function kbModel(THREE, mk) {
                 + '#nf-tbtn{position:absolute;left:calc(50% + 178px);bottom:96px;width:48px;height:48px;border-radius:50%;border:2px solid #6fd4ff;background:radial-gradient(circle,#1c4f8a,#08162e);color:#bff0ff;font:800 20px system-ui;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto}';
             document.head.appendChild(st); const r = document.createElement('div'); r.id = 'nf-root';
             r.innerHTML = '<div id="nf-pf"><div class="c"><div class="nfl"><span>HP</span><em data-k="hpt"></em></div><div class="nfg"><i class="hp" data-k="hp"></i></div></div><div class="c"><div class="nfl"><span>MP</span><em data-k="mpt"></em></div><div class="nfg"><i class="mp" data-k="mp"></i></div></div><div class="w"><div class="nfg sm"><i class="lb" data-k="lb"></i></div><div class="nfx" data-k="xpt"></div></div></div>'
-                + '<div id="nf-tf"><b></b><div class="nfbar"><i style="background:#e8503a" data-k="th"></i></div></div><div id="nf-cast"><span></span><div class="nfbar"><i style="background:#ffd24a;width:0"></i></div></div><div id="nf-fate"></div><div id="nf-pl"></div><div id="nf-xb"></div><div id="nf-pops"></div>';
+                + '<div id="nf-tf"><b></b><div class="nfbar"><i style="background:#e8503a" data-k="th"></i></div><div class="nfbar" id="nf-en"><i style="background:#ffb347;width:0" data-k="en"></i></div><small id="nf-et"></small></div><div id="nf-cast"><span></span><div class="nfbar"><i style="background:#ffd24a;width:0"></i></div></div><div id="nf-fate"></div><div id="nf-pl"></div><div id="nf-xb"></div><div id="nf-pops"></div>';
             document.body.appendChild(r); const tp = document.createElement('div'); tp.id = 'nf-tele'; document.body.appendChild(tp);
             NF.ui = { root: r, pf: r.querySelector('#nf-pf'), tf: r.querySelector('#nf-tf'), xb: r.querySelector('#nf-xb'), cast: r.querySelector('#nf-cast'), fate: r.querySelector('#nf-fate'), pl: r.querySelector('#nf-pl'), pops: r.querySelector('#nf-pops'), tele: tp };
             nfXbBuild();
@@ -13075,18 +13075,36 @@ function kbModel(THREE, mk) {
         }
         const NF_ROLE = { knight: 'tank', whitemage: 'healer' }, NF_ROLE_IC = { tank: '🛡️', healer: '✚', dps: '⚔️' };
         const nfRoleOf = (cls) => NF_ROLE[cls] || 'dps';
+        /* ---- THREAT (enmity): every enemy keeps a threat table. Damage adds threat (tanks x3), healing adds threat on everything fighting nearby, Provoke jumps the tank to the top for 3 s. An enemy hits whoever is highest;
+           a new target only takes over when they pass the current one by 10% (30% when the enemy is out of melee reach), like FFXIV. ---- */
+        const NF_THR = { tank: 3, healer: 1, dps: 1 };
+        const nfMyRole = () => nfRoleOf(NF.cls);
+        function nfThreatAdd(m, id, amt) { if (!m || m.dead || !(amt > 0) || typeof id !== 'string') return; const t = m.th || (m.th = {}); t[id] = (t[id] || 0) + amt; }
+        function nfThreatTop(m, except) { let b = 0; const t = m.th; if (t) for (const k in t) if (k !== except && t[k] > b) b = t[k]; return b; }
+        function nfThreatHeal(sender, x, z, amt) { if (!(amt > 0)) return; for (const m of nfMobs()) if (!m.dead && m.aggro && Math.hypot(m.x - x, m.z - z) < 45) nfThreatAdd(m, sender, amt * 0.5); }
+        function nfThreatFix(m, id) { if (!m || m.dead) return; nfThreatAdd(m, id, Math.max(0, nfThreatTop(m, id) + 300 - ((m.th && m.th[id]) || 0))); m.fix = { id, until: performance.now() + 3000 }; }
+        function nfAllies(r) {   // party members close enough to heal (their hp comes from the party vitals everyone sends)
+            const P = nfPos(), out = [], now = Date.now(); if (!PARTY.code || !NS.vt) return out;
+            for (const q of NS.pl) { if (q.me || !PARTY.members.has(q.id)) continue; const v = NS.vt.get(q.id); if (!v || v.d || now - v.ts > 5000 || Math.hypot(q.x - P.x, q.z - P.z) > r) continue; out.push({ id: q.id, q, v, pct: v.hp / v.hm }); }
+            return out;
+        }
+        function nfHealAlly(a, amt, hot) {
+            const h = Math.round(amt); a.v.hp = Math.min(a.v.hm, a.v.hp + (hot ? 0 : h)); nsSend({ k: 'hl', to: a.id, h, hot: hot ? 1 : 0 }); const pp = new THREE.Vector3(a.q.x, a.q.y, a.q.z);
+            nfPop(pp.clone().setY(pp.y + 2.2), '+' + h, '#7dffa0', true); nfFx('heal', pp, pp); nfThreatHeal(me.id, nfPos().x, nfPos().z, h); nsSend({ k: 'tg', a: h });
+        }
         /* party list (FFXIV style): your Oasis party members with level, class role, HP and MP; peers broadcast their vitals about once a second */
         function nfPartyTick(u, now) {
             if (!u.pl) return; const inParty = !!PARTY.code;
             if (inParty && nsLive() && now - (NF.vtT || 0) > 1.1) { NF.vtT = now; nsSend({ k: 'vt', hp: Math.round(NF.hp), hm: Math.round(NF.hpMax), mp: Math.round(NF.mp), mm: Math.round(NF.mpMax), lv: NF.lv, c: NF.cls, d: NF.dead ? 1 : 0 }); }
             if (!inParty) { u.pl.classList.remove('on'); return; }
             if (now - (NF.plT || 0) < 0.25) return; NF.plT = now;
+            const aggT = new Set(); for (const mb of nfMobs()) if (mb.aggro && !mb.dead && mb.tid) aggT.add(mb.tid);
             const rows = [...PARTY.members.values()].filter((m) => partyFresh(m)).sort((a, b) => (a.id === me.id ? -1 : b.id === me.id ? 1 : String(a.name).localeCompare(String(b.name)))).slice(0, 8);
             if (rows.length < 2) { u.pl.classList.remove('on'); return; }
             const esc = (t) => String(t || '').replace(/[<>&"]/g, ''), pc = (a, b) => Math.max(0, Math.min(100, b ? a / b * 100 : 0));
             u.pl.innerHTML = '<h4>' + (rows.length <= 4 ? 'LIGHT PARTY' : 'FULL PARTY') + '</h4>' + rows.map((m, i) => {
                 const self = m.id === me.id, v = self ? { hp: NF.hp, hm: NF.hpMax, mp: NF.mp, mm: NF.mpMax, lv: NF.lv, c: NF.cls, d: NF.dead } : ((NS.vt && NS.vt.get(m.id)) || null), role = nfRoleOf(v ? v.c : '');
-                return '<div class="pr' + (self ? ' me' : '') + (v && v.d ? ' dead' : '') + '"><span class="sn">' + (i + 1) + '</span><span class="ri ' + role + '">' + NF_ROLE_IC[role] + '</span><div><div class="nm"><i>Lv' + (v ? v.lv : (m.lv || 1)) + '</i>' + esc(m.name) + '</div>'
+                return '<div class="pr' + (self ? ' me' : '') + (v && v.d ? ' dead' : '') + (aggT.has(m.id) ? ' agg' : '') + '"><span class="sn">' + (i + 1) + '</span><span class="ri ' + role + '">' + NF_ROLE_IC[role] + '</span><div><div class="nm"><i>Lv' + (v ? v.lv : (m.lv || 1)) + '</i>' + esc(m.name) + '</div>'
                     + '<div class="bs"><div class="bb"><u class="hp" style="width:' + (v ? pc(v.hp, v.hm) : 100) + '%"></u></div><div class="bb"><u class="mp" style="width:' + (v ? pc(v.mp, v.mm) : 100) + '%"></u></div></div>'
                     + '<div class="bn"><span>' + (v ? Math.round(v.hp) : '--') + '</span><span>' + (v ? Math.round(v.mp) : '--') + '</span></div></div></div>';
             }).join(''); u.pl.classList.add('on');
@@ -13095,7 +13113,13 @@ function kbModel(THREE, mk) {
             const u = NF.ui; if (!u) return; try { if (u.xb) u.xb.style.display = PAD.active ? 'none' : ''; } catch (e) { /* no pad yet */ }   // a connected controller uses its own LT/RT hotbar: no on-screen touch hotbar underneath it
  const q = (k) => u.pf.querySelector('[data-k="' + k + '"]'); 
             q('hp').style.width = Math.max(0, NF.hp / NF.hpMax * 100) + '%'; q('mp').style.width = Math.max(0, NF.mp / NF.mpMax * 100) + '%'; q('lb').style.width = NF.lb + '%'; q('hpt').textContent = Math.max(0, Math.round(NF.hp)); q('mpt').textContent = Math.round(NF.mp); q('xpt').textContent = 'LB  ' + Math.round(NF.lb) + '%   ·   ' + (NF.lv >= NF_MAX ? 'MAX' : NF.xp + '/' + nfNeed(NF.lv) + ' xp');
-            const t = NF.tgt; if (t && !t.dead) { u.tf.classList.add('on'); u.tf.querySelector('b').textContent = '◆ LV ' + t.lv + '  ' + t.name.toUpperCase(); u.tf.querySelector('b').style.color = nfConCol(t.lv); u.tf.querySelector('[data-k="th"]').style.width = Math.max(0, t.hp / t.hpMax * 100) + '%'; } else u.tf.classList.remove('on');
+            const t = NF.tgt; if (t && !t.dead) { u.tf.classList.add('on'); u.tf.querySelector('b').textContent = '◆ LV ' + t.lv + '  ' + t.name.toUpperCase(); u.tf.querySelector('b').style.color = nfConCol(t.lv); u.tf.querySelector('[data-k="th"]').style.width = Math.max(0, t.hp / t.hpMax * 100) + '%';
+                const en = u.tf.querySelector('[data-k="en"]'), et = u.tf.querySelector('#nf-et'), th = t.th || {}, mine = th[me.id] || 0, top = Math.max(mine, nfThreatTop(t)), role = nfMyRole();
+                if (!(top > 0) || !t.aggro) { en.style.width = '0'; et.textContent = t.aggro ? '' : ''; } else {
+                    const pc = Math.min(100, mine / top * 100), onMe = t.tid === me.id; en.style.width = pc + '%'; en.style.background = role === 'tank' ? (onMe ? '#7dffa0' : '#ffb347') : (onMe ? '#ff4a3a' : pc > 80 ? '#ffd24a' : '#7ec8ff');
+                    let who = onMe ? 'YOU' : ((peers.get(t.tid) || {}).name || (t.tid ? 'ALLY' : '--')); et.textContent = 'ENMITY ' + Math.round(pc) + '%   ▶ ' + String(who).toUpperCase().slice(0, 14) + (role !== 'tank' && onMe ? '  - PULLING AGGRO' : role === 'tank' && !onMe && pc < 100 ? '  - TAUNT!' : '');
+                }
+            } else u.tf.classList.remove('on');
             const now = performance.now() / 1000; nfXbTick(now); try { nfPartyTick(u, now); } catch (e) { /* party list */ } try { tnSync(); tnBroadcast(false); } catch (e) { /* tents */ } if (u.fate && (ZN.on || DG.on)) u.fate.classList.remove('on'); try { if (NU.lbl) { const t = DG.on ? String(DG.th.name).toUpperCase() + ' · DUNGEON' : ZN.on ? (ZN.key === 'tent' ? 'CAMP · ' : 'FLOOR 2 · ') + String(ZN.zones[ZN.key].name).toUpperCase() : 'FLOOR 1 · FOREST OF NUU'; if (NU.lbl.textContent !== t) NU.lbl.textContent = t; } } catch (e) { /* label */ } { const dt = Math.min(0.5, Math.max(0, now - (NU.mtT || now))); NU.mtT = now; nuMusicTick(dt); }
             if (NF.cast) { u.cast.classList.add('on'); u.cast.querySelector('span').textContent = NF.cast.n; u.cast.querySelector('i').style.width = Math.min(100, (now - NF.cast.t0) / NF.cast.dur * 100) + '%'; } else u.cast.classList.remove('on');
         }
@@ -13219,7 +13243,7 @@ function kbModel(THREE, mk) {
         function nfFxTick(dt) { for (const f of NF.fx.slice()) { f.t += dt; const k = Math.min(1, f.t / f.dur); try { f.upd(k); } catch (e) { /* gone */ } if (k >= 1) { f.mesh.removeFromParent(); f.mesh.geometry && f.mesh.geometry.dispose(); f.mesh.material && f.mesh.material.dispose(); NF.fx.splice(NF.fx.indexOf(f), 1); } } }
         function nfDealDmg(m, mul, mag) {
             if (m.dead) return 0; const crit = Math.random() < 0.1, lvf = Math.max(0.5, Math.min(1.5, 1 + (NF.lv - m.lv) * 0.05)), base = (mag ? NF.mag : NF.atk) * (NF.buffT > 0 ? 1.3 : 1) * mul * (0.9 + Math.random() * 0.2) * lvf * (1 - Math.min(0.35, (NU_CLS[m.cls] ? NU_CLS[m.cls].def : 1) * 0.08)), d = Math.max(1, Math.round(base * (crit ? 1.6 : 1)));
-            try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } m.hp -= d; m.mine = true; if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
+            try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } m.hp -= d; m.mine = true; const thr = Math.round(d * NF_THR[nfMyRole()]); nfThreatAdd(m, me.id, thr); if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id, th: thr }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
             NF.lb = Math.min(100, NF.lb + (m.boss ? 2 : 3)); if (m.fate) m.fate.hit = true; if (!m.aggro) nfAggro(m); if (m.hp <= 0) nfMobDie(m); return d;
         }
         function nfCan(s) { if (NF.dead) return false; const now = performance.now() / 1000; if (s.gcd && NF.gcd > 0) return false; if (s.cd && (NF.cds[s.id] || 0) > now) return false; if (s.mp && NF.mp < s.mp) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb8ff'); return false; } if (s.lb && NF.lb < 100) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Limit gauge not full', '#ffd24a'); return false; } if (NF.cast) return false; return true; }
@@ -13304,7 +13328,7 @@ function kbModel(THREE, mk) {
                 case 'hit': if (!t) return; if (s.fx) nfFx(s.fx, p, tpos); nfDealDmg(t, s.pot, s.mag); if (s.dot && !t.dead) nfDot(t, { id: s.id, pot: s.dot.pot, sec: s.dot.sec }, s.mag); break;
                 case 'cone': nfShapeFx('cone', p.x, p.z, ang, { len: s.len, a: s.a }); hitAll((m) => { const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz); if (d > s.len + big(m)) return false; let da = Math.atan2(dx, dz) - ang; da = Math.atan2(Math.sin(da), Math.cos(da)); return d < 1.2 || Math.abs(da) < s.a / 2 + 0.15; }, s.pot); if (s.fx) nfFx(s.fx, p, new THREE.Vector3(p.x + Math.sin(ang) * 2.2, p.y, p.z + Math.cos(ang) * 2.2)); break;
                 case 'line': nfShapeFx('line', p.x, p.z, ang, { len: s.len, w: s.w }); hitAll((m) => { const dx = m.x - p.x, dz = m.z - p.z, lz = dx * Math.sin(ang) + dz * Math.cos(ang), lx = dx * Math.cos(ang) - dz * Math.sin(ang); return lz > -0.5 && lz < s.len + big(m) && Math.abs(lx) < s.w / 2 + big(m); }, s.pot); if (s.fx) nfFx(s.fx, p, new THREE.Vector3(p.x + Math.sin(ang) * s.len * 0.6, p.y, p.z + Math.cos(ang) * s.len * 0.6)); break;
-                case 'aoe': nfShapeFx('circle', p.x, p.z, 0, { r: s.r }); if (s.fx) nfFx('ring', p, p); hitAll((m) => Math.hypot(m.x - p.x, m.z - p.z) < s.r + big(m), s.pot); if (s.heal) { const h = Math.round(NF.hpMax * s.heal); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); } break;
+                case 'aoe': nfShapeFx('circle', p.x, p.z, 0, { r: s.r }); if (s.fx) nfFx('ring', p, p); hitAll((m) => Math.hypot(m.x - p.x, m.z - p.z) < s.r + big(m), s.pot); if (s.heal) { const h = Math.round(NF.hpMax * s.heal); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); if (nfMyRole() === 'healer') for (const al of nfAllies(s.r + 6)) nfHealAlly(al, al.v.hm * s.heal); } break;
                 case 'ground': { if (!t) return; const cx = t.x, cz = t.z; nfShapeFx('circle', cx, cz, 0, { r: s.r, col: 0xffa55a }); if (s.fx) nfFx(s.fx, p, tpos); hitAll((m) => Math.hypot(m.x - cx, m.z - cz) < s.r + big(m), s.pot); break; }
                 case 'dash': {
                     const g = localActor.group, fx0 = p.clone(); let dx, dz, tx = p.x, tz = p.z;
@@ -13313,12 +13337,16 @@ function kbModel(THREE, mk) {
                     g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz); nfFx('ring', fx0, fx0); if (s.back) break;
                     if (t && s.r) { nfShapeFx('circle', t.x, t.z, 0, { r: s.r }); hitAll((m) => Math.hypot(m.x - t.x, m.z - t.z) < s.r + big(m), s.pot); } else if (t) nfDealDmg(t, s.pot, s.mag); if (s.fx) nfFx(s.fx, g.position, tpos); break;
                 }
-                case 'heal': { const h = Math.round(NF.hpMax * s.heal + NF.mag * 0.8); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); if (s.fx) nfFx('heal', p, p); break; }
-                case 'hot': NF.hot = { left: s.sec, tick: 3, pot: s.heal }; nfPop(up, 'REGEN', '#7dffa0'); nfFx('heal', p, p); break;
+                case 'heal': {
+                    if (nfMyRole() === 'healer') {   // smart heal: the party member (or you) with the lowest HP in 24 m
+                        const al = nfAllies(24).sort((a, b) => a.pct - b.pct)[0]; if (al && al.pct < NF.hp / NF.hpMax) { nfHealAlly(al, al.v.hm * s.heal + NF.mag * 0.8); if (s.fx) nfFx('heal', p, p); break; }
+                    }
+                    const h = Math.round(NF.hpMax * s.heal + NF.mag * 0.8); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); if (s.fx) nfFx('heal', p, p); if (nfMyRole() === 'healer') { nfThreatHeal(me.id, p.x, p.z, h); nsSend({ k: 'tg', a: h }); } break; }
+                case 'hot': { const al = nfMyRole() === 'healer' ? nfAllies(24).sort((a, b) => a.pct - b.pct)[0] : null; if (al && al.pct < NF.hp / NF.hpMax) { nfHealAlly(al, al.v.hm * s.heal, true); break; } NF.hot = { left: s.sec, tick: 3, pot: s.heal }; nfPop(up, 'REGEN', '#7dffa0'); nfFx('heal', p, p); break; }
                 case 'guard': NF.guard = s.sec; NF.gRed = s.red || 0.5; nfPop(up, 'GUARD', '#8fb8ff'); nfFx('guard', p, p); break;
                 case 'buff': NF.buffT = s.sec; nfPop(up, 'ATTACK UP', '#ffd24a', true); nfFx('guard', p, p); break;
                 case 'mp': NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * s.frac); nfPop(up, 'MP UP', '#8fb8ff', true); nfFx('heal', p, p); break;
-                case 'taunt': { let n = 0; for (const m of mobs) if (!m.dead && nfDist(m) < 14) { nfAggro(m); n++; } nfShapeFx('circle', p.x, p.z, 0, { r: 14, col: 0xffd24a }); nfPop(up, n ? 'PROVOKE' : 'Nothing to provoke', '#ffd24a'); break; }
+                case 'taunt': { let n = 0; const ids = []; for (const m of mobs) if (!m.dead && nfDist(m) < 14) { nfAggro(m); nfThreatFix(m, me.id); if (m.sid) ids.push(m.sid); n++; } if (ids.length) nsSend({ k: 'tk', ids }); nfShapeFx('circle', p.x, p.z, 0, { r: 14, col: 0xffd24a }); nfPop(up, n ? 'PROVOKE' : 'Nothing to provoke', '#ffd24a'); break; }
                 case 'summon': nfPetStart(s.pet, s.sec, s.pot); break;
                 case 'steal': { if (!t) return; nfDealDmg(t, 0.4, false); if (Math.random() < 0.45) { const g = Math.round(8 + t.lv * 5 * (0.6 + Math.random())); try { window.oasisGil.add(g, true); } catch (e) { /* gil */ } let it = ''; if (Math.random() < 0.3) { try { btBagAdd('potion', 1); it = ' + Potion'; } catch (e) { /* bag */ } } nfPop(up, 'STOLE ' + g + ' Gil' + it, '#ffe27a', true); } else nfPop(up, 'Steal failed', '#cfd8e0'); break; }
                 case 'lb': { if (!t) return; NF.lb = 0; nuShowBanner('LIMIT BREAK', s.n.toUpperCase()); nfFx('limit-ring', p, p); nfFx('limit', p, tpos); nfShapeFx('circle', t.x, t.z, 0, { r: s.r, col: 0xffe27a }); nfDealDmg(t, s.pot, s.mag); for (const m of mobs) if (m !== t && !m.dead && Math.hypot(m.x - t.x, m.z - t.z) < s.r + big(m)) nfDealDmg(m, s.pot * 0.35, s.mag); if (s.heal) { const h = Math.round(NF.hpMax * s.heal); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); } break; }
@@ -13330,12 +13358,13 @@ function kbModel(THREE, mk) {
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
             if (!remote || m.mine) { nfPop(new THREE.Vector3(m.x, m.node.position.y + 1.2, m.z), '+' + Math.round(xp) + ' XP', '#7fd8ff'); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ } }
             const roll = (k, p) => { if ((!remote || m.mine) && Math.random() < p) { try { btBagAdd(k, 1); sysChat('Found ' + BT_ITEMS[k].n + '.'); } catch (e) { /* bag */ } } }; roll('potion', m.boss ? 0.9 : 0.2); roll('ether', m.boss ? 0.8 : 0.08); roll('hipotion', m.boss ? 0.6 : 0.03); roll('phoenix', m.boss ? 0.5 : 0.02); if (m.boss) roll('elixir', 0.4);
+            if ((!remote || m.mine) && Math.random() < (m.boss ? 0.3 : (m.rankMul > 1 || m.fate) ? 0.05 : 0.012)) { try { ttPackDrop(m.boss ? 'boss' : ''); } catch (e) { /* cards not ready */ } }     // uncommon drop
             if (m.group && !m.group.dg && m.group.mobs.every((o) => o.dead)) nuKill(m.group); if (m.dgBoss) { try { dgBossDown(); } catch (e) { console.warn('boss down', e); } } if (m.fate) { m.fate.kills++; }
             if (m.hunt) { try { nuHuntKilled(m, remote); } catch (e) { console.warn('hunt', e); } }
         }
         function nfPlayerHurt(d, from) {
             try { if (!NF.dead && !(NF.inv > 0)) NSX.playerHit(); } catch (e) { /* audio */ }
-            if (NF.dead) return; if (NF.inv > 0) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
+            if (NF.dead) return; if (NF.inv > 0) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); if (nfMyRole() === 'tank') d = Math.round(d * 0.8); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
             if (NF.tele) nfTeleCancel('Teleport interrupted'); if (NF.hp <= 0) nfDie();
         }
         async function nfDie() {
@@ -13447,6 +13476,12 @@ function kbModel(THREE, mk) {
         const nsIsOwner = (m) => !m.sid || nsOwner(m.unit, m.ax, m.az, m.orin, m.orkeep) === me.id;
         const nsFateOwner = (f) => nsOwner('F' + f.key, f.x, f.z, 45, 70) === me.id;
         function nsPickTarget(m, p) {
+            if (m.th && m.aggro) {   // threat decides; a challenger must beat the current target by 10% (30% when the enemy cannot reach them)
+                const now = performance.now(), fixed = m.fix && now < m.fix.until; let top = null, tv = 0, cur = null;
+                for (const q of NS.pl) { if (q.me && NF.dead) continue; const v = NS.vt && !q.me ? NS.vt.get(q.id) : null; if (v && v.d) continue; const th = m.th[q.id]; if (!(th > 0)) continue; if (q.id === m.tid) cur = q; if (th > tv) { tv = th; top = q; } }
+                if (fixed) { const f = NS.pl.find((q) => q.id === m.fix.id && !(q.me && NF.dead)); if (f) { top = f; cur = f; } }
+                if (top) { let t = top; if (cur && cur !== top && !fixed) { const reach = Math.hypot(cur.x - m.x, cur.z - m.z) < (m.ranged ? 11 : 4.5) ? 1.1 : 1.3; if (m.th[top.id] < m.th[cur.id] * reach) t = cur; } m.tid = t.id; return t.me ? { id: t.id, me: true, pos: p } : { id: t.id, me: false, pos: new THREE.Vector3(t.x, t.y, t.z) }; }
+            }
             let best = null, bd = 1e9, cur = null;
             for (const q of NS.pl) { if (q.me && NF.dead) continue; const d = Math.hypot(q.x - m.x, q.z - m.z); if (q.id === m.tid) cur = { q, d }; if (d < bd) { bd = d; best = q; } }
             let t = best; if (cur && m.aggro && cur.d < bd * 1.3 + 4) t = cur.q; if (!t) return { id: me.id, me: true, pos: p };
@@ -13487,7 +13522,7 @@ function kbModel(THREE, mk) {
             if (!NS.wanted) { NS.wantT += dt; if (NS.wantT > 1.2) { NS.wanted = true; NS.wantT = 0; nsSend({ k: 'want' }); } }
             NS.snapT -= dt; if (NS.snapT > 0) return;
             const rows = []; let any = false;
-            const add = (key, mobs, ax, az, rin, rk, ex) => { if (!mobs.length || nsOwner(key, ax, az, rin, rk) !== me.id) return; const r = []; for (const m of mobs) { if (!m.sid) continue; if (m.aggro && !m.dead) any = true; r.push([m.sid, nsRound(m.x, 20), nsRound(m.z, 20), nsRound(m.ang, 100), Math.round(m.hp), (m.aggro ? 1 : 0) | (m.reset ? 2 : 0) | (m.dead ? 4 : 0)]); } if (r.length) rows.push(ex === undefined ? [key, r] : [key, r, ex]); };
+            const add = (key, mobs, ax, az, rin, rk, ex) => { if (!mobs.length || nsOwner(key, ax, az, rin, rk) !== me.id) return; const r = []; for (const m of mobs) { if (!m.sid) continue; if (m.aggro && !m.dead) any = true; r.push([m.sid, nsRound(m.x, 20), nsRound(m.z, 20), nsRound(m.ang, 100), Math.round(m.hp), (m.aggro ? 1 : 0) | (m.reset ? 2 : 0) | (m.dead ? 4 : 0), m.aggro && m.tid ? m.tid : 0]); } if (r.length) rows.push(ex === undefined ? [key, r] : [key, r, ex]); };
             for (const g of NU.groups) if (g.built && !g.dead) add('G' + g.i, g.mobs, g.sp.x, g.sp.z, 140, 170);
             for (const f of NU.fates) if (f.state === 'live') add('F' + f.key, f.mobs, f.x, f.z, 45, 70, f.kills);
             for (const h of NU.hunts || []) if (h.m && !h.m.dead) add('H' + h.id, [h.m], h.x, h.z, 140, 170);
@@ -13509,14 +13544,17 @@ function kbModel(THREE, mk) {
                     if (!e || e.id === null || e.id === from || from < e.id) NS.own.set(u[0], { id: from, t: performance.now() }); else continue;
                     if (typeof u[2] === 'number' && u[0][0] === 'F') { const ff = NU.fates.find((q) => 'F' + q.key === u[0]); if (ff) ff.kills = Math.max(ff.kills, u[2] | 0); }
                     for (const r of u[1].slice(0, 40)) { const mm = Array.isArray(r) && NS.mobs.get(r[0]); if (!mm || mm.dead) continue; const fl = r[5] | 0;
-                        if (!mm.net) { mm.x = +r[1]; mm.z = +r[2]; } mm.net = { x: +r[1], z: +r[2], ang: +r[3] || 0 }; mm.hp = Math.min(mm.hpMax, +r[4]); mm.aggro = !!(fl & 1); mm.reset = !!(fl & 2); if (fl & 4) nfMobDie(mm, true); }
+                        if (!mm.net) { mm.x = +r[1]; mm.z = +r[2]; } mm.net = { x: +r[1], z: +r[2], ang: +r[3] || 0 }; mm.hp = Math.min(mm.hpMax, +r[4]); mm.aggro = !!(fl & 1); mm.reset = !!(fl & 2); if (typeof r[6] === 'string') mm.tid = r[6].slice(0, 40); else if (!(fl & 1)) mm.tid = null; if (fl & 4) nfMobDie(mm, true); }
                 }
             } else if (k === 'pd') {
                 try { const pe = peers.get(from); const hh = pe && pe.actor && (pe.actor.holder || pe.actor.group); if (hh && hh.visible && pe.actor.group.parent) { nuShatter(hh, 1.3); hh.visible = false; setTimeout(() => { hh.visible = true; }, 2200); } } catch (e) { /* cosmetic */ }
             } else if (k === 'h') {
                 const mm = NS.mobs.get(m.id); if (!mm || mm.dead) return; const d = nsNum(m.d, 0, 99999); mm.hp -= d; mm.hurt = performance.now(); if (mm.fate) mm.fate.hit = mm.fate.hit || false; nfPop(new THREE.Vector3(mm.x, mm.node.position.y + (mm.node.userData.h || 1.5) * (mm.big || 1) + 0.4, mm.z), String(d | 0), '#cfd8e0');
-                if (nsIsOwner(mm)) { nfAggro(mm); if (typeof m.f === 'string') mm.tid = m.f; } else mm.aggro = true; if (mm.hp <= 0) nfMobDie(mm, true);
-            } else if (k === 'x') { const mm = NS.mobs.get(m.id); if (mm && !mm.dead) { mm.hp = 0; nfMobDie(mm, true); } }
+                nfThreatAdd(mm, from, nsNum(m.th, 0, 999999)); if (nsIsOwner(mm)) { nfAggro(mm); if (typeof m.f === 'string' && !mm.th) mm.tid = m.f; } else mm.aggro = true; if (mm.hp <= 0) nfMobDie(mm, true);
+            } else if (k === 'tk') { for (const id of (Array.isArray(m.ids) ? m.ids : []).slice(0, 40)) { const mm = NS.mobs.get(id); if (mm && !mm.dead) { nfThreatFix(mm, from); if (nsIsOwner(mm)) nfAggro(mm); } } }
+            else if (k === 'tg') { const q = NS.pl.find((o) => o.id === from); if (q) nfThreatHeal(from, q.x, q.z, nsNum(m.a, 0, 99999)); }
+            else if (k === 'hl') { if (m.to === me.id && !NF.dead) { const h = nsNum(m.h, 0, 99999); if (m.hot) { NF.hot = { left: 18, tick: 3, pot: Math.max(0.01, h / Math.max(1, NF.hpMax)) }; nfPop(nfPos().clone().setY(nfPos().y + 2.2), 'REGEN', '#7dffa0'); } else { NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(nfPos().clone().setY(nfPos().y + 2.2), '+' + h, '#7dffa0', true); } nfFx('heal', nfPos(), nfPos()); } }
+            else if (k === 'x') { const mm = NS.mobs.get(m.id); if (mm && !mm.dead) { mm.hp = 0; nfMobDie(mm, true); } }
             else if (k === 'w') { const mm = NS.mobs.get(m.id); if (mm && !nsIsOwner(mm) && !mm.dead) { try { NSX.swing(mm); } catch (e) { /* audio */ } mm.swing = { t: 0, dur: mm.ranged ? 0.55 : 0.5, hit: false }; } }
             else if (k === 't' && m.T) { const mm = NS.mobs.get(m.id), q = m.T; if (!mm || mm.dead || nsIsOwner(mm) || !/^(circle|self|donut|cone|line)$/.test(q.kind)) return; const T = { kind: q.kind, t: 0, wind: nsNum(q.wind, 0.5, 4), m: mm, ang: +q.ang || 0, dmg: nsNum(q.dmg, 1, 99999), x: +q.x, z: +q.z, r: nsNum(q.r, 0, 40), ri: nsNum(q.ri, 0, 40), a: nsNum(q.a, 0, 6.3), len: nsNum(q.len, 0, 60), w: nsNum(q.w, 0, 20) }; nfTelBuild(mm, T); mm.wind = true; }
             else if (k === 'u') { const mm = NS.mobs.get(m.id), P = nfPos(); if (mm && !mm.dead && Math.hypot(mm.x - P.x, mm.z - P.z) < 18) nfPlayerHurt(nsNum(m.d, 1, 99999), mm); }
@@ -13538,7 +13576,7 @@ function kbModel(THREE, mk) {
             const dp = Math.hypot(m.x - p.x, m.z - p.z), dh = Math.hypot(m.x - leashC.x, m.z - leashC.z);
             const aggroR = (nuNight() > 0.5 ? 12 : 9) + (m.lv >= NF.lv + 3 ? 0 : 0);
             if (!m.aggro && !safe && NU.grace <= 0 && !ded && dp < aggroR && (m.fate || m.group || m.hunt) && !(m.lv <= NF.lv - 6 && !m.rank)) { m.aggro = true; if (m.group) for (const o of m.group.mobs) o.aggro = true; try { if (!m.noticed) { m.noticed = true; } } catch (e) { /* ok */ } }
-            if (m.aggro && (safe || ded || dh > leashR || dp > 40)) { m.aggro = false; m.reset = true; }
+            if (m.aggro && (safe || ded || dh > leashR || dp > 40)) { m.aggro = false; m.reset = true; m.th = null; m.fix = null; }
             if (m.reset) { m.hp = Math.min(m.hpMax, m.hp + m.hpMax * 0.25 * dt); if (dh < 2 && m.hp >= m.hpMax) m.reset = false; tx = m.home ? m.home.x : leashC.x; tz = m.home ? m.home.z : leashC.z; if (m.fate) { tx = leashC.x + Math.cos(m.ang) * 6; tz = leashC.z + Math.sin(m.ang) * 6; } sp = 3.4; }
             else if (m.aggro) {
                 const reach = m.ranged ? 8.5 : (m.boss ? 4.2 : 2.3); tx = p.x; tz = p.z; sp = 2.6 + Math.min(1.2, m.lv * 0.04);
@@ -13715,6 +13753,7 @@ function kbModel(THREE, mk) {
             if (activeMap !== 'nuu') return;
             if (Math.random() < 0.08) { try { sysChat('It was a Mimic!'); } catch (e) { /* chat */ } nuShowBanner('MIMIC!', 'THE CHEST BITES BACK'); setTimeout(() => nuSpawnExtra('mimic', Math.max(2, pt.lv)), 900); return; }
             const scale = 1 + pt.d / 70, r = lootWin('Forest chest', scale); let extra = ''; if (Math.random() < 0.12) { try { btBagAdd('elixir', 1); extra = ' · Elixir'; } catch (e) { /* bag */ } } else if (Math.random() < 0.2) { try { btBagAdd('phoenix', 1); extra = ' · Phoenix Down'; } catch (e) { /* bag */ } }
+            if (Math.random() < 0.15) { try { ttPackDrop('chest'); extra += ' · 🎴 Card Pack'; } catch (e) { /* cards not ready */ } }     // uncommon chest find
             try { chestGetSound(true); } catch (e) { /* sound */ }
             chestCss(); if (CH.msg) { CH.msg.innerHTML = 'TREASURE!<small>+' + (r.gil | 0).toLocaleString('en-US') + ' Gil' + (r.got && r.got.length ? ' · ' + r.got.join(', ') : '') + extra + '</small>'; CH.msg.classList.add('on'); setTimeout(() => CH.msg && CH.msg.classList.remove('on'), 5200); }
         }
@@ -14266,8 +14305,33 @@ function kbModel(THREE, mk) {
             try { const lb = makeLabel(label, { size: 28, border: '#' + new THREE.Color(col).getHexString(), plain: true }); lb.position.set(0, 9.4, 0); G.add(lb); } catch (e) { /* no label */ }
             return G;
         }
-        function niOpenDoor(G, ms) { return new Promise((ok) => { const L = G.userData.leaves; NI.anim.push({ t: 0, dur: ms / 1000, upd: (k) => { for (const l of L) l.pv.rotation.y = -l.sg * 1.55 * (k * (2 - k)); }, done: ok }); }); }
-        function niCloseDoor(G) { for (const l of G.userData.leaves) l.pv.rotation.y = 0; }
+        /* ---- the dungeon portal: a ring of themed stones or crystals around a swirling vortex, with orbiting motes and a rune circle on the ground ---- */
+        function dgPortalMesh(label, col, theme) {
+            const G = new THREE.Group(), gm = nuSoftRamp(), C = new THREE.Color(col), ice = theme === 'ice', R = seeded(ice ? 91 : 77);
+            const stoneM = new THREE.MeshToonMaterial({ color: ice ? nuLin(0.6, 0.82, 0.95) : nuLin(0.62, 0.64, 0.6), gradientMap: gm, transparent: ice, opacity: ice ? 0.85 : 1, emissive: C.clone().multiplyScalar(ice ? 0.3 : 0.16) });
+            const mossM = new THREE.MeshToonMaterial({ color: nuLin(0.3, 0.5, 0.22), gradientMap: gm });
+            const CY = 4.3, RAD = 4.1;
+            for (let i = 0; i < 12; i++) {
+                const a = i / 12 * Math.PI * 2, x = Math.cos(a) * RAD, y = CY + Math.sin(a) * RAD; let m;
+                if (ice) { const L = 2.2 + R() * 2.2; m = new THREE.Mesh(new THREE.ConeGeometry(0.5 + R() * 0.3, L, 5), stoneM); m.position.set(x, y, 0); m.rotation.z = a - Math.PI / 2; m.translateY(L * 0.45); }
+                else { const w = 1.0 + R() * 0.5, h = 1.5 + R() * 0.9; m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 1.0 + R() * 0.4), stoneM); m.position.set(x, y, (R() - 0.5) * 0.3); m.rotation.z = a + Math.PI / 2 + (R() - 0.5) * 0.25; if (i % 3 === 0) { const mo = new THREE.Mesh(new THREE.BoxGeometry(w * 1.05, h * 0.25, 1.1), mossM); mo.position.set(0, h * 0.4, 0); mo.userData.noOutline = true; m.add(mo); } }
+                m.userData.noOutline = true; G.add(m);
+            }
+            const vm = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false, uniforms: { uT: { value: 0 }, uC: { value: C }, uS: { value: 0 } },
+                vertexShader: 'varying vec2 vU; void main(){ vU = uv * 2.0 - 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+                fragmentShader: 'varying vec2 vU; uniform float uT, uS; uniform vec3 uC; void main(){ float r = length(vU); if (r > 1.0) discard; float a = atan(vU.y, vU.x); float sw = a + r * 5.5 - uT * (1.1 + uS * 4.0); float arms = 0.5 + 0.5 * sin(sw * 3.0); float rings = 0.5 + 0.5 * sin(r * 14.0 - uT * 2.4); float core = smoothstep(0.55, 0.0, r); float edge = smoothstep(1.0, 0.82, r); vec3 c = uC * (0.35 + arms * 0.75) + vec3(1.0) * core * (0.5 + uS) + uC * rings * 0.15; gl_FragColor = vec4(c, (0.55 + 0.45 * arms) * edge * (0.7 + core * 0.3)); }' });
+            const vortex = new THREE.Mesh(new THREE.CircleGeometry(RAD - 0.7, 48), vm); vortex.position.set(0, CY, 0); vortex.userData.noOutline = true; vortex.frustumCulled = false; G.add(vortex);
+            const motes = []; const mm = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+            for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(ice ? new THREE.OctahedronGeometry(0.16) : new THREE.IcosahedronGeometry(0.13, 0), mm); m.userData.noOutline = true; m.userData.ph = R() * 6.28; m.userData.sp = 0.4 + R() * 0.5; m.userData.rr = 4.9 + R() * 1.1; G.add(m); motes.push(m); }
+            const fl = new THREE.Mesh(new THREE.RingGeometry(5.2, 5.6, 48), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })); fl.rotation.x = -Math.PI / 2; fl.position.set(0, 0.1, 0); fl.userData.noOutline = true; G.add(fl);
+            const fl2 = new THREE.Mesh(new THREE.RingGeometry(3.7, 3.85, 6), fl.material); fl2.rotation.x = -Math.PI / 2; fl2.position.set(0, 0.11, 0); fl2.userData.noOutline = true; G.add(fl2);
+            vortex.onBeforeRender = () => { const t = performance.now() / 1000; vm.uniforms.uT.value = t; vm.uniforms.uS.value = G.userData.surge || 0; for (const m of motes) { const a = t * m.userData.sp + m.userData.ph; m.position.set(Math.cos(a) * m.userData.rr, CY + Math.sin(a) * m.userData.rr, Math.sin(a * 2) * 0.5); m.rotation.x = a; m.rotation.y = a * 1.3; } fl2.rotation.z = t * 0.3; };
+            G.userData.portal = vortex; G.userData.leaves = []; G.userData.rune = null;
+            try { const lb = makeLabel(label, { size: 28, border: '#' + C.getHexString(), plain: true }); lb.position.set(0, 9.9, 0); G.add(lb); } catch (e) { /* no label */ }
+            return G;
+        }
+        function niOpenDoor(G, ms) { return new Promise((ok) => { const L = G.userData.leaves; if (G.userData.portal) { NI.anim.push({ t: 0, dur: ms / 1000, upd: (k) => { G.userData.surge = k; }, done: ok }); return; } NI.anim.push({ t: 0, dur: ms / 1000, upd: (k) => { for (const l of L) l.pv.rotation.y = -l.sg * 1.55 * (k * (2 - k)); }, done: ok }); }); }
+        function niCloseDoor(G) { G.userData.surge = 0; for (const l of G.userData.leaves) l.pv.rotation.y = 0; }
         // ---- the field door: a cave mouth in the rock somewhere out in the Shadowveil country ----
         function nuDoorBuild(root) {
             const hub = NU.hub; let best = null, bs = -1e9;
@@ -14278,22 +14342,19 @@ function kbModel(THREE, mk) {
             }
             if (!best) { console.warn('no site for the dungeon door'); return; }
             const fx = hub.x - best.x, fz = hub.z - best.z, fl = Math.hypot(fx, fz) || 1, nx = fx / fl, nz = fz / fl, ry = Math.atan2(nx, nz), y = nuH(best.x, best.z), G = new THREE.Group(); G.position.set(best.x, y, best.z); G.rotation.y = ry; root.add(G);
-            const door = dgDoorMesh('◆ SHADOWVEIL DEPTHS', 0xb070ff); door.scale.setScalar(1.35); G.add(door); const gm = nuSoftRamp();
+            const door = dgPortalMesh('◆ SHADOWVEIL DEPTHS', 0xb070ff, 'forest'); door.scale.setScalar(1.0); G.add(door); const gm = nuSoftRamp();
             // a landmark you can spot from across the forest: a tall violet light beam, a pulsing ground ring and a glowing doorway
             const fxm = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
             const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.6, 140, 16, 1, true), fxm(0xb070ff, 0.32)); beam.position.set(0, 70, 1.5); beam.frustumCulled = false; beam.material.depthTest = false; beam.renderOrder = 4; beam.userData.noOutline = true; G.add(beam);
             const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.8, 140, 10, 1, true), fxm(0xe8d0ff, 0.5)); beam2.position.set(0, 70, 1.5); beam2.frustumCulled = false; beam2.material.depthTest = false; beam2.renderOrder = 4; beam2.userData.noOutline = true; G.add(beam2);
             const ring = new THREE.Mesh(new THREE.RingGeometry(3.4, 4.1, 40), fxm(0xb070ff, 0.6)); ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.12, 3.6); ring.userData.noOutline = true; G.add(ring);
-            const glow = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x8a3cff, 0.35)); glow.position.set(0, 3.9, 0.9); glow.userData.noOutline = true; G.add(glow);
+            const glow = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x8a3cff, 0.35)); glow.position.set(0, 3.9, 0.9); glow.userData.noOutline = true; glow.visible = false; G.add(glow);
             door.userData.fx = { beam, beam2, ring, glow };
-            const rock = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gm });
-            for (const [dx, dz, sx, sy, sz, seed] of [[0, -4.5, 9, 6.8, 6.2, 71], [-7.5, -3.2, 5.4, 5, 4.6, 72], [7.5, -3.2, 5.4, 5.2, 4.6, 73], [-3.8, -2.4, 3.6, 4.6, 3.4, 74], [3.8, -2.4, 3.6, 4.6, 3.4, 75]]) { const m = new THREE.Mesh(nuRockGeo(seed), rock); m.scale.set(sx, sy, sz); m.position.set(dx, 2.6 + sy * 0.15, dz); m.rotation.y = seed; m.userData.noOutline = true; G.add(m); }
-            const back = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 6.4), new THREE.MeshBasicMaterial({ color: 0x07040c })); back.position.set(0, 3.2, 0.15); back.userData.noOutline = true; G.add(back);
             nuBlockDisc(best.x - nx * 4.5, best.z - nz * 4.5, 6.5); nuBlockDisc(best.x + Math.cos(ry) * 5.6 - nx * 2.2, best.z - Math.sin(ry) * 5.6 - nz * 2.2, 2.4); nuBlockDisc(best.x - Math.cos(ry) * 5.6 - nx * 2.2, best.z + Math.sin(ry) * 5.6 + 0 - nz * 2.2, 2.4);
             try { if (NU.pines) for (const t of NU.pines.list) if (Math.hypot(t.x - best.x, t.z - best.z) < (t.giant ? 38 : 9)) { t.x = 1e5; t.z = 1e5; } } catch (e) { /* none */ }   // keep the doorway clear of tree crowns, so it is easy to spot
             const fx0 = best.x + nx * 3.6, fz0 = best.z + nz * 3.6;
             DG.door = { x: fx0, z: fz0, mesh: door, wx: best.x, wz: best.z, ry }; DG.ret = { mode: 'forest', x: fx0 + nx * 1.6, z: fz0 + nz * 1.6, ry: ry };
-            NI.list.push({ id: 'dg-door', x: fx0, z: fz0, r: 5.2, label: 'Enter the cave', act: () => dgEnter(1, DG.door, DG.ret), cond: () => !DG.on && !ZN.on && !AR.busy });
+            NI.list.push({ id: 'dg-door', x: fx0, z: fz0, r: 5.2, label: 'Enter the portal', act: () => dgEnter(1, DG.door, DG.ret), cond: () => !DG.on && !ZN.on && !AR.busy });
         }
         // ---- the "?" bubble: appears over your head when there is something to use; press X / A / F / E or click it ----
         function niNear() {
@@ -14857,15 +14918,14 @@ function kbModel(THREE, mk) {
             znGate(Z, G, Z.gates[0].x, Z.gates[0].z, '◆ CARVERNIA HOLD', 0x7fe6ff, 'zn-r-town', () => arGo({ mode: 'zone', key: 'town', at: { x: ZN.zones.town.gates[0].x, z: ZN.zones.town.gates[0].z - 6, ry: Math.PI }, banner: ['CARVERNIA HOLD', 'FLOOR 2 · TOWN'] }));
             Z.spawn = { x: Z.gates[0].x, z: Z.gates[0].z + 9, ry: 0 };
             // the dungeon door, deep in the snow at the far end, with a cyan light beam
-            const gx = Z.gates[1].x, gz = Z.gates[1].z, y = znH(gx, gz), door = dgDoorMesh('◆ CARVERNIA CAVERNS', 0x7fe6ff), w = new THREE.Group(); door.scale.setScalar(1.35); w.position.set(gx, y, gz); w.rotation.y = Math.PI; w.add(door);
+            const gx = Z.gates[1].x, gz = Z.gates[1].z, y = znH(gx, gz), door = dgPortalMesh('◆ CARVERNIA CAVERNS', 0x7fe6ff, 'ice'), w = new THREE.Group(); door.scale.setScalar(1.0); w.position.set(gx, y, gz); w.rotation.y = Math.PI; w.add(door);
             const fxm = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
             const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.6, 140, 16, 1, true), fxm(0x7fe6ff, 0.3)); beam.position.set(0, 70, 1.5); beam.frustumCulled = false; beam.material.depthTest = false; beam.renderOrder = 4; beam.userData.noOutline = true; w.add(beam);
-            const ring = new THREE.Mesh(new THREE.RingGeometry(3.4, 4.1, 40), fxm(0x7fe6ff, 0.6)); ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.12, 3.6); ring.userData.noOutline = true; w.add(ring); const gl = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x5ab8ff, 0.3)); gl.position.set(0, 3.9, 0.9); gl.userData.noOutline = true; w.add(gl);
-            const rockM = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gm }); for (const [dx, dz, sx, sy, sz, sd] of [[0, 4.5, 9, 6.8, 6.2, 81], [7.5, 3.2, 5.4, 5, 4.6, 82], [-7.5, 3.2, 5.4, 5.2, 4.6, 83]]) { const m = new THREE.Mesh(znIceRock(sd), rockM); m.scale.set(sx, sy, sz); m.position.set(dx, 2.6 + sy * 0.15, -dz); m.rotation.y = sd; m.userData.noOutline = true; w.add(m); }
-            const back = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 6.4), new THREE.MeshBasicMaterial({ color: 0x050a14 })); back.position.set(0, 3.2, -0.15); back.userData.noOutline = true; w.add(back); G.add(w); Z.door = { mesh: door, fx: { beam, ring, gl } };
+            const ring = new THREE.Mesh(new THREE.RingGeometry(3.4, 4.1, 40), fxm(0x7fe6ff, 0.6)); ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.12, 3.6); ring.userData.noOutline = true; w.add(ring); const gl = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x5ab8ff, 0.3)); gl.position.set(0, 3.9, 0.9); gl.userData.noOutline = true; gl.visible = false; w.add(gl);
+            G.add(w); Z.door = { mesh: door, fx: { beam, ring, gl } };
             blockDisc(gx, gz + 4.5, 6.5); blockDisc(gx + 5.6, gz + 2.2, 2.4); blockDisc(gx - 5.6, gz + 2.2, 2.4);
             const fx0 = gx, fz0 = gz - 3.6; Z.ret = { mode: 'zone', key: 'reach', x: fx0, z: fz0 - 1.6, ry: 0 };
-            NI.list.push({ id: 'dg-door2', x: fx0, z: fz0, r: 5.2, label: 'Enter the cave', act: () => dgEnter(2, Z.door, Z.ret), cond: () => ZN.on && ZN.key === 'reach' && !AR.busy, mesh: w });
+            NI.list.push({ id: 'dg-door2', x: fx0, z: fz0, r: 5.2, label: 'Enter the portal', act: () => dgEnter(2, Z.door, Z.ret), cond: () => ZN.on && ZN.key === 'reach' && !AR.busy, mesh: w });
             // monster packs scattered over the snowfield
             const PR = seeded(777); Z.spots = []; let t = 0; while (Z.spots.length < 18 && t++ < 4000) { const a = PR() * 6.283, r = 25 + PR() * 160, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (znBlk(x, z) || Math.hypot(x - Z.gates[0].x, z - Z.gates[0].z) < 38 || Math.hypot(x - gx, z - gz) < 30) continue; if (Z.spots.some((q) => Math.hypot(q.x - x, q.z - z) < 40)) continue; Z.spots.push({ x, z }); }
         }
@@ -15047,7 +15107,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
         try { window.__jv = { JV, jvH, jvBlk, jvCollide }; } catch (e) { /* no window */ }
         MAP_DEFS.jv = { id: 'jv', ground: (x, z) => jvH(x, z), clamp: (p) => { if (jvBlk(p.x, p.z) && JV.H) { /* collide handles it */ } }, collide: jvCollide, spawn: jvSpawn, update: jvUpdate };
 
-        window.__nuu = { tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        window.__nuu = { thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
@@ -17706,7 +17766,7 @@ function btMusicStop() {
            Needs a Google OAuth "Web" client ID: paste it into CS_CLIENT_ID below, or into Settings on a device to try it. The ID is public, not a secret.
            Never synced: companion AI keys (oasis.cmp.ai), graphics settings, uploaded avatar files. ---- */
         const CS_CLIENT_ID = '';
-        const CS_KEYS = ['oasis.csw2', 'oasis.sheath', 'oasis.btjob', 'oasis.gear', 'oasis.bag', 'oasis.gil', 'oasis.tents', 'oasisXP', 'oasisClass', 'oasisBtlBest', 'oasisGmRec', 'oasis.cmp.v1', 'oasis.pgun.v1', 'oasis.diner', 'oasisTTDecks', 'oasisTTDeck2', 'oasis.hbDesigns', 'oasis.hbVariant', 'oasis.recentColors', 'psHomeName', 'oasisBlitzCls', 'oasisGun', 'oasis.pid', 'oasisHolster', 'oasis.ship', 'oasis.shipcode', 'oasis.friends', 'oasis.friends.hide', 'oasis.lastroom', 'psHomeLoft', 'oasis.masakicode', 'oasis.bans.v1', 'oasis.owned', 'oasis.defroom', 'oasis.sv.save', 'oasis.sv.cosaves', 'oasis.sv.pid'], CS_PRE = ['oasis.chest.'];
+        const CS_KEYS = ['oasis.csw2', 'oasis.sheath', 'oasis.btjob', 'oasis.gear', 'oasis.bag', 'oasis.gil', 'oasis.tents', 'oasisXP', 'oasisClass', 'oasisBtlBest', 'oasisGmRec', 'oasis.cmp.v1', 'oasis.pgun.v1', 'oasis.diner', 'oasisTTDecks', 'oasisTTDeck2', 'oasis.ttcol', 'oasis.hbDesigns', 'oasis.hbVariant', 'oasis.recentColors', 'psHomeName', 'oasisBlitzCls', 'oasisGun', 'oasis.pid', 'oasisHolster', 'oasis.ship', 'oasis.shipcode', 'oasis.friends', 'oasis.friends.hide', 'oasis.lastroom', 'psHomeLoft', 'oasis.masakicode', 'oasis.bans.v1', 'oasis.owned', 'oasis.defroom', 'oasis.sv.save', 'oasis.sv.cosaves', 'oasis.sv.pid'], CS_PRE = ['oasis.chest.'];
         const CS = { tok: null, exp: 0, busy: false, msg: '', auto: 0 };
         const csGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
         const csSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage */ } };
@@ -22304,7 +22364,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
          *  GAMES: Triple Triad (2D cards) and Connect 4 (3D). Play the computer, or challenge a player in the room.
          *  The card art is stylized (no game artwork); cards, names and numbers are generated, the same on every device.
          * ==================================================================================================== */
-        const GM = { open: false, view: 'lobby', pick: 'tt', rules: { same: true, plus: true, minus: true, elem: true }, lvl: 1, sess: null, ask: null, timers: [], c4: null };
+        const GM = { bet: 0, open: false, view: 'lobby', pick: 'tt', rules: { same: true, plus: true, minus: true, elem: true }, lvl: 1, sess: null, ask: null, timers: [], c4: null };
         // the FFXIV card list (names, stars and the four numbers: top, right, bottom, left) as listed on the community wiki; the 5-star and later cards are not in yet
         const TT_DEF = [
             ["Dodo", "🐦", 1, [4, 2, 3, 4], 1],
@@ -22788,17 +22848,173 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const ttRng = (seed) => { let a = seed | 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
         function ttStats(name, star) { const r = ttRng(ttHash(name)), mx = TT_MAX[star], v = [1, 1, 1, 1]; let tot = TT_TOT[star] + Math.floor(r() * 3) - 1 - 4, g = 0; while (tot > 0 && g++ < 500) { const i = Math.floor(r() * 4); if (v[i] < mx) { v[i]++; tot--; } } return v; }
         const TT_CARDS = TT_DEF.map(([n, ic, st, v, row], id) => ({ id, n, ic, st, v, row }));
+        /* FINAL FANTASY VIII's 110 Triple Triad cards: name, level, the four numbers (top, right, bottom, left; 10 = A) and the element (0 fire, 1 ice, 2 thunder, 3 earth, 4 poison, 5 wind, 6 water, 7 holy, -1 none).
+           Their pictures are in tt8/ (000.webp ... 109.webp, in this order). Level 1-10 maps onto 1-5 stars for the deck rules. */
+        const TT8 = [
+            ["Geezard", 1, [1, 4, 1, 5], -1],
+            ["Funguar", 1, [5, 1, 1, 3], -1],
+            ["Bite Bug", 1, [1, 3, 3, 5], -1],
+            ["Red Bat", 1, [6, 1, 1, 2], -1],
+            ["Blobra", 1, [2, 3, 1, 5], -1],
+            ["Gayla", 1, [2, 1, 4, 4], 2],
+            ["Gesper", 1, [1, 5, 4, 1], -1],
+            ["Fastitocalon-F", 1, [3, 5, 2, 1], 3],
+            ["Blood Soul", 1, [2, 1, 6, 1], -1],
+            ["Caterchipillar", 1, [4, 2, 4, 3], -1],
+            ["Cockatrice", 1, [2, 1, 2, 6], 2],
+            ["Grat", 2, [7, 1, 3, 1], -1],
+            ["Buel", 2, [6, 2, 2, 3], -1],
+            ["Mesmerize", 2, [5, 3, 3, 4], -1],
+            ["Glacial Eye", 2, [6, 1, 4, 3], 1],
+            ["Belhelmel", 2, [3, 4, 5, 3], -1],
+            ["Thrustaevis", 2, [5, 3, 2, 5], 5],
+            ["Anacondaur", 2, [5, 1, 3, 5], 4],
+            ["Creeps", 2, [5, 2, 5, 2], 2],
+            ["Grendel", 2, [4, 4, 5, 2], 2],
+            ["Jelleye", 2, [3, 2, 1, 7], -1],
+            ["Grand Mantis", 2, [5, 2, 5, 3], -1],
+            ["Forbidden", 3, [6, 6, 3, 2], -1],
+            ["Armadodo", 3, [6, 3, 1, 6], 3],
+            ["Tri-Face", 3, [3, 5, 5, 5], 4],
+            ["Fastitocalon", 3, [7, 5, 1, 3], 3],
+            ["Snow Lion", 3, [7, 1, 5, 3], 1],
+            ["Ochu", 3, [5, 6, 3, 3], -1],
+            ["SAM08G", 3, [5, 6, 2, 4], 0],
+            ["Death Claw", 3, [4, 4, 7, 2], 0],
+            ["Cactuar", 3, [6, 2, 6, 3], -1],
+            ["Tonberry", 3, [3, 6, 4, 4], -1],
+            ["Abyss Worm", 3, [7, 2, 3, 5], 3],
+            ["Turtapod", 4, [2, 3, 6, 7], -1],
+            ["Vysage", 4, [6, 5, 4, 5], -1],
+            ["T-Rexaur", 4, [4, 6, 2, 7], -1],
+            ["Bomb", 4, [2, 7, 6, 3], 0],
+            ["Blitz", 4, [1, 6, 4, 7], 2],
+            ["Wendigo", 4, [7, 3, 1, 6], -1],
+            ["Torama", 4, [7, 4, 4, 4], -1],
+            ["Imp", 4, [3, 7, 3, 6], -1],
+            ["Blue Dragon", 4, [6, 2, 7, 3], 4],
+            ["Adamantoise", 4, [4, 5, 5, 6], 3],
+            ["Hexadragon", 4, [7, 5, 4, 3], 0],
+            ["Iron Giant", 5, [6, 5, 6, 5], -1],
+            ["Behemoth", 5, [3, 6, 5, 7], -1],
+            ["Chimera", 5, [7, 6, 5, 3], 6],
+            ["PuPu", 5, [3, 10, 2, 1], -1],
+            ["Elastoid", 5, [6, 2, 6, 7], -1],
+            ["GIM47N", 5, [5, 5, 7, 4], -1],
+            ["Malboro", 5, [7, 7, 4, 2], 4],
+            ["Ruby Dragon", 5, [7, 2, 7, 4], 0],
+            ["Elnoyle", 5, [5, 3, 7, 6], -1],
+            ["Tonberry King", 5, [4, 6, 7, 4], -1],
+            ["Biggs & Wedge", 5, [6, 6, 2, 7], -1],
+            ["Fujin & Raijin", 6, [2, 8, 8, 4], -1],
+            ["Elvoret", 6, [7, 8, 3, 4], 5],
+            ["X-ATM092", 6, [4, 8, 7, 3], -1],
+            ["Granaldo", 6, [7, 2, 8, 5], -1],
+            ["Gerogero", 6, [1, 8, 8, 3], 4],
+            ["Iguion", 6, [8, 2, 8, 2], -1],
+            ["Abadon", 6, [6, 8, 4, 5], -1],
+            ["Trauma", 6, [4, 8, 5, 6], -1],
+            ["Oilboyle", 6, [1, 8, 4, 8], -1],
+            ["Shumi Tribe", 6, [6, 5, 8, 4], -1],
+            ["Krysta", 6, [7, 5, 8, 1], -1],
+            ["Propagator", 7, [8, 4, 4, 8], -1],
+            ["Jumbo Cactuar", 7, [8, 8, 4, 4], -1],
+            ["Tri-Point", 7, [8, 5, 2, 8], 2],
+            ["Gargantua", 7, [5, 6, 6, 8], -1],
+            ["Mobile Type 8", 7, [8, 6, 7, 3], -1],
+            ["Sphinxara", 7, [8, 3, 5, 8], -1],
+            ["Tiamat", 7, [8, 8, 5, 4], -1],
+            ["BGH251F2", 7, [5, 7, 8, 5], -1],
+            ["Red Giant", 7, [6, 8, 4, 7], -1],
+            ["Catoblepas", 7, [1, 8, 7, 7], -1],
+            ["Ultima Weapon", 7, [7, 7, 2, 8], -1],
+            ["Chubby Chocobo", 8, [4, 4, 8, 9], -1],
+            ["Angelo", 8, [9, 6, 7, 3], -1],
+            ["Gilgamesh", 8, [3, 7, 9, 6], -1],
+            ["MiniMog", 8, [9, 3, 9, 2], -1],
+            ["Chicobo", 8, [9, 4, 8, 4], -1],
+            ["Quezacotl", 8, [2, 9, 9, 4], 2],
+            ["Shiva", 8, [6, 7, 4, 9], 1],
+            ["Ifrit", 8, [9, 6, 2, 8], 0],
+            ["Siren", 8, [8, 9, 6, 2], -1],
+            ["Sacred", 8, [5, 1, 9, 9], 3],
+            ["Minotaur", 8, [9, 5, 2, 9], 3],
+            ["Carbuncle", 9, [8, 4, 10, 4], -1],
+            ["Diablos", 9, [5, 10, 8, 3], -1],
+            ["Leviathan", 9, [7, 10, 1, 7], 6],
+            ["Odin", 9, [8, 10, 3, 5], -1],
+            ["Pandemona", 9, [10, 1, 7, 7], 5],
+            ["Cerberus", 9, [7, 4, 6, 10], -1],
+            ["Alexander", 9, [9, 10, 4, 2], 7],
+            ["Phoenix", 9, [7, 2, 7, 10], 0],
+            ["Bahamut", 9, [10, 8, 2, 6], -1],
+            ["Doomtrain", 9, [3, 1, 10, 10], 4],
+            ["Eden", 9, [4, 4, 9, 10], -1],
+            ["Ward", 10, [10, 7, 2, 8], -1],
+            ["Kiros", 10, [6, 7, 6, 10], -1],
+            ["Laguna", 10, [5, 10, 3, 9], -1],
+            ["Selphie", 10, [10, 8, 6, 4], -1],
+            ["Quistis", 10, [9, 6, 10, 2], -1],
+            ["Irvine", 10, [2, 6, 9, 10], -1],
+            ["Zell", 10, [8, 5, 10, 6], -1],
+            ["Rinoa", 10, [4, 10, 2, 10], -1],
+            ["Edea", 10, [10, 10, 3, 3], -1],
+            ["Seifer", 10, [6, 9, 10, 4], -1],
+            ["Squall", 10, [10, 4, 6, 9], -1]
+        ];
+        const TT_FF8_0 = TT_CARDS.length;
+        TT8.forEach(([n, lv, v, el]) => { TT_CARDS.push({ id: TT_CARDS.length, n, ic: lv >= 10 ? '🧑' : lv >= 8 ? '🔮' : lv >= 6 ? '👹' : '👾', st: Math.ceil(lv / 2), v, row: 0, set: 'ff8', lv, el }); });
+        /* ---- collection, booster packs and Gil ---- */
+        const TT_PACK_COST = 500, TT_LOSS = 50, TT_BETS = [0, 100, 500, 1000, 5000];
+        const TT_BY_ST = [[], [], [], [], [], []]; TT_CARDS.forEach((c) => TT_BY_ST[c.st].push(c.id));
+        function ttRoll(n) {
+            const out = []; for (let i = 0; i < n; i++) {
+                const r = Math.random() * 100; let st = r < 45 ? 1 : r < 75 ? 2 : r < 92 ? 3 : r < 98 ? 4 : 5;
+                if (i === n - 1 && !out.some((id) => TT_CARDS[id].st >= 2)) st = Math.max(st, 2);     // every pack has at least one 2-star or better
+                const pool = TT_BY_ST[st]; out.push(pool[Math.floor(Math.random() * pool.length)]);
+            } return out;
+        }
+        let TTCOL = null;
+        function ttColSave() { try { localStorage.setItem('oasis.ttcol', JSON.stringify(TTCOL)); } catch (e) { /* storage unavailable */ } }
+        function ttCol() {
+            if (TTCOL) return TTCOL; let o = null; try { o = JSON.parse(localStorage.getItem('oasis.ttcol') || 'null'); } catch (e) { o = null; }
+            if (!o || typeof o !== 'object' || !o.own || typeof o.own !== 'object') {
+                o = { own: {}, packs: 0, pend: [] };
+                try { const d = JSON.parse(localStorage.getItem('oasisTTDeck2') || '[]'), a = JSON.parse(localStorage.getItem('oasisTTDecks') || '[]'); [].concat(Array.isArray(d) ? d : [], ...(Array.isArray(a) ? a.map((x) => (x && x.d) || []) : [])).forEach((id) => { if (Number.isInteger(id) && TT_CARDS[id]) o.own[id] = 1; }); } catch (e) { /* none */ }
+                let st; do { st = [...ttRoll(5), ...ttRoll(5)]; } while (st.filter((id) => TT_CARDS[id].st <= 2).length < 5);       // the starter: two packs, always enough small cards to build a deck
+                st.forEach((id) => { o.own[id] = (o.own[id] || 0) + 1; }); o.pend = st;
+            }
+            o.packs = Math.max(0, o.packs | 0); if (!Array.isArray(o.pend)) o.pend = []; TTCOL = o; ttColSave(); return o;
+        }
+        const ttOwned = (id) => (ttCol().own[id] | 0) > 0;
+        const ttOwnedIds = () => TT_CARDS.filter((c) => ttOwned(c.id)).map((c) => c.id);
+        function ttGive(ids) { const o = ttCol(); ids.forEach((id) => { o.own[id] = (o.own[id] || 0) + 1; }); ttColSave(); }
+        function ttPackDrop(src) {      // an uncommon find out in the world: a sealed Triple Triad booster pack
+            const o = ttCol(); o.packs++; ttColSave(); try { sysChat('Found a Triple Triad card pack' + (src ? ' (' + src + ')' : '') + '! Open it in the Games lobby.'); } catch (e) { /* chat */ } try { hcPop('🎴 Card Pack', '#ffd24a'); } catch (e) { /* hud */ } return o.packs;
+        }
+        window.oasisCardPack = ttPackDrop;
+        function ttSettle(s, win) {
+            if (s.game !== 'tt') return ''; const o = ttCol(), m = [];
+            if (win === 1) { if (s.bet) { gilAdd(s.bet, true); m.push('+' + gilFmt(s.bet) + ' Gil'); } if (!(s.ai && s.lvl === 0 && Math.random() < 0.5)) { o.packs++; m.push('+1 card pack'); } }
+            else if (win === -1) { const l = s.bet || TT_LOSS, lost = Math.min(l, GIL.n); gilAdd(-l, true); m.push('-' + gilFmt(lost) + ' Gil'); }
+            ttColSave(); return m.join('  ·  ');
+        }
         function ttDeckOk(d) {
             if (!Array.isArray(d) || d.length !== 5 || new Set(d).size !== 5) return false; let sum = 0, hi = 0, five = 0;
             for (const id of d) { const c = TT_CARDS[id]; if (!Number.isInteger(id) || !c) return false; sum += c.st; if (c.st >= 4) hi++; if (c.st === 5) five++; }
             return sum <= 14 && hi <= 2 && five <= 1;
         }
-        function ttAutoDeck() { for (let k = 0; k < 400; k++) { const d = []; while (d.length < 5) { const id = Math.floor(Math.random() * TT_CARDS.length); if (!d.includes(id)) d.push(id); } if (ttDeckOk(d)) return d; } return [0, 12, 13, 24, 25]; }
-        function ttMyDeck() { try { const d = JSON.parse(localStorage.getItem('oasisTTDeck2') || 'null'); if (ttDeckOk(d)) return d; } catch (e) { /* none saved */ } const d = ttAutoDeck(); ttSaveDeck(d); return d; }
+        function ttAutoDeck(pool) {
+            const P = pool && pool.length >= 5 ? pool : null;
+            for (let k = 0; k < 600; k++) { const d = []; while (d.length < 5) { const id = P ? P[Math.floor(Math.random() * P.length)] : Math.floor(Math.random() * TT_CARDS.length); if (!d.includes(id)) d.push(id); } if (ttDeckOk(d)) return d; }
+            return P ? P.slice().sort((a, b) => TT_CARDS[a].st - TT_CARDS[b].st).slice(0, 5) : [0, 12, 13, 24, 25];
+        }
+        const ttOwnAuto = () => ttAutoDeck(ttOwnedIds());
+        function ttMyDeck() { ttCol(); try { const d = JSON.parse(localStorage.getItem('oasisTTDeck2') || 'null'); if (ttDeckOk(d) && d.every(ttOwned)) return d; } catch (e) { /* none saved */ } const d = ttOwnAuto(); ttSaveDeck(d); return d; }
         function ttSaveDeck(d) { try { localStorage.setItem('oasisTTDeck2', JSON.stringify(d)); } catch (e) { /* storage unavailable */ } }
         const ttNbrs = (i) => { const x = i % 3, y = (i / 3) | 0, o = []; if (y > 0) o.push([i - 3, 0, 2]); if (x < 2) o.push([i + 1, 1, 3]); if (y < 2) o.push([i + 3, 2, 0]); if (x > 0) o.push([i - 1, 3, 1]); return o; };
         const TT_EL = ['🔥', '❄️', '⚡', '🌍', '☠️', '🌪️', '💧', '✨'];
-        const ttElemOf = (id) => { const h = ttHash(TT_CARDS[id].n + '~element'); return h % 100 < 42 ? (h >>> 8) % 8 : -1; };    // about four cards in ten carry an element
+        const ttElemOf = (id) => { if (TT_CARDS[id].set === 'ff8') return TT_CARDS[id].el; const h = ttHash(TT_CARDS[id].n + '~element'); return h % 100 < 42 ? (h >>> 8) % 8 : -1; };    // about four cards in ten carry an element
         const ttRules = (r) => ({ same: !!(r && r.same), plus: !!(r && r.plus), minus: !!(r && r.minus), elem: !!(r && r.elem) });
         function ttBoardEl(rules, seed) { const el = Array(9).fill(-1); if (!rules.elem) return el; const R = ttRng(ttHash(String(seed || 'tt'))), cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]; for (let i = 8; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; } const n = 3 + Math.floor(R() * 3); for (let k = 0; k < n; k++) el[cells[k]] = Math.floor(R() * 8); return el; }
         const ttNew = (decks, rules, first, seed) => { const r = ttRules(rules); return { b: Array(9).fill(null), h: [decks[0].slice(), decks[1].slice()], turn: first, rules: r, el: ttBoardEl(r, seed), n: 0 }; };
@@ -22869,13 +23085,14 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
            The picture address is tried in a few forms (the first that works for the test card is then used for all). The result is written on the Games lobby. */
         const TT_ART = {}; let ttArtState = 0; const TT_ART_MSG = { t: 'Card pictures: not loaded yet' };
         const ttArtUrls = (row) => ['ui/icon/088000/' + String(88000 + row).padStart(6, '0') + '_hr1.tex', 'ui/icon/088000/' + String(88000 + row).padStart(6, '0') + '.tex', 'ui/icon/087000/' + String(87000 + row).padStart(6, '0') + '_hr1.tex', 'ui/icon/087000/' + String(87000 + row).padStart(6, '0') + '.tex'].map((q) => 'https://v2.xivapi.com/api/asset?path=' + q + '&format=png');
+        TT_CARDS.forEach((c) => { if (c.set === 'ff8') TT_ART[c.id] = ['tt8/' + String(c.id - TT_FF8_0).padStart(3, '0') + '.webp']; });
         const ttArtSay = (t) => { TT_ART_MSG.t = t; try { if (GM.open && GM.view === 'lobby') gmSay(t); } catch (e) { /* closed */ } };
         window.ttArtErr = (img) => { const l = TT_ART[+img.dataset.id]; const i = +img.dataset.i + 1; if (l && l[i]) { img.dataset.i = i; img.src = l[i]; } else img.remove(); };
         function ttArtLoad() {
             if (ttArtState === 1 || ttArtState === 2) return; ttArtState = 1; ttArtSay('Card pictures: asking XIVAPI…'); const norm = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '');
             Promise.resolve({ rows: [] }).then((j) => {
                 const rows = j.rows || [], by = new Map(); rows.forEach((r) => { const n = r.fields && r.fields.Name; if (n && r.row_id) by.set(norm(n), r.row_id); });
-                const hit = []; TT_CARDS.forEach((c) => { hit.push([c.id, c.row]); });
+                const hit = []; TT_CARDS.forEach((c) => { if (!c.set) hit.push([c.id, c.row]); });
                 if (!hit.length) { ttArtState = 3; ttArtSay('Card pictures: XIVAPI answered but no card names matched (' + rows.length + ' rows' + (rows[0] ? '; fields: ' + Object.keys(rows[0].fields || {}).join(',') : '') + ')'); return; }
                 const test = (k) => { if (k >= 4) { ttArtState = 3; ttArtSay('Card pictures: names matched (' + hit.length + ' of ' + TT_CARDS.length + ') but no picture address worked'); return; } const im = new Image(); im.onload = () => { ttArtState = 2; hit.forEach(([cid, row]) => { const l = ttArtUrls(row); TT_ART[cid] = l.slice(k).concat(l.slice(0, k)); }); ttArtSay('Card pictures: working (' + hit.length + ' of ' + TT_CARDS.length + ' cards, address form ' + (k + 1) + ')'); try { if (GM.open && GM.sess && GM.sess.game === 'tt') ttRender(); } catch (e) { /* closed */ } }; im.onerror = () => test(k + 1); im.src = ttArtUrls(hit[0][1])[k]; };
                 test(0);
@@ -23065,22 +23282,40 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 <button type="button" class="gm-tile ${tt ? '' : 'on'}" data-g="c4"><span class="ico">🔴</span><span><b>Connect 4 (3D)</b><small>Drop discs into the board and line up four.</small></span></button></div>
                 <div class="gm-opts"><h4>${tt ? 'Triple Triad' : 'Connect 4'}</h4>
                 ${tt ? `<div class="gm-row"><label class="gm-chk"><input type="checkbox" id="gm-same" ${GM.rules.same ? 'checked' : ''}> Same</label><label class="gm-chk"><input type="checkbox" id="gm-plus" ${GM.rules.plus ? 'checked' : ''}> Plus</label><label class="gm-chk"><input type="checkbox" id="gm-minus" ${GM.rules.minus ? 'checked' : ''}> Minus</label><label class="gm-chk"><input type="checkbox" id="gm-elem" ${GM.rules.elem ? 'checked' : ''}> Elemental</label><button type="button" class="gm-btn alt" id="gm-deck">Your deck</button><button type="button" class="gm-btn alt" id="gm-mfile">🎵 Music file</button><input type="file" id="gm-mfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-sfile">🔔 Start sound</button><input type="file" id="gm-sfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-cfile">🃏 Capture sound</button><input type="file" id="gm-cfin" accept="audio/*" hidden><button type="button" class="gm-btn alt" id="gm-ufile">🖱️ Cursor sound</button><input type="file" id="gm-ufin" accept="audio/*" hidden>${TTU.src && TTU.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-uclr">Remove cursor sound</button>' : ''}${TTC.src && TTC.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-cclr">Remove capture sound</button>' : ''}${TTS.src && TTS.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-sclr">Remove start sound</button>' : ''}${TTM.src && TTM.src.startsWith('blob:') ? '<button type="button" class="gm-btn alt" id="gm-mclr">Use default music</button>' : ''}</div><div class="gm-note">Both hands are open. Same and Plus flip cards and chain into combos.</div>` : '<div class="gm-note">Drag to turn the board. Left / right and Enter drop a disc, or click a column.</div>'}
+                ${tt ? `<div class="gm-note" style="margin:2px 0 8px;padding:8px 10px;border:1px solid #ffd24a88;border-radius:10px;background:#ffd24a14;color:#ffe9a8">🏆 <b>Card Tournament House — coming soon to Adventia.</b> Register for tournaments against computer players, your party or online queues. Collect cards and Gil now to be ready.</div><h4>Cards and packs</h4><div class="gm-row"><span class="gm-note">Collection <b style="color:#ffd24a">${ttOwnedIds().length}</b>/${TT_CARDS.length}</span><button type="button" class="gm-btn gold" id="gm-popen" ${ttCol().packs ? '' : 'disabled style="opacity:.5"'}>Open a pack (${ttCol().packs})</button><button type="button" class="gm-btn alt" id="gm-pbuy" ${GIL.n >= TT_PACK_COST ? '' : 'disabled style="opacity:.5"'}>Buy a pack · ${TT_PACK_COST} Gil</button></div>
+                <h4>Wager</h4><div class="gm-row">${TT_BETS.map((b) => `<button type="button" class="gm-btn ${(GM.bet | 0) === b ? 'gold' : 'alt'}" data-bet="${b}" ${b > GIL.n ? 'disabled style="opacity:.4"' : ''}>${b ? gilFmt(b) + ' Gil' : 'No wager'}</button>`).join('')}</div><div class="gm-note">You have ${gilFmt(GIL.n)} Gil. Win a game: a card pack${GM.bet ? ' and ' + gilFmt(GM.bet) + ' Gil' : ''}. Lose: ${gilFmt(GM.bet || TT_LOSS)} Gil.</div>` : ''}
                 ${tt ? '<h4>Your current deck</h4><div class="gm-row">' + ttStrip(ttMyDeck(), 64) + '</div>' : ''}<h4>Play the computer</h4><div class="gm-row"><button type="button" class="gm-btn" data-ai="0">Easy</button><button type="button" class="gm-btn" data-ai="1">Normal</button><button type="button" class="gm-btn" data-ai="2">Hard</button></div>
                 <h4>Challenge a player here</h4><div class="gm-row">${ps.length && net ? ps.map((p) => `<button type="button" class="gm-btn gold" data-peer="${esc(p.id)}">${esc(String(p.name).slice(0, 16))}</button>`).join('') : '<span class="gm-note">Nobody else is in this room right now.</span>'}</div>${gmRecHtml()}</div></div>`;
             const b = gmBody();
             b.querySelectorAll('[data-g]').forEach((e) => e.addEventListener('click', () => { GM.pick = e.dataset.g; gmLobby(); const t = gmBody().querySelector(`[data-g="${GM.pick}"]`); if (t) t.focus(); }));
-            b.querySelectorAll('[data-ai]').forEach((e) => e.addEventListener('click', () => { GM.lvl = +e.dataset.ai; gmStart({ game: GM.pick, peer: null, seat: 0, first: Math.random() < 0.5 ? 0 : 1, decks: [ttMyDeck(), ttAutoDeck()], rules: { ...GM.rules } }); }));
+            b.querySelectorAll('[data-ai]').forEach((e) => e.addEventListener('click', () => { GM.lvl = +e.dataset.ai; gmStart({ game: GM.pick, peer: null, seat: 0, first: Math.random() < 0.5 ? 0 : 1, decks: [ttMyDeck(), ttAutoDeck()], rules: { ...GM.rules }, bet: GM.bet | 0 }); }));
             b.querySelectorAll('[data-peer]').forEach((e) => e.addEventListener('click', () => gmChallenge(e.dataset.peer)));
             const sm = $('gm-same'), pl = $('gm-plus'), mi = $('gm-minus'), el = $('gm-elem'); if (sm) sm.onchange = () => { GM.rules.same = sm.checked; }; if (pl) pl.onchange = () => { GM.rules.plus = pl.checked; }; if (mi) mi.onchange = () => { GM.rules.minus = mi.checked; }; if (el) el.onchange = () => { GM.rules.elem = el.checked; };
             const dk = $('gm-deck'); if (dk) dk.onclick = () => gmDeckView();
+            b.querySelectorAll('[data-bet]').forEach((e) => e.addEventListener('click', () => { GM.bet = Math.min(+e.dataset.bet, GIL.n); gmLobby(); }));
+            { const po = $('gm-popen'), pb = $('gm-pbuy'); if (po) po.onclick = () => { const o = ttCol(); if (o.packs < 1) return; o.packs--; const ids = ttRoll(5); ttGive(ids); gmPackView(ids); }; if (pb) pb.onclick = () => { if (GIL.n < TT_PACK_COST) return; gilAdd(-TT_PACK_COST, true); const ids = ttRoll(5); ttGive(ids); gmPackView(ids); }; }
+            { const o = ttCol(); if (tt && o.pend.length) { const ids = o.pend.slice(); o.pend = []; ttColSave(); gmPackView(ids, 'Welcome to Triple Triad! Here are your starter cards.'); return; } }
             { const mf = $('gm-mfile'), fi = $('gm-mfin'), mc = $('gm-mclr'); if (mf && fi) { mf.onclick = () => fi.click(); fi.onchange = async () => { await ttmLoadFile(fi.files[0]); gmLobby(); }; } if (mc) mc.onclick = async () => { await ttmClearFile(); gmLobby(); }; { const uf = $('gm-ufile'), ufi = $('gm-ufin'), uc = $('gm-uclr'); if (uf && ufi) { uf.onclick = () => ufi.click(); ufi.onchange = async () => { await ttuLoadFile(ufi.files[0]); gmLobby(); }; } if (uc) uc.onclick = async () => { await ttuClearFile(); gmLobby(); }; try { ttuInit().then(() => { ttsfxPrep(TTU);  if (TTU.src && TTU.src.startsWith('blob:') && !$('gm-uclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
             { const cf = $('gm-cfile'), cfi = $('gm-cfin'), cc = $('gm-cclr'); if (cf && cfi) { cf.onclick = () => cfi.click(); cfi.onchange = async () => { await ttcLoadFile(cfi.files[0]); gmLobby(); }; } if (cc) cc.onclick = async () => { await ttcClearFile(); gmLobby(); }; try { ttcInit().then(() => { ttsfxPrep(TTC);  if (TTC.src && TTC.src.startsWith('blob:') && !$('gm-cclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
             { const sf = $('gm-sfile'), sfi = $('gm-sfin'), sc = $('gm-sclr'); if (sf && sfi) { sf.onclick = () => sfi.click(); sfi.onchange = async () => { await ttsLoadFile(sfi.files[0]); gmLobby(); }; } if (sc) sc.onclick = async () => { await ttsClearFile(); gmLobby(); }; try { ttsInit().then(() => { ttsfxPrep(TTS);  if (TTS.src && TTS.src.startsWith('blob:') && !$('gm-sclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
             try { ttmInit().then(() => { if (TTM.src && TTM.src.startsWith('blob:') && !$('gm-mclr') && GM.open && GM.view === 'lobby') gmLobby(); }); } catch (e) { /* none */ } }
             const f = b.querySelector('[data-ai="1"]'); if (f) f.focus({ preventScroll: true });
         }
-        const ttDeckList = () => TT_CARDS.filter((c) => (!GM.df || c.st === GM.df) && (!GM.dq || c.n.toLowerCase().includes(GM.dq)));
-        const ttSlots = () => { try { const a = JSON.parse(localStorage.getItem('oasisTTDecks') || '[]'); return Array.isArray(a) ? a.filter((x) => x && Array.isArray(x.d) && ttDeckOk(x.d)).map((x) => ({ n: String(x.n || 'Deck').slice(0, 18), d: x.d })).slice(0, 8) : []; } catch (e) { return []; } };
+        function gmPackView(ids, msg) {
+            GM.view = 'packs'; $('gm-title').textContent = 'CARD PACK'; $('gm-back').hidden = false; const seen = new Set(); gmSay(msg || 'Click a card to turn it over.');
+            const nw = new Set(); ids.forEach((id) => { if ((ttCol().own[id] | 0) === ids.filter((x) => x === id).length) nw.add(id); });
+            const draw = () => {
+                const ch = clamp(Math.floor(((gmBody().clientHeight || 330) - 120) / (ids.length > 5 ? 2.2 : 1.15)), 80, 170);
+                gmBody().innerHTML = `<div style="padding:12px;text-align:center"><div class="gm-row" style="justify-content:center;flex-wrap:wrap;gap:12px">${ids.map((id, i) => { const c = TT_CARDS[id]; return seen.has(i) ? `<span style="text-align:center"><span class="tc o0 s${c.st} flip" style="--ch:${ch}px">${ttFace(c)}</span><div style="font-size:11px;font-weight:800;color:${nw.has(id) ? '#8cff9e' : '#9fa9cc'};margin-top:4px">${nw.has(id) ? 'NEW!' : 'Duplicate'}</div></span>` : `<button type="button" class="tc back" data-i="${i}" style="--ch:${ch}px" aria-label="Turn card ${i + 1} over"></button>`; }).join('')}</div>
+                <div class="gm-row" style="justify-content:center;margin-top:12px">${seen.size < ids.length ? '<button type="button" class="gm-btn" id="gp-all">Turn them all over</button>' : `<button type="button" class="gm-btn gold" id="gp-done">Done</button><button type="button" class="gm-btn alt" id="gp-deck">Build a deck</button>`}</div></div>`;
+                gmBody().querySelectorAll('[data-i]').forEach((e) => e.addEventListener('click', () => { seen.add(+e.dataset.i); try { ttCardSnd('flip'); } catch (x) { /* sound */ } draw(); }));
+                const a = $('gp-all'); if (a) a.onclick = () => { ids.forEach((x, i) => seen.add(i)); try { ttCardSnd('flip'); } catch (x) { /* sound */ } draw(); };
+                const d = $('gp-done'); if (d) { d.onclick = () => gmLobby(); d.focus(); } const k = $('gp-deck'); if (k) k.onclick = () => gmDeckView();
+            };
+            draw();
+        }
+        const ttDeckList = () => TT_CARDS.filter((c) => ttOwned(c.id) && (!GM.df || c.st === GM.df) && (!GM.dset || (GM.dset === 'ff8') === (c.set === 'ff8')) && (!GM.dq || c.n.toLowerCase().includes(GM.dq)));
+        const ttSlots = () => { try { const a = JSON.parse(localStorage.getItem('oasisTTDecks') || '[]'); return Array.isArray(a) ? a.filter((x) => x && Array.isArray(x.d) && ttDeckOk(x.d) && x.d.every(ttOwned)).map((x) => ({ n: String(x.n || 'Deck').slice(0, 18), d: x.d })).slice(0, 8) : []; } catch (e) { return []; } };
         const ttSaveSlots = (a) => { try { localStorage.setItem('oasisTTDecks', JSON.stringify(a.slice(0, 8))); } catch (e) { /* storage unavailable */ } };
         const ttStrip = (d, ch) => `<span class="tt-strip">${d.map((id) => `<span class="tc o0 s${TT_CARDS[id].st}" style="--ch:${ch}px" title="${esc(TT_CARDS[id].n)}">${ttFace(TT_CARDS[id])}</span>`).join('')}</span>`;
         const ttCanAdd = (d, id) => { if (d.includes(id)) return 'in'; if (d.length >= 5) return 'Your deck already has 5 cards.'; const c = TT_CARDS[id]; if (d.reduce((n, i) => n + TT_CARDS[i].st, 0) + c.st > 14) return 'That would go over 14 stars.'; if (d.filter((i) => TT_CARDS[i].st >= 4).length + (c.st >= 4 ? 1 : 0) > 2) return 'Only two 4★ or 5★ cards are allowed.'; if (d.filter((i) => TT_CARDS[i].st === 5).length + (c.st === 5 ? 1 : 0) > 1) return 'Only one 5★ card is allowed.'; return ''; };
@@ -23096,7 +23331,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 const old = gmBody().querySelector('.gm-deckgrid'), keepTop = old ? old.scrollTop : 0, sum = deck.reduce((n, id) => n + TT_CARDS[id].st, 0), slots = ttSlots(), active = ttMyDeck(); gmSay(`${deck.length}/5 cards · ${sum}/14 stars`);
                 const cur = `<div class="gm-curh"><b>Deck you are building</b><span class="gm-note">${deck.length}/5 cards · ${sum}/14 stars · click a card to look at it${same(deck, active) ? ' · <b style="color:#ffd24a">this is your deck in games</b>' : ''}</span></div><div class="tt-strip">${[0, 1, 2, 3, 4].map((i) => (deck[i] != null ? `<button type="button" class="tc o0 s${TT_CARDS[deck[i]].st} ${GM.dv === deck[i] ? 'view' : ''}" data-id="${deck[i]}" style="--ch:78px" title="${esc(TT_CARDS[deck[i]].n)}">${ttFace(TT_CARDS[deck[i]])}</button>` : `<span class="tt-empty" style="--ch:78px">${i + 1}</span>`)).join('')}</div>`;
                 const saved = slots.length ? slots.map((x, i) => `<div class="gm-slot ${same(x.d, active) ? 'act' : ''}"><div class="gm-slh"><b>${esc(x.n)}</b>${same(x.d, active) ? '<em>IN USE</em>' : ''}</div>${ttStrip(x.d, 48)}<span class="gm-row"><button type="button" class="gm-btn" data-use="${i}">Use</button><button type="button" class="gm-btn alt" data-edit="${i}">Edit</button><button type="button" class="gm-btn alt" data-ren="${i}" title="Rename">✎</button><button type="button" class="gm-btn alt" data-del="${i}" title="Delete">✕</button></span></div>`).join('') : '<span class="gm-note">None yet. Build a deck, then press “Save as new deck”.</span>';
-                gmBody().innerHTML = `<div class="gm-deck2"><div class="gm-dl"><div class="gm-row"><button type="button" class="gm-btn" id="gd-save">Use this deck</button><button type="button" class="gm-btn gold" id="gd-new">Save as new deck</button><button type="button" class="gm-btn alt" id="gd-auto">Random</button></div>${cur}<div class="gm-row gm-flt">${[0, 1, 2, 3, 4, 5].map((k) => `<button type="button" class="gm-btn ${(GM.df || 0) === k ? '' : 'alt'}" data-f="${k}">${k ? k + '★' : 'All'}</button>`).join('')}<input id="gd-q" type="search" placeholder="Search ${TT_CARDS.length} cards" value="${esc(GM.dq || '')}" autocomplete="off"><span class="gm-note">${ttDeckList().length} shown</span></div><div class="gm-deckgrid">${ttDeckList().map((c) => `<button type="button" class="tc o0 s${c.st} ${deck.includes(c.id) ? 'pick' : ''} ${GM.dv === c.id ? 'view' : ''}" data-id="${c.id}" style="--ch:78px" title="${esc(c.n)}">${ttFace(c)}</button>`).join('')}</div></div>
+                gmBody().innerHTML = `<div class="gm-deck2"><div class="gm-dl"><div class="gm-row"><button type="button" class="gm-btn" id="gd-save">Use this deck</button><button type="button" class="gm-btn gold" id="gd-new">Save as new deck</button><button type="button" class="gm-btn alt" id="gd-auto">Random</button></div>${cur}<div class="gm-row gm-flt">${[0, 1, 2, 3, 4, 5].map((k) => `<button type="button" class="gm-btn ${(GM.df || 0) === k ? '' : 'alt'}" data-f="${k}">${k ? k + '★' : 'All'}</button>`).join('')}${[['', 'Both sets'], ['xiv', 'FFXIV'], ['ff8', 'FF8']].map(([k, t]) => `<button type="button" class="gm-btn ${(GM.dset || '') === k ? '' : 'alt'}" data-set="${k}">${t}</button>`).join('')}<input id="gd-q" type="search" placeholder="Search ${TT_CARDS.length} cards" value="${esc(GM.dq || '')}" autocomplete="off"><span class="gm-note">${ttDeckList().length} shown</span></div><div class="gm-deckgrid">${ttDeckList().map((c) => `<button type="button" class="tc o0 s${c.st} ${deck.includes(c.id) ? 'pick' : ''} ${GM.dv === c.id ? 'view' : ''}" data-id="${c.id}" style="--ch:78px" title="${esc(c.n)}">${ttFace(c)}</button>`).join('')}</div></div>
                 <div class="gm-side"><div class="gm-row gm-tabs"><button type="button" class="gm-btn ${GM.dtab === 'card' ? '' : 'alt'}" data-tab="card">Card</button><button type="button" class="gm-btn ${GM.dtab === 'saved' ? '' : 'alt'}" data-tab="saved">Saved decks (${slots.length}/8)</button></div><div class="gm-sidec" id="gd-side">${GM.dtab === 'card' ? prevHtml() : saved}</div></div></div>`;
                 const b = gmBody(), g = b.querySelector('.gm-deckgrid'); if (g) g.scrollTop = keepTop;
                 const wirePrev = () => { const t = $('gd-tog'); if (t) t.onclick = () => { toggle(GM.dv); draw(); const n = gmBody().querySelector(`.gm-deckgrid [data-id="${GM.dv}"]`) || $('gd-tog'); if (n) n.focus({ preventScroll: true }); }; };
@@ -23106,8 +23341,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                     e.addEventListener('mouseenter', () => { if (matchMedia('(hover:hover)').matches && GM.dtab === 'card' && GM.dv !== id) look(id); }); e.addEventListener('focus', () => { if (GM.dtab === 'card' && GM.dv !== id) look(id); }); });
                 wirePrev();
                 b.querySelectorAll('[data-tab]').forEach((e) => e.addEventListener('click', () => { GM.dtab = e.dataset.tab; draw(); const f = gmBody().querySelector(`[data-tab="${GM.dtab}"]`); if (f) f.focus({ preventScroll: true }); }));
-                $('gd-auto').onclick = () => { deck = ttAutoDeck(); draw(); };
-                b.querySelectorAll('[data-f]').forEach((e) => e.addEventListener('click', () => { GM.df = +e.dataset.f; draw(); }));
+                $('gd-auto').onclick = () => { deck = ttOwnAuto(); draw(); };
+                b.querySelectorAll('[data-f]').forEach((e) => e.addEventListener('click', () => { GM.df = +e.dataset.f; draw(); })); b.querySelectorAll('[data-set]').forEach((e) => e.addEventListener('click', () => { GM.dset = e.dataset.set; draw(); }));
                 { const q = $('gd-q'); if (q) { q.oninput = () => { GM.dq = q.value.trim().toLowerCase(); draw(); const q2 = $('gd-q'); if (q2) { q2.focus(); q2.setSelectionRange(q2.value.length, q2.value.length); } }; } }
                 $('gd-save').onclick = () => { if (!ttDeckOk(deck)) { gmSay('That deck is not allowed (5 cards, 14 stars, at most two 4★+ and one 5★).'); return; } ttSaveDeck(deck); gmLobby(); };
                 $('gd-new').onclick = () => {
@@ -23127,8 +23362,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function gmChallenge(peerId) {
             const p = peers.get(peerId); if (!p || !net) { sysChat('That player is not here.'); return; }
             if (GM.sess) { gmEndSession(true); }
-            const tid = uid() + uid(); GM.sess = { tid, peer: peerId, game: GM.pick, phase: 'asking', seat: 0, rules: { ...GM.rules }, deck: GM.pick === 'tt' ? ttMyDeck() : null, name: p.name };
-            net.send({ t: 'gm', op: 'req', to: peerId, tid, g: GM.pick, rules: GM.rules, deck: GM.sess.deck });
+            const bet = GM.pick === 'tt' ? Math.min(GM.bet | 0, GIL.n) : 0, tid = uid() + uid(); GM.sess = { tid, peer: peerId, game: GM.pick, phase: 'asking', seat: 0, rules: { ...GM.rules }, deck: GM.pick === 'tt' ? ttMyDeck() : null, name: p.name, bet };
+            net.send({ t: 'gm', op: 'req', to: peerId, tid, g: GM.pick, rules: GM.rules, deck: GM.sess.deck, bet });
             gmSay('Waiting for ' + String(p.name).slice(0, 14) + '…'); sysChat('Game request sent to ' + p.name + '.');
             gmLater(() => { if (GM.sess && GM.sess.phase === 'asking') { sysChat('No answer to your game request.'); gmEndSession(false); if (GM.open) gmLobby(); } }, 30000);
         }
@@ -23140,12 +23375,13 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 const no = (why) => net.send({ t: 'gm', op: 'ans', to: from, tid, ok: false, why });
                 if (GM.sess || GM.ask) { no('busy'); return; }
                 if (g === 'tt' && !ttDeckOk(m.deck)) return;
+                const bet = g === 'tt' ? Math.max(0, Math.min(Math.floor(+m.bet || 0), 100000)) : 0; if (bet > GIL.n) { no('poor'); sysChat(String(p.name) + ' wanted to wager ' + gilFmt(bet) + ' Gil, which you do not have.'); return; }
                 const ask = $('gm-ask'); GM.ask = { from, tid };
-                $('gma-txt').textContent = `${String(p.name).slice(0, 16)} invites you to play ${g === 'tt' ? 'Triple Triad' : 'Connect 4'}.`; ask.classList.remove('hidden'); setTimeout(() => { const y = $('gma-yes'); if (y) y.focus(); }, 30);
+                $('gma-txt').textContent = `${String(p.name).slice(0, 16)} invites you to play ${g === 'tt' ? 'Triple Triad' : 'Connect 4'}${bet ? ' for ' + gilFmt(bet) + ' Gil' : ''}.`; ask.classList.remove('hidden'); setTimeout(() => { const y = $('gma-yes'); if (y) y.focus(); }, 30);
                 const done = (ok) => {
                     ask.classList.add('hidden'); $('gma-yes').onclick = $('gma-no').onclick = null; GM.ask = null; if (!ok) { net.send({ t: 'gm', op: 'ans', to: from, tid, ok: false }); return; }
                     if (GM.sess || !peers.has(from)) { no('busy'); return; }
-                    GM.sess = { tid, peer: from, game: g, phase: 'wait', seat: 1, rules: ttRules(m.rules), hostDeck: g === 'tt' ? m.deck.slice() : null, name: p.name };
+                    GM.sess = { tid, peer: from, game: g, phase: 'wait', seat: 1, rules: ttRules(m.rules), hostDeck: g === 'tt' ? m.deck.slice() : null, name: p.name, bet };
                     net.send({ t: 'gm', op: 'ans', to: from, tid, ok: true, deck: g === 'tt' ? ttMyDeck() : null }); gmOpen(); gmSay('Starting…');
                 };
                 $('gma-yes').onclick = () => done(true); $('gma-no').onclick = () => done(false); GM.ask.done = done;
@@ -23155,13 +23391,13 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const s = GM.sess; if (!s || s.peer !== from || s.tid !== tid) return;
             if (op === 'ans') {
                 if (s.phase !== 'asking') return;
-                if (m.ok !== true) { sysChat(String(p.name) + (m.why === 'busy' ? ' is busy.' : ' declined the game.')); gmEndSession(false); if (GM.open) gmLobby(); return; }
+                if (m.ok !== true) { sysChat(String(p.name) + (m.why === 'busy' ? ' is busy.' : m.why === 'poor' ? ' does not have enough Gil for that wager.' : ' declined the game.')); gmEndSession(false); if (GM.open) gmLobby(); return; }
                 if (s.game === 'tt' && !ttDeckOk(m.deck)) { gmEndSession(true); return; }
                 const first = Math.random() < 0.5 ? 0 : 1; net.send({ t: 'gm', op: 'go', to: from, tid, first });
-                gmStart({ game: s.game, peer: from, seat: 0, first, decks: s.game === 'tt' ? [s.deck, m.deck] : null, rules: s.rules, tid, name: p.name }); gmOpen();
+                gmStart({ game: s.game, peer: from, seat: 0, first, decks: s.game === 'tt' ? [s.deck, m.deck] : null, rules: s.rules, tid, name: p.name, bet: s.bet }); gmOpen();
             } else if (op === 'go') {
                 if (s.phase !== 'wait' || (m.first !== 0 && m.first !== 1)) return;
-                gmStart({ game: s.game, peer: from, seat: 1, first: m.first, decks: s.game === 'tt' ? [s.hostDeck, ttMyDeck()] : null, rules: s.rules, tid, name: p.name }); gmOpen();
+                gmStart({ game: s.game, peer: from, seat: 1, first: m.first, decks: s.game === 'tt' ? [s.hostDeck, ttMyDeck()] : null, rules: s.rules, tid, name: p.name, bet: s.bet }); gmOpen();
             } else if (op === 'mv') {
                 if (s.phase !== 'live') return;
                 if (s.game === 'tt') gmTtMove(1 - s.seat, +m.c, +m.s, true); else gmC4Move(1 - s.seat, +m.col, true);
@@ -23172,7 +23408,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         }
         function gmStart(o) {
             const prev = GM.sess; GM.timers.forEach(clearTimeout); GM.timers = [];
-            const s = GM.sess = { tid: o.tid || (prev && prev.tid) || uid(), peer: o.peer, game: o.game, seat: o.seat, phase: 'live', ai: !o.peer, lvl: GM.lvl, name: o.name || 'Computer', rules: o.rules, over: false, sel: -1 };
+            const s = GM.sess = { tid: o.tid || (prev && prev.tid) || uid(), peer: o.peer, game: o.game, seat: o.seat, phase: 'live', ai: !o.peer, lvl: GM.lvl, name: o.name || 'Computer', rules: o.rules, over: false, sel: -1, bet: o.game === 'tt' ? Math.max(0, Math.min(o.bet | 0, GIL.n)) : 0 };
             if (o.game === 'tt') { s.S = ttNew(o.decks, o.rules, o.first, s.tid); } else { s.cols = [[], [], [], [], [], [], []]; s.turn = o.first; s.last = null; }
             gmShowGame(); try { if (o.game === 'tt') { ttsPlay(); ttStinger('SHUFFLE', 0.15); ttmPlay(); } else ttmStop(); } catch (e) { /* music */ }
         }
@@ -23187,13 +23423,14 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         }
         function gmBanner() {
             const s = GM.sess; if (!s || !s.over || !s.res) return; const host = s.game === 'tt' ? $('tt-table') : $('c4-wrap'); if (!host || host.querySelector('.gm-banner')) return; const d = document.createElement('div'); d.className = 'gm-banner';
-            d.innerHTML = `<h3>${esc(s.res)}</h3><div class="gm-row" style="justify-content:center"><button type="button" class="gm-btn gold" id="gm-again">${s.peer ? 'Ask for a rematch' : 'Play again'}</button><button type="button" class="gm-btn alt" id="gm-tolobby">Lobby</button></div>`; host.appendChild(d);
+            d.innerHTML = `<h3>${esc(s.res)}</h3>${s.reward ? `<div style="text-align:center;color:#ffd24a;font-weight:800;font-size:13px;margin:2px 0 8px">${esc(s.reward)}</div>` : ''}<div class="gm-row" style="justify-content:center"><button type="button" class="gm-btn gold" id="gm-again">${s.peer ? 'Ask for a rematch' : 'Play again'}</button><button type="button" class="gm-btn alt" id="gm-tolobby">Lobby</button></div>`; host.appendChild(d);
             $('gm-tolobby').onclick = gmBack;
-            $('gm-again').onclick = () => { if (s.peer) { const pid = s.peer, g = s.game; gmEndSession(true); GM.pick = g; gmChallenge(pid); } else gmStart({ game: s.game, peer: null, seat: 0, first: Math.random() < 0.5 ? 0 : 1, decks: [ttMyDeck(), ttAutoDeck()], rules: s.rules }); };
+            $('gm-again').onclick = () => { if (s.peer) { const pid = s.peer, g = s.game; gmEndSession(true); GM.pick = g; gmChallenge(pid); } else gmStart({ game: s.game, peer: null, seat: 0, first: Math.random() < 0.5 ? 0 : 1, decks: [ttMyDeck(), ttAutoDeck()], rules: s.rules, bet: s.bet }); };
             setTimeout(() => { const x = $('gm-again'); if (x) x.focus(); }, 30);
         }
         function gmFinish(text, win) {
             const s = GM.sess; if (!s) return; if (s.over) return; s.over = true; s.res = text; gmSay(text); try { gmRecAdd(s, win); } catch (e) { /* record */ } try { if (win === 1) { lvAward('win', 120, 30); lootWin('game', 1); } else lvAward('win', 15, 30); } catch (e) { /* levels not ready */ }
+            try { s.reward = ttSettle(s, win); } catch (e) { s.reward = ''; }
             try { ttResultFx(win, s); } catch (e) { gmBanner(); }
         }
         /* ---- Triple Triad: screen ---- */
@@ -23306,7 +23543,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (GM.view === 'lobby') gmClose(); else if (GM.view === 'deck') gmLobby(); else gmBack();
         }, true);
         $('gm-close').addEventListener('click', gmClose); $('gm-back').addEventListener('click', () => { if (GM.view === 'deck') gmLobby(); else gmBack(); });
-        window.__gm = { peers, setNet: (n) => { net = n; }, GM, TT_CARDS, ttPlay, ttNew, ttAi, c4Line, c4Ai, open: gmOpen, start: gmStart, onMsg: gmOnMsg, ttDeckOk };
+        window.__gm = { ttCol, ttSettle, gmFinish, ttOwnedIds, GIL, peers, setNet: (n) => { net = n; }, GM, TT_CARDS, ttPlay, ttNew, ttAi, c4Line, c4Ai, open: gmOpen, start: gmStart, onMsg: gmOnMsg, ttDeckOk };
 
         /* ====================================================================================================
          *  PARTY: up to eight friends who stay together as you move between rooms (like a party in an online RPG).
