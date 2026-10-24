@@ -7348,7 +7348,8 @@ function kbModel(THREE, mk) {
         const SCREEN = { x: 0, z: -13.2, y0: 2.8, w: 12, h: 6.75, group: null, hit: [], edge: [], idleMesh: null, holeMesh: null, idleCanvas: null, idleCtx: null, idleTex: null, idleAt: -1, hintShown: false, volAt: 0, sentVol: -1, tickAt: 0, ry: 0, near: 15, reach: 18 };
         // One TV site per room that has a TV: the mall's big screen and Harbor Studio's wall TV. selectScreenSite() points SCREEN (and the video layer) at the current one.
         const SCREEN_SITES = { mall: null, loft: null };
-        const hasScreen = () => !!SCREEN_SITES[activeMap];
+        const tvTent = () => { try { return activeMap === 'nuu' && ZN.on && ZN.key === 'tent'; } catch (e) { return false; } };   // the box TV inside a tent: private to the tent
+        const hasScreen = () => activeMap === 'nuu' ? !!(SCREEN_SITES.nuu && tvTent()) : !!SCREEN_SITES[activeMap];
         function selectScreenSite(map) {
             const t = SCREEN_SITES[map];
             if (!t) return false;
@@ -7364,7 +7365,7 @@ function kbModel(THREE, mk) {
         const screenState = { shared: null, local: null, muted: true, volume: 70, fade: true, applied: null, queue: [], qi: 0, seq: 0 };
         let cssRenderer = null, cssScene = null, cssScreen = null, screenFrame = null;   // screenFrame: the <iframe> or <video> currently on the screen
         const YT_ID = /^[\w-]{11}$/, VDO_VIEW = /^[\w.,-]{1,100}$/, VDO_NAME = /^[\w.-]{1,64}$/, VIDEO_EXT = /\.(mp4|webm|ogv|ogg|mov|m4v)$/i;
-        const activeSrc = () => screenState.local || screenState.shared;
+        const activeSrc = () => tvTent() ? screenState.local : (screenState.local || screenState.shared);
 
         // ---- reading what the user pastes ----
         function parseTimeParam(t) {
@@ -7437,7 +7438,7 @@ function kbModel(THREE, mk) {
             const u = parseHttpUrl(raw); if (!u) return null;
             return VIDEO_EXT.test(u.pathname) ? { kind: 'video', url: u.href } : { kind: 'web', url: u.href };
         }
-        const isShared = (s) => s.kind === 'yt' || s.kind === 'vdo';
+        const isShared = (s) => (s.kind === 'yt' || s.kind === 'vdo') && !tvTent();
         // what arrives from the network: only shared kinds, every field re-validated, rebuilt from scratch
         function sanitizeShared(m) {
             if (!m || typeof m !== 'object') return null;
@@ -13949,19 +13950,20 @@ function kbModel(THREE, mk) {
         const NSB_PENTA = [1, 1.122, 1.26, 1.498, 1.682, 2];
         const nsxNear = (m) => { try { return Math.max(0, 1 - nfDist(m) / 38); } catch (e) { return 0.6; } };
         const NSX = {
-            shatter(big) {   // glass-crack, sub boom, a spray of tuned shards, a swelling shimmer and a rising sparkle as the light drifts away
-                const v = Math.min(1.5, 0.85 + (big || 1) * 0.22); const R = (a, b) => a + Math.random() * (b - a);
-                nsbN(0, 0.05, 7000, 3500, 0.8, 0.30 * v, 'highpass', 0, 0.25);                       // the crack
-                nsbT(0, 190, 42, 0.42, 0.34 * v, 'sine', 0, 0.15, 0.003);                               // the body drops out
-                nsbN(0.01, 0.35, 3200, 900, 1.2, 0.12 * v, 'bandpass', 0, 0.3);                         // splinter
-                nsbN(0.02, 1.1, 2200, 9500, 0.7, 0.07 * v, 'highpass', 0, 0.7);                         // the glassy swell as the pieces lift
-                for (let i = 0; i < 26; i++) {                                                              // tuned shards, scattered through the stereo field
-                    const at = 0.025 + Math.pow(Math.random(), 1.5) * 0.9, base = 1046 * NSB_PENTA[(Math.random() * 6) | 0] * (Math.random() < 0.35 ? 2 : 1), pan = R(-0.9, 0.9);
-                    nsbBell(at, base, (0.016 + Math.random() * 0.026) * v, R(0.25, 0.7), pan);
-                    if (Math.random() < 0.5) nsbN(at, 0.04, 6000 + Math.random() * 4000, 3000, 2, 0.02 * v, 'bandpass', pan, 0.3);   // the tick of each piece
+            shatter(big) {   // the polygon burst: a bright glassy crack, a dense spray of tiny crystal pieces and a high shimmer rising away. No low thud.
+                const v = Math.min(1.4, 0.8 + (big || 1) * 0.2); const R = (a, b) => a + Math.random() * (b - a);
+                nsbN(0, 0.09, 11000, 6000, 0.6, 0.22 * v, 'highpass', 0, 0.35);                         // the first sharp "tsh" of the break
+                nsbN(0.005, 0.2, 9000, 4200, 1.4, 0.10 * v, 'bandpass', 0, 0.4);                        // glassy body of the crack
+                [2637, 3520, 4699, 6272].forEach((f, i) => nsbBell(i * 0.012, f * (1 + i * 0.01), (0.05 - i * 0.008) * v, 0.5 - i * 0.07, (i - 1.5) * 0.3));   // bright ringing partials
+                for (let i = 0; i < 64; i++) {                                                              // dense glittering shards, most of them in the first half second
+                    const at = 0.01 + Math.pow(Math.random(), 1.9) * 1.0, f = R(2600, 9800), pan = R(-1, 1), dur = R(0.05, 0.22);
+                    nsbT(at, f, f * R(0.92, 1.05), dur, R(0.008, 0.026) * v, 'sine', pan, 0.55, 0.001);
+                    if (i % 3 === 0) nsbN(at, 0.025, R(6500, 11000), 4000, 3, 0.03 * v, 'bandpass', pan, 0.4);   // the tick of each piece
                 }
-                [0, 1, 2, 3, 4, 5, 6].forEach((i) => nsbBell(0.28 + i * 0.075, 880 * NSB_PENTA[Math.min(5, i)] * (i > 5 ? 2 : 1), 0.028 * v, 0.9, -0.4 + i * 0.13));   // rising sparkle as the light drifts off
-                nsbT(0.18, 440, 1320, 0.9, 0.05 * v, 'triangle', 0, 0.8, 0.25);                        // airy lift
+                nsbN(0.06, 0.95, 3500, 13000, 0.8, 0.075 * v, 'bandpass', 0, 0.8);                      // a shimmer that lifts and thins out
+                nsbT(0.05, 1500, 5200, 0.6, 0.028 * v, 'sine', 0, 0.7, 0.05);                           // quick rising glint
+                [0, 1, 2, 3, 4, 5].forEach((i) => nsbBell(0.22 + i * 0.07, 1760 * NSB_PENTA[Math.min(5, i)], 0.02 * v, 0.9, -0.5 + i * 0.2));   // sparkle as the light drifts off
+                nsbT(0, 900, 300, 0.07, 0.05 * v, 'triangle', 0, 0.1, 0.002);                           // the tiniest pop of body so it is not just hiss
             },
             // the sound of your own skills: shaped by what the move is and which weapon the class carries
             skill(s) {
@@ -14658,12 +14660,13 @@ function kbModel(THREE, mk) {
         async function tnEnter(t) {
             if (AR.busy || !tnCanEnter(t)) return; TN.ret = { a: t.a, x: t.x + Math.sin(t.ang) * 4.4, z: t.z + Math.cos(t.ang) * 4.4, ang: t.ang, owner: t.name }; TN.slot = tnSlot(t.id); TN.inst = t.id;
             await arGo({ mode: 'zone', key: 'tent', at: { x: TN_CX, z: TN_CZ + 5.6 + TN.slot * TN_STEP, ry: Math.PI }, banner: [String(t.id === me.id ? 'YOUR TENT' : String(t.name).toUpperCase() + "'S TENT"), 'REST · COOK · RELAX'] });
+            tnTvAttach();
         }
         async function tnLeave() {
             if (AR.busy) return; const r = TN.ret || { a: 'forest', x: NU.hub.x + 4, z: NU.hub.z + 2, ang: 0 };
             if (r.a === 'forest') await arGo({ mode: 'forest', at: { x: r.x, z: r.z, ry: r.ang - Math.PI } });
             else await arGo({ mode: 'zone', key: r.a, at: { x: r.x, z: r.z, ry: r.ang } });
-            TN.ret = null; try { if (controls) controls.maxDistance = 18; } catch (e) { /* controls */ }
+            tnTvDetach(); TN.ret = null; try { if (controls) controls.maxDistance = 18; } catch (e) { /* controls */ }
         }
         async function tnSleep() {
             if (AR.busy || NF.dead) return; AR.busy = true;
@@ -14675,6 +14678,10 @@ function kbModel(THREE, mk) {
             AR.busy = false;
         }
         function tnCook() { try { if (typeof window.__cookOpen === 'function') { window.__cookOpen(); return; } } catch (e) { /* none */ } nuShowBanner('CAMP KITCHEN', 'THE COOKING GAME ARRIVES SOON'); }
+        function tnTvAttach() { try { const Z = ZN.zones.tent, C = Z && Z.inst && Z.inst[TN.slot]; if (!C || !C.site) return; clearLocal(); SCREEN_SITES.nuu = C.site; selectScreenSite('nuu'); applyScreen(); } catch (e) { console.warn('tent tv', e); } }
+        function tnTvDetach() { try { clearLocal(); SCREEN_SITES.nuu = null; applyScreen(); const sp = $('screen-panel'); if (sp) sp.classList.add('hidden'); } catch (e) { /* tv */ } }
+        function tnTvOpen() { tnTvAttach2(); try { openScreenPanel(); } catch (e) { console.warn('tv panel', e); } }
+        function tnTvAttach2() { if (SCREEN_SITES.nuu && SCREEN.group === SCREEN_SITES.nuu.group) return; tnTvAttach(); }
         function tnTvCycle() {
             const T = TN.tv; T.ch = (T.ch + 1) % 4; T.t = 0; try { nsbN(0, 0.12, 6000, 2500, 0.8, 0.04, 'highpass', 0.3, 0.1); nsbT(0, 1800, 1500, 0.06, 0.02, 'square', 0.3, 0.1, 0.002); } catch (e) { /* audio */ }
             nuShowBanner(T.ch ? 'CHANNEL ' + T.ch : 'TV OFF', ['', 'SNOW', 'TEST PATTERN', 'OASIS TV'][T.ch]);
@@ -14734,7 +14741,7 @@ function kbModel(THREE, mk) {
                 const rail = cyl(0.025, 0.025, 2.6, 0x333333, 6); rail.rotation.x = Math.PI / 2; rail.position.set(0.5, 2.0, 0); k.add(rail); for (let i = 0; i < 5; i++) { const u = box(0.04, 0.4, 0.06, 0x999999); u.position.set(0.5, 1.75, -1 + i * 0.5); k.add(u); } const blu = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.015, 6, 14), new THREE.MeshBasicMaterial({ color: 0x66aaff })); blu.rotation.x = Math.PI / 2; blu.position.set(0, 1.26, -0.8); k.add(blu); k.traverse((o) => { o.userData.noOutline = true; }); add(k, kx, 0, kz, 0); blockDisc(cx + kx, cz + kz - 1.1, 1.1); blockDisc(cx + kx, cz + kz + 0.2, 1.1); blockDisc(cx + kx, cz + kz + 1.4, 1.1); Z.kitchen = { x: cx + kx - 1.7, z: cz + kz + 0.2 };
                 const kl = new THREE.PointLight(0xffd9a0, 1.1, 8, 1.6); kl.position.set(cx + kx - 0.6, 2.1, cz + kz); G.add(kl); }
             // the portable '90s TV on a crate, with rabbit-ear antenna and a beanbag
-            { const tx = 4.9, tz = 2.6, tv = new THREE.Group(); const crate = box(1.3, 0.7, 1.1, 0x7a5532); crate.position.y = 0.35; const body = box(1.15, 0.9, 0.95, 0x2b2d36); body.position.y = 1.15; const face = box(1.0, 0.76, 0.06, 0x1c1d24); face.position.set(0, 1.15, 0.5); const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.58), new THREE.MeshBasicMaterial({ color: 0xffffff })); sc.position.set(-0.05, 1.19, 0.535); const c = document.createElement('canvas'); c.width = 128; c.height = 96; const t = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; sc.material.map = t; TN.tv.cv = c; TN.tv.cx = c.getContext('2d'); TN.tv.tex = t; for (const s of [[0.42, 1.0, 0xc8402e], [0.42, 1.14, 0x2e8a4c]]) { const kn = cyl(0.045, 0.045, 0.05, s[2], 8); kn.rotation.x = Math.PI / 2; kn.position.set(s[0] + 0.04, s[1], 0.55); tv.add(kn); } const an1 = cyl(0.012, 0.012, 0.9, 0xcfcfcf, 5); an1.position.set(-0.2, 1.95, -0.1); an1.rotation.z = 0.5; const an2 = cyl(0.012, 0.012, 0.9, 0xcfcfcf, 5); an2.position.set(0.2, 1.95, -0.1); an2.rotation.z = -0.5; const hb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6, 0, 6.3, 0, 1.6), tnMat(0x33353d)); hb.position.set(0, 1.62, -0.1); tv.add(crate, body, face, sc, an1, an2, hb); tv.traverse((o) => { o.userData.noOutline = true; }); add(tv, tx, 0, tz, -Math.PI / 2 - 0.25); tv.scale.setScalar(1.75); blockDisc(cx + tx, cz + tz - 0.6, 1.2); blockDisc(cx + tx, cz + tz + 0.6, 1.2); Z.tv = { x: cx + tx - 3.0, z: cz + tz };
+            { const tx = 4.9, tz = 2.6, tv = new THREE.Group(); const crate = box(1.3, 0.7, 1.1, 0x7a5532); crate.position.y = 0.35; const body = box(1.15, 0.9, 0.95, 0x2b2d36); body.position.y = 1.15; const face = box(1.0, 0.76, 0.06, 0x1c1d24); face.position.set(0, 1.15, 0.5); const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.58), new THREE.MeshBasicMaterial({ color: 0x070b0a })); sc.position.set(-0.05, 1.19, 0.535); if (!SCREEN.idleTex) { const ic = document.createElement('canvas'); ic.width = 256; ic.height = 144; SCREEN.idleCanvas = SCREEN.idleCanvas || ic; SCREEN.idleCtx = SCREEN.idleCtx || SCREEN.idleCanvas.getContext('2d'); SCREEN.idleTex = new THREE.CanvasTexture(SCREEN.idleCanvas); } const vw = 0.78, vh = 0.78 * 9 / 16; const idle = new THREE.Mesh(new THREE.PlaneGeometry(vw, vh), new THREE.MeshBasicMaterial({ map: SCREEN.idleTex, toneMapped: false })); idle.position.set(-0.05, 1.19, 0.545); const hole = new THREE.Mesh(new THREE.PlaneGeometry(vw, vh), new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0, blending: THREE.NoBlending, side: THREE.FrontSide, fog: false, toneMapped: false })); hole.position.set(-0.05, 1.19, 0.545); hole.visible = false; const tvParts = [body, face, sc, idle, hole]; for (const s of [[0.42, 1.0, 0xc8402e], [0.42, 1.14, 0x2e8a4c]]) { const kn = cyl(0.045, 0.045, 0.05, s[2], 8); kn.rotation.x = Math.PI / 2; kn.position.set(s[0] + 0.04, s[1], 0.55); tv.add(kn); } const an1 = cyl(0.012, 0.012, 0.9, 0xcfcfcf, 5); an1.position.set(-0.2, 1.95, -0.1); an1.rotation.z = 0.5; const an2 = cyl(0.012, 0.012, 0.9, 0xcfcfcf, 5); an2.position.set(0.2, 1.95, -0.1); an2.rotation.z = -0.5; const hb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6, 0, 6.3, 0, 1.6), tnMat(0x33353d)); hb.position.set(0, 1.62, -0.1); tv.add(crate, body, face, sc, idle, hole, an1, an2, hb); tv.traverse((o) => { o.userData.noOutline = true; }); add(tv, tx, 0, tz, -Math.PI / 2 - 0.25); tv.scale.setScalar(1.75); tv.updateMatrixWorld(true); G.updateMatrixWorld(true); { const wp = new THREE.Vector3(); idle.getWorldPosition(wp); Z.site = { x: wp.x, z: wp.z, y0: wp.y - vh * 1.75 / 2, w: vw * 1.75, h: vh * 1.75, ry: tv.rotation.y, near: 9, reach: 6, group: tv, hit: tvParts, edge: [], idleMesh: idle, holeMesh: hole }; } blockDisc(cx + tx, cz + tz - 0.6, 1.2); blockDisc(cx + tx, cz + tz + 0.6, 1.2); Z.tv = { x: cx + tx - 3.0, z: cz + tz };
                 const bb = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 8), tnMat(0x4a78c4)); bb.scale.set(1, 0.62, 1); add(bb, tx - 3.7, 0.38, tz + 1.4); blockDisc(cx + tx - 3.7, cz + tz + 1.4, 0.65); const bb2 = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8), tnMat(0xd0607a)); bb2.scale.set(1, 0.6, 1); add(bb2, tx - 3.6, 0.34, tz - 1.2); blockDisc(cx + tx - 3.6, cz + tz - 1.2, 0.6);
                 const tl = new THREE.PointLight(0x7fb4ff, 0, 9, 1.6); tl.position.set(cx + tx - 2.2, 1.9, cz + tz); G.add(tl); Z.tvL = tl; }
             // little extras: crates, a backpack, mugs, a shelf of books, string lights
@@ -14748,15 +14755,15 @@ function kbModel(THREE, mk) {
             // things to do
             const mk = (id, p, r, label, act) => NI.list.push({ id: id + slot, x: p.x, z: p.z + oz, r, label, act, cond: () => ZN.on && ZN.key === 'tent' && TN.slot === slot && !AR.busy });
             mk('tn-exit', { x: cx, z: cz + 6.9 }, 2.7, 'Leave the tent', () => tnLeave()); mk('tn-bed', Z.bed, 2.6, 'Sleep (restore HP & MP)', () => tnSleep()); mk('tn-cook', Z.kitchen, 2.4, 'Cook', () => tnCook());
-            mk('tn-tv', Z.tv, 2.6, 'TV: next channel', () => tnTvCycle()); mk('tn-fire', { x: cx - 2.6, z: cz + 1.5 }, 2.2, 'Sit by the campfire', () => { try { performEmote('sit'); } catch (e) { /* none */ } });
-            Z.inst = Z.inst || {}; Z.inst[slot] = { G, flames: Z.flames, fireL: Z.fireL, tvL: Z.tvL, bulbs: Z.bulbs, flick: Z.flick, tv: { cv: TN.tv.cv, cx: TN.tv.cx, tex: TN.tv.tex } }; Z.built = true; tentSelect(Z, slot); return Z;
+            mk('tn-tv', Z.tv, 2.6, 'Use the TV', () => tnTvOpen()); mk('tn-fire', { x: cx - 2.6, z: cz + 1.5 }, 2.2, 'Sit by the campfire', () => { try { performEmote('sit'); } catch (e) { /* none */ } });
+            Z.inst = Z.inst || {}; Z.inst[slot] = { G, flames: Z.flames, fireL: Z.fireL, tvL: Z.tvL, bulbs: Z.bulbs, flick: Z.flick, site: Z.site, tv: null }; Z.built = true; tentSelect(Z, slot); return Z;
         }
         function tentTick(dt, Z) {
             TN.t += dt; const t = TN.t, S = NU.skyCtx;
             if (Z.flames) for (const f of Z.flames) { const k = 0.85 + 0.25 * Math.sin(t * 9 + f.userData.ph) + 0.08 * Math.sin(t * 17 + f.userData.ph * 3); f.scale.set(0.9 + 0.1 * Math.sin(t * 11 + f.userData.ph), k, 0.9 + 0.1 * Math.cos(t * 12 + f.userData.ph)); f.position.y = f.userData.base * (0.9 + 0.1 * k); }
             if (Z.fireL) Z.fireL.intensity = 3.0 + 0.7 * Math.sin(t * 8.3) + 0.4 * Math.sin(t * 19.7);
             if (Z.flick) for (const f of Z.flick) f.sp.scale.setScalar(f.sc * (0.9 + 0.1 * Math.sin(t * 8 + f.ph) + 0.05 * Math.sin(t * 13 + f.ph * 2)));
-            if (Z.tvL) Z.tvL.intensity = TN.tv.ch ? 2.2 + 0.6 * Math.sin(t * 13) * (TN.tv.ch === 1 ? 1 : 0.3) : 0; tnTvDraw(dt); tnTvSound(dt, Z);
+            if (Z.tvL) Z.tvL.intensity = (SCREEN.holeMesh && SCREEN.holeMesh.visible) ? 2.4 + 0.5 * Math.sin(t * 11) * 0.3 : 0.55;
             if (Z.bulbs) { const im = Z.bulbs.im, c = new THREE.Color(); for (let i = 0; i < Z.bulbs.n; i++) { c.set(Z.bulbs.base[i]).multiplyScalar(0.65 + 0.35 * Math.sin(t * 2.2 + i * 1.7)); im.setColorAt(i, c); } if (im.instanceColor) im.instanceColor.needsUpdate = true; }
             if (S) { S.sun.intensity *= 0.18; S.hemi.intensity *= 0.55; if (S.amb) S.amb.intensity *= 1.2; S.sun.color.lerp(new THREE.Color(0xffe0b8), 0.7); }
             if (scene.fog) { scene.fog.color.set(0x2b2019); scene.fog.density = 0.004; if (scene.background && scene.background.isColor) scene.background.copy(scene.fog.color); }
@@ -23628,7 +23635,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             let fl = 0; for (const t of WXS.flashQ) { const a = now - t; if (a >= 0 && a < 0.22) fl = Math.max(fl, 1 - a / 0.22); } WX.flash = fl * (0.7 + 0.3 * Math.random());
             if (WXS.flashQ.length && now - WXS.flashQ[WXS.flashQ.length - 1] > 1) WXS.flashQ = [];
             // outdoors only: which maps show the weather, and whether you are under a roof
-            const outdoor = activeMap === 'city' || activeMap === 'plot' || activeMap === 'galleria' || activeMap === 'school' || activeMap === 'raimon' || activeMap === 'raimonN' || activeMap === 'raimonT' || activeMap === 'nuu';
+            let outdoor = activeMap === 'city' || activeMap === 'plot' || activeMap === 'galleria' || activeMap === 'school' || activeMap === 'raimon' || activeMap === 'raimonN' || activeMap === 'raimonT' || activeMap === 'nuu';
+            if (outdoor && activeMap === 'nuu') { try { if ((ZN.on && ZN.key === 'tent') || (typeof DG !== 'undefined' && DG.on)) outdoor = false; } catch (e) { /* none */ } }   // no weather inside a tent or a dungeon
             WXS.tick -= dt; if (WXS.tick <= 0 && g) { WXS.tick = 0.2; WXS.shelterT = outdoor ? wxShelterAt(g.position) : 0; }
             WX.shelter += ((activeMap === 'loft' ? (g && g.position.z < LOFT.Z0 - 0.3 ? 0.05 : 0.8) : WXS.shelterT || 0) - WX.shelter) * Math.min(1, dt * 3);       // the studio: dry inside, in the weather out on the deck
             if (activeMap === 'loft') SNOWU.uWx.value.set(WX.depth, WX.wet, LOFT.Z0 - 0.15, 0); else SNOWU.uWx.value.set(outdoor ? WX.depth : 0, outdoor ? WX.wet : 0, 1e5, 0);      // (in the studio only the patio, beyond the glass wall, gathers snow and gets wet)
