@@ -21647,11 +21647,15 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             try { const g = gearLoad(), out = []; for (const [gid, o] of Object.entries(g.own || {})) { let lv = 1; try { lv = gearProg(o.xp | 0).lv; } catch (e) { /* none */ } const by = Object.keys(g.worn || {}).filter((c) => g.worn[c] && g.worn[c][o.s] === gid); out.push({ id: 's:' + gid, k: 'shop', name: String(o.n || gid), size: 0, slot: o.s || 'weapon', gid, lv, by }); } return out; } catch (e) { return []; }
         }
         // sort the way the Final Fantasy bags do: arms, then armour from head down, accessories, clothes, avatars, pictures; A to Z inside each group
-        function invRank(it) { if (it.k === 'shop') { const i = INV_SLOT_ORDER.indexOf(it.slot); return i < 0 ? 5 : i; } if (it.k === 'gear') return 10; if (it.k === 'vrm') return 20; return 30; }
+        function invRank(it) { if (it.k === 'item') return 8; if (it.k === 'shop') { const i = INV_SLOT_ORDER.indexOf(it.slot); return i < 0 ? 5 : i; } if (it.k === 'gear') return 10; if (it.k === 'vrm') return 20; return 30; }
         function invCmp(a, b) { const ra = invRank(a), rb = invRank(b); if (ra !== rb) return ra - rb; if (a.k === 'gear' && b.k === 'gear') { const sa = String(a.slot), sb = String(b.slot); if (sa !== sb) return sa < sb ? -1 : 1; } return String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' }); }
+        function invItems() {   // consumables (stacked): shown in the bag with a count
+            const out = []; try { if (typeof TN !== 'undefined' && TN.n > 0) out.push({ id: 'i:tent', k: 'item', name: 'Tent', size: 0, qty: TN.n, ico: '⛺', desc: 'Pitch it in the field (B). Step inside to sleep and restore HP and MP, cook and watch TV. It packs itself away once everyone has left it. Buy more from a Camp Supplies tent.', use: 'Pitch tent' }); } catch (e) { /* none */ }
+            return out;
+        }
         function invList() {
             const gear = (typeof eqItems !== 'undefined' ? eqItems : []).map((g) => ({ id: 'g:' + g.id, k: 'gear', name: g.name, size: g.size || 0, slot: g.slot, gid: g.id }));
-            const all = INV.files.map((f) => ({ ...f })).concat(gear, invShopGear()); if (INV.sorted) all.sort(invCmp); return all;
+            const all = INV.files.map((f) => ({ ...f })).concat(gear, invShopGear(), invItems()); if (INV.sorted) all.sort(invCmp); return all;
         }
         function invAutoSort() { INV.sorted = true; try { localStorage.setItem('oasis.inv.sorted', '1'); } catch (e) { /* storage */ } INV.files.sort(invCmp); invSaveIndex(); renderInv(); try { sysChat('Inventory sorted: weapons, armour, accessories, clothes, avatars, pictures.'); } catch (e) { /* chat */ } }
         const invFind = (id) => invList().find((x) => x.id === id);
@@ -21691,8 +21695,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const b = await invBuffer(it); if (!b) return null;
             const u = URL.createObjectURL(new Blob([b], { type: it.mime || 'image/png' })); INV.thumbs.set(it.id, u); return u;
         }
-        const invIcon = (it) => it.k === 'shop' ? (INV_SLOT_ICO[it.slot] || '🎽') : it.k === 'vrm' ? '🧍' : it.k === 'image' ? '🖼️' : ((eqSlot(it.slot) || {}).ico || '🎽');
-        const invKindLabel = (it) => it.k === 'shop' ? 'Shop gear · ' + (INV_SLOT_NAME[it.slot] || 'item') + ' · Lv ' + (it.lv || 1) : it.k === 'vrm' ? 'VRM model' : it.k === 'image' ? 'Image' : 'Gear · ' + ((eqSlot(it.slot) || {}).n || 'item');
+        const invIcon = (it) => it.k === 'item' ? it.ico : it.k === 'shop' ? (INV_SLOT_ICO[it.slot] || '🎽') : it.k === 'vrm' ? '🧍' : it.k === 'image' ? '🖼️' : ((eqSlot(it.slot) || {}).ico || '🎽');
+        const invKindLabel = (it) => it.k === 'item' ? 'Item · x' + it.qty : it.k === 'shop' ? 'Shop gear · ' + (INV_SLOT_NAME[it.slot] || 'item') + ' · Lv ' + (it.lv || 1) : it.k === 'vrm' ? 'VRM model' : it.k === 'image' ? 'Image' : 'Gear · ' + ((eqSlot(it.slot) || {}).n || 'item');
         const iel = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
         function invSlotEl(it, onClick, extra) {
             const b = iel('button', 'iv-slot' + (it ? ' full' : '') + (extra || '')); b.type = 'button';
@@ -21700,7 +21704,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 b.title = it.name + ' · ' + invKindLabel(it);
                 b.append(iel('span', '', invIcon(it)));
                 if (it.k === 'image') invThumb(it).then((u) => { if (u && b.isConnected) { const im = document.createElement('img'); im.alt = ''; im.src = u; b.prepend(im); b.firstChild.nextSibling && (b.firstChild.nextSibling.style.display = 'none'); } });
-                b.append(iel('i', '', it.k === 'shop' ? 'SHOP' : it.k === 'gear' ? 'GEAR' : it.k === 'vrm' ? 'VRM' : 'IMG'));
+                b.append(iel('i', '', it.k === 'item' ? '×' + it.qty : it.k === 'shop' ? 'SHOP' : it.k === 'gear' ? 'GEAR' : it.k === 'vrm' ? 'VRM' : 'IMG'));
             }
             if (onClick) b.addEventListener('click', onClick);
             return b;
@@ -21801,6 +21805,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (it.k === 'image') invThumb(it).then((u) => { if (u && det.isConnected && INV.sel === it.id) { const im = document.createElement('img'); im.className = 'big'; im.alt = it.name; im.src = u; det.insertBefore(im, bar); } });
             const bar = iel('div', 'iv-bar'); bar.style.marginTop = '7px';
             const mk = (txt, cls, fn) => { const b = iel('button', 'iv-btn ' + (cls || ''), txt); b.type = 'button'; b.addEventListener('click', fn); bar.append(b); return b; };
+            if (it.k === 'item') { const w = iel('small', ''); w.style.display = 'block'; w.style.margin = '4px 0'; w.textContent = it.desc; det.append(w); mk(it.use || 'Use', 'gold', () => { closeInv(); if (it.id === 'i:tent') { if (activeMap !== 'nuu') { sysChat('Tents can only be pitched in Adventia.'); return; } tnPitch(); } }); det.append(bar); return; }
             if (it.k === 'shop') { if (it.by && it.by.length) { const w = iel('small', ''); w.textContent = 'Equipped by: ' + it.by.join(', '); det.append(w); } mk('Open Equipment Shop', 'gold', () => { closeInv(); eqpOpen(); }); det.append(bar); return; }
             mk('⬇ Download', 'gold', () => invDownload(it));
             if (it.k === 'vrm') mk('Use as avatar', '', async () => { const b = await invBuffer(it); if (b) { closeInv(); handleFile(new File([b], it.name + '.vrm')); } });
@@ -21858,7 +21863,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function tradeManifest(id) { const it = invFind(id); return it ? { iid: it.id, k: it.k, name: it.name, size: it.size, slot: it.slot } : null; }
         function tradeSendOffer() { const s = TR.s; s.myRev++; tradeReset(); tsend({ op: 'offer', rev: s.myRev, items: s.mine.map(tradeManifest).filter(Boolean) }); renderTrade(); }
         function tradeAdd(id) {
-            const s = TR.s; if (!s || s.phase !== 'open' || s.lockMe || s.lockThem) return; if (String(id).startsWith('s:')) { sysChat('Shop gear cannot be traded.'); return; }
+            const s = TR.s; if (!s || s.phase !== 'open' || s.lockMe || s.lockThem) return; if (String(id).startsWith('s:') || String(id).startsWith('i:')) { sysChat('That item cannot be traded.'); return; }
             if (s.mine.includes(id) || s.mine.length >= INV.slots) return;
             const it = invFind(id); if (!it) return;
             if (it.size > INV.maxVrm) { sysChat('That item is too large to trade.'); return; }
