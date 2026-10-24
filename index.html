@@ -13009,7 +13009,7 @@ function kbModel(THREE, mk) {
         function nuFlatNear(x, z) { for (let r = 0; r < 70; r += 3) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (Math.abs(px) < 235 && Math.abs(pz) < 235 && !nuBlkR(px, pz) && !nuBlkR(px + 3, pz) && !nuBlkR(px - 3, pz) && !nuBlkR(px, pz + 3) && !nuBlkR(px, pz - 3)) return { x: px, z: pz }; } return { x, z }; }
         /* ---- player (Adventia level), stored on this device ---- */
         const NFK = 'oasis.nf.v1', NF_MAX = 30;
-        const NF = { fall: new Map(), itemT: 0, lv: 1, xp: 0, att: {}, done: [], hunt: {}, cls: 'hero', buffT: 0, gRed: 0.5, hot: null, pet: null, hp: 100, mp: 60, hpMax: 100, mpMax: 60, lb: 0, tgt: null, gcd: 0, auto: 0, cds: {}, cast: null, guard: 0, comb: 0, dead: false, ui: null, fx: [], tels: [], tele: null, regen: 0, lastHit: 0 };
+        const NF = { fall: new Map(), glow: null, itemT: 0, lv: 1, xp: 0, att: {}, done: [], hunt: {}, cls: 'hero', buffT: 0, gRed: 0.5, hot: null, pet: null, hp: 100, mp: 60, hpMax: 100, mpMax: 60, lb: 0, tgt: null, gcd: 0, auto: 0, cds: {}, cast: null, guard: 0, comb: 0, dead: false, ui: null, fx: [], tels: [], tele: null, regen: 0, lastHit: 0 };
         const nfNeed = (lv) => Math.round(45 * lv * Math.pow(1.17, lv - 1));
         function nfStats() { const C = NF_CLASSES[NF.cls] || NF_CLASSES.hero; NF.hpMax = Math.round((150 + 34 * (NF.lv - 1)) * C.hp); NF.mpMax = Math.round((60 + 7 * (NF.lv - 1)) * C.mp); NF.atk = (12 + 3.4 * NF.lv) * C.atk; NF.mag = (12 + 3.7 * NF.lv) * C.mag; }
         function nfLoad() { try { const o = JSON.parse(localStorage.getItem(NFK) || '{}'); NF.fl = o.fl | 0; NF.lv = Math.max(1, Math.min(NF_MAX, o.lv | 0 || 1)); NF.xp = o.xp | 0; NF.att = o.att && typeof o.att === 'object' ? o.att : {}; NF.done = Array.isArray(o.done) ? o.done.slice(-30) : []; NF.hunt = o.hunt && typeof o.hunt === 'object' ? o.hunt : {}; NF.cls = NF_CLASSES[o.cls] && NF.lv >= NF_CLASSES[o.cls].lv ? o.cls : 'hero'; NF.last = typeof o.last === 'string' ? o.last.slice(0, 24) : ''; } catch (e) { /* storage */ } NF.att.hub = 1; nfStats(); NF.hp = NF.hpMax; NF.mp = NF.mpMax; }
@@ -13306,7 +13306,30 @@ function kbModel(THREE, mk) {
             if (moving && A.playUpper && A.playUpper(nm, rate)) return;
             A.playEmote(nm); A.emoteRate = rate;
         }
-        function nfAnim(s) { try { if (nfCls().w === 'sword' && NF.cls === 'keyblade') { kbAnim(s); return; } if (!/^(hit|cone|aoe|line|dash|lb|steal)$/.test(s.k)) return; const C = nfCls(); if (C.w !== 'sword' && C.w !== 'fighter') return; const n = 1 + ((Math.random() * 3) | 0), nm = C.w === 'fighter' && HERO_ACTS['f_hatk' + n] ? 'f_hatk' + n : 'hatk' + n; if (HERO_ACTS[nm] && localActor && localActor.playEmote) { localActor.playEmote(nm); localActor.emoteRate = 1.4; } } catch (e) { /* no clip */ } }      // Adventia swings run about 40% quicker so the combat feels snappy
+        /* ---- sword skills: the blade lights up with the skill's colour, SAO style (a bright core and a soft sheath that flare in and fade out) ---- */
+        const NF_GLOW = { h1: 0x8fe8ff, h2: 0xff5a4a, h3: 0x6fb4ff, h4: 0x8cffd9, h5: 0x7dff9a, h9: 0xbfeaff, h10: 0xc78bff, h11: 0xffd24a, h12: 0xff3c8a, x1: 0xfff1b8 };
+        function nfWeaponRoot(A) {
+            try { if (A.cswVis && A.cswVis.at === 'hand' && A.cswVis.objs[0] && A.cswVis.objs[0].parent) return A.cswVis.objs[0]; if (A.kbVis && A.kbVis.on) return A.kbVis.m; if (A.hcVis && A.hcVis.at === 'hand' && A.hcVis.sword) return A.hcVis.sword; } catch (e) { /* none */ } return null;
+        }
+        function nfGlowClear() { const G = NF.glow; if (!G) return; try { G.g.removeFromParent(); G.g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); } catch (e) { /* gone */ } NF.glow = null; }
+        function nfBladeGlow(s) {
+            const A = localActor, root = A && nfWeaponRoot(A); if (!root) return; nfGlowClear();
+            const col = new THREE.Color(NF_GLOW[s.id] || (s.fx === 'limit' ? 0xffd24a : s.fx === 'ring' ? 0x8cffd9 : 0x8fe8ff)), big = s.fx === 'limit' || s.fx === 'ring' || s.k === 'lb' || s.k === 'aoe';
+            root.updateWorldMatrix(true, true); const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), bb = new THREE.Box3();
+            root.traverse((o) => { if (o.isMesh && o.visible && o.geometry && !o.userData.glowAura) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); bb.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld).applyMatrix4(inv)); } });
+            if (bb.isEmpty() || !(bb.max.y > 0.05)) bb.set(new THREE.Vector3(-0.03, -0.1, -0.02), new THREE.Vector3(0.03, 1.0, 0.02));
+            const top = bb.max.y, y0 = Math.max(0, top * 0.2), L = Math.max(0.2, top - y0), r = Math.max(0.025, Math.min(0.1, Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * 0.8)), g = new THREE.Group(); g.userData.glowAura = true;
+            const mk = (rad, op, c) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.7, rad, L * 1.06, 14, 1, true), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })); m.position.set((bb.min.x + bb.max.x) / 2, y0 + L / 2, (bb.min.z + bb.max.z) / 2); m.userData.glowAura = true; m.userData.noOutline = true; m.userData.op = op; g.add(m); return m; };
+            mk(r * 2.6, 0.35, col); mk(r * 1.5, 0.6, col.clone().lerp(new THREE.Color(0xffffff), 0.45)); mk(r * 0.7, 0.95, new THREE.Color(0xffffff));
+            const tip = new THREE.Mesh(new THREE.SphereGeometry(r * 2.4, 12, 8), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); tip.position.set((bb.min.x + bb.max.x) / 2, top, (bb.min.z + bb.max.z) / 2); tip.userData.glowAura = true; tip.userData.noOutline = true; tip.userData.op = 0.7; g.add(tip);
+            root.add(g); NF.glow = { g, t: 0, dur: big ? 1.0 : 0.6, root, big };
+        }
+        function nfGlowTick(dt) {
+            const G = NF.glow; if (!G) return; G.t += dt; const k = G.t / G.dur; if (k >= 1 || !G.root.parent) { nfGlowClear(); return; }
+            const env = k < 0.12 ? k / 0.12 : k < 0.55 ? 1 : Math.max(0, 1 - (k - 0.55) / 0.45), pulse = 1 + Math.sin(G.t * 38) * 0.08 + (G.big ? 0.08 : 0);
+            G.g.children.forEach((o) => { o.material.opacity = (o.userData.op || 0.5) * env; }); G.g.scale.set(pulse * (1 + (1 - env) * 0.35), 1, pulse * (1 + (1 - env) * 0.35));
+        }
+        function nfAnim(s) { try { if (s && (nfCls().w === 'sword') && /^(hit|cone|aoe|line|dash|lb)$/.test(s.k)) nfBladeGlow(s); } catch (e) { /* glow is cosmetic */ } try { if (nfCls().w === 'sword' && NF.cls === 'keyblade') { kbAnim(s); return; } if (!/^(hit|cone|aoe|line|dash|lb|steal)$/.test(s.k)) return; const C = nfCls(); if (C.w !== 'sword' && C.w !== 'fighter') return; const n = 1 + ((Math.random() * 3) | 0), nm = C.w === 'fighter' && HERO_ACTS['f_hatk' + n] ? 'f_hatk' + n : 'hatk' + n; if (HERO_ACTS[nm] && localActor && localActor.playEmote) { localActor.playEmote(nm); localActor.emoteRate = 1.4; } } catch (e) { /* no clip */ } }      // Adventia swings run about 40% quicker so the combat feels snappy
         function nfDot(m, d, mag) { m.dots = (m.dots || []).filter((q) => q.id !== d.id); m.dots.push({ id: d.id, pot: d.pot, left: d.sec, tick: 1.5, mag: !!mag }); nfPop(new THREE.Vector3(m.x, m.node.position.y + 2.4, m.z), 'DoT', '#c78bff'); }
         function nfPetStart(kind, sec, pot) {
             nfPetClear(); const col = { ifrit: 0xff6a2a, shiva: 0x7fe0ff, ramuh: 0xffe44a, bahamut: 0xb06aff }[kind] || 0xffffff, orb = new THREE.Mesh(new THREE.IcosahedronGeometry(kind === 'bahamut' ? 0.9 : 0.55, 1), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); orb.userData.noOutline = true; NU.group.add(orb); NF.pet = { kind, left: sec, t: 0, pot, orb, tick: 1.2 };
@@ -13803,7 +13826,7 @@ function kbModel(THREE, mk) {
             NF.tele = { c, t0: performance.now() / 1000 }; NF.cast = { n: 'Teleport: ' + c.name, t0: performance.now() / 1000, dur: 3, s: { cast: 3 }, x: nfPos().x, z: nfPos().z, go: async () => { NF.tele = null; if (cost) { try { window.oasisGil.add(-cost, true); } catch (e) { /* gil */ } } NF.last = c.id; nfSave(); if (c.zone) { await arGo({ mode: 'zone', key: c.zone, banner: [c.name.toUpperCase(), 'AETHER TELEPORT'] }); return; } await nuFade(true, 500); nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.4, 1, c.z); NU.grace = 4; await nuFade(false, 500); nuShowBanner(c.name.toUpperCase(), 'AETHER TELEPORT'); } };
         }
         function nfCastTick(dt) {
-            nfRollTick(dt); try { nfFallTick(dt); } catch (e) { /* crystals */ } if (NF.gcd > 0) NF.gcd = Math.max(0, NF.gcd - dt); if (NF.guard > 0) NF.guard -= dt; if (NF.buffT > 0) NF.buffT -= dt; if (NF.comb > 0) NF.comb -= dt; const p = nfPos();
+            nfRollTick(dt); try { nfFallTick(dt); nfGlowTick(dt); } catch (e) { /* crystals */ } if (NF.gcd > 0) NF.gcd = Math.max(0, NF.gcd - dt); if (NF.guard > 0) NF.guard -= dt; if (NF.buffT > 0) NF.buffT -= dt; if (NF.comb > 0) NF.comb -= dt; const p = nfPos();
             if (NF.hot) { NF.hot.left -= dt; NF.hot.tick -= dt; if (NF.hot.tick <= 0) { NF.hot.tick = 3; const h = Math.round(NF.hpMax * NF.hot.pot + NF.mag * 0.3); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(p.clone().setY(p.y + 2.2), '+' + h, '#7dffa0'); } if (NF.hot.left <= 0) NF.hot = null; }
             for (const m of nfMobs()) if (m.dots && m.dots.length) for (const d of m.dots.slice()) { d.left -= dt; d.tick -= dt; if (d.tick <= 0) { d.tick = 3; nfDealDmg(m, d.pot, d.mag); } if (d.left <= 0 || m.dead) m.dots.splice(m.dots.indexOf(d), 1); }
             nfPetTick(dt);
@@ -13862,7 +13885,7 @@ function kbModel(THREE, mk) {
         function nuHookInput() {
             if (NU.hooked) return; NU.hooked = true; nfLoad(); nfApplyClass(NF.cls, true); window.addEventListener('keydown', nuFieldInput, true); let dn = null;
             const cv = renderer.domElement; cv.addEventListener('pointerdown', (e) => { dn = { x: e.clientX, y: e.clientY }; }, true);
-            cv.addEventListener('pointerup', (e) => { if (!dn || activeMap !== 'nuu' || !NU.ready) return; const mv = Math.hypot(e.clientX - dn.x, e.clientY - dn.y); dn = null; if (mv > 6) return; const m = nfPick(e.clientX, e.clientY); if (m) nfTarget(m); }, true);
+            cv.addEventListener('pointerup', (e) => { if (!dn || activeMap !== 'nuu' || !NU.ready) return; const mv = Math.hypot(e.clientX - dn.x, e.clientY - dn.y); dn = null; if (mv > 6) return; const m = nfPick(e.clientX, e.clientY); if (m) nfTarget(m); else { nfTarget(null); NF.lockOn = false; try { setLookTarget(null, false); setSelfTarget(false); } catch (x) { /* none */ } } }, true);      // a click on open ground (not on a menu) drops every target
         }
         /* ---- grass and flowers: the original map's own tufts (nuu/grass.glb), instanced and re-scattered around the player as they walk ---- */
         const NU_GR = { R: 42, CELL: 1.05, ready: false, loading: false, last: null, parts: [], uT: { value: 0 } };
@@ -14430,8 +14453,8 @@ function kbModel(THREE, mk) {
             const door = dgPortalMesh('◆ SHADOWVEIL DEPTHS', 0xb070ff, 'forest'); door.scale.setScalar(1.0); G.add(door); const gm = nuSoftRamp();
             // a landmark you can spot from across the forest: a tall violet light beam, a pulsing ground ring and a glowing doorway
             const fxm = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.6, 140, 16, 1, true), fxm(0xb070ff, 0.32)); beam.position.set(0, 70, 1.5); beam.frustumCulled = false; beam.material.depthTest = false; beam.renderOrder = 4; beam.userData.noOutline = true; G.add(beam);
-            const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.8, 140, 10, 1, true), fxm(0xe8d0ff, 0.5)); beam2.position.set(0, 70, 1.5); beam2.frustumCulled = false; beam2.material.depthTest = false; beam2.renderOrder = 4; beam2.userData.noOutline = true; G.add(beam2);
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.6, 140, 16, 1, true), fxm(0xb070ff, 0.32)); beam.position.set(0, 70, 1.5); beam.frustumCulled = false; beam.material.depthTest = true; beam.renderOrder = 4; beam.userData.noOutline = true; G.add(beam);
+            const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.8, 140, 10, 1, true), fxm(0xe8d0ff, 0.5)); beam2.position.set(0, 70, 1.5); beam2.frustumCulled = false; beam2.material.depthTest = true; beam2.renderOrder = 4; beam2.userData.noOutline = true; G.add(beam2);
             const ring = new THREE.Mesh(new THREE.RingGeometry(3.4, 4.1, 40), fxm(0xb070ff, 0.6)); ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.12, 3.6); ring.userData.noOutline = true; G.add(ring);
             const glow = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x8a3cff, 0.35)); glow.position.set(0, 3.9, 0.9); glow.userData.noOutline = true; glow.visible = false; G.add(glow);
             door.userData.fx = { beam, beam2, ring, glow };
@@ -15005,7 +15028,7 @@ function kbModel(THREE, mk) {
             // the dungeon door, deep in the snow at the far end, with a cyan light beam
             const gx = Z.gates[1].x, gz = Z.gates[1].z, y = znH(gx, gz), door = dgPortalMesh('◆ CARVERNIA CAVERNS', 0x7fe6ff, 'ice'), w = new THREE.Group(); door.scale.setScalar(1.0); w.position.set(gx, y, gz); w.rotation.y = Math.PI; w.add(door);
             const fxm = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.6, 140, 16, 1, true), fxm(0x7fe6ff, 0.3)); beam.position.set(0, 70, 1.5); beam.frustumCulled = false; beam.material.depthTest = false; beam.renderOrder = 4; beam.userData.noOutline = true; w.add(beam);
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.6, 140, 16, 1, true), fxm(0x7fe6ff, 0.3)); beam.position.set(0, 70, 1.5); beam.frustumCulled = false; beam.material.depthTest = true; beam.renderOrder = 4; beam.userData.noOutline = true; w.add(beam);
             const ring = new THREE.Mesh(new THREE.RingGeometry(3.4, 4.1, 40), fxm(0x7fe6ff, 0.6)); ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.12, 3.6); ring.userData.noOutline = true; w.add(ring); const gl = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x5ab8ff, 0.3)); gl.position.set(0, 3.9, 0.9); gl.userData.noOutline = true; gl.visible = false; w.add(gl);
             G.add(w); Z.door = { mesh: door, fx: { beam, ring, gl } };
             blockDisc(gx, gz + 4.5, 6.5); blockDisc(gx + 5.6, gz + 2.2, 2.4); blockDisc(gx - 5.6, gz + 2.2, 2.4);
@@ -20783,8 +20806,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         });
         PAD_ACTS.estop = ['\uD83E\uDDCD', 'Stand up', () => { try { localActor.playEmote('stand'); net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } }];
         const PAD_SETS_DEF = [
-            { name: 'Adventia', L: ['nfm_8', 'nfm_9', 'nfm_10', 'nfm_11', 'nf_target', 'nf_use', 'nf_aether', 'nf_class'], R: ['nfm_0', 'nfm_1', 'nfm_2', 'nfm_3', 'nfm_4', 'nfm_5', 'nfm_6', 'nfm_7'] },      // hold R2 + the face buttons / D-pad for your attacks, L2 for the rest
-            { name: 'Adventia Items', L: ['nf_potion', 'nf_hipotion', 'nf_ether', 'nf_elixir', 'nf_phoenix', 'nf_roll', 'nf_guard', 'nf_untarget'], R: ['nfm_0', 'nfm_1', 'nfm_2', 'nfm_3', 'nfm_4', 'nfm_5', 'nfm_6', 'nfm_7'] },
+            { name: 'Adventia', L: ['nfm_8', 'nfm_9', 'nfm_10', 'nfm_11', 'nf_target', 'nf_use', 'nf_aether', 'nf_class'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },      // hold R2: Y / △ = Fast Blade, B / ○ = Rending Slash, A / ✕ = Cross Cut, X / □ = Spin Slash; the D-pad has the next four. Hold + the face buttons / D-pad for your attacks, L2 for the rest
+            { name: 'Adventia Items', L: ['nf_potion', 'nf_hipotion', 'nf_ether', 'nf_elixir', 'nf_phoenix', 'nf_roll', 'nf_guard', 'nf_untarget'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },
             { name: 'Emotes 1', L: ['e_cheer', 'e_sit', 'e_bboy', 'e_rumba', 'e_twerk', 'e_hiphop', 'e_gangnam', 'e_slide'], R: ['e_snake', 'e_show', 'e_greet', 'e_peace', 'e_shoot', 'e_spin', 'e_modelpose', 'e_squat'] },
             { name: 'Emotes 2', L: ['e_stand1', 'e_stand2', 'e_stand3', 'e_sitm1', 'e_sitm2', 'e_layf1', 'e_layf2', 'e_laym1'], R: ['e_laym2', 'estop', 'emotes', 'cheer', 'selft', 'clear', 'chat', 'games'] },
             { name: 'Social', L: ['cheer', 'sit', 'selft', 'clear', 'emotes', 'oboy', 'board', 'boardc'], R: ['chat', 'party', 'tv', 'strafe', 'equip', 'inv', 'lobbies', 'weather'] },
@@ -20967,14 +20990,15 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             padMove.x = mx; padMove.z = mz;
             PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = zoomHold ? 0 : ry; PAD.zoom = zoomHold ? ry : 0;
             if (PAD.sprint) padMove.run = true;
-            if (activeMap === 'nuu') { if (b[5] && b[1]) PAD.r1Used = true; if (hit(5)) PAD.r1Used = false; }
-            if ((activeMap === 'nuu' ? (PAD.prev[5] && !b[5] && !PAD.r1Used) : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
+            if (activeMap === 'nuu' && hit(5) && NU.ready && nfAdv().mode !== 'aim' && !NF.dead && !NF.cast) { PAD.auto = false; nfRoll(); }      // Adventia: R1 is the dash
+            if ((activeMap === 'nuu' ? false : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
             const tagMode = activeMap === 'tag' && tgMine();      // laser tag: the triggers are weapons, not hotbars
             const gunHb = gnMode() && b[5] && !b[4];       // Gunner: hold RB for the emote hotbar (LT aims, RT fires); L3 flips left / right bar, R3 changes set
             const ngOn = activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim', ngHb = ngOn && b[5] && !b[4];      // Adventia Gunner: L2 aims, R2 fires, hold RB for the cross hotbar
             if (ngOn) { NG.adsP = !ngHb && !!b[6]; NG.fireP = !ngHb && !!b[7]; } else { NG.adsP = false; NG.fireP = false; }
             const held = gunHb ? (GN.hbR ? 'R' : 'L') : ngHb ? (NG.hbR ? 'R' : 'L') : (tagMode || hcPadOn() || ngOn) ? '' : b[6] && !b[7] ? 'L' : b[7] && !b[6] ? 'R' : '';
             if (held) {
+                if (activeMap === 'nuu' && hit(11)) { PAD.set = (PAD.set + 1) % PAD_SETS.length; PAD.drawKey = ''; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }      // hold L2 / R2 and press R3 to flip the hotbar set
                 for (let k = 0; k < 8; k++) if (hit(PAD_SLOT_BTN[k])) padSlotRun(held, k);
                 if (ngHb) { if (hit(10)) NG.hbR = !NG.hbR; if (hit(11)) { PAD.set = (PAD.set + 1) % PAD_SETS.length; PAD.drawKey = ''; padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); } }
                 if (gunHb) { HC.fireP = false; GN.adsP = false; if (hit(10)) GN.hbR = !GN.hbR; if (hit(11)) { PAD.set = (PAD.set + 1) % PAD_SETS.length; PAD.drawKey = ''; padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); } }
@@ -20992,7 +21016,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 }
                 const nfDn = activeMap === 'nuu' && NF.dead; if (nfDn && !grace) { if (hit(0)) nfDownAct('phoenix'); if (hit(2)) nfDownAct('return'); }
                 if (hit(0) && !grace && !nfDn) { if (activeMap === 'btl') { /* the battle reads the pad itself */ } else if (activeMap === 'bowl') bwPadAct(); else if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (activeMap === 'nuu' && nfPadUse()) { /* chest / crystal */ } else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
-                if (hit(1) && !grace) { if (activeMap === 'diner' && KC.hold) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (activeMap === 'nuu' && NU.ready && b[5] && !NF.cast) { PAD.auto = false; nfRoll(); } else if (activeMap === 'nuu' && NU.ready && (NF.tgt || localActor.lookId || SELF.on)) { NF.tgt = null; NF.lockOn = false; padCancelAll(); try { padToast('Target cleared'); } catch (e) { /* toast */ } } else if (!padCancelAll()) PAD.auto = false; }     // B: cancel / untarget (Adventia: R1 + B is the dash) (Kitchen Clash: drop the plate)
+                if (hit(1) && !grace) { if (activeMap === 'diner' && KC.hold) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (activeMap === 'nuu' && NU.ready && (NF.tgt || localActor.lookId || SELF.on || PAD.lockId)) { NF.tgt = null; NF.lockOn = false; padCancelAll(); try { setLookTarget(null, false); setSelfTarget(false); padToast('Target cleared'); } catch (e) { /* toast */ } } else if (!padCancelAll()) PAD.auto = false; }     // B: cancel / untarget (Adventia: R1 is the dash) (Kitchen Clash: drop the plate)
                 if (hit(2) && !grace && !nfDn) { if (activeMap === 'nuu' && nfPadUse()) { /* X: open chest */ } else if (mag > 0.12) tapSprint(); else if (activeMap === 'diner') { /* no map button while cooking */ } else if (localActor.lookId && peers.has(localActor.lookId)) exmMenuOpen(localActor.lookId); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y: jump
             }
@@ -21944,6 +21968,10 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             mk('Auto-save trades: ' + (INVDIR.auto ? 'on' : 'off'), () => { INVDIR.auto = !INVDIR.auto; store.put('inv:dirauto', INVDIR.auto).catch(() => {}); renderDirInfo(); });
         }
         let invDelArm = null;
+        function invGearWear(it, cid, wear) {
+            try { const g = gearLoad(); g.worn[cid] = g.worn[cid] || {}; if (wear) g.worn[cid][it.slot] = it.gid; else if (g.worn[cid][it.slot] === it.gid) delete g.worn[cid][it.slot]; localStorage.setItem(GEAR_KEY, JSON.stringify(g)); try { window.oasisGear.changed(); } catch (e) { /* not in a battle */ } try { nfStats(); } catch (e) { /* Adventia not ready */ } sysChat((wear ? 'Equipped ' : 'Took off ') + it.name + (wear ? ' on ' : ' from ') + cid[0].toUpperCase() + cid.slice(1) + '.'); } catch (e) { /* storage */ }
+            renderInv();
+        }
         function renderInv() {
             if (!invOpen()) return;
             renderDirInfo();
@@ -21962,7 +21990,15 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const bar = iel('div', 'iv-bar'); bar.style.marginTop = '7px';
             const mk = (txt, cls, fn) => { const b = iel('button', 'iv-btn ' + (cls || ''), txt); b.type = 'button'; b.addEventListener('click', fn); bar.append(b); return b; };
             if (it.k === 'item') { const w = iel('small', ''); w.style.display = 'block'; w.style.margin = '4px 0'; w.textContent = it.desc; det.append(w); mk(it.use || 'Use', 'gold', () => { closeInv(); if (it.id === 'i:tent') { if (activeMap !== 'nuu') { sysChat('Tents can only be pitched in Adventia.'); return; } tnPitch(); } }); det.append(bar); return; }
-            if (it.k === 'shop') { if (it.by && it.by.length) { const w = iel('small', ''); w.textContent = 'Equipped by: ' + it.by.join(', '); det.append(w); } mk('Open Equipment Shop', 'gold', () => { closeInv(); eqpOpen(); }); det.append(bar); return; }
+            if (it.k === 'shop') {
+                if (it.by && it.by.length) { const w = iel('small', ''); w.textContent = 'Equipped by: ' + it.by.join(', '); det.append(w); }
+                if (!String(it.gid).startsWith('csw-')) {      // wear or take off a piece for any class right here (weapons only fit the class they were made for)
+                    if (!BTC.cat) btcCatalog().then(() => { if (invOpen() && INV.sel === it.id) renderInv(); }).catch(() => { /* offline */ });
+                    const ci = BTC.cat && BTC.cat.find((x) => x.id === it.gid), wc = it.slot !== 'weapon' ? 'any' : ci ? ci.cls : null;
+                    if (wc) for (const [cid, cn] of [['hero', 'Hero'], ['gunner', 'Gunner'], ['fighter', 'Fighter']]) { if (wc !== 'any' && wc !== cid) continue; const on = (it.by || []).includes(cid); mk((on ? 'Take off · ' : 'Equip · ') + cn, on ? '' : 'gold', () => invGearWear(it, cid, !on)); }
+                }
+                mk('Open Equipment Shop', '', () => { closeInv(); eqpOpen(); }); det.append(bar); return;
+            }
             mk('⬇ Download', 'gold', () => invDownload(it));
             if (it.k === 'vrm') mk('Use as avatar', '', async () => { const b = await invBuffer(it); if (b) { closeInv(); handleFile(new File([b], it.name + '.vrm')); } });
             if (it.k === 'gear') mk('Open Equipment', '', () => { closeInv(); openEquip(); });
