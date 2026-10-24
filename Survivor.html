@@ -3266,7 +3266,7 @@ async function avLoad(buffer, name) {
     const boneFor = (n) => vrm.humanoid.getNormalizedBoneNode(n) || vrm.humanoid.getNormalizedBoneNode(n.replace('Pinky', 'Little')); const D = acData(); let names = [];
     if (D) { const ref = (D.male && D.male.idle) || D.gp.gp_idle; names = Object.keys(ref.b).filter((n) => boneFor(n)); }
     Object.assign(AV, { fix: vrmFix(vrm), vrm, root: grp, N, s, name: name || 'Character', on: false, names, nodes: names.map(boneFor), hips0: N.hips.position.y, qs: null, hasClips: names.length > 0 }); AC.cache = {}; AC.cur = AC.prev = AC.act = null;
-    AV.nat = AV.fix.nat; avWeapons(); avAttach(); AV.on = true; return AV;
+    AV.nat = AV.fix.nat; avLegRest(); avWeapons(); avAttach(); AV.on = true; return AV;
 }
 function avWeapons() {
     const inv = 1 / AV.s, M = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: e || 0x000000 }), B = (w, h, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * inv, h * inv, d * inv), M(c, e)); m.position.set(x * inv, y * inv, z * inv); return m; };
@@ -3323,6 +3323,7 @@ const addRot = (n, x, y, z) => { _e.set(x, y, z); _q.tmp.setFromEuler(_e); n.qua
    sep = how far ahead of the right wrist the left wrist sits, lx / ly = its sideways and up/down shift, la = how far the left palm is tipped up (0 = flat on the side of the fore end),
    kick = how far the grip hand is shoved back by recoil */
 const HOLD = {
+    pistol: { a: [-0.07, -0.03, 0.40], sep: 0.045, lx: 0.055, ly: -0.012, la: 0.9, kick: 0.05 },
     shotgun: { a: [-0.11, -0.05, 0.27], sep: 0.22, lx: 0.09, ly: -0.015, la: 0.25, kick: 0.09 },
     grenade: { a: [-0.10, -0.04, 0.30], sep: 0.19, lx: 0.08, ly: -0.03, la: 0.35, kick: 0.07 },
     rocket: { a: [-0.12, -0.06, 0.17], sep: 0.28, lx: 0.12, ly: -0.11, la: 0.6, kick: 0.05 },
@@ -3358,6 +3359,47 @@ function avPick(mv) {
     if (run) return { set: g, key: 'jogF', rate: spd / 4.2 };
     return { set, key: set === 'gp' ? 'gp_walkF' : set === 'hr' ? 'hr_walkF' : 'hf_walkF', rate: spd / 2.9 };
 }
+/* ---------- body sanitiser: whatever the clip does, the hips face where you face and the feet stay square under the body.
+   Mixamo-style clips carry a turned hip, splayed knees and feet pointing every which way on some rigs. After the clip is applied we (1) untwist the hips about the
+   vertical to within a few degrees of your facing, and (2) put each foot where the clip wants it but no wider than a natural stance with toes forward, and solve the
+   leg with a two-bone IK so the knee always bends forward. Whole-body hit / death clips are left alone. ---------- */
+function avLegRest() {
+    const N = AV.N, root = AV.root, V = THREE.Vector3; AV.lg = null; if (!N.hips || !N.leftUpperLeg || !N.leftLowerLeg || !N.leftFoot || !N.rightUpperLeg || !N.rightLowerLeg || !N.rightFoot) return;
+    root.updateMatrixWorld(true); const bq = (n) => n.getWorldQuaternion(new THREE.Quaternion()), bp = (n) => root.worldToLocal(n.getWorldPosition(new V()));
+    const rr = { hips: bq(N.hips) }, lg = { rrInv: {}, side: {} }; lg.rrInv.hips = rr.hips.clone().invert(); for (const k of ['spine', 'chest', 'upperChest', 'neck', 'head']) if (N[k]) lg.rrInv[k] = bq(N[k]).invert();
+    for (const sd of ['left', 'right']) {
+        const U = N[sd + 'UpperLeg'], Lw = N[sd + 'LowerLeg'], F = N[sd + 'Foot'], qu = bq(U), ql = bq(Lw), qf = bq(F), pu = bp(U), pl = bp(Lw), pf = bp(F);
+        lg.rrInv[sd + 'Foot'] = qf.clone().invert();
+        lg.side[sd] = { l1: pu.distanceTo(pl), l2: pl.distanceTo(pf), fy0: pf.y, hx: pu.x, nu: pl.clone().sub(pu).normalize().applyQuaternion(rr.hips.clone().invert()), nl: pf.clone().sub(pl).normalize().applyQuaternion(qu.clone().invert()) };
+    }
+    AV.lg = lg; AV.sw = 1;
+}
+const _sA = new THREE.Quaternion(), _sB = new THREE.Quaternion(), _sC = new THREE.Quaternion(), _sG = new THREE.Quaternion(), _sGi = new THREE.Quaternion(), _sP = new THREE.Quaternion(), _sY = new THREE.Vector3(0, 1, 0);
+const _s1 = new THREE.Vector3(), _s2 = new THREE.Vector3(), _s3 = new THREE.Vector3(), _s4 = new THREE.Vector3(), _s5 = new THREE.Vector3(), _s6 = new THREE.Vector3(), _s7 = new THREE.Vector3();
+function twistYaw(q) { let th = 2 * Math.atan2(q.y, q.w); if (th > Math.PI) th -= 2 * Math.PI; else if (th < -Math.PI) th += 2 * Math.PI; return th; }
+function avSanitize(dt, dead) {
+    const A = AV, N = A.N, LG = A.lg; if (!LG) return;
+    const wt = dead || (AC.act && !AC.act.upper && AC.act.name !== 'gpfire') ? 0 : 1; A.sw = sm1(A.sw === undefined ? 1 : A.sw, wt, 1 - Math.exp(-dt * 10)); const w = A.sw; if (w < 0.02) return;
+    const root = A.root, hips = N.hips; root.updateMatrixWorld(true); root.getWorldQuaternion(_sG); _sGi.copy(_sG).invert();
+    // 1) hips, spine, chest and head: turned no further from your facing than a person could stand
+    const fixYaw = (n, key, lim) => { if (!n || !LG.rrInv[key]) return; n.getWorldQuaternion(_sA); _sB.copy(_sGi).multiply(_sA).multiply(LG.rrInv[key]); const th = twistYaw(_sB), ex = th - Math.max(-lim, Math.min(lim, th)), dl = ex * w; if (Math.abs(dl) < 1e-4) return; _sC.setFromAxisAngle(_sY, -dl); _sB.copy(_sG).multiply(_sC).multiply(_sGi).multiply(_sA); n.parent.getWorldQuaternion(_sP); n.quaternion.copy(_sP.invert()).multiply(_sB); n.updateMatrixWorld(true); };
+    fixYaw(hips, 'hips', 0.12); fixYaw(N.spine, 'spine', 0.22); fixYaw(N.chest, 'chest', 0.3); fixYaw(N.upperChest, 'upperChest', 0.3); fixYaw(N.neck, 'neck', 0.3); fixYaw(N.head, 'head', 0.3);
+    // 2) legs
+    hips.getWorldQuaternion(_sA); const PQ = _sGi.clone().multiply(_sA), PQi = PQ.clone().invert();
+    for (const sd of ['left', 'right']) {
+        const sx = sd === 'left' ? 1 : -1, U = N[sd + 'UpperLeg'], Lw = N[sd + 'LowerLeg'], F = N[sd + 'Foot'], R = LG.side[sd], len = R.l1 + R.l2;
+        const S = root.worldToLocal(U.getWorldPosition(_s1)), T = root.worldToLocal(F.getWorldPosition(_s2)); F.getWorldQuaternion(_sB); const wfClip = _sB.clone();
+        let dx = (T.x - S.x) * sx, dz = T.z - S.z; dx = Math.max(-0.01 * len, Math.min(0.15 * len, dx)); dz = Math.max(-0.4 * len, Math.min(0.4 * len, dz)); T.x = S.x + dx * sx; T.z = S.z + dz; T.y = Math.max(T.y, R.fy0);
+        const D = _s3.copy(T).sub(S); let d = D.length(); const mx = (R.l1 + R.l2) * 0.998; if (d > mx) { D.multiplyScalar(mx / d); d = mx; } if (d < 0.05) d = 0.05; const al = _s4.copy(D).normalize();
+        const cA = Math.max(-1, Math.min(1, (R.l1 * R.l1 + d * d - R.l2 * R.l2) / (2 * R.l1 * d))), sA = Math.sqrt(1 - cA * cA), pole = _s5.set(0.16 * sx, 0, 1); const pe = pole.addScaledVector(al, -pole.dot(al)); if (pe.lengthSq() < 1e-5) pe.set(0, 0, 1); pe.normalize();
+        const u = _s6.copy(al).multiplyScalar(cA).addScaledVector(pe, sA), E = _s7.copy(S).addScaledVector(u, R.l1), l = D.copy(T).sub(E).normalize();
+        const qU = new THREE.Quaternion().setFromUnitVectors(R.nu, u.clone().applyQuaternion(PQi)); const PQ2 = PQ.clone().multiply(qU), qL = new THREE.Quaternion().setFromUnitVectors(R.nl, l.clone().applyQuaternion(PQ2.clone().invert()));
+        U.quaternion.slerp(qU, w); Lw.quaternion.slerp(qL, w); U.updateMatrixWorld(true);
+        // the foot: keep the clip's tilt (toe-off, heel lift) but turn it square: toes forward, a little out at most
+        _sC.copy(_sGi).multiply(wfClip).multiply(LG.rrInv[sd + 'Foot']); const tf = twistYaw(_sC), tx = Math.max(-0.12, Math.min(0.4, tf * sx)) * sx;
+        _sC.setFromAxisAngle(_sY, tx - tf); _sB.copy(_sG).multiply(_sC).multiply(_sGi).multiply(wfClip); Lw.getWorldQuaternion(_sA); const fl = _sA.invert().multiply(_sB); F.quaternion.slerp(fl, w); F.updateMatrixWorld(true);
+    }
+}
 function avAnim(dt, mv) {
     if (!AV.on) return; const N = AV.N, vrm = AV.vrm, now = performance.now() / 1000, w = curW(), id = G.eq, gun = !!w.gun, hp = G.hp, k = 1 - Math.exp(-dt * 14), st = PL.state, aim = PL.aim, dead = st === 'dead', low = hp < 35 && !dead;
     if (!AV.qs) { AV.qs = AV.names.map(() => new THREE.Quaternion()); AV.qa = AV.names.map(() => new THREE.Quaternion()); AV.t = 0; }
@@ -3377,6 +3419,7 @@ function avAnim(dt, mv) {
     P.sp = sm1(P.sp, sp, k); P.hd = sm1(P.hd, hd, k); addRot(N.spine, P.sp * 0.55, 0, 0); addRot(N.chest, P.sp * 0.45, 0, 0); addRot(N.neck, P.hd * 0.4, 0, 0); addRot(N.head, P.hd * 0.6, 0, 0);
     if (st === 'swing' && id === 'blade') { const kt = clamp(PL.st / (w.rate * 0.95), 0, 1); addRot(N.spine, 0, kt < 0.3 ? -0.5 * kt / 0.3 : -0.5 + 1.1 * Math.min(1, (kt - 0.3) / 0.4), 0); }
     N.hips.updateMatrixWorld(true);
+    try { avSanitize(dt, dead); } catch (e) { if (!AV.sErr) { AV.sErr = e; console.warn('avSanitize', e); } }
     // ---- arms: aiming, the knife hand, clutching the side at low health, reaching for pickups — IK on top of the clip
     const gunOut = isGun(id), aimOn = aim && st !== 'dead' && !(AC.act && !AC.act.upper && AC.act.name !== 'gpfire');
     let hP = 0, holdOn = false, tR = null, tL = null, oR = null, oL = null, hR = HINT.R, hL = HINT.L, cR = gunOut ? 0.85 : id === 'blade' ? 0.95 : 1.0, cL = 1.0, wR = 0, wL = 0;
