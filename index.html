@@ -971,6 +971,8 @@
                     <button id="wpn-fighter" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🥋 Fighter <span class="block text-[10px] font-normal text-gray-300">Martial arts · bare hands</span></button>
                     <button id="wpn-pistol" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🔫 Gunner <span class="block text-[10px] font-normal text-gray-300">Military weapons below</span></button>
                     <button id="wpn-keyblade" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🗝️ Keyblade Chosen <span class="block text-[10px] font-normal text-gray-300">Combos, magic and Drive · Adventia Lv 8</span></button>
+                    <div class="col-span-2 text-[11px] text-gray-400 mt-1">Adventia classes <span class="text-gray-500">(unlock as you level; gear comes from the Equipment shop)</span></div>
+                    <div id="nf-cls-grid" class="col-span-2 grid grid-cols-2 gap-2"></div>
                     <div id="gw-grid" class="col-span-2 grid grid-cols-4 gap-1.5"></div>
                     <div id="gcus-panel" class="col-span-2"></div>
                     <div class="col-span-2 text-[11px] text-gray-400 mt-1">Sword style <span class="text-gray-500">(Hero)</span></div>
@@ -13011,7 +13013,12 @@ function kbModel(THREE, mk) {
         const NFK = 'oasis.nf.v1', NF_MAX = 30;
         const NF = { fall: new Map(), glow: null, itemT: 0, lv: 1, xp: 0, att: {}, done: [], hunt: {}, cls: 'hero', buffT: 0, gRed: 0.5, hot: null, pet: null, hp: 100, mp: 60, hpMax: 100, mpMax: 60, lb: 0, tgt: null, gcd: 0, auto: 0, cds: {}, cast: null, guard: 0, comb: 0, dead: false, ui: null, fx: [], tels: [], tele: null, regen: 0, lastHit: 0 };
         const nfNeed = (lv) => Math.round(45 * lv * Math.pow(1.17, lv - 1));
-        function nfStats() { const C = NF_CLASSES[NF.cls] || NF_CLASSES.hero; NF.hpMax = Math.round((150 + 34 * (NF.lv - 1)) * C.hp); NF.mpMax = Math.round((60 + 7 * (NF.lv - 1)) * C.mp); NF.atk = (12 + 3.4 * NF.lv) * C.atk; NF.mag = (12 + 3.7 * NF.lv) * C.mag; }
+        const NF_GEARCLS = { hero: 'hero', knight: 'hero', dragoon: 'hero', thief: 'hero', keyblade: 'hero', fighter: 'fighter', gunner: 'gunner', blackmage: 'mage', whitemage: 'mage', summoner: 'mage' };      // which Equipment-shop loadout each Adventia class wears
+        const nfGearCls = (id) => NF_GEARCLS[id] || 'hero';
+        function nfStats() {
+            const C = NF_CLASSES[NF.cls] || NF_CLASSES.hero; let g = { atk: 0, def: 0, mag: 0, hp: 0, mp: 0 }; try { g = gearStats(nfGearCls(NF.cls)); } catch (e) { /* gear not ready */ } const GS = 0.6;       // shop gear counts for 60% in Adventia
+            NF.hpMax = Math.round((150 + 34 * (NF.lv - 1)) * C.hp + g.hp * GS); NF.mpMax = Math.round((60 + 7 * (NF.lv - 1)) * C.mp + g.mp * GS); NF.atk = (12 + 3.4 * NF.lv) * C.atk + g.atk * GS; NF.mag = (12 + 3.7 * NF.lv) * C.mag + g.mag * GS; NF.def = g.def * GS; NF.hp = Math.min(NF.hp, NF.hpMax); NF.mp = Math.min(NF.mp, NF.mpMax);
+        }
         function nfLoad() { try { const o = JSON.parse(localStorage.getItem(NFK) || '{}'); NF.fl = o.fl | 0; NF.lv = Math.max(1, Math.min(NF_MAX, o.lv | 0 || 1)); NF.xp = o.xp | 0; NF.att = o.att && typeof o.att === 'object' ? o.att : {}; NF.done = Array.isArray(o.done) ? o.done.slice(-30) : []; NF.hunt = o.hunt && typeof o.hunt === 'object' ? o.hunt : {}; NF.cls = NF_CLASSES[o.cls] && NF.lv >= NF_CLASSES[o.cls].lv ? o.cls : 'hero'; NF.last = typeof o.last === 'string' ? o.last.slice(0, 24) : ''; } catch (e) { /* storage */ } NF.att.hub = 1; nfStats(); NF.hp = NF.hpMax; NF.mp = NF.mpMax; }
         function nfSave() { try { localStorage.setItem(NFK, JSON.stringify({ lv: NF.lv, xp: NF.xp, att: NF.att, done: NF.done.slice(-30), hunt: NF.hunt, cls: NF.cls, fl: NF.fl | 0, last: NF.last || '' })); } catch (e) { /* storage */ } }
         function nfXp(n) { if (NF.lv >= NF_MAX) return; NF.xp += Math.round(n); let up = false; while (NF.lv < NF_MAX && NF.xp >= nfNeed(NF.lv)) { NF.xp -= nfNeed(NF.lv); NF.lv++; up = true; } if (up) { nfStats(); NF.hp = NF.hpMax; NF.mp = NF.mpMax; nuShowBanner('LEVEL UP', 'ADVENTIA LV ' + NF.lv); try { sysChat('◆ Level up! You are now Adventia Lv ' + NF.lv + '.'); } catch (e) { /* chat */ } } nfSave(); }
@@ -13071,7 +13078,7 @@ function kbModel(THREE, mk) {
         }
         function nfClassMenu() {
             if (activeMap !== 'nuu') { try { sysChat('Classes can only be changed in Adventia.'); } catch (e) { /* chat */ } return; } const u = nfUi(); if (u.tele.classList.contains('on')) { nfTeleClose(); return; }
-            if (NF.comb > 0.1) { nuShowBanner('NOT NOW', 'YOU CANNOT CHANGE CLASS IN COMBAT'); return; }
+            if (NF.comb > 0.1) { nuShowBanner('NOT NOW', 'YOU CANNOT CHANGE CLASS IN COMBAT'); return; } if (DG.on) { nuShowBanner('NOT NOW', 'YOU CANNOT CHANGE CLASS IN A DUNGEON'); return; }
             u.tele.innerHTML = '<div class="bx"><h3>🎭 CHOOSE YOUR CLASS</h3><small>A class is a whole move set on the cross hotbar · you are Adventia Lv ' + NF.lv + ' · more classes unlock as you level</small>' + Object.entries(NF_CLASSES).map(([id, c]) => { const ok = NF.lv >= c.lv; return '<button data-cls="' + id + '" ' + (!ok || NF.cls === id ? 'disabled' : '') + '><span>' + c.ic + ' ' + c.n + (NF.cls === id ? ' (current)' : '') + '<br><small style="opacity:.7;margin:0">' + (ok ? c.d : 'Unlocks at Lv ' + c.lv) + '</small></span><span>' + (ok ? '' : '🔒') + '</span></button>'; }).join('') + '<button data-cls="" style="justify-content:center;margin-top:10px">Close</button></div>';
             u.tele.classList.add('on'); u.tele.querySelectorAll('button').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const id = b.dataset.cls; nfTeleClose(); if (id) nfApplyClass(id); }));
         }
@@ -13393,7 +13400,7 @@ function kbModel(THREE, mk) {
         }
         function nfPlayerHurt(d, from) {
             try { if (!NF.dead && !(NF.inv > 0)) NSX.playerHit(); } catch (e) { /* audio */ }
-            if (NF.dead) return; if (NF.inv > 0) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); if (nfMyRole() === 'tank') d = Math.round(d * 0.8); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
+            if (NF.dead) return; if (NF.inv > 0) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); if (nfMyRole() === 'tank') d = Math.round(d * 0.8); if (NF.def > 0) d = Math.round(d * (1 - Math.min(0.6, NF.def / (NF.def + 260)))); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
             if (NF.tele) nfTeleCancel('Teleport interrupted'); if (NF.hp <= 0) nfDie();
         }
         /* ---- DOWN: you fall where you stand and a pale crystal with floating shards marks the spot. A Phoenix Down (yours, or a friend's) stands you back up at 25% HP; or you can return to an aether crystal. ---- */
@@ -13457,10 +13464,13 @@ function kbModel(THREE, mk) {
             else return;
             btBagAdd(k, -1); NF.itemT = now + NF_ITEM_CD; NF.itemRef = 0;
         }
+        function nfShopGate() { if (activeMap !== 'nuu') return false; if (NF.dead) return false; if (DG.on) { nuShowBanner('NOT HERE', 'NO SHOPPING INSIDE A DUNGEON'); return false; } if (NF.comb > 0.1) { nuShowBanner('NOT NOW', 'YOU CANNOT SHOP IN COMBAT'); return false; } return true; }
+        function nfOpenShop(kind) { if (!nfShopGate()) return; try { if (kind === 'eq') eqpOpen(); else bagToggle(true); } catch (e) { sysChat('The shop is not available right now.'); } }
+        const NF_SHOPBTN = '<button type="button" data-k="__eq" title="Equipment shop: gear for your class" style="width:42px;height:42px;border-radius:10px;border:2px solid #ffd24a;background:linear-gradient(180deg,rgba(60,44,10,.9),rgba(24,16,4,.95));color:#fff;font-size:20px;cursor:pointer">🛡️</button><button type="button" data-k="__shop" title="Bag and item shop" style="width:42px;height:42px;border-radius:10px;border:2px solid #ffd24a;background:linear-gradient(180deg,rgba(60,44,10,.9),rgba(24,16,4,.95));color:#fff;font-size:20px;cursor:pointer">🛒</button>';
         function nfItemsUi() {
             const rt = document.getElementById('nf-root'); if (!rt) return; let el = document.getElementById('nf-items');
-            if (!el) { el = document.createElement('div'); el.id = 'nf-items'; el.style.cssText = 'position:absolute;right:10px;bottom:250px;display:flex;flex-direction:column;gap:5px;pointer-events:auto'; rt.appendChild(el); el.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); e.stopPropagation(); nfItemUse(b.dataset.k); }); }
-            const t = performance.now(); if (t - (NF.itemRef || 0) > 400) { NF.itemRef = t; const bag = btBagLoad(), html = NF_ITEMS.filter((q) => bag[q[0]] > 0).map((q) => `<button type="button" data-k="${q[0]}" title="${q[2]}" style="position:relative;width:42px;height:42px;border-radius:10px;border:2px solid #8fd8ff;background:linear-gradient(180deg,rgba(20,50,90,.9),rgba(6,16,36,.95));color:#fff;font-size:20px;line-height:1;cursor:pointer">${q[1]}<b style="position:absolute;right:3px;bottom:1px;font:900 11px Nunito,system-ui,sans-serif;text-shadow:0 1px 2px #000">${bag[q[0]]}</b></button>`).join(''); if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; } }
+            if (!el) { el = document.createElement('div'); el.id = 'nf-items'; el.style.cssText = 'position:absolute;right:10px;bottom:250px;display:flex;flex-direction:column;gap:5px;pointer-events:auto'; rt.appendChild(el); el.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); e.stopPropagation(); if (b.dataset.k === '__eq') nfOpenShop('eq'); else if (b.dataset.k === '__shop') nfOpenShop('bag'); else nfItemUse(b.dataset.k); }); }
+            const t = performance.now(); if (t - (NF.itemRef || 0) > 400) { NF.itemRef = t; const bag = btBagLoad(), html = NF_ITEMS.filter((q) => bag[q[0]] > 0).map((q) => `<button type="button" data-k="${q[0]}" title="${q[2]}" style="position:relative;width:42px;height:42px;border-radius:10px;border:2px solid #8fd8ff;background:linear-gradient(180deg,rgba(20,50,90,.9),rgba(6,16,36,.95));color:#fff;font-size:20px;line-height:1;cursor:pointer">${q[1]}<b style="position:absolute;right:3px;bottom:1px;font:900 11px Nunito,system-ui,sans-serif;text-shadow:0 1px 2px #000">${bag[q[0]]}</b></button>`).join('') + NF_SHOPBTN; if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; } }
             let h = document.getElementById('nf-rvhint'); if (!h) { h = document.createElement('div'); h.id = 'nf-rvhint'; h.style.cssText = 'position:absolute;left:50%;bottom:34%;transform:translateX(-50%);padding:7px 16px;border-radius:999px;background:rgba(8,16,34,.88);border:1px solid #bfe8ff;color:#e8f6ff;font:800 13px Nunito,system-ui,sans-serif;display:none;white-space:nowrap'; rt.appendChild(h); }
             const f = nfFallNear(); h.style.display = f ? 'block' : 'none'; if (f) h.textContent = (btBagLoad().phoenix | 0) > 0 ? '🪶 Use a Phoenix Down on ' + f.name + '  (F / ✋)' : f.name + ' has fallen · you need a Phoenix Down';
         }
@@ -13833,7 +13843,7 @@ function kbModel(THREE, mk) {
             if (NF.cast) { const now = performance.now() / 1000; if (Math.hypot(p.x - NF.cast.x, p.z - NF.cast.z) > 0.7) { const was = NF.tele; NF.cast = null; NF.tele = null; nfPop(p.clone().setY(p.y + 2.4), 'Interrupted', '#ffb347'); if (was) nuShowBanner('CANCELLED', 'YOU MOVED'); } else if (now - NF.cast.t0 >= NF.cast.dur) { const c = NF.cast; NF.cast = null; c.go(); } }
             // auto-attack on a hostile in reach, regen when out of combat
             if (NF.tgt && !NF.tgt.dead && !NF.dead && !NF.cast && NF.tgt.aggro) { NF.auto -= dt; const CA = nfCls(); if (NF.auto <= 0 && nfDist(NF.tgt) < CA.auto + (NF.tgt.big || 1) * 0.5) { NF.auto = 2.6; nfFace(NF.tgt); try { nfAutoAnim(); } catch (e) { /* no clip */ } nfFx(CA.auto > 6 ? 'bolt' : 'slash', p, new THREE.Vector3(NF.tgt.x, NF.tgt.node.position.y, NF.tgt.z)); nfDealDmg(NF.tgt, 0.6, CA.mag > 1); } } else NF.auto = Math.min(NF.auto + dt, 1);
-            if (NF.comb <= 0 && !NF.dead) { NF.hp = Math.min(NF.hpMax, NF.hp + NF.hpMax * 0.018 * dt); NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.032 * dt); } else if (!NF.dead) NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.008 * dt);
+            if (DG.on) { /* no natural recovery in a dungeon: potions, cures and your party keep you alive */ } else if (NF.comb <= 0 && !NF.dead) { NF.hp = Math.min(NF.hpMax, NF.hp + NF.hpMax * 0.018 * dt); NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.032 * dt); } else if (!NF.dead) NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.008 * dt);
             if (NF.tgt && (NF.tgt.dead || nfDist(NF.tgt) > 45)) NF.tgt = null;
         }
         /* ---- treasure chests ---- */
@@ -14553,7 +14563,7 @@ function kbModel(THREE, mk) {
             else if (!AR.hid) { DG.hidden = []; for (const c of NU.group.children) { if (c.isLight || c.userData.keep) continue; DG.hidden.push([c, c.visible]); c.visible = false; } AR.hid = true; }
             { const SK = NU.skyCtx && NU.skyCtx.sky; if (SK && mode !== 'forest') for (const k of ['sky', 'stars', 'clouds']) if (SK[k]) SK[k].visible = mode === 'zone'; }
             if (DG.group) DG.group.visible = mode === 'dungeon'; if (ZN.group) ZN.group.visible = mode === 'zone';
-            DG.on = mode === 'dungeon'; ZN.on = mode === 'zone';
+            DG.on = mode === 'dungeon'; ZN.on = mode === 'zone'; if (DG.on) { try { setTimeout(() => { if (DG.on) sysChat('◆ Natural recovery does not work in a dungeon. Bring potions, cures and a healer.'); }, 1800); } catch (e) { /* chat */ } }
             if (mode === 'forest') { const S = NU.skyCtx; if (S) { S.sun.intensity = 2.4; S.hemi.intensity = 0.9 * Math.PI; S.amb.intensity = 0.22 * Math.PI; S.sun.color.set(0xfff0d6); } }
         }
         async function arGo(dest, door) {
@@ -15116,7 +15126,9 @@ function kbModel(THREE, mk) {
             const dot = (wx, wz, col, r, sq) => { const [sx, sy] = toS(wx, wz); if (Math.hypot(sx - C, sy - C) > C - 5) return; x.fillStyle = col; x.strokeStyle = '#2a1a0a'; x.lineWidth = 1.5; x.beginPath(); if (sq) { x.moveTo(sx, sy - r * 1.3); x.lineTo(sx + r, sy); x.lineTo(sx, sy + r * 1.3); x.lineTo(sx - r, sy); x.closePath(); } else x.arc(sx, sy, r, 0, 6.283); x.fill(); x.stroke(); };
             if (nuu) {
                 if (zn) { for (const o of NI.list) if (/^(zn-|dg-door2)/.test(o.id) && (!o.cond || o.cond())) dot(o.x, o.z, o.id === 'dg-door2' ? '#7fe6ff' : o.id === 'zn-t-crystal' ? '#6fd4ff' : '#ffe27a', 5, true); }
-                else if (!dg) { try { dot(NU.hub.x, NU.hub.z, '#ffe27a', 5, true); for (const c of NU.cry || []) dot(c.x, c.z, '#6fd4ff', 4, true); if (DG.door) dot(DG.door.x, DG.door.z, '#b070ff', 5.5, true); } catch (e) { /* none */ } }
+                else if (!dg) { try { dot(NU.hub.x, NU.hub.z, '#ffe27a', 5, true); for (const c of NU.cry || []) dot(c.x, c.z, '#6fd4ff', 4, true); if (DG.door) dot(DG.door.x, DG.door.z, '#b070ff', 5.5, true); } catch (e) { /* none */ }
+                    try { for (const f of NU.fates || []) { if (!f.g || f.state === 'done' || f.state === 'fail' || f.state === 'gone') continue; const [fx2, fy2] = toS(f.x, f.z), dd = Math.hypot(fx2 - C, fy2 - C), rim = C - 9, q2 = 0.5 + 0.5 * Math.sin(performance.now() / 260);       // a live FATE: a gold diamond, pinned to the rim when it is further than the map reaches
+                        const px = dd > rim ? C + (fx2 - C) * rim / dd : fx2, py = dd > rim ? C + (fy2 - C) * rim / dd : fy2; x.save(); x.globalAlpha = dd > rim ? 0.7 + 0.3 * q2 : 1; x.translate(px, py); x.rotate(Math.PI / 4); x.fillStyle = '#ffd24a'; x.strokeStyle = '#7a1c12'; x.lineWidth = 2; const sz = 6 + 1.5 * q2; x.fillRect(-sz, -sz, sz * 2, sz * 2); x.strokeRect(-sz, -sz, sz * 2, sz * 2); x.restore(); } } catch (e) { /* none */ } }
                 else { for (const o of NI.list) if (o.id === 'dg-exit' || o.id === 'dg-out') dot(o.x, o.z, o.id === 'dg-exit' ? '#7fe6ff' : '#b070ff', 5, true); }
                 try { for (const m of nfMobs()) { if (Math.hypot(m.x - P.x, m.z - P.z) > R * 1.1) continue; dot(m.x, m.z, m.aggro ? '#ff4a3a' : m.boss ? '#c060ff' : '#b0614a', m.boss ? 5.5 : 3.2); } } catch (e) { /* none */ }
             }
@@ -16099,6 +16111,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
         window.oasisGear = { prog: gearProg, stats: gearStats, addXp: gearAddXp, changed: () => { try { btGearChanged(); } catch (e) { /* not in a battle */ } } };
         const EQP = { ov: null, fr: null, html: '' };
         async function eqpFetch() { if (EQP.html) return EQP.html; const r = await fetch('Equipment.html'); if (!r.ok) throw new Error('Equipment.html ' + r.status); EQP.html = await r.text(); return EQP.html; }
+        window.oasisEqClass = () => (activeMap === 'nuu' ? nfGearCls(NF.cls) : null);
         function eqpOpen() {
             if (EQP.ov) return; try { closeStart(); } catch (e) { /* menu */ } document.querySelectorAll('.xmb-col.open').forEach((e) => e.classList.remove('open'));
             const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:#070b1c';
@@ -16108,7 +16121,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
             const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Back'; x.style.cssText = 'position:absolute;right:8px;bottom:8px;z-index:2;font:800 12px Nunito,sans-serif;color:#fff;background:rgba(10,30,70,.9);border:2px solid #8fe0ff;border-radius:999px;padding:6px 14px;cursor:pointer';
             x.addEventListener('click', eqpClose); ov.append(ld, fr, x); document.body.appendChild(ov); EQP.ov = ov; EQP.fr = fr; fr.addEventListener('load', () => { try { ld.remove(); } catch (e) { /* ok */ } });
         }
-        function eqpClose() { if (EQP.ov) { try { EQP.fr.srcdoc = ''; } catch (e) { /* ok */ } EQP.ov.remove(); } EQP.ov = null; EQP.fr = null; try { btGearChanged(); } catch (e) { /* ok */ } try { window.focus(); } catch (e) { /* ok */ } }
+        function eqpClose() { try { nfStats(); } catch (e) { /* adventia not ready */ } if (EQP.ov) { try { EQP.fr.srcdoc = ''; } catch (e) { /* ok */ } EQP.ov.remove(); } EQP.ov = null; EQP.fr = null; try { btGearChanged(); } catch (e) { /* ok */ } try { window.focus(); } catch (e) { /* ok */ } }
 
         const SVX = { ov: null, fr: null, html: '', file: 'Survivor.html' };
         SVX.cache = {};
@@ -20802,12 +20815,12 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         Object.assign(PAD_ACTS, {
             nf_target: ['🎯', 'Next target', nfPadOn(() => nfCycle())], nf_aether: ['💠', 'Aether network', nfPadOn(() => nfTeleMenu())], nf_camp: ['⛺', 'Camp', nfPadOn(() => tnPitch())], nf_class: ['🎭', 'Change class', nfPadOn(() => nfClassMenu())],
             nf_use: ['✋', 'Use / open', nfPadOn(() => { nfPadUse(); })], nf_roll: ['🤸', 'Dodge Roll', nfPadOn(() => nfRoll())], nf_guard: ['🛡️', 'Guard', nfPadOn(() => { const i = NF_SK.findIndex((q) => q && q.k === 'guard'); if (i >= 0) nfUse(i); })], nf_untarget: ['✖️', 'Drop target', nfPadOn(() => nfTarget(null))],
-            nf_potion: ['🧪', 'Potion', nfPadOn(() => nfItemUse('potion'))], nf_hipotion: ['⚗️', 'Hi-Potion', nfPadOn(() => nfItemUse('hipotion'))], nf_ether: ['🔷', 'Ether', nfPadOn(() => nfItemUse('ether'))], nf_elixir: ['🌟', 'Elixir', nfPadOn(() => nfItemUse('elixir'))], nf_phoenix: ['🪶', 'Phoenix Down', nfPadOn(() => nfItemUse('phoenix'))]
+            nf_potion: ['🧪', 'Potion', nfPadOn(() => nfItemUse('potion'))], nf_hipotion: ['⚗️', 'Hi-Potion', nfPadOn(() => nfItemUse('hipotion'))], nf_ether: ['🔷', 'Ether', nfPadOn(() => nfItemUse('ether'))], nf_elixir: ['🌟', 'Elixir', nfPadOn(() => nfItemUse('elixir'))], nf_phoenix: ['🪶', 'Phoenix Down', nfPadOn(() => nfItemUse('phoenix'))], nf_equip: ['🛡️', 'Equipment', nfPadOn(() => nfOpenShop('eq'))], nf_shop: ['🛒', 'Bag and shop', nfPadOn(() => nfOpenShop('bag'))]
         });
         PAD_ACTS.estop = ['\uD83E\uDDCD', 'Stand up', () => { try { localActor.playEmote('stand'); net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } }];
         const PAD_SETS_DEF = [
             { name: 'Adventia', L: ['nfm_8', 'nfm_9', 'nfm_10', 'nfm_11', 'nf_target', 'nf_use', 'nf_aether', 'nf_class'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },      // hold R2: Y / △ = Fast Blade, B / ○ = Rending Slash, A / ✕ = Cross Cut, X / □ = Spin Slash; the D-pad has the next four. Hold + the face buttons / D-pad for your attacks, L2 for the rest
-            { name: 'Adventia Items', L: ['nf_potion', 'nf_hipotion', 'nf_ether', 'nf_elixir', 'nf_phoenix', 'nf_roll', 'nf_guard', 'nf_untarget'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },
+            { name: 'Adventia Items', L: ['nf_potion', 'nf_hipotion', 'nf_ether', 'nf_elixir', 'nf_phoenix', 'nf_equip', 'nf_shop', 'nf_guard'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },
             { name: 'Emotes 1', L: ['e_cheer', 'e_sit', 'e_bboy', 'e_rumba', 'e_twerk', 'e_hiphop', 'e_gangnam', 'e_slide'], R: ['e_snake', 'e_show', 'e_greet', 'e_peace', 'e_shoot', 'e_spin', 'e_modelpose', 'e_squat'] },
             { name: 'Emotes 2', L: ['e_stand1', 'e_stand2', 'e_stand3', 'e_sitm1', 'e_sitm2', 'e_layf1', 'e_layf2', 'e_laym1'], R: ['e_laym2', 'estop', 'emotes', 'cheer', 'selft', 'clear', 'chat', 'games'] },
             { name: 'Social', L: ['cheer', 'sit', 'selft', 'clear', 'emotes', 'oboy', 'board', 'boardc'], R: ['chat', 'party', 'tv', 'strafe', 'equip', 'inv', 'lobbies', 'weather'] },
@@ -20874,10 +20887,10 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 const st = document.createElement('style'); st.id = 'padbar-css';
                 st.textContent = `#padbar{position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:19;display:flex;gap:26px;align-items:flex-end;pointer-events:none;font:700 10px/1 Nunito,Inter,system-ui,sans-serif;color:#e8f2ff;transition:opacity .25s;opacity:0}
 #padbar.on{opacity:1}#padbar .pb-side{display:flex;gap:8px;opacity:.38;transition:opacity .15s,transform .15s;transform-origin:50% 100%}#padbar .pb-side.hold{opacity:1;transform:scale(1.12)}
-#padbar .pb-dia{display:grid;grid-template-columns:repeat(3,32px);grid-template-rows:repeat(3,32px);gap:1px}
-#padbar .pb-slot{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:50%;background:rgba(12,22,44,.78);border:1.5px solid rgba(190,220,255,.55);box-shadow:0 2px 8px rgba(0,0,0,.45);overflow:hidden;transition:transform .12s,background .12s}
-#padbar .pb-slot i{font-style:normal;font-size:14px;line-height:14px}#padbar .pb-slot u{text-decoration:none;font-size:6.5px;line-height:7px;max-width:30px;white-space:nowrap;overflow:hidden;opacity:.85}
-#padbar .pb-slot.hit{transform:scale(1.28);background:rgba(90,170,255,.9)}#padbar .pb-slot em{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.66);font:800 13px/1 Nunito,system-ui,sans-serif;font-style:normal;color:#fff;text-shadow:0 1px 3px #000;border-radius:50%}#padbar .pb-slot.off{opacity:.5}
+#padbar .pb-dia{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,40px);gap:2px}
+#padbar .pb-slot{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;border-radius:11px;background:rgba(12,22,44,.82);border:1.5px solid rgba(190,220,255,.55);box-shadow:0 2px 8px rgba(0,0,0,.45);overflow:hidden;transition:transform .12s,background .12s}
+#padbar .pb-slot i{font-style:normal;font-size:14px;line-height:15px;font-family:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif}#padbar .pb-slot u{text-decoration:none;font:700 9px/10px system-ui,'Segoe UI',Arial,sans-serif;max-width:44px;max-height:20px;text-align:center;overflow:hidden;color:#fff;text-shadow:0 1px 2px #000}
+#padbar .pb-slot.hit{transform:scale(1.28);background:rgba(90,170,255,.9)}#padbar .pb-slot em{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.66);font:800 13px/1 Nunito,system-ui,sans-serif;font-style:normal;color:#fff;text-shadow:0 1px 3px #000;border-radius:11px}#padbar .pb-slot.off{opacity:.5}
 #padbar .pb-f1{grid-column:2;grid-row:1}#padbar .pb-f2{grid-column:3;grid-row:2}#padbar .pb-f3{grid-column:2;grid-row:3}#padbar .pb-f4{grid-column:1;grid-row:2}
 #padbar .pb-dia.fc .pb-f1{border-color:#f5c542}#padbar .pb-dia.fc .pb-f2{border-color:#ef5350}#padbar .pb-dia.fc .pb-f3{border-color:#4cc36b}#padbar .pb-dia.fc .pb-f4{border-color:#4a8cf0}
 #padbar .pb-mid{position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;white-space:nowrap;text-shadow:0 1px 3px #000}
@@ -20990,8 +21003,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             padMove.x = mx; padMove.z = mz;
             PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = zoomHold ? 0 : ry; PAD.zoom = zoomHold ? ry : 0;
             if (PAD.sprint) padMove.run = true;
-            if (activeMap === 'nuu' && hit(5) && NU.ready && nfAdv().mode !== 'aim' && !NF.dead && !NF.cast) { PAD.auto = false; nfRoll(); }      // Adventia: R1 is the dash
-            if ((activeMap === 'nuu' ? false : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
+            if (activeMap === 'nuu' && NU.sw && hit(5) && NU.ready && nfAdv().mode !== 'aim' && !NF.dead && !NF.cast) { PAD.auto = false; nfRoll(); }      // Adventia: R1 is the dash
+            if ((activeMap === 'nuu' ? !NU.sw : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
             const tagMode = activeMap === 'tag' && tgMine();      // laser tag: the triggers are weapons, not hotbars
             const gunHb = gnMode() && b[5] && !b[4];       // Gunner: hold RB for the emote hotbar (LT aims, RT fires); L3 flips left / right bar, R3 changes set
             const ngOn = activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim', ngHb = ngOn && b[5] && !b[4];      // Adventia Gunner: L2 aims, R2 fires, hold RB for the cross hotbar
@@ -21995,7 +22008,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 if (!String(it.gid).startsWith('csw-')) {      // wear or take off a piece for any class right here (weapons only fit the class they were made for)
                     if (!BTC.cat) btcCatalog().then(() => { if (invOpen() && INV.sel === it.id) renderInv(); }).catch(() => { /* offline */ });
                     const ci = BTC.cat && BTC.cat.find((x) => x.id === it.gid), wc = it.slot !== 'weapon' ? 'any' : ci ? ci.cls : null;
-                    if (wc) for (const [cid, cn] of [['hero', 'Hero'], ['gunner', 'Gunner'], ['fighter', 'Fighter']]) { if (wc !== 'any' && wc !== cid) continue; const on = (it.by || []).includes(cid); mk((on ? 'Take off · ' : 'Equip · ') + cn, on ? '' : 'gold', () => invGearWear(it, cid, !on)); }
+                    if (wc) for (const [cid, cn] of [['hero', 'Hero'], ['gunner', 'Gunner'], ['fighter', 'Fighter'], ['mage', 'Mage']]) { if (wc !== 'any' && wc !== cid) continue; const on = (it.by || []).includes(cid); mk((on ? 'Take off · ' : 'Equip · ') + cn, on ? '' : 'gold', () => invGearWear(it, cid, !on)); }
                 }
                 mk('Open Equipment Shop', '', () => { closeInv(); eqpOpen(); }); det.append(bar); return;
             }
@@ -22209,7 +22222,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             $('tr-cancel').addEventListener('click', () => tradeEnd('Trade cancelled.', true));
             $('pc-trade').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) tradeBegin(p.id); });
             $('pc-duel').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) duelBegin(p.id); });
-            $('wpn-fists').addEventListener('click', () => { if (BLZ.on) blzSet(false, true); clsEquip('fists'); }); $('wpn-blitz').addEventListener('click', () => blzSet(!BLZ.on)); $('wpn-sword').addEventListener('click', () => clsEquip('sword')); $('wpn-pistol').addEventListener('click', () => clsEquip('pistol')); $('wpn-fighter').addEventListener('click', () => clsEquip('fighter')); $('wpn-keyblade').addEventListener('click', () => { try { if (NF.lv < NF_CLASSES.keyblade.lv) { sysChat('Keyblade Chosen unlocks at Adventia Lv ' + NF_CLASSES.keyblade.lv + ' (you are Lv ' + NF.lv + ').'); return; } if (NF.comb > 0.1) { sysChat('You cannot change class in combat.'); return; } if (BLZ.on) blzSet(false, true); nfApplyClass('keyblade'); sysChat('The keyblade comes to your hand when a fight begins in Adventia.'); clsRender(); } catch (e) { sysChat('Open Adventia first, then pick Keyblade Chosen.'); } }); $('bm-default').addEventListener('click', () => baseMoveSet('default')); $('bm-starter').addEventListener('click', () => baseMoveSet('starter')); clsRender();
+            $('wpn-fists').addEventListener('click', () => { if (BLZ.on) blzSet(false, true); clsEquip('fists'); }); $('wpn-blitz').addEventListener('click', () => blzSet(!BLZ.on)); $('wpn-sword').addEventListener('click', () => clsEquip('sword')); $('wpn-pistol').addEventListener('click', () => clsEquip('pistol')); $('wpn-fighter').addEventListener('click', () => clsEquip('fighter')); $('wpn-keyblade').addEventListener('click', () => nfPickClass('keyblade')); $('bm-default').addEventListener('click', () => baseMoveSet('default')); $('bm-starter').addEventListener('click', () => baseMoveSet('starter')); clsRender();
             window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && tradeUiOpen()) { e.preventDefault(); e.stopPropagation(); tradeEnd('Trade cancelled.', true); } else if (e.key === 'Escape' && invOpen()) { e.preventDefault(); e.stopPropagation(); closeInv(); } }, true);
             window.__inv = { INVDIR, invDirSave, INV, TR, invAddFile, invList, tradeBegin, tradeAdd, tradeLockToggle, tradeConfirm, openInv, tradeOpenUi, renderTrade };
         }
@@ -27116,8 +27129,17 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             try { net && net.send(helloMsg(false)); } catch (e) { /* offline */ }
             sysChat(BASEMV.v === 'starter' ? 'Base movement: Animation Starter Pack.' : 'Base movement: default VRoid set.'); clsRender();
         }
+        function nfPickClass(id) {
+            const C = NF_CLASSES[id]; if (!C) return;
+            try {
+                if (NF.lv < C.lv) { sysChat(C.n + ' unlocks at Adventia Lv ' + C.lv + ' (you are Lv ' + NF.lv + ').'); return; } if (NF.comb > 0.1) { sysChat('You cannot change class in combat.'); return; } if (DG.on) { sysChat('You cannot change class inside a dungeon.'); return; }
+                if (BLZ.on) blzSet(false, true); nfApplyClass(id); sysChat('Class: ' + C.n + '. Wear its gear from the Equipment shop or your Inventory.'); clsRender();
+            } catch (e) { sysChat('Open Adventia first, then pick ' + C.n + '.'); }
+        }
         function clsRender() {
-            const card = document.getElementById('cls-card'); if (!card) return; try { cswWire(); cswSync(); } catch (e) { /* ui */ }
+            const card = document.getElementById('cls-card'); if (!card) return;
+            try { const gr = document.getElementById('nf-cls-grid'); if (gr) { if (!gr.children.length) for (const id of ['knight', 'dragoon', 'thief', 'blackmage', 'whitemage', 'summoner']) { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = id; b.className = 'py-2 rounded-xl text-sm font-semibold transition bg-white/10'; b.addEventListener('click', () => nfPickClass(id)); gr.appendChild(b); }
+                for (const b of gr.children) { const c = NF_CLASSES[b.dataset.k], lock = NF.lv < c.lv, on = NF.cls === b.dataset.k; b.innerHTML = c.ic + ' ' + c.n + '<span class="block text-[10px] font-normal text-gray-300">' + (lock ? 'Unlocks at Adventia Lv ' + c.lv : c.d.length > 34 ? c.d.slice(0, 33) + '…' : c.d) + '</span>'; b.style.opacity = lock ? '.45' : '1'; b.classList.toggle('bg-psGlow', on); b.classList.toggle('bg-white/10', !on); } } } catch (e) { /* adventia not ready */ } try { cswWire(); cswSync(); } catch (e) { /* ui */ }
             if (!document.querySelector('#gw-grid button')) gnBuildUi();
             for (const [id, w] of [['wpn-fists', 'fists'], ['wpn-sword', 'sword'], ['wpn-pistol', 'pistol'], ['wpn-fighter', 'fighter']]) { const b = document.getElementById(id); if (b) { const on = CLS.wpn === w && !(w === 'fists' && BLZ.on); b.classList.toggle('bg-psGlow', on); b.classList.toggle('bg-white/10', !on); } }
             { const kb = NF.cls === 'keyblade' && CLS.wpn === 'sword', b = document.getElementById('wpn-keyblade'), sw = document.getElementById('wpn-sword'); if (b) { b.classList.toggle('bg-psGlow', kb); b.classList.toggle('bg-white/10', !kb); } if (kb && sw) { sw.classList.remove('bg-psGlow'); sw.classList.add('bg-white/10'); } }
