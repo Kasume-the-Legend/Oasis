@@ -12885,7 +12885,8 @@ function kbModel(THREE, mk) {
             try {
                 if (!NU.musicWant || activeMap !== 'nuu') return; let off = false; try { off = localStorage.getItem('oasis.nuu.music') === '0'; } catch (e) { /* storage */ }
                 if (off) { if (NU.bmus && !NU.bmus.paused) { NU.bmus.pause(); NU.bmus.currentTime = 0; } NU.bfade = 0; return; }
-                const want = NF.comb > 0.1 && !NF.dead ? 1 : 0, b = NU.bfade || 0, k = want ? dt / 1.6 : dt / 3.2, nb = want ? Math.min(1, b + k) : Math.max(0, b - k);
+                let hunted = false; try { hunted = nfMobs().some((m) => !m.dead && m.aggro && !m.reset && nfDist(m) < 45); } catch (e) { /* mobs not ready */ }      // battle music only while an enemy is actually after you
+                const want = hunted && !NF.dead ? 1 : 0, b = NU.bfade || 0, k = want ? dt / 1.6 : dt / 3.2, nb = want ? Math.min(1, b + k) : Math.max(0, b - k);
                 if (want && !NU.bmus) { NU.bmus = new Audio(NU_BATTLE); NU.bmus.loop = true; NU.bmus.preload = 'auto'; NU.bmus.volume = 0; }
                 NU.bfade = nb; const ease = nb * nb * (3 - 2 * nb);
                 if (NU.bmus) {
@@ -13008,7 +13009,7 @@ function kbModel(THREE, mk) {
         function nuFlatNear(x, z) { for (let r = 0; r < 70; r += 3) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (Math.abs(px) < 235 && Math.abs(pz) < 235 && !nuBlkR(px, pz) && !nuBlkR(px + 3, pz) && !nuBlkR(px - 3, pz) && !nuBlkR(px, pz + 3) && !nuBlkR(px, pz - 3)) return { x: px, z: pz }; } return { x, z }; }
         /* ---- player (Adventia level), stored on this device ---- */
         const NFK = 'oasis.nf.v1', NF_MAX = 30;
-        const NF = { lv: 1, xp: 0, att: {}, done: [], hunt: {}, cls: 'hero', buffT: 0, gRed: 0.5, hot: null, pet: null, hp: 100, mp: 60, hpMax: 100, mpMax: 60, lb: 0, tgt: null, gcd: 0, auto: 0, cds: {}, cast: null, guard: 0, comb: 0, dead: false, ui: null, fx: [], tels: [], tele: null, regen: 0, lastHit: 0 };
+        const NF = { fall: new Map(), itemT: 0, lv: 1, xp: 0, att: {}, done: [], hunt: {}, cls: 'hero', buffT: 0, gRed: 0.5, hot: null, pet: null, hp: 100, mp: 60, hpMax: 100, mpMax: 60, lb: 0, tgt: null, gcd: 0, auto: 0, cds: {}, cast: null, guard: 0, comb: 0, dead: false, ui: null, fx: [], tels: [], tele: null, regen: 0, lastHit: 0 };
         const nfNeed = (lv) => Math.round(45 * lv * Math.pow(1.17, lv - 1));
         function nfStats() { const C = NF_CLASSES[NF.cls] || NF_CLASSES.hero; NF.hpMax = Math.round((150 + 34 * (NF.lv - 1)) * C.hp); NF.mpMax = Math.round((60 + 7 * (NF.lv - 1)) * C.mp); NF.atk = (12 + 3.4 * NF.lv) * C.atk; NF.mag = (12 + 3.7 * NF.lv) * C.mag; }
         function nfLoad() { try { const o = JSON.parse(localStorage.getItem(NFK) || '{}'); NF.fl = o.fl | 0; NF.lv = Math.max(1, Math.min(NF_MAX, o.lv | 0 || 1)); NF.xp = o.xp | 0; NF.att = o.att && typeof o.att === 'object' ? o.att : {}; NF.done = Array.isArray(o.done) ? o.done.slice(-30) : []; NF.hunt = o.hunt && typeof o.hunt === 'object' ? o.hunt : {}; NF.cls = NF_CLASSES[o.cls] && NF.lv >= NF_CLASSES[o.cls].lv ? o.cls : 'hero'; NF.last = typeof o.last === 'string' ? o.last.slice(0, 24) : ''; } catch (e) { /* storage */ } NF.att.hub = 1; nfStats(); NF.hp = NF.hpMax; NF.mp = NF.mpMax; }
@@ -13018,7 +13019,7 @@ function kbModel(THREE, mk) {
         /* ---- on-screen UI: player frame, target frame, hotbar, cast bar, FATE panel, floating numbers ---- */
         function nfUi() {
             if (NF.ui) return NF.ui; nuCss(); const st = document.createElement('style');
-            st.textContent = '#nf-root{position:fixed;inset:0;z-index:58;pointer-events:none;display:none;font-family:Nunito,system-ui,sans-serif;color:#dff6ff}#nf-root.on{display:block}#nf-root *{box-sizing:border-box}'
+            st.textContent = '#nf-root{position:fixed;inset:0;z-index:58;pointer-events:none;display:none;font-family:Nunito,system-ui,sans-serif;color:#dff6ff}#nf-root.on{display:block}#nf-root *{box-sizing:border-box}#nf-root.nfhide>*:not(#nf-tele){display:none!important}'
                 + '#nf-pf{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:min(430px,92vw);display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;pointer-events:none;text-shadow:0 1px 3px #000}#nf-pf .c{min-width:0}#nf-pf .nfl{display:flex;align-items:baseline;gap:7px;line-height:1}#nf-pf .nfl span{font:800 12px Nunito,system-ui,sans-serif;color:#efe4c4;letter-spacing:.06em}#nf-pf .nfl em{font:800 36px/1 Nunito,system-ui,sans-serif;font-style:normal;color:#fff;letter-spacing:.02em;text-shadow:0 2px 0 #000,0 0 8px rgba(0,0,0,.95)}#nf-pf .nfg{height:8px;margin-top:2px;border-radius:5px;border:1.5px solid #cdbb8c;background:#0e100b;box-shadow:inset 0 0 0 1px #2e2818,0 2px 5px rgba(0,0,0,.65);overflow:hidden}#nf-pf .nfg i{display:block;height:100%;width:50%;transition:width .15s;box-shadow:inset 0 2px 0 rgba(255,255,255,.28)}#nf-pf .nfg i.hp{background:linear-gradient(180deg,#c6f592,#72d03c 45%,#3b9420)}#nf-pf .nfg i.mp{background:linear-gradient(180deg,#ffb6ea,#e63fb2 45%,#9d1479)}#nf-pf .nfg i.lb{background:linear-gradient(180deg,#ffe9a0,#f0b429 55%,#b3770c)}#nf-pf .nfg.sm{height:4px;border-width:1px;margin-top:0;border-radius:3px}#nf-pf .w{grid-column:1/3;display:flex;align-items:center;gap:8px}#nf-pf .w .nfg{flex:1}#nf-pf .nfx{font:700 10px Nunito,system-ui,sans-serif;color:#e9dfc0;opacity:.9;white-space:nowrap}.nfbar{flex:1;height:7px;background:rgba(0,0,0,.55);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,.25)}.nfbar i{display:block;height:100%;width:50%}@media (max-width:640px){#nf-pf{bottom:14px;width:min(340px,94vw)}#nf-pf .nfl em{font-size:28px}}'
                 + '#nf-tf{position:absolute;left:50%;top:12px;transform:translateX(-50%);min-width:210px;padding:6px 14px;border:1px solid rgba(255,255,255,.35);background:rgba(6,18,36,.78);text-align:center;display:none;border-radius:4px;text-shadow:0 1px 2px #000}#nf-tf.on{display:block}#nf-tf b{font-size:12px;letter-spacing:.1em}#nf-tf .nfbar{margin-top:4px;height:9px;flex:none}#nf-tf #nf-en{height:5px;margin-top:5px}#nf-et{display:block;font-size:10px;letter-spacing:.08em;margin-top:2px;color:#cfd8e0}#nf-pl .pr.agg{box-shadow:inset 3px 0 0 #ff5a3a;background:linear-gradient(90deg,rgba(255,90,58,.22),transparent 60%)}'
                 + '#nf-hb{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto}.nfsk{position:relative;width:48px;height:48px;border-radius:8px;border:2px solid #8fd8ff;background:linear-gradient(180deg,rgba(20,50,90,.9),rgba(6,16,36,.95));color:#fff;font:800 18px system-ui;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;user-select:none;touch-action:manipulation}.nfsk small{position:absolute;left:3px;top:1px;font-size:9px;opacity:.8}.nfsk em{position:absolute;inset:0;background:rgba(0,0,0,.62);font:700 11px system-ui;display:flex;align-items:center;justify-content:center;font-style:normal}.nfsk.off{opacity:.45}.nfsk .nm{position:absolute;bottom:0;left:0;right:0;font-size:7px;text-align:center;background:rgba(0,0,0,.45);letter-spacing:.04em}'
@@ -13111,7 +13112,8 @@ function kbModel(THREE, mk) {
             }).join(''); u.pl.classList.add('on');
         }
         function nfUiTick() {
-            const u = NF.ui; if (!u) return; try { if (u.xb) u.xb.style.display = PAD.active ? 'none' : ''; } catch (e) { /* no pad yet */ }   // a connected controller uses its own LT/RT hotbar: no on-screen touch hotbar underneath it
+            const u = NF.ui; if (!u) return; try { nfItemsUi(); } catch (e) { /* items bar */ } try { const rt = document.getElementById('nf-root'); if (rt) rt.classList.toggle('nfhide', lobbyOpen() || startOpen() || charModalOpen() || equipOpen() || invOpen() || animModalOpen() || !dockHidden); } catch (e) { /* menus not ready */ }   // the Adventia HUD steps aside while a menu is open so nothing overlaps
+            try { if (u.xb) u.xb.style.display = PAD.active ? 'none' : ''; } catch (e) { /* no pad yet */ }   // a connected controller uses its own LT/RT hotbar: no on-screen touch hotbar underneath it
  const q = (k) => u.pf.querySelector('[data-k="' + k + '"]'); 
             q('hp').style.width = Math.max(0, NF.hp / NF.hpMax * 100) + '%'; q('mp').style.width = Math.max(0, NF.mp / NF.mpMax * 100) + '%'; q('lb').style.width = NF.lb + '%'; q('hpt').textContent = Math.max(0, Math.round(NF.hp)); q('mpt').textContent = Math.round(NF.mp); q('xpt').textContent = 'LB  ' + Math.round(NF.lb) + '%   ·   ' + (NF.lv >= NF_MAX ? 'MAX' : NF.xp + '/' + nfNeed(NF.lv) + ' xp');
             const t = NF.tgt; if (t && !t.dead) { u.tf.classList.add('on'); u.tf.querySelector('b').textContent = '◆ LV ' + t.lv + '  ' + t.name.toUpperCase(); u.tf.querySelector('b').style.color = nfConCol(t.lv); u.tf.querySelector('[data-k="th"]').style.width = Math.max(0, t.hp / t.hpMax * 100) + '%';
@@ -13206,14 +13208,14 @@ function kbModel(THREE, mk) {
         const nfDist = (m) => Math.hypot(m.x - nfPos().x, m.z - nfPos().z);
         function nfMobs() { const out = []; for (const g of NU.groups) if (!g.dead) for (const m of g.mobs) if (!m.dead) out.push(m); for (const f of NU.fates) for (const m of f.mobs) if (!m.dead) out.push(m); for (const m of NU.extra) if (!m.dead) out.push(m); return out; }
         function nfTarget(m) { if (NF.tgt === m) return; NF.tgt = m; if (m) { nfBar(m); } }
-        function nfCycle(dir) {
+        function nfCycle(dir, foesOnly) {      // foesOnly (the D-pad left / right): enemies only, and your party target is left alone
             dir = dir || 1; const p = nfPos(), list = nfMobs().filter((m) => nfDist(m) < 30).sort((a, b) => (b.aggro ? 1 : 0) - (a.aggro ? 1 : 0) || nfDist(a) - nfDist(b)).map((m) => ({ m }));
-            try { [...peers.values()].filter((q) => q.actor.group.parent && q.actor.group.position.distanceTo(p) < 25).sort((a, b) => a.actor.group.position.distanceTo(p) - b.actor.group.position.distanceTo(p)).forEach((q) => list.push({ id: q.id })); } catch (e) { /* no peers */ }
-            if (!list.length) { nfTarget(null); NF.lockOn = false; try { setLookTarget(null, false); } catch (e) { /* none */ } return; }
+            if (!foesOnly) try { [...peers.values()].filter((q) => q.actor.group.parent && q.actor.group.position.distanceTo(p) < 25).sort((a, b) => a.actor.group.position.distanceTo(p) - b.actor.group.position.distanceTo(p)).forEach((q) => list.push({ id: q.id })); } catch (e) { /* no peers */ }
+            if (!list.length) { nfTarget(null); NF.lockOn = false; if (!foesOnly) try { setLookTarget(null, false); } catch (e) { /* none */ } return; }
             let i = list.findIndex((o) => (o.m ? o.m === NF.tgt : o.id === localActor.lookId)); i = i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length;
-            const o = list[i]; if (o.m) { try { if (localActor.lookId) setLookTarget(null, false); } catch (e) { /* none */ } nfTarget(o.m); NF.lockOn = !!PAD.active; } else { nfTarget(null); NF.lockOn = false; setLookTarget(o.id, false); const q = peers.get(o.id); if (q) padToast('Targeting ' + q.name); }
+            const o = list[i]; if (o.m) { try { if (localActor.lookId && !foesOnly) setLookTarget(null, false); } catch (e) { /* none */ } nfTarget(o.m); NF.lockOn = !!PAD.active; } else { nfTarget(null); NF.lockOn = false; setLookTarget(o.id, false); const q = peers.get(o.id); if (q) padToast('Targeting ' + q.name); }
         }
-        function nfPadUse() { if (activeMap !== 'nuu') return false; if (niNear()) { niGo(); return true; } const c = nuChestNear(); if (c) { nuChestOpenNear(); return true; } const k = nuCrystalNear(); if (k) { nfInteractCrystal(k); return true; } return false; }
+        function nfPadUse() { if (activeMap !== 'nuu') return false; if (niNear()) { niGo(); return true; } { const fr = nfFallNear(); if (fr) { nfPhoenixOther(fr); return true; } } const c = nuChestNear(); if (c) { nuChestOpenNear(); return true; } const k = nuCrystalNear(); if (k) { nfInteractCrystal(k); return true; } return false; }
         function nfRoll() {
             if (activeMap !== 'nuu' || !NU.ready || NF.dead || NF.tele || NF.cast || NF.roll) return; const now = performance.now() / 1000; if ((NF.rollCd || 0) > now) return; NF.rollCd = now + 0.9;
             const g = localActor.group; let ix = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + (padMove.x || 0), iz = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + (padMove.z || 0), dx, dz;
@@ -13288,13 +13290,13 @@ function kbModel(THREE, mk) {
                 const A = localActor; if (!A || !A.playEmote) return; let nm = KB_ANIM[s.id];
                 if (s.id === 'x1') { const t = performance.now() / 1000; NF.kbC = (t - (NF.kbT || 0) > 1.5) ? 1 : (NF.kbC % 3) + 1; NF.kbT = t; nm = 'kb_atk' + NF.kbC; }
                 if (!nm || !ANIM_EMOTES[nm]) return; const moving = Math.hypot(playerVelocity.x, playerVelocity.z) > 0.6 || !!hcInput();
-                if (nm !== 'groll' && moving && A.playUpper && A.playUpper(nm, 1.15)) return;        // on the move only the upper body swings, so the legs keep running
-                A.playEmote(nm); A.emoteRate = 1.1;
+                if (nm !== 'groll' && moving && A.playUpper && A.playUpper(nm, 1.45)) return;        // on the move only the upper body swings, so the legs keep running
+                A.playEmote(nm); A.emoteRate = 1.4;
             } catch (e) { /* no clip */ }
         }
         /* auto attacks swing too: the same combat clips the skills use, upper body only while running so the legs keep going */
         function nfAutoAnim() {
-            const A = localActor; if (!A || !A.playEmote) return; const C = nfCls(); let nm = null, rate = 1.15;
+            const A = localActor; if (!A || !A.playEmote) return; const C = nfCls(); let nm = null, rate = 1.45;
             if (NF.cls === 'keyblade') { kbAnim({ id: 'x1' }); return; }
             if (C.w === 'sword') { NF.aaC = ((NF.aaC | 0) % 3) + 1; nm = 'hatk' + NF.aaC; }
             else if (C.w === 'fighter') { NF.aaC = ((NF.aaC | 0) % 3) + 1; nm = HERO_ACTS['f_hatk' + NF.aaC] ? 'f_hatk' + NF.aaC : null; }
@@ -13304,7 +13306,7 @@ function kbModel(THREE, mk) {
             if (moving && A.playUpper && A.playUpper(nm, rate)) return;
             A.playEmote(nm); A.emoteRate = rate;
         }
-        function nfAnim(s) { try { if (nfCls().w === 'sword' && NF.cls === 'keyblade') { kbAnim(s); return; } if (!/^(hit|cone|aoe|line|dash|lb|steal)$/.test(s.k)) return; const C = nfCls(); if (C.w !== 'sword' && C.w !== 'fighter') return; const n = 1 + ((Math.random() * 3) | 0), nm = C.w === 'fighter' && HERO_ACTS['f_hatk' + n] ? 'f_hatk' + n : 'hatk' + n; if (HERO_ACTS[nm] && localActor && localActor.playEmote) localActor.playEmote(nm); } catch (e) { /* no clip */ } }
+        function nfAnim(s) { try { if (nfCls().w === 'sword' && NF.cls === 'keyblade') { kbAnim(s); return; } if (!/^(hit|cone|aoe|line|dash|lb|steal)$/.test(s.k)) return; const C = nfCls(); if (C.w !== 'sword' && C.w !== 'fighter') return; const n = 1 + ((Math.random() * 3) | 0), nm = C.w === 'fighter' && HERO_ACTS['f_hatk' + n] ? 'f_hatk' + n : 'hatk' + n; if (HERO_ACTS[nm] && localActor && localActor.playEmote) { localActor.playEmote(nm); localActor.emoteRate = 1.4; } } catch (e) { /* no clip */ } }      // Adventia swings run about 40% quicker so the combat feels snappy
         function nfDot(m, d, mag) { m.dots = (m.dots || []).filter((q) => q.id !== d.id); m.dots.push({ id: d.id, pot: d.pot, left: d.sec, tick: 1.5, mag: !!mag }); nfPop(new THREE.Vector3(m.x, m.node.position.y + 2.4, m.z), 'DoT', '#c78bff'); }
         function nfPetStart(kind, sec, pot) {
             nfPetClear(); const col = { ifrit: 0xff6a2a, shiva: 0x7fe0ff, ramuh: 0xffe44a, bahamut: 0xb06aff }[kind] || 0xffffff, orb = new THREE.Mesh(new THREE.IcosahedronGeometry(kind === 'bahamut' ? 0.9 : 0.55, 1), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); orb.userData.noOutline = true; NU.group.add(orb); NF.pet = { kind, left: sec, t: 0, pot, orb, tick: 1.2 };
@@ -13354,10 +13356,13 @@ function kbModel(THREE, mk) {
             }
         }
         function nfAggro(m) { if (!m.aggro) { try { NSX.growl(m); } catch (e) { /* audio */ } } m.aggro = true; if (m.group) for (const o of m.group.mobs) if (!o.dead) o.aggro = true; NF.comb = 6; }
+        function nfShareN() { try { if (!PARTY.code || !NS.pl) return 1; let n = 1; for (const q of NS.pl) if (!q.me && PARTY.members.has(q.id)) n++; return n; } catch (e) { return 1; } }
         function nfMobDie(m, remote) {
             if (m.dead) return; m.dead = true; if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); try { if (m.node.visible) nuShatter(m.node, m.big || 1); } catch (e) { /* cosmetic */ } m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
-            if (!remote || m.mine) { nfPop(new THREE.Vector3(m.x, m.node.position.y + 1.2, m.z), '+' + Math.round(xp) + ' XP', '#7fd8ff'); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ } }
+            { const sN = nfShareN(), own = !remote || m.mine, xs = sN > 1 ? xp / sN : xp;      // the whole party shares a kill's XP equally, whoever landed the blow
+                if (sN > 1 || own) { nfPop(new THREE.Vector3(m.x, m.node.position.y + 1.2, m.z), '+' + Math.round(xs) + ' XP' + (sN > 1 ? ' (÷' + sN + ')' : ''), '#7fd8ff'); nfXp(xs); }
+                if (own) { try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ } } }
             const roll = (k, p) => { if ((!remote || m.mine) && Math.random() < p) { try { btBagAdd(k, 1); sysChat('Found ' + BT_ITEMS[k].n + '.'); } catch (e) { /* bag */ } } }; roll('potion', m.boss ? 0.9 : 0.2); roll('ether', m.boss ? 0.8 : 0.08); roll('hipotion', m.boss ? 0.6 : 0.03); roll('phoenix', m.boss ? 0.5 : 0.02); if (m.boss) roll('elixir', 0.4);
             if ((!remote || m.mine) && Math.random() < (m.boss ? 0.3 : (m.rankMul > 1 || m.fate) ? 0.05 : 0.012)) { try { ttPackDrop(m.boss ? 'boss' : ''); } catch (e) { /* cards not ready */ } }     // uncommon drop
             if (m.group && !m.group.dg && m.group.mobs.every((o) => o.dead)) nuKill(m.group); if (m.dgBoss) { try { dgBossDown(); } catch (e) { console.warn('boss down', e); } } if (m.fate) { m.fate.kills++; }
@@ -13368,11 +13373,79 @@ function kbModel(THREE, mk) {
             if (NF.dead) return; if (NF.inv > 0) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); if (nfMyRole() === 'tank') d = Math.round(d * 0.8); d = Math.max(1, Math.round(d)); NF.hp -= d; NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
             if (NF.tele) nfTeleCancel('Teleport interrupted'); if (NF.hp <= 0) nfDie();
         }
+        /* ---- DOWN: you fall where you stand and a pale crystal with floating shards marks the spot. A Phoenix Down (yours, or a friend's) stands you back up at 25% HP; or you can return to an aether crystal. ---- */
+        const NF_ITEM_CD = 2.5;
+        function nfFallBuild(id, name, x, y, z, mine) {
+            nfFallRemove(id); if (!NU.group) return; const G = new THREE.Group(); G.position.set(x, y, z); const col = new THREE.Color(0xbfe8ff);
+            const glow = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.04, 6, 32), glow); ring.rotation.x = Math.PI / 2; ring.position.y = 0.08; G.add(ring);
+            const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.6, 0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.4, roughness: 0.15, transparent: true, opacity: 0.88 })); core.scale.set(0.8, 1.6, 0.8); core.position.y = 1.3; G.add(core);
+            const shards = []; for (let k = 0; k < 9; k++) { const sh = new THREE.Mesh(new THREE.TetrahedronGeometry(0.1 + (k % 3) * 0.03, 0), glow.clone()); sh.material.opacity = 0.9; G.add(sh); shards.push(sh); }
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 9, 8, 1, true), glow.clone()); beam.material.opacity = 0.22; beam.position.y = 4.5; G.add(beam);
+            try { const lb = makeLabel('🪶 ' + String(name).slice(0, 16), { size: 24, border: '#bfe8ff', plain: true }); lb.position.set(0, 3.1, 0); G.add(lb); } catch (e) { /* no label */ }
+            for (const o of G.children) o.userData.noOutline = true; NU.group.add(G); NF.fall.set(id, { id, name: String(name), x, y, z, g: G, core, shards, mine, t: Math.random() * 6 });
+        }
+        function nfFallRemove(id) { const f = NF.fall.get(id); if (!f) return; try { f.g.removeFromParent(); f.g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); } catch (e) { /* gone */ } NF.fall.delete(id); }
+        function nfFallClear() { for (const id of [...NF.fall.keys()]) nfFallRemove(id); }
+        function nfFallTick(dt) {
+            for (const f of [...NF.fall.values()]) {
+                if (!f.mine && !peers.has(f.id)) { nfFallRemove(f.id); continue; } f.t += dt; f.core.rotation.y += dt * 1.2; f.core.position.y = 1.3 + Math.sin(f.t * 2) * 0.12;
+                f.shards.forEach((sh, i) => { const a = f.t * 0.8 + i * (Math.PI * 2 / f.shards.length), r = 0.85 + 0.25 * Math.sin(f.t + i); sh.position.set(Math.cos(a) * r, 0.5 + (i % 3) * 0.45 + Math.sin(f.t * 1.5 + i) * 0.15, Math.sin(a) * r); sh.rotation.x += dt * 1.5; sh.rotation.y += dt * 1.1; });
+            }
+        }
+        function nfFallNear() { if (activeMap !== 'nuu' || NF.dead) return null; const p = nfPos(); for (const f of NF.fall.values()) if (!f.mine && Math.hypot(f.x - p.x, f.z - p.z) < 3.4) return f; return null; }
+        function nfUnhideSelf() { try { if (NF.hid) NF.hid.visible = true; if (localActor.label) localActor.label.visible = true; } catch (e) { /* cosmetic */ } NF.hid = null; }
+        function nfDownUi(show) {
+            let el = document.getElementById('nf-down');
+            if (!el) { el = document.createElement('div'); el.id = 'nf-down'; el.style.cssText = 'position:fixed;left:50%;bottom:16%;transform:translateX(-50%);z-index:8300;display:none;text-align:center;padding:14px 20px;border-radius:14px;background:rgba(8,16,34,.9);border:2px solid #bfe8ff;color:#e8f6ff;font:800 14px Nunito,system-ui,sans-serif;box-shadow:0 10px 40px #000a;max-width:92vw';
+                el.innerHTML = '<div style="font-size:18px;letter-spacing:.12em;margin-bottom:4px">YOU HAVE FALLEN</div><div style="font-size:11px;opacity:.8;margin-bottom:10px">A friend can revive you with a Phoenix Down at your crystal.</div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button type="button" data-a="phoenix" style="padding:9px 16px;border-radius:10px;border:1px solid #ffd24a;background:linear-gradient(180deg,#d9a21c,#8a6208);color:#fff;font:800 13px Nunito,sans-serif;cursor:pointer"></button><button type="button" data-a="return" style="padding:9px 16px;border-radius:10px;border:1px solid #9fb8ff;background:linear-gradient(180deg,#3d63c9,#27428c);color:#fff;font:800 13px Nunito,sans-serif;cursor:pointer">Return to aether crystal <small style="opacity:.75">(X)</small></button></div>';
+                el.querySelectorAll('button').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); nfDownAct(b.dataset.a); })); document.body.appendChild(el); }
+            if (show) { const n = btBagLoad().phoenix | 0, b = el.querySelector('[data-a="phoenix"]'); b.textContent = '🪶 Use a Phoenix Down (' + n + ') · A'; b.style.opacity = n ? '1' : '.5'; }
+            el.style.display = show ? 'block' : 'none';
+        }
+        function nfDownAct(a) {
+            if (!NF.dead) return;
+            if (a === 'phoenix') { if ((btBagLoad().phoenix | 0) < 1) { try { sysChat('You have no Phoenix Down.'); padToast('No Phoenix Down'); } catch (e) { /* chat */ } return; } btBagAdd('phoenix', -1); nfRevive(0.25); }
+            else if (a === 'return') nfReturn();
+        }
+        function nfRevive(frac) {
+            if (!NF.dead) return; NF.dead = false; NF.hp = Math.max(1, NF.hpMax * frac); NF.comb = 0; NU.grace = 4; NF.lb = 0; nfUnhideSelf(); nfFallRemove(me.id); nfDownUi(false);
+            try { nsSend({ k: 'pu' }); } catch (e) { /* offline */ } try { nuShowBanner('REVIVED', 'BACK ON YOUR FEET'); nfFx('heal', nfPos(), nfPos()); nfPop(nfPos().clone().setY(nfPos().y + 2), '+' + Math.round(NF.hp), '#7dffa0', true); } catch (e) { /* cosmetic */ }
+        }
+        async function nfReturn() {
+            if (!NF.dead || NF.rt) return; NF.rt = true; nfDownUi(false); await nuFade(true, 900); nfUnhideSelf();
+            const c = DG.on ? { x: DG.start.x - 2.2, z: DG.start.z } : ZN.on ? { x: ZN.zones[ZN.key].spawn.x - 2.2, z: ZN.zones[ZN.key].spawn.z + (ZN.key === 'tent' ? TN.slot * TN_STEP : 0) } : nfNearestCrystal(); nuPlace({ x: c.x + 2.2, y: nuH(c.x + 2.2, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.2, 1, c.z);
+            NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.dead = false; NU.grace = 5; NF.comb = 0; NF.lb = 0; nfFallRemove(me.id); try { nsSend({ k: 'pu' }); } catch (e) { /* offline */ } await nuFade(false, 600); NF.rt = false;
+        }
+        function nfPhoenixOther(f) {
+            if (!f || NF.dead) return; if ((btBagLoad().phoenix | 0) < 1) { try { sysChat('You need a Phoenix Down to revive ' + f.name + '.'); padToast('No Phoenix Down'); } catch (e) { /* chat */ } return; }
+            btBagAdd('phoenix', -1); try { nsSend({ k: 'rv', to: f.id }); } catch (e) { /* offline */ } nfFallRemove(f.id); try { nfFx('heal', nfPos(), nfPos()); sysChat('You used a Phoenix Down on ' + f.name + '.'); nfPop(nfPos().clone().setY(nfPos().y + 2), '🪶 Phoenix Down', '#ffd24a'); } catch (e) { /* cosmetic */ }
+        }
+        const NF_ITEMS = [['potion', '🧪', 'Potion · heals 30% HP (H)'], ['hipotion', '⚗️', 'Hi-Potion · heals 65% HP'], ['ether', '🔷', 'Ether · restores 40% MP (G)'], ['elixir', '🌟', 'Elixir · full HP and MP (Y)'], ['phoenix', '🪶', 'Phoenix Down · revive at 25% HP']];
+        function nfItemUse(k) {
+            if (activeMap !== 'nuu' || !NU.ready) return;
+            if (k === 'phoenix') { if (NF.dead) { nfDownAct('phoenix'); return; } const f = nfFallNear(); if (f) { nfPhoenixOther(f); return; } try { padToast('Stand by a fallen ally\'s crystal'); } catch (e) { /* toast */ } return; }
+            if (NF.dead) return; const now = performance.now() / 1000; if (NF.itemT > now) return; const bag = btBagLoad(), nm = (BT_ITEMS[k] || { n: k }).n;
+            if (!(bag[k] > 0)) { try { padToast('No ' + nm); } catch (e) { /* toast */ } return; }
+            const P = nfPos(), up = P.clone().setY(P.y + 2), hfull = NF.hp >= NF.hpMax - 0.5, mfull = NF.mp >= NF.mpMax - 0.5;
+            if (k === 'potion' || k === 'hipotion') { if (hfull) { nfPop(up, 'HP is full', '#cfd8e0'); return; } const h = Math.round(NF.hpMax * (k === 'potion' ? 0.3 : 0.65)); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); try { nfFx('heal', P, P); } catch (e) { /* fx */ } }
+            else if (k === 'ether') { if (mfull) { nfPop(up, 'MP is full', '#cfd8e0'); return; } const m = Math.round(NF.mpMax * 0.4); NF.mp = Math.min(NF.mpMax, NF.mp + m); nfPop(up, '+' + m + ' MP', '#8fb8ff', true); }
+            else if (k === 'elixir') { if (hfull && mfull) { nfPop(up, 'Already full', '#cfd8e0'); return; } NF.hp = NF.hpMax; NF.mp = NF.mpMax; nfPop(up, 'Elixir!', '#ffe27a', true); try { nfFx('heal', P, P); } catch (e) { /* fx */ } }
+            else return;
+            btBagAdd(k, -1); NF.itemT = now + NF_ITEM_CD; NF.itemRef = 0;
+        }
+        function nfItemsUi() {
+            const rt = document.getElementById('nf-root'); if (!rt) return; let el = document.getElementById('nf-items');
+            if (!el) { el = document.createElement('div'); el.id = 'nf-items'; el.style.cssText = 'position:absolute;right:10px;bottom:250px;display:flex;flex-direction:column;gap:5px;pointer-events:auto'; rt.appendChild(el); el.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); e.stopPropagation(); nfItemUse(b.dataset.k); }); }
+            const t = performance.now(); if (t - (NF.itemRef || 0) > 400) { NF.itemRef = t; const bag = btBagLoad(), html = NF_ITEMS.filter((q) => bag[q[0]] > 0).map((q) => `<button type="button" data-k="${q[0]}" title="${q[2]}" style="position:relative;width:42px;height:42px;border-radius:10px;border:2px solid #8fd8ff;background:linear-gradient(180deg,rgba(20,50,90,.9),rgba(6,16,36,.95));color:#fff;font-size:20px;line-height:1;cursor:pointer">${q[1]}<b style="position:absolute;right:3px;bottom:1px;font:900 11px Nunito,system-ui,sans-serif;text-shadow:0 1px 2px #000">${bag[q[0]]}</b></button>`).join(''); if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; } }
+            let h = document.getElementById('nf-rvhint'); if (!h) { h = document.createElement('div'); h.id = 'nf-rvhint'; h.style.cssText = 'position:absolute;left:50%;bottom:34%;transform:translateX(-50%);padding:7px 16px;border-radius:999px;background:rgba(8,16,34,.88);border:1px solid #bfe8ff;color:#e8f6ff;font:800 13px Nunito,system-ui,sans-serif;display:none;white-space:nowrap'; rt.appendChild(h); }
+            const f = nfFallNear(); h.style.display = f ? 'block' : 'none'; if (f) h.textContent = (btBagLoad().phoenix | 0) > 0 ? '🪶 Use a Phoenix Down on ' + f.name + '  (F / ✋)' : f.name + ' has fallen · you need a Phoenix Down';
+        }
         async function nfDie() {
-            if (NF.dead) return; NF.dead = true; NF.cast = null; NF.tgt = null; nuShowBanner('YOU DIED', 'RETURNING TO AN AETHER CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
-            try { nsSend({ k: 'pd' }); } catch (e) { /* offline */ } let hid = null; try { hid = localActor.holder || localActor.group; if (hid.visible) { nuShatter(hid, 1.3); hid.visible = false; if (localActor.label) localActor.label.visible = false; } else hid = null; } catch (e) { hid = null; }   // the same polygon shatter the monsters get
-            await new Promise((r) => setTimeout(r, 900));
-            await nuFade(true, 900); try { if (hid) hid.visible = true; if (localActor.label) localActor.label.visible = true; } catch (e) { /* cosmetic */ } const c = DG.on ? { x: DG.start.x - 2.2, z: DG.start.z } : ZN.on ? { x: ZN.zones[ZN.key].spawn.x - 2.2, z: ZN.zones[ZN.key].spawn.z + (ZN.key === 'tent' ? TN.slot * TN_STEP : 0) } : nfNearestCrystal(); nuPlace({ x: c.x + 2.2, y: nuH(c.x + 2.2, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.2, 1, c.z); NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.dead = false; NU.grace = 5; NF.comb = 0; NF.lb = 0; await nuFade(false, 600);
+            if (NF.dead) return; NF.dead = true; NF.cast = null; NF.tgt = null; NF.roll = null; NF.hot = null; nuShowBanner('YOU HAVE FALLEN', 'USE A PHOENIX DOWN OR RETURN TO A CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
+            const P = nfPos(), fx = Math.round(P.x * 100) / 100, fy = Math.round(P.y * 100) / 100, fz = Math.round(P.z * 100) / 100;
+            try { nsSend({ k: 'pd', x: fx, y: fy, z: fz }); } catch (e) { /* offline */ } let hid = null; try { hid = localActor.holder || localActor.group; if (hid.visible) { nuShatter(hid, 1.3); hid.visible = false; if (localActor.label) localActor.label.visible = false; } else hid = null; } catch (e) { hid = null; }   // the same polygon shatter the monsters get
+            NF.hid = hid; await new Promise((r) => setTimeout(r, 700)); if (!NF.dead) return; nfFallBuild(me.id, me.name || 'You', fx, fy, fz, true); nfDownUi(true);
         }
         function nfBar(m) {
             if (m.bar || m.dead) return; const c = document.createElement('canvas'); c.width = 128; c.height = 16; const tex = new THREE.CanvasTexture(c), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })); sp.scale.set(1.5, 0.19, 1); sp.renderOrder = 999; sp.position.set(0, ((m.node.userData.h || 1.6) + 0.5) / (m.size || 1), 0); sp.userData.noOutline = true; m.node.add(sp); m.bar = sp;
@@ -13548,7 +13621,11 @@ function kbModel(THREE, mk) {
                         if (!mm.net) { mm.x = +r[1]; mm.z = +r[2]; } mm.net = { x: +r[1], z: +r[2], ang: +r[3] || 0 }; mm.hp = Math.min(mm.hpMax, +r[4]); mm.aggro = !!(fl & 1); mm.reset = !!(fl & 2); if (typeof r[6] === 'string') mm.tid = r[6].slice(0, 40); else if (!(fl & 1)) mm.tid = null; if (fl & 4) nfMobDie(mm, true); }
                 }
             } else if (k === 'pd') {
-                try { const pe = peers.get(from); const hh = pe && pe.actor && (pe.actor.holder || pe.actor.group); if (hh && hh.visible && pe.actor.group.parent) { nuShatter(hh, 1.3); hh.visible = false; setTimeout(() => { hh.visible = true; }, 2200); } } catch (e) { /* cosmetic */ }
+                try { const pe = peers.get(from); const hh = pe && pe.actor && (pe.actor.holder || pe.actor.group); const at = Number.isFinite(+m.x) && Number.isFinite(+m.z) && m.x !== undefined; if (hh && hh.visible && pe.actor.group.parent) { nuShatter(hh, 1.3); hh.visible = false; if (!at) setTimeout(() => { hh.visible = true; }, 2200); } if (at && pe) nfFallBuild(from, pe.name || 'Ally', +m.x, Number.isFinite(+m.y) ? +m.y : 0, +m.z, false); } catch (e) { /* cosmetic */ }
+            } else if (k === 'pu') {
+                try { nfFallRemove(from); const pe = peers.get(from); const hh = pe && pe.actor && (pe.actor.holder || pe.actor.group); if (hh) hh.visible = true; } catch (e) { /* cosmetic */ }
+            } else if (k === 'rv') {
+                if (m.to === me.id && NF.dead) { nfRevive(0.25); try { sysChat((peers.get(from) ? peers.get(from).name : 'An ally') + ' revived you with a Phoenix Down.'); } catch (e) { /* chat */ } }
             } else if (k === 'h') {
                 const mm = NS.mobs.get(m.id); if (!mm || mm.dead) return; const d = nsNum(m.d, 0, 99999); mm.hp -= d; mm.hurt = performance.now(); if (mm.fate) mm.fate.hit = mm.fate.hit || false; nfPop(new THREE.Vector3(mm.x, mm.node.position.y + (mm.node.userData.h || 1.5) * (mm.big || 1) + 0.4, mm.z), String(d | 0), '#cfd8e0');
                 nfThreatAdd(mm, from, nsNum(m.th, 0, 999999)); if (nsIsOwner(mm)) { nfAggro(mm); if (typeof m.f === 'string' && !mm.th) mm.tid = m.f; } else mm.aggro = true; if (mm.hp <= 0) nfMobDie(mm, true);
@@ -13726,14 +13803,14 @@ function kbModel(THREE, mk) {
             NF.tele = { c, t0: performance.now() / 1000 }; NF.cast = { n: 'Teleport: ' + c.name, t0: performance.now() / 1000, dur: 3, s: { cast: 3 }, x: nfPos().x, z: nfPos().z, go: async () => { NF.tele = null; if (cost) { try { window.oasisGil.add(-cost, true); } catch (e) { /* gil */ } } NF.last = c.id; nfSave(); if (c.zone) { await arGo({ mode: 'zone', key: c.zone, banner: [c.name.toUpperCase(), 'AETHER TELEPORT'] }); return; } await nuFade(true, 500); nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.4, 1, c.z); NU.grace = 4; await nuFade(false, 500); nuShowBanner(c.name.toUpperCase(), 'AETHER TELEPORT'); } };
         }
         function nfCastTick(dt) {
-            nfRollTick(dt); if (NF.gcd > 0) NF.gcd = Math.max(0, NF.gcd - dt); if (NF.guard > 0) NF.guard -= dt; if (NF.buffT > 0) NF.buffT -= dt; if (NF.comb > 0) NF.comb -= dt; const p = nfPos();
+            nfRollTick(dt); try { nfFallTick(dt); } catch (e) { /* crystals */ } if (NF.gcd > 0) NF.gcd = Math.max(0, NF.gcd - dt); if (NF.guard > 0) NF.guard -= dt; if (NF.buffT > 0) NF.buffT -= dt; if (NF.comb > 0) NF.comb -= dt; const p = nfPos();
             if (NF.hot) { NF.hot.left -= dt; NF.hot.tick -= dt; if (NF.hot.tick <= 0) { NF.hot.tick = 3; const h = Math.round(NF.hpMax * NF.hot.pot + NF.mag * 0.3); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(p.clone().setY(p.y + 2.2), '+' + h, '#7dffa0'); } if (NF.hot.left <= 0) NF.hot = null; }
             for (const m of nfMobs()) if (m.dots && m.dots.length) for (const d of m.dots.slice()) { d.left -= dt; d.tick -= dt; if (d.tick <= 0) { d.tick = 3; nfDealDmg(m, d.pot, d.mag); } if (d.left <= 0 || m.dead) m.dots.splice(m.dots.indexOf(d), 1); }
             nfPetTick(dt);
             if (NF.cast) { const now = performance.now() / 1000; if (Math.hypot(p.x - NF.cast.x, p.z - NF.cast.z) > 0.7) { const was = NF.tele; NF.cast = null; NF.tele = null; nfPop(p.clone().setY(p.y + 2.4), 'Interrupted', '#ffb347'); if (was) nuShowBanner('CANCELLED', 'YOU MOVED'); } else if (now - NF.cast.t0 >= NF.cast.dur) { const c = NF.cast; NF.cast = null; c.go(); } }
             // auto-attack on a hostile in reach, regen when out of combat
             if (NF.tgt && !NF.tgt.dead && !NF.dead && !NF.cast && NF.tgt.aggro) { NF.auto -= dt; const CA = nfCls(); if (NF.auto <= 0 && nfDist(NF.tgt) < CA.auto + (NF.tgt.big || 1) * 0.5) { NF.auto = 2.6; nfFace(NF.tgt); try { nfAutoAnim(); } catch (e) { /* no clip */ } nfFx(CA.auto > 6 ? 'bolt' : 'slash', p, new THREE.Vector3(NF.tgt.x, NF.tgt.node.position.y, NF.tgt.z)); nfDealDmg(NF.tgt, 0.6, CA.mag > 1); } } else NF.auto = Math.min(NF.auto + dt, 1);
-            if (NF.comb <= 0 && !NF.dead) { NF.hp = Math.min(NF.hpMax, NF.hp + NF.hpMax * 0.03 * dt); NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.05 * dt); } else if (!NF.dead) NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.012 * dt);
+            if (NF.comb <= 0 && !NF.dead) { NF.hp = Math.min(NF.hpMax, NF.hp + NF.hpMax * 0.018 * dt); NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.032 * dt); } else if (!NF.dead) NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * 0.008 * dt);
             if (NF.tgt && (NF.tgt.dead || nfDist(NF.tgt) > 45)) NF.tgt = null;
         }
         /* ---- treasure chests ---- */
@@ -13777,6 +13854,8 @@ function kbModel(THREE, mk) {
             else if (k === 'KeyT') { sw(); if (!e.repeat) nfTeleMenu(); }
             else if (k === 'KeyB') { sw(); if (!e.repeat) tnPitch(); }
             else if ((k === 'KeyF' || k === 'KeyE') && niNear()) { sw(); if (!e.repeat) niGo(); }
+            else if ((k === 'KeyF' || k === 'KeyE') && nfFallNear()) { sw(); if (!e.repeat) nfPhoenixOther(nfFallNear()); }
+            else if (k === 'KeyH' || k === 'KeyG' || k === 'KeyY') { sw(); if (!e.repeat) nfItemUse(k === 'KeyH' ? 'potion' : k === 'KeyG' ? 'ether' : 'elixir'); }
             else if (k === 'KeyF' && !nuChestNear()) { const c = nuCrystalNear(); if (c) { sw(); if (!e.repeat) nfInteractCrystal(c); } }
             else if (k === 'Escape') { const u = NF.ui; if (u && u.tele.classList.contains('on')) { sw(); nfTeleClose(); } }
         }
@@ -14030,8 +14109,12 @@ function kbModel(THREE, mk) {
                 if (w === 'fighter' || w === 'fists') { swish(0, 0.16, 500, 2200, 0.1); nsbT(0.04, 150, 55, 0.14, 0.2, 'sine', 0, 0.1, 0.002); if (k === 'aoe') for (let i = 1; i < 5; i++) { swish(i * 0.06, 0.1, 600, 2000, 0.07, R(-0.5, 0.5)); nsbT(i * 0.06 + 0.03, 140, 60, 0.1, 0.1, 'sine'); } return; }
                 // blades
                 if (NF.cls === 'keyblade') nsbBell(0.03, 2349, 0.035, 0.6);
-                const big = k === 'aoe' || k === 'line' || k === 'cone'; swish(0, big ? 0.3 : 0.2, 700, big ? 3600 : 3000, big ? 0.17 : 0.13); sheen(0.02, big ? 2400 : 3000, 0.06);
-                if (k === 'aoe') { swish(0.14, 0.26, 3400, 800, 0.1); } if (s.fx === 'limit') nsbT(0.1, 200, 50, 0.5, 0.3, 'sine');
+                // a blade cutting the air: the whoosh climbs as it nears and falls as it passes, over a low body of air, an edge hiss and a bright ring of metal; no two swings sound the same
+                const big = k === 'aoe' || k === 'line' || k === 'cone', v = R(0.92, 1.1), pan = ((NF.swP = (NF.swP || 0) ^ 1) ? 1 : -1) * R(0.1, 0.3), d = big ? 0.36 : 0.23, pk = d * 0.4, top = (big ? 2600 : 3400) * v;
+                nsbN(0, pk, 450 * v, top, 2.2, big ? 0.2 : 0.15, 'bandpass', pan, 0.12); nsbN(pk * 0.8, d - pk * 0.8, top, 650 * v, 1.8, big ? 0.17 : 0.12, 'bandpass', pan, 0.15);
+                nsbN(0, d * 1.15, 300 * v, 110, 0.7, big ? 0.15 : 0.09, 'lowpass', pan * 0.5); nsbN(pk * 0.6, 0.08, 7200, 4200, 1.2, 0.05, 'highpass', pan, 0.2);
+                sheen(pk * 0.7, (big ? 2200 : 3100) * v, 0.05, pan); nsbT(pk * 0.7, 3000 * v, 2300 * v, 0.2, 0.022, 'sine', pan, 0.5, 0.003);
+                if (k === 'aoe') { nsbN(0.16, 0.28, 3400, 750, 1.6, 0.11, 'bandpass', -pan, 0.15); nsbN(0.16, 0.3, 260, 100, 0.7, 0.1, 'lowpass'); } if (s.fx === 'limit') nsbT(0.1, 200, 50, 0.5, 0.3, 'sine');
             },
             impact(m, mag, crit) {
                 const t = performance.now(); if (t - NSB.last < 45) return; NSB.last = t; const k = nsxNear(m); if (k < 0.08) return; if (!mag && cswSndPlay(CSW_SLOT[NF.cls] || '', 'hit', 0.5 + 0.5 * k + (crit ? 0.25 : 0))) return; const w = (nfCls() || {}).w || 'sword', pan = 0;
@@ -14177,9 +14260,10 @@ function kbModel(THREE, mk) {
         /* keep the Oasis overlays out of the Adventia HUD: the party list sits under the HP frame, and a name plate that is nearly on the lens is hidden instead of covering the screen */
         function nuUiFix() {
             const ph = document.getElementById('party-hud'); if (ph && ph.dataset.nu !== '1') { ph.dataset.nu = '1'; ph.style.top = '236px'; }
+            if (ph) ph.style.setProperty('display', 'none', 'important');      // Adventia has its own party list on the left; the Oasis one would sit on top of it
             if (!camera) return; for (const p of peers.values()) { const lb = p.actor && p.actor.label; if (lb) lb.visible = p.actor.group.position.distanceTo(camera.position) > 2.6; }
         }
-        function nuUiRestore() { try { const ph = document.getElementById('party-hud'); if (ph) { ph.style.top = ''; delete ph.dataset.nu; } for (const p of peers.values()) { const lb = p.actor && p.actor.label; if (lb) lb.visible = true; } } catch (e) { /* dom */ } }
+        function nuUiRestore() { try { nfFallClear(); if (NF.dead) { NF.dead = false; nfUnhideSelf(); nfDownUi(false); } } catch (e) { /* none */ } try { const ph = document.getElementById('party-hud'); if (ph) { ph.style.top = ''; ph.style.removeProperty('display'); delete ph.dataset.nu; } for (const p of peers.values()) { const lb = p.actor && p.actor.label; if (lb) lb.visible = true; } } catch (e) { /* dom */ } }
         function nuUpdate(g, dt) {
             const p = g.position; NU.t += dt; if (NU.grace > 0) NU.grace -= dt;
             if (NU.skyCtx && NU.group && NU.group.visible) { NU.skyCtx.t += dt; cySkyUpdate(dt, p, NU.skyCtx); nuShroud(); const night = nuNight(); for (const l of NU.lamps) l.intensity = 14 * night; }
@@ -15108,7 +15192,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
         try { window.__jv = { JV, jvH, jvBlk, jvCollide }; } catch (e) { /* no window */ }
         MAP_DEFS.jv = { id: 'jv', ground: (x, z) => jvH(x, z), clamp: (p) => { if (jvBlk(p.x, p.z) && JV.H) { /* collide handles it */ } }, collide: jvCollide, spawn: jvSpawn, update: jvUpdate };
 
-        window.__nuu = { thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        window.__nuu = { die: () => nfDie(), revive: nfRevive, ret: nfReturn, itemUse: nfItemUse, fallNear: nfFallNear, fallBuild: nfFallBuild, down: nfDownAct, thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
@@ -20694,11 +20778,13 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         for (let i = 0; i < 12; i++) PAD_ACTS['nfm_' + i] = ['•', 'Move', nfPadOn(() => nfUse(i))];
         Object.assign(PAD_ACTS, {
             nf_target: ['🎯', 'Next target', nfPadOn(() => nfCycle())], nf_aether: ['💠', 'Aether network', nfPadOn(() => nfTeleMenu())], nf_camp: ['⛺', 'Camp', nfPadOn(() => tnPitch())], nf_class: ['🎭', 'Change class', nfPadOn(() => nfClassMenu())],
-            nf_use: ['✋', 'Use / open', nfPadOn(() => { nfPadUse(); })], nf_roll: ['🤸', 'Dodge Roll', nfPadOn(() => nfRoll())], nf_guard: ['🛡️', 'Guard', nfPadOn(() => { const i = NF_SK.findIndex((q) => q && q.k === 'guard'); if (i >= 0) nfUse(i); })], nf_untarget: ['✖️', 'Drop target', nfPadOn(() => nfTarget(null))]
+            nf_use: ['✋', 'Use / open', nfPadOn(() => { nfPadUse(); })], nf_roll: ['🤸', 'Dodge Roll', nfPadOn(() => nfRoll())], nf_guard: ['🛡️', 'Guard', nfPadOn(() => { const i = NF_SK.findIndex((q) => q && q.k === 'guard'); if (i >= 0) nfUse(i); })], nf_untarget: ['✖️', 'Drop target', nfPadOn(() => nfTarget(null))],
+            nf_potion: ['🧪', 'Potion', nfPadOn(() => nfItemUse('potion'))], nf_hipotion: ['⚗️', 'Hi-Potion', nfPadOn(() => nfItemUse('hipotion'))], nf_ether: ['🔷', 'Ether', nfPadOn(() => nfItemUse('ether'))], nf_elixir: ['🌟', 'Elixir', nfPadOn(() => nfItemUse('elixir'))], nf_phoenix: ['🪶', 'Phoenix Down', nfPadOn(() => nfItemUse('phoenix'))]
         });
         PAD_ACTS.estop = ['\uD83E\uDDCD', 'Stand up', () => { try { localActor.playEmote('stand'); net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } }];
         const PAD_SETS_DEF = [
-            { name: 'Adventia', L: ['nfm_0', 'nfm_1', 'nfm_2', 'nfm_3', 'nfm_4', 'nfm_5', 'nfm_6', 'nfm_7'], R: ['nfm_8', 'nfm_9', 'nfm_10', 'nfm_11', 'nf_target', 'nf_use', 'nf_aether', 'nf_class'] },
+            { name: 'Adventia', L: ['nfm_8', 'nfm_9', 'nfm_10', 'nfm_11', 'nf_target', 'nf_use', 'nf_aether', 'nf_class'], R: ['nfm_0', 'nfm_1', 'nfm_2', 'nfm_3', 'nfm_4', 'nfm_5', 'nfm_6', 'nfm_7'] },      // hold R2 + the face buttons / D-pad for your attacks, L2 for the rest
+            { name: 'Adventia Items', L: ['nf_potion', 'nf_hipotion', 'nf_ether', 'nf_elixir', 'nf_phoenix', 'nf_roll', 'nf_guard', 'nf_untarget'], R: ['nfm_0', 'nfm_1', 'nfm_2', 'nfm_3', 'nfm_4', 'nfm_5', 'nfm_6', 'nfm_7'] },
             { name: 'Emotes 1', L: ['e_cheer', 'e_sit', 'e_bboy', 'e_rumba', 'e_twerk', 'e_hiphop', 'e_gangnam', 'e_slide'], R: ['e_snake', 'e_show', 'e_greet', 'e_peace', 'e_shoot', 'e_spin', 'e_modelpose', 'e_squat'] },
             { name: 'Emotes 2', L: ['e_stand1', 'e_stand2', 'e_stand3', 'e_sitm1', 'e_sitm2', 'e_layf1', 'e_layf2', 'e_laym1'], R: ['e_laym2', 'estop', 'emotes', 'cheer', 'selft', 'clear', 'chat', 'games'] },
             { name: 'Social', L: ['cheer', 'sit', 'selft', 'clear', 'emotes', 'oboy', 'board', 'boardc'], R: ['chat', 'party', 'tv', 'strafe', 'equip', 'inv', 'lobbies', 'weather'] },
@@ -20881,7 +20967,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             padMove.x = mx; padMove.z = mz;
             PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = zoomHold ? 0 : ry; PAD.zoom = zoomHold ? ry : 0;
             if (PAD.sprint) padMove.run = true;
-            if (hit(5) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
+            if (activeMap === 'nuu') { if (b[5] && b[1]) PAD.r1Used = true; if (hit(5)) PAD.r1Used = false; }
+            if ((activeMap === 'nuu' ? (PAD.prev[5] && !b[5] && !PAD.r1Used) : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
             const tagMode = activeMap === 'tag' && tgMine();      // laser tag: the triggers are weapons, not hotbars
             const gunHb = gnMode() && b[5] && !b[4];       // Gunner: hold RB for the emote hotbar (LT aims, RT fires); L3 flips left / right bar, R3 changes set
             const ngOn = activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim', ngHb = ngOn && b[5] && !b[4];      // Adventia Gunner: L2 aims, R2 fires, hold RB for the cross hotbar
@@ -20900,12 +20987,13 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 if (activeMap !== 'diner') {
                 if (hit(12) && !grace) padCycleParty(-1);
                 if (hit(13) && !grace) padCycleParty(1);
-                if (hit(14) && !grace) { if (activeMap === 'nuu') nfCycle(-1); else cycleLookTarget(-1); }
-                if (hit(15) && !grace) { if (activeMap === 'nuu') nfCycle(1); else cycleLookTarget(1); }
+                if (hit(14) && !grace) { if (activeMap === 'nuu') nfCycle(-1, true); else cycleLookTarget(-1); }
+                if (hit(15) && !grace) { if (activeMap === 'nuu') nfCycle(1, true); else cycleLookTarget(1); }
                 }
-                if (hit(0) && !grace) { if (activeMap === 'btl') { /* the battle reads the pad itself */ } else if (activeMap === 'bowl') bwPadAct(); else if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (activeMap === 'nuu' && nfPadUse()) { /* chest / crystal */ } else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
-                if (hit(1) && !grace) { if (activeMap === 'diner' && KC.hold) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (activeMap === 'nuu' && NU.ready && !NF.cast) { PAD.auto = false; nfRoll(); } else if (!padCancelAll()) PAD.auto = false; }     // B: cancel (Kitchen Clash: drop the plate)
-                if (hit(2) && !grace) { if (activeMap === 'nuu' && nfPadUse()) { /* X: open chest */ } else if (mag > 0.12) tapSprint(); else if (activeMap === 'diner') { /* no map button while cooking */ } else if (localActor.lookId && peers.has(localActor.lookId)) exmMenuOpen(localActor.lookId); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
+                const nfDn = activeMap === 'nuu' && NF.dead; if (nfDn && !grace) { if (hit(0)) nfDownAct('phoenix'); if (hit(2)) nfDownAct('return'); }
+                if (hit(0) && !grace && !nfDn) { if (activeMap === 'btl') { /* the battle reads the pad itself */ } else if (activeMap === 'bowl') bwPadAct(); else if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (activeMap === 'nuu' && nfPadUse()) { /* chest / crystal */ } else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
+                if (hit(1) && !grace) { if (activeMap === 'diner' && KC.hold) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (activeMap === 'nuu' && NU.ready && b[5] && !NF.cast) { PAD.auto = false; nfRoll(); } else if (activeMap === 'nuu' && NU.ready && (NF.tgt || localActor.lookId || SELF.on)) { NF.tgt = null; NF.lockOn = false; padCancelAll(); try { padToast('Target cleared'); } catch (e) { /* toast */ } } else if (!padCancelAll()) PAD.auto = false; }     // B: cancel / untarget (Adventia: R1 + B is the dash) (Kitchen Clash: drop the plate)
+                if (hit(2) && !grace && !nfDn) { if (activeMap === 'nuu' && nfPadUse()) { /* X: open chest */ } else if (mag > 0.12) tapSprint(); else if (activeMap === 'diner') { /* no map button while cooking */ } else if (localActor.lookId && peers.has(localActor.lookId)) exmMenuOpen(localActor.lookId); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y: jump
             }
             if ((PAD.prev[6] || PAD.prev[7]) && !(b[6] || b[7])) PAD.trigUp = nowS();
@@ -21379,7 +21467,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (keys.left) _mv.x -= 1;
             if (keys.right) _mv.x += 1;
             if (_mv.lengthSq() === 0 && (padMove.x || padMove.z)) _mv.set(padMove.x, 0, padMove.z);   // controller left stick
-            if (TG.lockMove() || budLock() || (hcMine() && HC.act) || gnRolling() || bwLockMove() || btLockMove()) _mv.set(0, 0, 0);   // laser tag: knocked out / countdown
+            if ((activeMap === 'nuu' && NF.dead) || TG.lockMove() || budLock() || (hcMine() && HC.act) || gnRolling() || bwLockMove() || btLockMove()) _mv.set(0, 0, 0);   // laser tag: knocked out / countdown
 
             if (_mv.lengthSq() > 0) {
                 _mv.normalize();
@@ -27028,7 +27116,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             else if (activeMap !== 'construct') { HC.act = null; HC.lock = null; HC.guardHeld = false; if (HC.lockSp) HC.lockSp.visible = false; if (localActor) { hcUndress(localActor); localActor.emote = null; } hcHud(); }
             if (!quiet) sysChat(w === 'fighter' ? 'Fighter class: martial arts, bare hands. Combos on J, skills, evades and guard like the Hero.' : w === 'sword' ? 'Sword equipped: Hero class. Your animations switched to the Hero set.' : w === 'pistol' ? 'Gunner class: ' + GW[GN.cur].name + ' ready. Keys 1-7 or Q switch weapon.' : 'Weapon put away: back to your normal animations.');
             try { if (w === 'pistol' && gnMode()) gnPlay('gpequip', 1.2); } catch (e) { /* ignore */ }
-            try { net && net.send({ t: 'hero', s: HC.sheathed, w: w === 'sword' || w === 'fighter', f: w === 'fighter' }); net && net.send(helloMsg(false)); } catch (e) { /* offline */ }
+            try { net && net.send({ t: 'hero', s: HC.sheathed, w: hcMine() && (w === 'sword' || w === 'fighter'), f: w === 'fighter' }); net && net.send(helloMsg(false)); } catch (e) { /* offline */ }
             clsRender();
         }
 
@@ -27354,8 +27442,9 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         const HC_RCOL = ['#7d8794', '#6aa7ff', '#4fe0a8', '#ffd24a', '#ff9a3c', '#ff5a5a', '#ff3ca8', '#c06bff'];
         const hcRank = () => { let r = 0; for (let i = 1; i < HC_TH.length; i++) if (HC.style.pts >= HC_TH[i]) r = i; return r; };
         const hcCombatMap = () => activeMap !== 'nuu' && activeMap !== 'loft' && activeMap !== 'tag' && activeMap !== 'diner' && activeMap !== 'bowl' && activeMap !== 'btl';      // the only places you cannot fight: your Harbor Studio (and the two minigame arenas, which have their own rules)
-        const hcMine = () => activeMap === 'construct' || (CLS.wpn !== 'fists' && hcCombatMap());          // a sword in hand (or the Construct): the Hero set and the combat HUD are on
-        const hcLive = () => activeMap === 'construct' || (hcMine() && (CLS.wpn === 'pistol' || !HC.sheathed));                       // sword drawn: the combat keys, pad and touch buttons are live
+        const hcPeace = () => activeMap === 'loft' && CLS.wpn === 'sword';       // Harbor Studio: you may draw and sheathe your sword, but nothing can be swung and nobody can be dueled
+        const hcMine = () => activeMap === 'construct' || (CLS.wpn !== 'fists' && hcCombatMap()) || hcPeace();          // a sword in hand (or the Construct): the Hero set and the combat HUD are on
+        const hcLive = () => activeMap === 'construct' || (hcMine() && !hcPeace() && (CLS.wpn === 'pistol' || !HC.sheathed));                       // sword drawn: the combat keys, pad and touch buttons are live
         const hcPadOn = () => hcMine() && hcLive();
         const hcUiBlock = (e) => isTyping(e) || lobbyOpen() || charModalOpen() || animModalOpen() || startOpen() || equipOpen() || invOpen();
 
@@ -27652,6 +27741,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         const hcCamYaw = () => Math.atan2(controls.target.x - camera.position.x, controls.target.z - camera.position.z);
         function hcEnsureDrawn() { if (HC.sheathed) { HC.sheathed = false; hcSfx('draw'); try { net && net.send({ t: 'hero', s: false }); } catch (e) { /* offline */ } } }
         function hcSword() {
+            if (hcPeace()) return;
             if (HC.lock === null && HC.act === null) { /* free */ }
             const a = HC.act; if (a && !hcCancelable(a) && !/^hatk/.test(a.name)) return; if (a && a.o.hurt) return;
             if (a && /^hatk/.test(a.name)) { a.buf = true; return; }          // chain: buffered, fires when the swing allows
@@ -27704,6 +27794,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             HC.act = null; HC.comboN = 0; hcStart(list[0], { yaw, ...hcComboOpts(list.length === 1), chain: list.slice(1).map((n, i, arr) => [n, hcComboOpts(i === arr.length - 1)]), combo: true }); hcSfx('swish'); hcPop('COMBO ' + L, '#ffd24a');
         }
         function hcSkill(name) {
+            if (hcPeace()) return;
             const a = HC.act; if (a && !hcCancelable(a)) return;
             const sk = /^hsk/.test(name);
             if (/^hcom/.test(name)) return hcCombo(name.slice(4));
@@ -27721,6 +27812,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             else if (HC.airJumps < 1) { HC.airJumps++; playerVelocity.y = JUMP_FORCE * 0.92; hcSfx('jump'); const P = localActor.group.position; hcSpark(P.x, P.y + 0.1, P.z, 1.6, 0x7dffb4); }
         }
         function hcEvade() {
+            if (hcPeace()) return;
             const a = HC.act; if (a && !hcCancelable(a)) return;
             const g = localActor.group, inp = hcInput(), P = g.position;
             let yaw = g.rotation.y, name = 'hbdash', len;
@@ -28657,7 +28749,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             const up = () => { HC.fireT = false; hcGuardBtn('t', false); }; h.querySelector('#hc-btns').addEventListener('pointerup', up); h.querySelector('#hc-btns').addEventListener('pointercancel', up); h.querySelector('#hc-btns').addEventListener('pointerleave', up);
         }
         function hcHud() {
-            const h = HC.hud; if (!h) return; const on = hcMine(); if (HC.shown.on !== on) { HC.shown.on = on; h.classList.toggle('on', on); } duelHud(); if (!on) return;
+            const h = HC.hud; if (!h) return; const on = hcMine() && !hcPeace(); if (HC.shown.on !== on) { HC.shown.on = on; h.classList.toggle('on', on); } duelHud(); if (!on) return;
             { let aim = false; try { aim = gnRigOn(); } catch (e) { /* not ready */ } if (HC.shown.aim !== aim) { HC.shown.aim = aim; h.classList.toggle('aim', aim); } }
             { const wl = activeMap !== 'construct', sh = wl && HC.sheathed; if (HC.shown.wl !== wl) { HC.shown.wl = wl; h.classList.toggle('world', wl); } if (HC.shown.sh !== sh) { HC.shown.sh = sh; h.classList.toggle('sheath', sh); } }
             const S = HC.style, r = hcRank(), q = (id) => h.querySelector(id), set = (k, el, v) => { if (HC.shown[k] !== v) { HC.shown[k] = v; el(v); } };
@@ -28749,7 +28841,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
                 if (!hcMine()) { hcUndress(localActor); if (localActor) localActor.emote = null; if (HC.lockSp) HC.lockSp.visible = false; }
                 for (const p of peers.values()) if (p.actor && p.actor.heroEq !== true) hcUndress(p.actor);
                 const tn = document.getElementById('hc-tint'); if (tn) tn.style.opacity = '0'; HC.hp = HC.hpMax = clsHpMax(); hcHud();
-                try { net && net.send({ t: 'hero', s: HC.sheathed, w: CLS.wpn === 'sword' || CLS.wpn === 'fighter', f: CLS.wpn === 'fighter' }); } catch (e) { /* offline */ }
+                try { net && net.send({ t: 'hero', s: HC.sheathed, w: hcMine() && (CLS.wpn === 'sword' || CLS.wpn === 'fighter'), f: CLS.wpn === 'fighter' }); } catch (e) { /* offline */ }      // others only see the weapon stance where you really are in it
             }
         }
         function hcGround() { return 0; }
