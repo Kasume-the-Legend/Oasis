@@ -12595,18 +12595,19 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
         function nuOverlay(msg) { try { if (!msg) { if (NU.ov) { NU.ov.remove(); NU.ov = null; } return; } if (!NU.ov) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:8200;background:radial-gradient(circle at 50% 40%,#0c2a4a,#030a16);color:#bfeaff;display:flex;align-items:center;justify-content:center;font:700 18px system-ui;letter-spacing:.14em;text-align:center;text-shadow:0 0 14px #36c8ff'; document.body.appendChild(d); NU.ov = d; } NU.ov.textContent = msg; } catch (e) { /* no dom */ } }
         function nuH(x, z) {
+            if (x > 1000) return dgH(x, z);
             const nv = NU.nav; if (!nv) return 0; const fx = x - NU_X0 - 0.5, fz = z - NU_X0 - 0.5, i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j;
             const g = (a, b) => nv.h[Math.max(0, Math.min(NU_N - 1, b)) * NU_N + Math.max(0, Math.min(NU_N - 1, a))];
             return (g(i, j) * (1 - tx) + g(i + 1, j) * tx) * (1 - tz) + (g(i, j + 1) * (1 - tx) + g(i + 1, j + 1) * tx) * tz;
         }
-        function nuBlk(x, z) { const nv = NU.nav; if (!nv) return false; const bi = Math.floor((x - NU_X0) * 2), bj = Math.floor((z - NU_X0) * 2); if (bi < 0 || bj < 0 || bi >= NU_BW || bj >= NU_BW) return true; return nv.b[bj * NU_BW + bi] === 1; }
+        function nuBlk(x, z) { if (x > 1000) return !dgWalk(x, z); const nv = NU.nav; if (!nv) return false; const bi = Math.floor((x - NU_X0) * 2), bj = Math.floor((z - NU_X0) * 2); if (bi < 0 || bj < 0 || bi >= NU_BW || bj >= NU_BW) return true; return nv.b[bj * NU_BW + bi] === 1; }
         function nuBlkR(x, z) { return nuBlk(x, z) || nuBlk(x + 0.3, z) || nuBlk(x - 0.3, z) || nuBlk(x, z + 0.3) || nuBlk(x, z - 0.3); }
         function nuCollide(pos) {
             if (!NU.nav) return; const L = NU.last; if (Math.hypot(pos.x - L.x, pos.z - L.z) > 3 || L.y === 0) L.set(pos.x, 1, pos.z);
             if (!nuBlkR(pos.x, pos.z)) { L.set(pos.x, 1, pos.z); return; }
             if (!nuBlkR(pos.x, L.z)) pos.z = L.z; else if (!nuBlkR(L.x, pos.z)) pos.x = L.x; else { pos.x = L.x; pos.z = L.z; }
         }
-        function nuClamp(p) { p.x = Math.max(-NU_EDGE, Math.min(NU_EDGE, p.x)); p.z = Math.max(-NU_EDGE, Math.min(NU_EDGE, p.z)); }
+        function nuClamp(p) { if (p.x > 1000) { p.x = Math.max(DG.X0 + 2, Math.min(DG.X0 + DG.W - 2, p.x)); p.z = Math.max(DG.Z0 + 2, Math.min(DG.Z0 + DG.D - 2, p.z)); return; } p.x = Math.max(-NU_EDGE, Math.min(NU_EDGE, p.x)); p.z = Math.max(-NU_EDGE, Math.min(NU_EDGE, p.z)); }
         function nuSpawn() { const h = NU.hub, a = Math.random() * 6.28, r = 2.5 + Math.random() * 2; const x = h.x + Math.cos(a) * r, z = h.z + Math.sin(a) * r; NU.last.set(x, 1, z); return { x, y: NU.nav ? nuH(x, z) : 0, z, ry: Math.atan2(h.x - x, h.z - z) + Math.PI }; }
         const nuSafe = (p) => Math.hypot(p.x - NU.hub.x, p.z - NU.hub.z) < NU.SAFE_R;
         /* ---- the walk grid, baked at load from the terrain mesh: height per 1 m, blocked per 0.5 m (steep ground, the edge, tree trunks and rocks) ---- */
@@ -12741,6 +12742,13 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                     if (/^SM_tree_0[1-6]$/.test(p.top) && p.mat && p.mat.name === 'bark') for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); }
                     else if (/stone|stump|log/.test(p.top) && !/small/.test(p.top)) { p.geo.computeBoundingBox(); const bb = p.geo.boundingBox; for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, 0.38 * Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * S.x); } }
                 }
+                if (pine && pineList.length) {   // a few giant trees, twenty times the size of a person: landmarks you can see from across the forest
+                    const GR = seeded(31337), gv = [0, 3, 4, 0]; let gn = 0, gt = 0; while (gn < 30 && gt++ < 4000) {
+                        const x = (GR() * 2 - 1) * 225, z = (GR() * 2 - 1) * 225; if (Math.hypot(x - hub.x, z - hub.z) < 42 || nuBlkR(x, z) || nuBlkR(x + 3, z) || nuBlkR(x - 3, z) || nuBlkR(x, z + 3) || nuBlkR(x, z - 3)) continue;
+                        if (pineList.some((q) => q.giant && Math.hypot(q.x - x, q.z - z) < 38)) continue; const h = 30 + GR() * 18;
+                        pineList.push({ v: gv[gn % 4] % pine.nv, x, y: nuH(x, z), z, h, r: GR() * 6.283, giant: true }); nuBlockDisc(x, z, h * 0.062); gn++;
+                    }
+                }
                 if (pine && pineList.length) {
                     const n = pineList.length, groups = []; for (let v = 0; v < pine.nv; v++) { const cap = pineList.filter((t) => t.v === v).length; groups.push([0, 1, 2].map((l) => [pine.ms['Tree' + v + '_LOD' + l], pine.ms['Tree' + v + '_LOD' + l + 'L']].filter(Boolean).map((o) => { const im = new THREE.InstancedMesh(o.geometry, o.name.endsWith('L') ? pine.lmat : pine.tmat, Math.max(1, cap)); im.count = 0; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); return { im, pm: o.matrix.clone() }; }))); }
                     NU.pines = { list: pineList, groups, t: 0, last: new THREE.Vector3(1e9, 0, 1e9) }; nInst += n;
@@ -12760,7 +12768,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
                 } catch (e) { console.warn('undergrowth.glb not found', e && e.message); }
                 NU.nInst = nInst;
                 for (let z = hub.z - 18; z <= hub.z + 18; z += 0.5) for (let x = hub.x - 18; x <= hub.x + 18; x += 0.5) if (Math.hypot(x - hub.x, z - hub.z) < 17 && !(Math.abs(x) > NU_EDGE - 2 || Math.abs(z) > NU_EDGE - 2)) { const bi = Math.floor((x - NU_X0) * 2), bj = Math.floor((z - NU_X0) * 2); NU.nav.b[bj * NU_BW + bi] = 0; }
-                nuBuildHub(root); nuMakeSpawners(); nuMakeChestPoints(); nuMakeCrystals(); nuMakeHunts();
+                nuBuildHub(root); nuMakeSpawners(); nuMakeChestPoints(); nuMakeCrystals(); nuMakeHunts(); try { nuDoorBuild(root); } catch (e) { console.warn('dungeon door', e); }
                 // sun, sky and lamps (same day/night cycle as the rest of the world)
                 const sun = new THREE.DirectionalLight(0xfff0d6, 2.4), hemi = new THREE.HemisphereLight(0xdcebff, 0x8fa070, 0.9 * Math.PI), amb = new THREE.AmbientLight(0xfff3e0, 0.22 * Math.PI); root.add(sun, sun.target, hemi, amb);
                 const own = cySkyBuild(root, true); NU.skyCtx = { sky: own, sun, hemi, amb, t: 0, sunDist: 120, get group() { return NU.group; }, fogCol: null };
@@ -12808,7 +12816,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         const NU_FATES = (r) => [{ k: 'slay', title: 'Culling the ' + r.pre[0] + ' Horde', n: 18 }, { k: 'slay', title: 'Hold the Line in the ' + r.name, n: 28 }, { k: 'boss', title: r.boss, sub: r.bossTitle }];
         const nuHash = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; };
         function nuSeeds() { const h = NU.hub; return [{ x: h.x, z: h.z, b: 55 }, { x: 135, z: -135, b: 0 }, { x: 135, z: 135, b: 0 }, { x: -135, z: -135, b: 0 }, { x: -135, z: 135, b: 0 }]; }
-        function nuRegionAt(x, z) { const S = NU.seeds || (NU.seeds = nuSeeds()); let bi = 0, bd = 1e9; for (let i = 0; i < S.length; i++) { const d = Math.hypot(x - S[i].x, z - S[i].z) - S[i].b; if (d < bd) { bd = d; bi = i; } } return bi; }
+        function nuRegionAt(x, z) { if (x > 1000) return 4; const S = NU.seeds || (NU.seeds = nuSeeds()); let bi = 0, bd = 1e9; for (let i = 0; i < S.length; i++) { const d = Math.hypot(x - S[i].x, z - S[i].z) - S[i].b; if (d < bd) { bd = d; bi = i; } } return bi; }
         function nuTintTerrain(geo, mesh) {   // each area gets its own tint on the ground (smooth across borders)
             const S = NU.seeds || (NU.seeds = nuSeeds()), P = geo.attributes.position, C = geo.attributes.color; if (!C) return; const tint = NU_REG.map((r) => { const c = new THREE.Color(r.accent).convertSRGBToLinear(); return [c.r, c.g, c.b]; }), amt = [0.05, 0.08, 0.08, 0.08, 0.08];   /* one even meadow colour: the per-area tints made patchy ground */
             for (let i = 0; i < P.count; i++) { let tw = 0; const w = S.map((s, k) => { const d = Math.max(1, Math.hypot(P.getX(i) - s.x, P.getZ(i) - s.z) - s.b); const q = 1 / (d * d); tw += q; return q; }); let r = 0, g = 0, b = 0, a = 0; w.forEach((q, k) => { const f = q / tw; r += tint[k][0] * f; g += tint[k][1] * f; b += tint[k][2] * f; a += amt[k] * f; }); C.setXYZ(i, C.getX(i) * (1 - a) + r * a * 0.9, C.getY(i) * (1 - a) + g * a * 0.9, C.getZ(i) * (1 - a) + b * a * 0.9); }
@@ -12820,8 +12828,8 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         const NF = { lv: 1, xp: 0, att: {}, done: [], hunt: {}, cls: 'hero', buffT: 0, gRed: 0.5, hot: null, pet: null, hp: 100, mp: 60, hpMax: 100, mpMax: 60, lb: 0, tgt: null, gcd: 0, auto: 0, cds: {}, cast: null, guard: 0, comb: 0, dead: false, ui: null, fx: [], tels: [], tele: null, regen: 0, lastHit: 0 };
         const nfNeed = (lv) => Math.round(45 * lv * Math.pow(1.17, lv - 1));
         function nfStats() { const C = NF_CLASSES[NF.cls] || NF_CLASSES.hero; NF.hpMax = Math.round((150 + 34 * (NF.lv - 1)) * C.hp); NF.mpMax = Math.round((60 + 7 * (NF.lv - 1)) * C.mp); NF.atk = (12 + 3.4 * NF.lv) * C.atk; NF.mag = (12 + 3.7 * NF.lv) * C.mag; }
-        function nfLoad() { try { const o = JSON.parse(localStorage.getItem(NFK) || '{}'); NF.lv = Math.max(1, Math.min(NF_MAX, o.lv | 0 || 1)); NF.xp = o.xp | 0; NF.att = o.att && typeof o.att === 'object' ? o.att : {}; NF.done = Array.isArray(o.done) ? o.done.slice(-30) : []; NF.hunt = o.hunt && typeof o.hunt === 'object' ? o.hunt : {}; NF.cls = NF_CLASSES[o.cls] && NF.lv >= NF_CLASSES[o.cls].lv ? o.cls : 'hero'; } catch (e) { /* storage */ } NF.att.hub = 1; nfStats(); NF.hp = NF.hpMax; NF.mp = NF.mpMax; }
-        function nfSave() { try { localStorage.setItem(NFK, JSON.stringify({ lv: NF.lv, xp: NF.xp, att: NF.att, done: NF.done.slice(-30), hunt: NF.hunt, cls: NF.cls })); } catch (e) { /* storage */ } }
+        function nfLoad() { try { const o = JSON.parse(localStorage.getItem(NFK) || '{}'); NF.fl = o.fl | 0; NF.lv = Math.max(1, Math.min(NF_MAX, o.lv | 0 || 1)); NF.xp = o.xp | 0; NF.att = o.att && typeof o.att === 'object' ? o.att : {}; NF.done = Array.isArray(o.done) ? o.done.slice(-30) : []; NF.hunt = o.hunt && typeof o.hunt === 'object' ? o.hunt : {}; NF.cls = NF_CLASSES[o.cls] && NF.lv >= NF_CLASSES[o.cls].lv ? o.cls : 'hero'; } catch (e) { /* storage */ } NF.att.hub = 1; nfStats(); NF.hp = NF.hpMax; NF.mp = NF.mpMax; }
+        function nfSave() { try { localStorage.setItem(NFK, JSON.stringify({ lv: NF.lv, xp: NF.xp, att: NF.att, done: NF.done.slice(-30), hunt: NF.hunt, cls: NF.cls, fl: NF.fl | 0 })); } catch (e) { /* storage */ } }
         function nfXp(n) { if (NF.lv >= NF_MAX) return; NF.xp += Math.round(n); let up = false; while (NF.lv < NF_MAX && NF.xp >= nfNeed(NF.lv)) { NF.xp -= nfNeed(NF.lv); NF.lv++; up = true; } if (up) { nfStats(); NF.hp = NF.hpMax; NF.mp = NF.mpMax; nuShowBanner('LEVEL UP', 'ADVENTIA LV ' + NF.lv); try { sysChat('◆ Level up! You are now Adventia Lv ' + NF.lv + '.'); } catch (e) { /* chat */ } } nfSave(); }
         const nfConCol = (lv) => lv >= NF.lv + 4 ? '#ff4a3a' : lv >= NF.lv + 2 ? '#ffa347' : lv <= NF.lv - 5 ? '#9aa6b2' : '#ffe27a';
         /* ---- on-screen UI: player frame, target frame, hotbar, cast bar, FATE panel, floating numbers ---- */
@@ -12971,7 +12979,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             let i = list.findIndex((o) => (o.m ? o.m === NF.tgt : o.id === localActor.lookId)); i = i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length;
             const o = list[i]; if (o.m) { try { if (localActor.lookId) setLookTarget(null, false); } catch (e) { /* none */ } nfTarget(o.m); NF.lockOn = !!PAD.active; } else { nfTarget(null); NF.lockOn = false; setLookTarget(o.id, false); const q = peers.get(o.id); if (q) padToast('Targeting ' + q.name); }
         }
-        function nfPadUse() { if (activeMap !== 'nuu') return false; const c = nuChestNear(); if (c) { nuChestOpenNear(); return true; } const k = nuCrystalNear(); if (k) { nfInteractCrystal(k); return true; } return false; }
+        function nfPadUse() { if (activeMap !== 'nuu') return false; if (niNear()) { niGo(); return true; } const c = nuChestNear(); if (c) { nuChestOpenNear(); return true; } const k = nuCrystalNear(); if (k) { nfInteractCrystal(k); return true; } return false; }
         function nfRoll() {
             if (activeMap !== 'nuu' || !NU.ready || NF.dead || NF.tele || NF.cast || NF.roll) return; const now = performance.now() / 1000; if ((NF.rollCd || 0) > now) return; NF.rollCd = now + 0.9;
             const g = localActor.group; let ix = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + (padMove.x || 0), iz = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + (padMove.z || 0), dx, dz;
@@ -13074,7 +13082,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
             if (!remote || m.mine) { nfPop(new THREE.Vector3(m.x, m.node.position.y + 1.2, m.z), '+' + Math.round(xp) + ' XP', '#7fd8ff'); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ } }
             const roll = (k, p) => { if ((!remote || m.mine) && Math.random() < p) { try { btBagAdd(k, 1); sysChat('Found ' + BT_ITEMS[k].n + '.'); } catch (e) { /* bag */ } } }; roll('potion', m.boss ? 0.9 : 0.2); roll('ether', m.boss ? 0.8 : 0.08); roll('hipotion', m.boss ? 0.6 : 0.03); roll('phoenix', m.boss ? 0.5 : 0.02); if (m.boss) roll('elixir', 0.4);
-            if (m.group && m.group.mobs.every((o) => o.dead)) nuKill(m.group); if (m.fate) { m.fate.kills++; }
+            if (m.group && !m.group.dg && m.group.mobs.every((o) => o.dead)) nuKill(m.group); if (m.dgBoss) { try { dgBossDown(); } catch (e) { console.warn('boss down', e); } } if (m.fate) { m.fate.kills++; }
             if (m.hunt) { try { nuHuntKilled(m, remote); } catch (e) { console.warn('hunt', e); } }
         }
         function nfPlayerHurt(d, from) {
@@ -13084,7 +13092,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         }
         async function nfDie() {
             if (NF.dead) return; NF.dead = true; NF.cast = null; NF.tgt = null; nuShowBanner('YOU DIED', 'RETURNING TO AN AETHER CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
-            await nuFade(true, 900); const c = nfNearestCrystal(); nuPlace({ x: c.x + 2.2, y: nuH(c.x + 2.2, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.2, 1, c.z); NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.dead = false; NU.grace = 5; NF.comb = 0; NF.lb = 0; await nuFade(false, 600);
+            await nuFade(true, 900); const c = DG.on ? { x: DG.start.x - 2.2, z: DG.start.z } : nfNearestCrystal(); nuPlace({ x: c.x + 2.2, y: nuH(c.x + 2.2, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.2, 1, c.z); NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.dead = false; NU.grace = 5; NF.comb = 0; NF.lb = 0; await nuFade(false, 600);
         }
         function nfBar(m) {
             if (m.bar || m.dead) return; const c = document.createElement('canvas'); c.width = 128; c.height = 16; const tex = new THREE.CanvasTexture(c), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })); sp.scale.set(1.5, 0.19, 1); sp.renderOrder = 999; sp.position.set(0, ((m.node.userData.h || 1.6) + 0.5) / (m.size || 1), 0); sp.userData.noOutline = true; m.node.add(sp); m.bar = sp;
@@ -13400,7 +13408,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         const NF_TELE_COST = 25;
         function nfTeleClose() { const u = nfUi(); u.tele.classList.remove('on'); }
         function nfTeleMenu() {
-            if (activeMap !== 'nuu') { try { sysChat('The aether crystals only answer inside Adventia.'); } catch (e) { /* chat */ } return; } const u = nfUi();
+            if (activeMap !== 'nuu') { try { sysChat('The aether crystals only answer inside Adventia.'); } catch (e) { /* chat */ } return; } if (DG.on) { nuShowBanner('NOT HERE', 'THE AETHER CANNOT REACH THE DEPTHS'); return; } const u = nfUi();
             if (u.tele.classList.contains('on')) { nfTeleClose(); return; } if (NF.comb > 0.1) { nuShowBanner('NOT NOW', 'YOU CANNOT TELEPORT IN COMBAT'); return; } if (NF.tele) return;
             const gil = window.oasisGil ? window.oasisGil.get() : 0, here = nuCrystalNear();
             u.tele.innerHTML = '<div class="bx"><h3>💠 AETHER NETWORK</h3><small>Adventia only · ' + NF_TELE_COST + ' Gil per jump (the Starting Plaza is free) · you have ' + gil.toLocaleString('en-US') + ' Gil</small>' + NU.cry.map((c) => { const ok = c.hub || NF.att[c.id], cost = c.hub ? 0 : NF_TELE_COST; return '<button data-id="' + c.id + '" ' + (!ok || (!c.hub && gil < cost) || (here && here.id === c.id) ? 'disabled' : '') + '><span>' + (ok ? '💠 ' : '🔒 ') + c.name + (here && here.id === c.id ? ' (here)' : '') + '</span><span>' + (ok ? (cost ? cost + ' Gil' : 'free') : 'not attuned') + '</span></button>'; }).join('') + '<button data-id="" style="justify-content:center;margin-top:10px">Close</button></div>';
@@ -13459,6 +13467,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
             else if (k === 'KeyQ' || k === 'AltLeft') { sw(); if (!e.repeat) nfRoll(); }
             else if (k === 'Tab') { sw(); if (!e.repeat) nfCycle(); }
             else if (k === 'KeyT') { sw(); if (!e.repeat) nfTeleMenu(); }
+            else if ((k === 'KeyF' || k === 'KeyE') && niNear()) { sw(); if (!e.repeat) niGo(); }
             else if (k === 'KeyF' && !nuChestNear()) { const c = nuCrystalNear(); if (c) { sw(); if (!e.repeat) nfInteractCrystal(c); } }
             else if (k === 'Escape') { const u = NF.ui; if (u && u.tele.classList.contains('on')) { sw(); nfTeleClose(); } }
         }
@@ -13674,38 +13683,64 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         const NU_WF = { snow: 0, mats: null, streaks: null, grp: null, t: 0 };
         function nuWfMats() {
             if (NU_WF.mats) return NU_WF.mats; const out = [], seen = new Set(), add = (m, k) => { if (!m || seen.has(m) || !m.color) return; seen.add(m); out.push({ m, k, c: m.color.clone(), e: m.emissive ? m.emissive.clone() : null, ei: m.emissiveIntensity }); };
-            const T = NU.terrain || NU.ground; try { if (NU.terrainMesh) [].concat(NU.terrainMesh.material).forEach((m) => add(m, 1.3)); } catch (e) { /* none */ }
+            const T = NU.terrain || NU.ground; try { if (NU.terrainMesh) [].concat(NU.terrainMesh.material).forEach((m) => add(m, 9)); } catch (e) { /* none */ }
             try { for (const g of NU.pines.groups) for (const lv of g) for (const part of lv) [].concat(part.im.material).forEach((m) => add(m, part.im.material.alphaTest > 0 ? 0.55 : 0.3)); } catch (e) { /* none */ }
             try { for (const n in NU.ug.ims) [].concat(NU.ug.ims[n].material).forEach((m) => add(m, 0.6)); } catch (e) { /* none */ }
             try { for (const q of NU_GR.parts) [].concat(q.im.material).forEach((m) => add(m, 0.75)); } catch (e) { /* none */ }
             if (out.length > 3) NU_WF.mats = out; return out;
         }
+        /* ---- snow on the ground: a patchy blanket in the ground's own shader, so the grass texture still shows through the drifts (thin snow = patches in the hollows, deep snow = mostly covered, tufts poking out) ---- */
+        const NU_SNOWU = { value: 0 };
+        function nuSnowPatch() {
+            if (NU_WF.sp || !NU.terrainMesh) return; NU_WF.sp = true;
+            for (const m of [].concat(NU.terrainMesh.material)) {
+                m.onBeforeCompile = (sh) => {
+                    sh.uniforms.uSnow = NU_SNOWU;
+                    sh.vertexShader = 'varying vec3 vSw;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vSw = (modelMatrix * vec4(position, 1.0)).xyz;');
+                    sh.fragmentShader = 'uniform float uSnow; varying vec3 vSw;\n float sH(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n float sN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(sH(i), sH(i + vec2(1, 0)), f.x), mix(sH(i + vec2(0, 1)), sH(i + vec2(1, 1)), f.x), f.y); }\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n { float n = sN(vSw.xz * 0.21) * 0.55 + sN(vSw.xz * 0.9) * 0.3 + sN(vSw.xz * 3.7) * 0.15; float cover = smoothstep(0.0, 0.16, uSnow * 1.18 - n * 0.9 + 0.1); vec3 sc = mix(vec3(0.80, 0.86, 0.94), vec3(0.96, 0.98, 1.0), sN(vSw.xz * 7.0)); float sp = step(0.987, sH(floor(vSw.xz * 14.0))) * cover; diffuseColor.rgb = mix(diffuseColor.rgb, sc, cover * 0.88) + vec3(sp * 0.35); }');
+                };
+                m.customProgramCacheKey = () => 'nusnow'; m.needsUpdate = true;
+            }
+        }
+        function nuCrunch(dt, p) {
+            const sn = NU_WF.snow; if (!NU_WF.lp) { NU_WF.lp = p.clone(); NU_WF.sd = 0; } const dx = p.x - NU_WF.lp.x, dz = p.z - NU_WF.lp.z; NU_WF.lp.copy(p); const d = Math.hypot(dx, dz); if (d > 3 || DG.on || activeMap !== 'nuu') { NU_WF.sd = 0; return; }
+            if (sn < 0.12 || !isGrounded) return; NU_WF.sd += d; const stride = (NU_WF.sw ? 1.15 : 0.9); if (NU_WF.sd < stride) return; NU_WF.sd = 0; NU_WF.sw = !NU_WF.sw;
+            try { const v = Math.min(1, sn * 1.2); nsxBurst(0, 0.05, 2900 + Math.random() * 600, 1500, 1.3, 0.1 * v); nsxBurst(0.025, 0.07, 4300 + Math.random() * 700, 2300, 2, 0.07 * v); nsxBurst(0.01, 0.1, 950, 520, 0.8, 0.09 * v); } catch (e) { /* audio */ }
+        }
+        function nuCurlGeo() {   // a ribbon that runs along the wind, bends in a gentle S, and ends in a spiral that tightens by the golden ratio
+            const N = 34, P = [], I = [], UV = [], rr = 0.1, ph = 1.618; const pt = (t) => {
+                const k = 0.7; if (t <= k) return [t, 0.045 * Math.sin(t / k * 3.1416 * 1.1) * (t / k)];
+                const u = (t - k) / (1 - k), a = u * 4.4, r = rr * Math.pow(1 / ph, a * 0.55), cx = k, cy = 0.045 * Math.sin(3.1416 * 1.1) + rr;
+                return [cx + r * Math.sin(a) * 1.0, cy - r * Math.cos(a)]; };
+            for (let i = 0; i <= N; i++) { const t = i / N, a = pt(t), b = pt(Math.min(1, t + 0.012)), c = pt(Math.max(0, t - 0.012)); let tx = b[0] - c[0], ty = b[1] - c[1]; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l; const w = 0.011 * Math.pow(Math.sin(Math.min(1, t * 1.04) * 3.1416), 0.6) + 0.0006; P.push(a[0] - ty * w, a[1] + tx * w, 0, a[0] + ty * w, a[1] - tx * w, 0); UV.push(0, t, 1, t); if (i < N) { const q = i * 2; I.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); } }
+            const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); g.setIndex(I); return g;
+        }
         function nuWeatherFx(dt, p) {
             const on = activeMap === 'nuu'; NU_WF.t += dt;
             const wnd = NU.windForce != null ? NU.windForce : (WX.wind || 0); NU_WIND.uT.value += dt * (1 + wnd * 0.8); NU_WIND.uW.value += ((0.3 + wnd * 0.95) - NU_WIND.uW.value) * (1 - Math.exp(-dt * 1.2)); { const wx = NU.windDir ? NU.windDir[0] : WX.wdx, wz = NU.windDir ? NU.windDir[1] : WX.wdz, wl = Math.hypot(wx, wz) || 1; NU_WIND.uD.value.set(wx / wl, wz / wl); }
             const _x0 = 0, snowT = on ? Math.min(1, Math.max(0, (WX.depth || 0) * 1.05 + ((WX.kind === 'snow' || WX.kind === 'sleet') ? (WX.precip || 0) * 0.35 : 0))) : 0, snowTarget = NU.snowForce != null ? NU.snowForce : snowT;
-            NU_WF.snow += (snowTarget - NU_WF.snow) * (1 - Math.exp(-dt * 0.8));
-            if (NU_WF.t > 0.4 || NU_WF.force) { if (Math.abs(NU_WF.snow - (NU_WF.applied || 0)) > 0.01) { NU_WF.applied = NU_WF.snow; const sn = NU_WF.snow; for (const o of nuWfMats()) { const a = Math.min(1, sn * o.k); o.m.color.copy(o.c).lerp(_wfW, a * 0.55); if (o.e) { o.m.emissive.copy(o.e).lerp(_wfS, a); o.m.emissiveIntensity = o.ei + a * 0.5; } else if (o.m.emissive) { o.m.emissive.copy(_wfS).multiplyScalar(a * 0.45); } o.m.needsUpdate = false; } } NU_WF.t = 0; }
+            NU_WF.snow += (snowTarget - NU_WF.snow) * (1 - Math.exp(-dt * 0.8)); try { if (on) { nuSnowPatch(); NU_SNOWU.value = NU_WF.snow; nuCrunch(dt, p); } } catch (e) { if (!window.__snErr) { window.__snErr = e; console.warn('snow', e); } }
+            if (NU_WF.t > 0.4 || NU_WF.force) { if (Math.abs(NU_WF.snow - (NU_WF.applied || 0)) > 0.01) { NU_WF.applied = NU_WF.snow; const sn = NU_WF.snow; for (const o of nuWfMats()) { if (o.k > 1) continue; const a = Math.min(1, sn * o.k); o.m.color.copy(o.c).lerp(_wfG, a * 0.4); if (o.e) { o.m.emissive.copy(o.e).lerp(_wfS, a * 0.5); o.m.emissiveIntensity = o.ei + a * 0.12; } else if (o.m.emissive) { o.m.emissive.copy(_wfS).multiplyScalar(a * 0.1); } o.m.needsUpdate = false; } } NU_WF.t = 0; }
             // wind streaks
             const amt = on ? Math.max(0, Math.min(1, ((wnd) - 0.3) / 0.45)) : 0;
-            if (!NU_WF.grp) { if (!amt) return; const G = NU_WF.grp = new THREE.Group(), geo = new THREE.PlaneGeometry(1, 0.03); NU_WF.streaks = []; for (let i = 0; i < 26; i++) { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false })); m.visible = false; m.frustumCulled = false; m.userData.noOutline = true; G.add(m); NU_WF.streaks.push({ m, t: 9, life: 1, len: 2, v: 18, x: 0, y: 0, z: 0 }); } scene.add(G); }
+            if (!NU_WF.grp) { if (!amt) return; const G = NU_WF.grp = new THREE.Group(), geo = nuCurlGeo(); NU_WF.streaks = []; for (let i = 0; i < 26; i++) { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false })); m.visible = false; m.frustumCulled = false; m.userData.noOutline = true; G.add(m); NU_WF.streaks.push({ m, t: 9, life: 1, len: 2, v: 18, x: 0, y: 0, z: 0 }); } scene.add(G); }
             NU_WF.grp.visible = amt > 0 || NU_WF.streaks.some((s) => s.m.visible); if (!NU_WF.grp.visible) return;
             let dx = WX.wdx, dz = WX.wdz; if (NU.windDir) { dx = NU.windDir[0]; dz = NU.windDir[1]; } const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl; const cam = camera.position;
             for (const s of NU_WF.streaks) {
                 s.t += dt;
-                if (s.t >= s.life) { s.m.visible = false; if (amt > 0 && Math.random() < dt * (3 + amt * 14)) { const a = Math.random() * 6.283, r = 3 + Math.random() * 15; s.x = cam.x + Math.cos(a) * r - dx * 6; s.z = cam.z + Math.sin(a) * r - dz * 6; s.y = nuH(s.x, s.z) + 0.6 + Math.random() * 5; s.len = 1.6 + Math.random() * 2.6; s.v = 11 + wnd * 16 + Math.random() * 6; s.life = 0.8 + Math.random() * 0.7; s.t = 0; s.ph = Math.random() * 6; s.m.visible = true; } continue; }
+                if (s.t >= s.life) { s.m.visible = false; if (amt > 0 && Math.random() < dt * (3 + amt * 14)) { const a = Math.random() * 6.283, r = 3 + Math.random() * 15; s.x = cam.x + Math.cos(a) * r - dx * 6; s.z = cam.z + Math.sin(a) * r - dz * 6; s.y = nuH(s.x, s.z) + 0.6 + Math.random() * 5; s.len = 2.2 + Math.random() * 3; s.v = 11 + wnd * 16 + Math.random() * 6; s.life = 0.8 + Math.random() * 0.7; s.t = 0; s.ph = Math.random() * 6; s.flip = Math.random() < 0.5 ? 1 : -1; s.m.visible = true; } continue; }
                 const k = s.t / s.life, env = Math.sin(Math.PI * k); s.x += dx * s.v * dt; s.z += dz * s.v * dt; s.y += Math.sin(NU_WF.t * 0 + s.t * 3 + s.ph) * dt * 0.5;
                 _wfX.set(dx, 0, dz); _wfZ.set(cam.x - s.x, 0.0, cam.z - s.z); _wfZ.y = (cam.y - s.y) * 0.9; _wfZ.normalize(); _wfY.crossVectors(_wfZ, _wfX).normalize(); _wfZ.crossVectors(_wfX, _wfY).normalize();
-                _wfM.makeBasis(_wfX.clone().multiplyScalar(s.len * (0.6 + 0.4 * env)), _wfY, _wfZ); _wfM.setPosition(s.x, s.y, s.z); s.m.matrixAutoUpdate = false; s.m.matrix.copy(_wfM); s.m.matrixWorldNeedsUpdate = true;
-                s.m.material.opacity = 0.34 * env * Math.max(0.35, amt);
+                _wfM.makeBasis(_wfX.clone().multiplyScalar(s.len * (0.6 + 0.4 * env)), _wfY.clone().multiplyScalar(s.len * (0.6 + 0.4 * env) * (s.flip || 1)), _wfZ); _wfM.setPosition(s.x, s.y, s.z); s.m.matrixAutoUpdate = false; s.m.matrix.copy(_wfM); s.m.matrixWorldNeedsUpdate = true;
+                s.m.material.opacity = 0.5 * env * Math.max(0.35, amt);
             }
         }
-        const _wfW = new THREE.Color(0.93, 0.97, 1), _wfS = new THREE.Color(0.78, 0.86, 0.98), _wfX = new THREE.Vector3(), _wfY = new THREE.Vector3(), _wfZ = new THREE.Vector3(), _wfM = new THREE.Matrix4();
+        const _wfG = new THREE.Color(0.66, 0.8, 0.76), _wfW = new THREE.Color(0.93, 0.97, 1), _wfS = new THREE.Color(0.78, 0.86, 0.98), _wfX = new THREE.Vector3(), _wfY = new THREE.Vector3(), _wfZ = new THREE.Vector3(), _wfM = new THREE.Matrix4();
         function nuPineLod(dt) {   // three levels of every tree, swapped by distance a few times a second (1100 trees)
             const P = NU.pines; if (!P || !camera) return; P.t -= dt; if (P.t > 0) return; P.t = 0.35; const c = camera.position; if (Math.hypot(c.x - P.last.x, c.z - P.last.z) < 1.5 && P.t0) return; P.last.copy(c); P.t0 = 1;
             const cnt = P.groups.map(() => [0, 0, 0]);
             for (const t of P.list) {
-                const d2 = (t.x - c.x) * (t.x - c.x) + (t.z - c.z) * (t.z - c.z); const L = d2 < 2500 ? 0 : d2 < 12100 ? 1 : d2 < 52900 ? 2 : -1; if (L < 0) continue;
+                const gk = t.giant ? 0.11 : 1, d2 = ((t.x - c.x) * (t.x - c.x) + (t.z - c.z) * (t.z - c.z)) * gk; const L = d2 < 2500 ? 0 : d2 < 12100 ? 1 : d2 < 52900 ? 2 : -1; if (L < 0) continue;
                 _pQ.setFromAxisAngle(_pY, t.r); _pP.set(t.x, t.y - 0.16 - t.h * 0.05, t.z); _pS.set(t.h, t.h, t.h); _pM.compose(_pP, _pQ, _pS); const gp = P.groups[t.v][L], ci = cnt[t.v][L]++; for (const part of gp) { _pM2.multiplyMatrices(_pM, part.pm); part.im.setMatrixAt(ci, _pM2); }
             }
             P.groups.forEach((g, v) => g.forEach((parts, i) => { for (const part of parts) { part.im.count = cnt[v][i]; part.im.instanceMatrix.needsUpdate = true; } }));
@@ -13720,12 +13755,260 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         function nuUpdate(g, dt) {
             const p = g.position; NU.t += dt; if (NU.grace > 0) NU.grace -= dt;
             if (NU.skyCtx && NU.group && NU.group.visible) { NU.skyCtx.t += dt; cySkyUpdate(dt, p, NU.skyCtx); nuShroud(); const night = nuNight(); for (const l of NU.lamps) l.intensity = 14 * night; }
-            nuUiFix(); if (!NU.ready) return; nuPineLod(dt); try { nuShatterTick(dt); } catch (e) { /* cosmetic */ } try { nuWeatherFx(dt, p); } catch (e) { if (!window.__wfErr) { window.__wfErr = e; console.warn('nu weather fx', e); } }
+            nuUiFix(); if (!NU.ready) return; if (!DG.on) nuPineLod(dt); try { nuShatterTick(dt); } catch (e) { /* cosmetic */ } try { if (!DG.on) nuWeatherFx(dt, p); } catch (e) { if (!window.__wfErr) { window.__wfErr = e; console.warn('nu weather fx', e); } }
             if (NU.crystal) { NU.crystal.rotation.y += dt * 0.8; NU.crystal.position.y = 3.1 + Math.sin(NU.t * 1.6) * 0.18; }
             if (activeMap !== 'nuu') return;
             for (const c of NU.cry) if (c.mesh) { c.mesh.rotation.y += dt * 0.9; c.mesh.position.y = 2.2 + Math.sin(NU.t * 1.5 + c.x) * 0.15; }
-            dt = Math.min(dt, 0.1); try { nuSword(); } catch (e) { /* weapon model not ready */ } nfCastTick(dt); nuMobsTick(dt); nuFateTick(dt); nuHuntTick(dt); nuGrassTick(dt); nuChestsTick(dt); nfFxTick(dt); nfTelTick(dt); nfUiTick();
+            dt = Math.min(dt, 0.1); try { nuSword(); } catch (e) { /* weapon model not ready */ } nfCastTick(dt); nuMobsTick(dt); if (!DG.on) { nuFateTick(dt); nuHuntTick(dt); nuGrassTick(dt); nuChestsTick(dt); } else { try { dgTick(dt); } catch (e) { if (!window.__dgErr) { window.__dgErr = e; console.error('dungeon', e); } } } nfFxTick(dt); nfTelTick(dt); nfUiTick(); try { niTick(dt); } catch (e) { if (!window.__niErr) { window.__niErr = e; console.error('interact', e); } }
             const cn = nuCrystalNear(); if (cn !== NU.cNear) { NU.cNear = cn; if (cn) { try { sysChat(!cn.hub && !NF.att[cn.id] ? 'Press F to attune to the ' + cn.name + ' aether crystal.' : 'Press F or T to open the aether network.'); } catch (e) { /* chat */ } } }
+        }
+        /* ================= ADVENTIA DUNGEONS: every floor is a town, a field and a linear dungeon. You explore the field, find the dungeon door (a "?" bubble pops over your head near anything you can use),
+           fight through chambers sealed by barriers that open when the pack is down, and the boss room's exit leads on to the next floor. The dungeon is generated (same generator for every floor, different seed / layout / palette). ================= */
+        const NI = { list: [], el: null, cur: null, anim: [], t: 0 };
+        const DG = { on: false, built: false, busy: false, DX: 2000, X0: 1970, Z0: -60, W: 400, D: 130, C: 0.5, nx: 0, nz: 0, mask: null, dist: null, group: null, rooms: [], packs: [], barriers: [], torches: [], boss: null, start: null, ret: null, hidden: [], lt: null, exit: null, door: null, cleared: false, t: 0, floor: 1 };
+        const dgIdx = (x, z) => { const i = Math.floor((x - DG.X0) / DG.C), j = Math.floor((z - DG.Z0) / DG.C); return (i < 0 || j < 0 || i >= DG.nx || j >= DG.nz) ? -1 : j * DG.nx + i; };
+        const dgWalk = (x, z) => { const k = dgIdx(x, z); return k >= 0 && DG.mask[k] === 1; };
+        const DG_WH = 24;
+        const dgWallY = (d, x, z) => Math.min(DG_WH, d * 4.2 + (nuFbm(x * 0.15, z * 0.15, 2) - 0.5) * d * 1.5);
+        function dgH(x, z) { const k = dgIdx(x, z); if (k < 0) return DG_WH; if (DG.mask[k] === 1 || DG.base[k] === 1) return 0; return dgWallY(DG.dist[k], x, z); }
+        function dgCeilY(x, z) { const b = DG.rooms[DG.rooms.length - 1], d = Math.hypot(x - b.x, z - b.z), k = Math.max(0, Math.min(1, (b.r + 14 - d) / 16)); return 11 + 7 * k * k * (3 - 2 * k) + (nuFbm(x * 0.05, z * 0.05, 2) - 0.5) * 2; }
+        function dgBuildGeo() {
+            const X0 = DG.X0, Z0 = DG.Z0, C = DG.C, nx = DG.nx = Math.round(DG.W / C), nz = DG.nz = Math.round(DG.D / C), mask = DG.mask = new Uint8Array(nx * nz), DX = DG.DX;
+            DG.rooms = [
+                { x: DX, z: 0, r: 11 }, { x: DX + 62, z: -6, r: 17, pk: { n: 3, lv: 15, cls: ['Striker', 'Guardian'] } }, { x: DX + 128, z: 22, r: 18, pillars: 3, pk: { n: 4, lv: 16, cls: ['Striker', 'Sage', 'Phantom'] } },
+                { x: DX + 192, z: -10, r: 18, pillars: 3, pk: { n: 4, lv: 17, cls: ['Phantom', 'Blaster', 'Guardian'] } }, { x: DX + 250, z: 18, r: 13, pk: { n: 3, lv: 18, cls: ['Guardian', 'Berserker', 'Sage'], elite: true } }, { x: DX + 322, z: 14, r: 26, boss: true, pillars: 8 }];
+            const cap = (ax, az, bx, bz, hw) => {
+                const x0 = Math.min(ax, bx) - hw - 3, x1 = Math.max(ax, bx) + hw + 3, z0 = Math.min(az, bz) - hw - 3, z1 = Math.max(az, bz) + hw + 3, vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz || 1;
+                for (let z = z0; z <= z1; z += C) for (let x = x0; x <= x1; x += C) { const k = dgIdx(x, z); if (k < 0 || mask[k]) continue; const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / l2)), d = Math.hypot(x - ax - vx * t, z - az - vz * t); if (d < hw + (nuFbm(x * 0.07, z * 0.07, 2) - 0.5) * 3) mask[k] = 1; }
+            };
+            const R = DG.rooms; for (const r of R) cap(r.x, r.z, r.x, r.z, r.r);
+            for (let i = 0; i < R.length - 1; i++) { const a = R[i], b = R[i + 1], mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, off = (i % 2 ? -1 : 1) * 12, l = Math.hypot(b.x - a.x, b.z - a.z) || 1; a.mx = mx - (b.z - a.z) / l * off; a.mz = mz + (b.x - a.x) / l * off; cap(a.x, a.z, a.mx, a.mz, 4.6); cap(a.mx, a.mz, b.x, b.z, 4.6); }
+            // pillars (blocked discs) inside the bigger rooms
+            const PR = seeded(8801); DG.pillars = [];
+            for (const r of R) { if (!r.pillars) continue; for (let i = 0; i < r.pillars; i++) { let px, pz; if (r.boss) { const a = i / r.pillars * 6.283 + 0.4; px = r.x + Math.cos(a) * (r.r - 7); pz = r.z + Math.sin(a) * (r.r - 7); } else { const a = PR() * 6.283, d = 5 + PR() * (r.r - 11); px = r.x + Math.cos(a) * d; pz = r.z + Math.sin(a) * d; } DG.pillars.push({ x: px, z: pz, r: r.boss ? 1.9 : 1.5 }); } }
+            for (const q of DG.pillars) for (let z = q.z - q.r - 1; z <= q.z + q.r + 1; z += C) for (let x = q.x - q.r - 1; x <= q.x + q.r + 1; x += C) { if (Math.hypot(x - q.x, z - q.z) < q.r + 0.4) { const k = dgIdx(x, z); if (k >= 0) mask[k] = 0; } }
+            DG.base = mask.slice(); for (const q of DG.pillars) for (let z = q.z - q.r; z <= q.z + q.r; z += C) for (let x = q.x - q.r; x <= q.x + q.r; x += C) { const k = dgIdx(x, z); if (k >= 0 && Math.hypot(x - q.x, z - q.z) < q.r) DG.base[k] = 0; }
+            // distance (metres) from the nearest walkable cell: two chamfer passes
+            const d = DG.dist = new Float32Array(nx * nz); for (let k = 0; k < d.length; k++) d[k] = mask[k] ? 0 : 1e4; const S2 = 1.4142;
+            for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const k = j * nx + i; let v = d[k]; if (i > 0) v = Math.min(v, d[k - 1] + 1); if (j > 0) { v = Math.min(v, d[k - nx] + 1); if (i > 0) v = Math.min(v, d[k - nx - 1] + S2); if (i < nx - 1) v = Math.min(v, d[k - nx + 1] + S2); } d[k] = v; }
+            for (let j = nz - 1; j >= 0; j--) for (let i = nx - 1; i >= 0; i--) { const k = j * nx + i; let v = d[k]; if (i < nx - 1) v = Math.min(v, d[k + 1] + 1); if (j < nz - 1) { v = Math.min(v, d[k + nx] + 1); if (i < nx - 1) v = Math.min(v, d[k + nx + 1] + S2); if (i > 0) v = Math.min(v, d[k + nx - 1] + S2); } d[k] = v; }
+            for (let k = 0; k < d.length; k++) d[k] *= C;
+            // floor + walls: one height-field mesh, 1 m grid
+            const gx = Math.round(DG.W) + 1, gz = Math.round(DG.D) + 1, P = new Float32Array(gx * gz * 3), Col = new Float32Array(gx * gz * 3), I = [];
+            const floorA = nuLin(0.30, 0.31, 0.37), floorB = nuLin(0.40, 0.38, 0.42), rockA = nuLin(0.26, 0.24, 0.27), rockB = nuLin(0.40, 0.35, 0.34), moss = nuLin(0.22, 0.33, 0.24), cc = new THREE.Color();
+            for (let j = 0; j < gz; j++) for (let i = 0; i < gx; i++) {
+                const x = X0 + i, z = Z0 + j, k = dgIdx(x, z), dd = k < 0 ? 40 : (DG.base[k] === 1 ? 0 : d[k]), y = dd < 0.01 ? 0 : dgWallY(dd, x, z), v = j * gx + i; P[v * 3] = x; P[v * 3 + 1] = y; P[v * 3 + 2] = z;
+                const nz2 = nuFbm(x * 0.09, z * 0.09, 3), st = 0.5 + 0.5 * Math.sin(y * 0.9 + nz2 * 6);
+                if (dd < 0.6) { cc.copy(floorA).lerp(floorB, nz2 * 0.9 + (((Math.floor(x / 3) + Math.floor(z / 3)) & 1) ? 0.12 : 0)); cc.lerp(moss, Math.max(0, nz2 - 0.58) * 1.6); }
+                else { cc.copy(rockA).lerp(rockB, st * 0.7 + nz2 * 0.3); cc.lerp(moss, Math.max(0, 1 - y / 2.5) * 0.6 * nz2); const sh = 1 - Math.min(0.6, y / 30); cc.multiplyScalar(sh); }
+                Col[v * 3] = cc.r; Col[v * 3 + 1] = cc.g; Col[v * 3 + 2] = cc.b;
+            }
+            for (let j = 0; j < gz - 1; j++) for (let i = 0; i < gx - 1; i++) { const a = j * gx + i, b = a + 1, c = a + gx, e = c + 1; if (P[a * 3 + 1] >= DG_WH && P[b * 3 + 1] >= DG_WH && P[c * 3 + 1] >= DG_WH && P[e * 3 + 1] >= DG_WH) continue; I.push(a, c, b, b, c, e); }
+            const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('color', new THREE.BufferAttribute(Col, 3)); g.setIndex(I); g.computeVertexNormals();
+            const G = DG.group = new THREE.Group(); G.visible = false; G.name = 'NuDungeon'; NU.group.add(G); const gm = nuSoftRamp();
+            const floor = new THREE.Mesh(g, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gm })); floor.frustumCulled = false; floor.userData.noOutline = true; G.add(floor);
+            // ceiling: a dark rock lid, higher over the boss hall
+            const cx2 = 100, cz2 = 33, cg = new THREE.PlaneGeometry(DG.W, DG.D, cx2, cz2); cg.rotateX(-Math.PI / 2); const cp = cg.attributes.position, ccol = new Float32Array(cp.count * 3), cl = nuLin(0.17, 0.16, 0.2);
+            for (let i = 0; i < cp.count; i++) { const x = cp.getX(i) + X0 + DG.W / 2, z = cp.getZ(i) + Z0 + DG.D / 2; cp.setXYZ(i, x, dgCeilY(x, z), z); const n = 0.8 + nuFbm(x * 0.06, z * 0.06, 2) * 0.5; ccol[i * 3] = cl.r * n; ccol[i * 3 + 1] = cl.g * n; ccol[i * 3 + 2] = cl.b * n; }
+            cg.setAttribute('color', new THREE.BufferAttribute(ccol, 3)); cg.computeVertexNormals(); const ceil = new THREE.Mesh(cg, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gm, side: THREE.DoubleSide })); ceil.frustumCulled = false; ceil.userData.noOutline = true; G.add(ceil);
+            // pillars
+            const stone = new THREE.MeshToonMaterial({ color: nuLin(0.42, 0.40, 0.44), gradientMap: gm });
+            for (const q of DG.pillars) { const h = dgCeilY(q.x, q.z), m = new THREE.Mesh(new THREE.CylinderGeometry(q.r * 0.82, q.r * 1.05, h, 10), stone); m.position.set(q.x, h / 2, q.z); m.userData.noOutline = true; G.add(m); const cap2 = new THREE.Mesh(new THREE.CylinderGeometry(q.r * 1.2, q.r * 1.2, 0.5, 10), stone); cap2.position.set(q.x, 0.25, q.z); cap2.userData.noOutline = true; G.add(cap2); }
+            // glowing crystals on the walls, torches at the walls
+            const cryM = new THREE.MeshBasicMaterial({ color: 0xb070ff, transparent: true, opacity: 0.9 }), cryG = new THREE.OctahedronGeometry(1, 0), CR = seeded(5150), cs = [];
+            const edge = (cx, cz, a, r0) => { for (let t = r0; t < r0 + 40; t += 0.5) { const x = cx + Math.cos(a) * t, z = cz + Math.sin(a) * t; if (!dgWalk(x, z)) return { x: cx + Math.cos(a) * (t - 0.9), z: cz + Math.sin(a) * (t - 0.9), t }; } return null; };
+            for (const r of R) for (let i = 0; i < (r.boss ? 9 : 5); i++) { const a = CR() * 6.283, e = edge(r.x, r.z, a, 3); if (!e) continue; const n = 1 + ((CR() * 3) | 0); for (let k = 0; k < n; k++) { const m = new THREE.Mesh(cryG, cryM); const s2 = 0.25 + CR() * 0.55; m.scale.set(s2 * 0.5, s2 * 1.7, s2 * 0.5); m.position.set(e.x + (CR() - 0.5) * 1.6, 0.6 + CR() * 2.2, e.z + (CR() - 0.5) * 1.6); m.rotation.set((CR() - 0.5) * 0.7, CR() * 6, (CR() - 0.5) * 0.7); m.userData.noOutline = true; G.add(m); cs.push(m); } }
+            const flameM = new THREE.MeshBasicMaterial({ color: 0xffa040 }), flameG = new THREE.ConeGeometry(0.22, 0.7, 6), brk = new THREE.BoxGeometry(0.3, 0.6, 0.3), brkM = new THREE.MeshToonMaterial({ color: 0x2a2220, gradientMap: gm });
+            const gc = document.createElement('canvas'); gc.width = gc.height = 64; const gg = gc.getContext('2d'), gr = gg.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,190,100,1)'); gr.addColorStop(0.35, 'rgba(255,130,40,.45)'); gr.addColorStop(1, 'rgba(255,100,20,0)'); gg.fillStyle = gr; gg.fillRect(0, 0, 64, 64); const gt = new THREE.CanvasTexture(gc);
+            const torch = (x, z) => { const b = new THREE.Mesh(brk, brkM), f = new THREE.Mesh(flameG, flameM), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gt, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); b.position.set(x, 2.2, z); f.position.set(x, 2.85, z); sp.position.set(x, 2.9, z); sp.scale.setScalar(4.2); for (const o of [b, f, sp]) { o.userData.noOutline = true; G.add(o); } DG.torches.push({ f, sp, ph: Math.random() * 6 }); };
+            for (const r of R) for (let i = 0; i < (r.boss ? 8 : 3); i++) { const a = (i + 0.37) / (r.boss ? 8 : 3) * 6.283 + (r.r % 1), e = edge(r.x, r.z, a, 3); if (e) torch(e.x, e.z); }
+            for (let i = 0; i < R.length - 1; i++) { const a = R[i]; for (const [px, pz] of [[a.mx, a.mz], [(a.x + a.mx) / 2, (a.z + a.mz) / 2], [(a.mx + R[i + 1].x) / 2, (a.mz + R[i + 1].z) / 2]]) { const e = edge(px, pz, Math.PI / 2 + (i % 2 ? Math.PI : 0), 0.5) || edge(px, pz, -Math.PI / 2, 0.5); if (e) torch(e.x, e.z); } }
+            DG.crys = cs; DG.start = { x: DX + 1, y: 0, z: 0, ry: Math.PI / 2 }; DG.built = true;
+        }
+        function dgDoorMesh(label, col) {   // a stone doorway with two heavy doors; the leaves swing open when used
+            const G = new THREE.Group(), gm = nuSoftRamp(), stone = new THREE.MeshToonMaterial({ color: nuLin(0.40, 0.39, 0.43), gradientMap: gm }), wood = new THREE.MeshToonMaterial({ color: nuLin(0.30, 0.20, 0.14), gradientMap: gm }), iron = new THREE.MeshToonMaterial({ color: nuLin(0.16, 0.16, 0.19), gradientMap: gm });
+            const box = (w, h, d, m, x, y, z, parent) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.userData.noOutline = true; (parent || G).add(b); return b; };
+            box(1.5, 6.4, 1.7, stone, -3.2, 3.2, 0); box(1.5, 6.4, 1.7, stone, 3.2, 3.2, 0); box(8.6, 1.3, 2, stone, 0, 6.8, 0); box(9.6, 0.5, 2.3, stone, 0, 7.65, 0);
+            const leaves = []; for (const sg of [-1, 1]) { const pv = new THREE.Group(); pv.position.set(sg * 2.45, 0, 0.2); G.add(pv); box(2.45, 5.8, 0.4, wood, -sg * 1.22, 2.9, 0, pv); for (const y of [1.2, 3, 4.8]) box(2.45, 0.28, 0.46, iron, -sg * 1.22, y, 0, pv); box(0.3, 0.5, 0.5, iron, -sg * 0.35, 2.9, 0, pv); leaves.push({ pv, sg }); }
+            const rn = new THREE.Mesh(new THREE.CircleGeometry(0.75, 20), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); rn.position.set(0, 6.8, 1.02); rn.userData.noOutline = true; G.add(rn); G.userData.rune = rn; G.userData.leaves = leaves;
+            try { const lb = makeLabel(label, { size: 28, border: '#' + new THREE.Color(col).getHexString(), plain: true }); lb.position.set(0, 9.4, 0); G.add(lb); } catch (e) { /* no label */ }
+            return G;
+        }
+        function niOpenDoor(G, ms) { return new Promise((ok) => { const L = G.userData.leaves; NI.anim.push({ t: 0, dur: ms / 1000, upd: (k) => { for (const l of L) l.pv.rotation.y = -l.sg * 1.55 * (k * (2 - k)); }, done: ok }); }); }
+        function niCloseDoor(G) { for (const l of G.userData.leaves) l.pv.rotation.y = 0; }
+        // ---- the field door: a cave mouth in the rock somewhere out in the Shadowveil country ----
+        function nuDoorBuild(root) {
+            const hub = NU.hub; let best = null, bs = -1e9;
+            for (let t = 0; t < 2400; t++) {
+                const a = (t * 2.399) % 6.283, r = 70 + (t % 160) * 0.9, x = hub.x + Math.cos(a) * r, z = hub.z + Math.sin(a) * r; if (Math.abs(x) > 205 || Math.abs(z) > 205) continue;
+                let ok = true, sl = 0; const h0 = nuH(x, z); for (let k = 0; k < 12 && ok; k++) { const aa = k / 12 * 6.283, xx = x + Math.cos(aa) * 8, zz = z + Math.sin(aa) * 8; if (nuBlkR(xx, zz)) ok = false; sl = Math.max(sl, Math.abs(nuH(xx, zz) - h0)); } if (!ok || nuBlkR(x, z) || sl > 1.4) continue;
+                const sc = (nuRegionAt(x, z) === 4 ? 40 : 0) - sl * 6 - Math.abs(r - 120) * 0.05; if (sc > bs) { bs = sc; best = { x, z }; }
+            }
+            if (!best) { console.warn('no site for the dungeon door'); return; }
+            const fx = hub.x - best.x, fz = hub.z - best.z, fl = Math.hypot(fx, fz) || 1, nx = fx / fl, nz = fz / fl, ry = Math.atan2(nx, nz), y = nuH(best.x, best.z), G = new THREE.Group(); G.position.set(best.x, y, best.z); G.rotation.y = ry; root.add(G);
+            const door = dgDoorMesh('◆ SHADOWVEIL DEPTHS', 0xb070ff); door.scale.setScalar(1.35); G.add(door); const gm = nuSoftRamp();
+            // a landmark you can spot from across the forest: a tall violet light beam, a pulsing ground ring and a glowing doorway
+            const fxm = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.6, 140, 16, 1, true), fxm(0xb070ff, 0.32)); beam.position.set(0, 70, 1.5); beam.frustumCulled = false; beam.material.depthTest = false; beam.renderOrder = 4; beam.userData.noOutline = true; G.add(beam);
+            const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.8, 140, 10, 1, true), fxm(0xe8d0ff, 0.5)); beam2.position.set(0, 70, 1.5); beam2.frustumCulled = false; beam2.material.depthTest = false; beam2.renderOrder = 4; beam2.userData.noOutline = true; G.add(beam2);
+            const ring = new THREE.Mesh(new THREE.RingGeometry(3.4, 4.1, 40), fxm(0xb070ff, 0.6)); ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.12, 3.6); ring.userData.noOutline = true; G.add(ring);
+            const glow = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x8a3cff, 0.35)); glow.position.set(0, 3.9, 0.9); glow.userData.noOutline = true; G.add(glow);
+            door.userData.fx = { beam, beam2, ring, glow };
+            const rock = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gm });
+            for (const [dx, dz, sx, sy, sz, seed] of [[0, -4.5, 9, 6.8, 6.2, 71], [-7.5, -3.2, 5.4, 5, 4.6, 72], [7.5, -3.2, 5.4, 5.2, 4.6, 73], [-3.8, -2.4, 3.6, 4.6, 3.4, 74], [3.8, -2.4, 3.6, 4.6, 3.4, 75]]) { const m = new THREE.Mesh(nuRockGeo(seed), rock); m.scale.set(sx, sy, sz); m.position.set(dx, 2.6 + sy * 0.15, dz); m.rotation.y = seed; m.userData.noOutline = true; G.add(m); }
+            const back = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 6.4), new THREE.MeshBasicMaterial({ color: 0x07040c })); back.position.set(0, 3.2, 0.15); back.userData.noOutline = true; G.add(back);
+            nuBlockDisc(best.x - nx * 4.5, best.z - nz * 4.5, 6.5); nuBlockDisc(best.x + Math.cos(ry) * 5.6 - nx * 2.2, best.z - Math.sin(ry) * 5.6 - nz * 2.2, 2.4); nuBlockDisc(best.x - Math.cos(ry) * 5.6 - nx * 2.2, best.z + Math.sin(ry) * 5.6 + 0 - nz * 2.2, 2.4);
+            try { if (NU.pines) for (const t of NU.pines.list) if (Math.hypot(t.x - best.x, t.z - best.z) < (t.giant ? 38 : 9)) { t.x = 1e5; t.z = 1e5; } } catch (e) { /* none */ }   // keep the doorway clear of tree crowns, so it is easy to spot
+            const fx0 = best.x + nx * 3.6, fz0 = best.z + nz * 3.6;
+            DG.door = { x: fx0, z: fz0, mesh: door, wx: best.x, wz: best.z, ry }; DG.ret = { x: fx0 + nx * 1.6, z: fz0 + nz * 1.6, ry: ry };
+            NI.list.push({ id: 'dg-door', x: fx0, z: fz0, r: 5.2, label: 'Enter the cave', act: () => dgEnter(), cond: () => !DG.on && !DG.busy });
+        }
+        // ---- the "?" bubble: appears over your head when there is something to use; press X / A / F / E or click it ----
+        function niNear() {
+            if (activeMap !== 'nuu' || !localActor || NF.dead || DG.busy) return null; const p = nfPos(); let b = null, bd = 1e9;
+            for (const o of NI.list) { if (o.cond && !o.cond()) continue; const d = Math.hypot(o.x - p.x, o.z - p.z); if (d < o.r && d < bd) { b = o; bd = d; } } return b;
+        }
+        const niGo = () => { const o = niNear(); if (!o) return false; try { o.act(); } catch (e) { console.warn('interact', e); } return true; };
+        function niCur() { const o = niNear(); if (o) return o; if (activeMap !== 'nuu') return null; const c = nuChestNear(); if (c) return { label: 'Open', chest: true }; const k = nuCrystalNear(); if (k) return { label: k.name || 'Aether crystal', crystal: true }; return null; }
+        function niTick(dt) {
+            if (DG.door && DG.door.mesh.userData.fx && !DG.on) { const f = DG.door.mesh.userData.fx, q = 0.5 + 0.5 * Math.sin(NI.t += dt * 2.2); f.beam.material.opacity = 0.22 + 0.16 * q; f.beam2.material.opacity = 0.35 + 0.25 * q; f.ring.scale.setScalar(1 + 0.18 * q); f.ring.material.opacity = 0.35 + 0.35 * (1 - q); f.glow.material.opacity = 0.22 + 0.2 * q; }
+            for (const a of NI.anim.slice()) { a.t += dt; const k = Math.min(1, a.t / a.dur); a.upd(k); if (k >= 1) { NI.anim.splice(NI.anim.indexOf(a), 1); a.done && a.done(); } }
+            if (!NI.el) {
+                const st = document.createElement('style'); st.textContent = '#ni-q{position:fixed;left:0;top:0;z-index:21;display:none;pointer-events:auto;cursor:pointer;text-align:center;user-select:none;-webkit-user-select:none;touch-action:manipulation}#ni-q b{display:block;width:46px;height:46px;margin:0 auto;border-radius:50%;background:#fff;border:3px solid #1a1a22;box-shadow:0 3px 10px rgba(0,0,0,.45);font:900 30px/40px Nunito,Inter,system-ui,sans-serif;color:#1a1a22;position:relative;animation:niB .8s ease-in-out infinite}#ni-q b:after{content:"";position:absolute;left:50%;bottom:-11px;margin-left:-8px;border:8px solid transparent;border-top:11px solid #1a1a22;border-bottom:0}#ni-q i{display:block;margin-top:12px;font:800 11px Nunito,Inter,system-ui,sans-serif;font-style:normal;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;letter-spacing:.04em}@keyframes niB{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}';
+                document.head.appendChild(st); const d = document.createElement('div'); d.id = 'ni-q'; d.innerHTML = '<b>?</b><i></i>'; document.body.appendChild(d); NI.el = d;
+                const go = (e) => { e.preventDefault(); e.stopPropagation(); if (!niGo()) nfPadUse(); }; d.addEventListener('pointerdown', go); d.addEventListener('click', (e) => e.stopPropagation());
+            }
+            const el = NI.el; let o = null; try { o = (activeMap === 'nuu' && NU.ready && !NF.cast && !NF.tele && !NF.roll && !fpOn && !(NF.ui && NF.ui.tele && NF.ui.tele.classList.contains('on'))) ? niCur() : null; } catch (e) { o = null; }
+            if (!o) { if (el.style.display !== 'none') el.style.display = 'none'; NI.cur = null; return; }
+            const v = new THREE.Vector3(nfPos().x, nfPos().y + 2.5, nfPos().z).project(camera); if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) { el.style.display = 'none'; return; }
+            const rc = renderer.domElement.getBoundingClientRect(), sx = rc.left + (v.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-v.y * 0.5 + 0.5) * rc.height;
+            el.style.display = 'block'; el.style.transform = 'translate(' + Math.round(sx - 23) + 'px,' + Math.round(sy - 74) + 'px)'; if (NI.cur !== o.label) { NI.cur = o.label; el.querySelector('i').textContent = o.label; }
+        }
+        // clicking the door itself also uses it when you are close enough
+        window.addEventListener('pointerdown', (e) => {
+            try {
+                if (e.pointerType !== 'mouse' || e.button !== 0 || activeMap !== 'nuu' || DG.busy || e.target !== renderer.domElement || document.pointerLockElement) return; const o = niNear(); if (!o || !o.mesh) return;
+                const rc = renderer.domElement.getBoundingClientRect(), rcs = new THREE.Raycaster(); rcs.setFromCamera(new THREE.Vector2(((e.clientX - rc.left) / rc.width) * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1), camera);
+                if (rcs.intersectObject(o.mesh, true).length) { e.stopPropagation(); niGo(); }
+            } catch (x) { /* ignore */ }
+        }, true);
+        // ---- running a dungeon ----
+        const dgSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        function dgHideForest(on) {
+            if (on) { DG.hidden = []; for (const c of NU.group.children) { if (c === DG.group || c.isLight) continue; DG.hidden.push([c, c.visible]); c.visible = false; } DG.group.visible = true; }
+            else { for (const [c, v] of DG.hidden) c.visible = v; DG.hidden = []; DG.group.visible = false; }
+        }
+        function dgPopulate() {
+            dgClear(); const R = DG.rooms, PR = seeded(Date.now() & 0xffff);
+            R.forEach((r, i) => {
+                if (r.pk) {
+                    const pk = { mobs: [], dg: true, k: i, dead: false }; DG.packs.push(pk);
+                    for (let n = 0; n < r.pk.n; n++) { const a = PR() * 6.283, d = 2 + PR() * (r.r * 0.5), x = r.x + Math.cos(a) * d, z = r.z + Math.sin(a) * d, cls = r.pk.cls[n % r.pk.cls.length]; if (!dgWalk(x, z)) { n--; continue; }
+                        const m = nuMobBuild({ reg: 4, cls, lv: r.pk.lv + (n === 0 ? 1 : 0), x, z, ax: r.x, az: r.z, group: pk, hm: r.pk.elite ? 1.7 : 1.15, am: r.pk.elite ? 1.15 : 1, size: r.pk.elite ? 1.35 : 1 }); m.orkeep = 300; pk.mobs.push(m); NU.extra.push(m); }
+                    // the barrier sealing the way on
+                    const nx2 = r.mx - r.x, nz2 = r.mz - r.z, l = Math.hypot(nx2, nz2) || 1, ux = nx2 / l, uz = nz2 / l, bx = r.x + ux * (r.r + 8), bz = r.z + uz * (r.r + 8), cells = [];
+                    for (let t = -7; t <= 7; t += C0) for (let u = -1.2; u <= 1.2; u += C0) { const x = bx + ux * u - uz * t, z = bz + uz * u + ux * t, k = dgIdx(x, z); if (k >= 0 && DG.mask[k] === 1) { cells.push(k); DG.mask[k] = 0; } }
+                    const g = new THREE.Mesh(new THREE.PlaneGeometry(15, 11, 1, 1), new THREE.MeshBasicMaterial({ color: i === 4 ? 0xff4a6a : 0xb070ff, transparent: true, opacity: 0.38, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); g.position.set(bx, 5.4, bz); g.rotation.y = Math.atan2(ux, uz); g.userData.noOutline = true; DG.group.add(g);
+                    DG.barriers.push({ cells, mesh: g, pk, open: false, x: bx, z: bz });
+                } else if (r.boss) {
+                    const a = Math.atan2(r.z - R[R.length - 2].z, r.x - R[R.length - 2].x), x = r.x + Math.cos(a) * 6, z = r.z + Math.sin(a) * 6, pk = { mobs: [], dg: true, k: i, dead: false }; DG.packs.push(pk);
+                    const m = nuMobBuild({ reg: 4, cls: 'Phantom', boss: true, lv: 19, x, z, ax: r.x, az: r.z, group: pk, hm: 1.4, am: 1.1 }); m.dgBoss = true; m.orkeep = 300; pk.mobs.push(m); NU.extra.push(m); DG.boss = m;
+                }
+            });
+        }
+        const C0 = 0.5;
+        function dgClear() {
+            for (const m of NU.extra.slice()) if (m.group && m.group.dg) { nuDisposeMob(m); NU.extra.splice(NU.extra.indexOf(m), 1); }
+            for (const b of DG.barriers) { for (const k of b.cells) DG.mask[k] = 1; b.mesh.removeFromParent(); b.mesh.geometry.dispose(); b.mesh.material.dispose(); }
+            DG.barriers = []; DG.packs = []; DG.boss = null; if (DG.exit) { DG.exit.mesh.removeFromParent(); NI.list = NI.list.filter((o) => o.id !== 'dg-exit'); DG.exit = null; }
+        }
+        function dgTick(dt) {
+            DG.t += dt; const t = DG.t;
+            for (const f of DG.torches) { const q = 0.85 + 0.15 * Math.sin(t * 9 + f.ph) + 0.08 * Math.sin(t * 23 + f.ph * 2); f.sp.scale.setScalar(4.2 * q); f.f.scale.y = q; }
+            if (DG.crys) { const q = 0.82 + 0.18 * Math.sin(t * 1.7); for (const c of DG.crys) c.material.opacity = q; }
+            for (const b of DG.barriers) {
+                if (!b.open) { b.mesh.material.opacity = 0.3 + 0.1 * Math.sin(t * 3 + b.x); if (b.pk.mobs.every((m) => m.dead)) { b.open = true; for (const k of b.cells) DG.mask[k] = 1; b.t = 0; nuShowBanner('THE WAY OPENS', 'THE BARRIER FADES'); try { sysChat('The barrier fades.'); } catch (e) { /* chat */ } } }
+                else if (b.mesh.visible) { b.t += dt; b.mesh.material.opacity = Math.max(0, 0.38 - b.t * 0.5); if (b.t > 0.8) b.mesh.visible = false; }
+            }
+            if (DG.exit) { DG.exit.mesh.rotation.y += dt * 0.8; DG.exit.ring.material.opacity = 0.6 + 0.25 * Math.sin(t * 3); }
+            // dim the world to a cave
+            const S = NU.skyCtx; if (S) { S.sun.intensity = 0.55; S.hemi.intensity = 1.05; S.amb.intensity = 0.5; }
+            // the camera stays under the ceiling
+            const cp = camera.position, cy = dgCeilY(cp.x, cp.z) - 0.7; if (cp.y > cy) cp.y = cy;
+        }
+        async function dgEnter() {
+            if (DG.busy || DG.on || !NU.ready) return; DG.busy = true; const door = DG.door;
+            try { try { await niOpenDoor(door.mesh, 700); } catch (e) { /* anim */ } await nuFade(true, 600); niCloseDoor(door.mesh);
+                if (!DG.built) dgBuildGeo(); DG.on = true; dgHideForest(true); dgPopulate(); Object.keys(keys).forEach((k) => (keys[k] = false)); NF.tgt = null; NF.lockOn = false;
+                NI.list = NI.list.filter((o) => o.id !== 'dg-out'); NI.list.push({ id: 'dg-out', x: DG.start.x - 8.5, z: 0, r: 4.2, label: 'Leave the cave', act: () => dgLeave(false), cond: () => DG.on && !DG.busy });
+                nuPlace(DG.start); NU.last.set(DG.start.x, 1, DG.start.z); NU.grace = 3; nuShowBanner('SHADOWVEIL DEPTHS', 'DUNGEON · FLOOR ' + DG.floor); await nuFade(false, 700);
+            } catch (e) { console.error('dungeon enter', e); try { DG.on = false; dgHideForest(false); await nuFade(false, 300); } catch (x) { /* none */ } }
+            DG.busy = false;
+        }
+        async function dgLeave(next) {
+            if (DG.busy || !DG.on) return; DG.busy = true;
+            try { await nuFade(true, 600); dgClear(); NI.list = NI.list.filter((o) => o.id !== 'dg-out'); DG.on = false; dgHideForest(false); const S = NU.skyCtx; if (S) { S.sun.intensity = 2.4; S.hemi.intensity = 0.9 * Math.PI; S.amb.intensity = 0.22 * Math.PI; }
+                const r = DG.ret; nuPlace({ x: r.x, y: nuH(r.x, r.z), z: r.z, ry: r.ry + Math.PI }); NU.last.set(r.x, 1, r.z); NU.grace = 3; NU.camLast = null;
+                if (next) nuShowBanner('FLOOR ' + DG.floor + ' CLEARED', 'THE ROAD TO FROSTVEIL TOWN OPENS SOON'); await nuFade(false, 700);
+            } catch (e) { console.error('dungeon leave', e); }
+            DG.busy = false;
+        }
+        function dgBossDown() {
+            NF.fl = Math.max(NF.fl | 0, DG.floor); try { nfSave(); } catch (e) { /* storage */ } nuShowBanner('FLOOR ' + DG.floor + ' CLEARED', 'MALACHAR, THE HOLLOW ONE, IS DEFEATED');
+            const b = DG.rooms[DG.rooms.length - 1], x = b.x + 12, z = b.z, G = new THREE.Group(); G.position.set(x, 0, z);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.14, 8, 40), new THREE.MeshBasicMaterial({ color: 0x7fe6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.2; G.add(ring);
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 14, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0x7fe6ff, transparent: true, opacity: 0.22, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); beam.position.y = 7; G.add(beam);
+            const cry = new THREE.Mesh(new THREE.OctahedronGeometry(1, 0), new THREE.MeshBasicMaterial({ color: 0xcff4ff })); cry.scale.set(0.7, 1.4, 0.7); cry.position.y = 2.2; G.add(cry); for (const o of G.children) o.userData.noOutline = true; DG.group.add(G);
+            DG.exit = { mesh: cry, ring }; cry.userData.spin = 1; try { const lb = makeLabel('◆ TO THE NEXT FLOOR', { size: 26, border: '#7fe6ff', plain: true }); lb.position.set(0, 4.4, 0); G.add(lb); } catch (e) { /* no label */ }
+            NI.list.push({ id: 'dg-exit', x, z, r: 4.2, label: 'Step through', act: () => dgLeave(true), cond: () => DG.on && !DG.busy, mesh: G });
+        }
+        /* ================= MINI MAP: a worn parchment disc in the corner. It turns with your camera (north marked), shows where you are, your party, enemies, doors and crystals. Every area has one. ================= */
+        const MM = { el: null, cv: null, cx: null, base: {}, t: 0, lab: null };
+        function mmBaseNuu() {
+            const nv = NU.nav; if (!nv) return null; const S = 256, cv = document.createElement('canvas'); cv.width = cv.height = S; const x = cv.getContext('2d'), im = x.createImageData(S, S), D = im.data, st = NU_N / S, tint = NU_REG.map((r) => new THREE.Color(r.accent));
+            for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
+                const wx = NU_X0 + (i + 0.5) * st, wz = NU_X0 + (j + 0.5) * st, hx = nuH(wx + 2, wz) - nuH(wx - 2, wz), hz = nuH(wx, wz + 2) - nuH(wx, wz - 2), sh = Math.max(-0.5, Math.min(0.5, (-hx - hz) * 0.05)), blk = nuBlk(wx, wz), rg = tint[nuRegionAt(wx, wz)], k = (j * S + i) * 4;
+                let r = 210 + rg.r * 10 - 10, g = 188 + rg.g * 12 - 10, b = 140 + rg.b * 14 - 10; if (blk) { r = 150; g = 160; b = 108; } const f = 1 + sh * 0.55; if (Math.abs(wx) > NU_EDGE || Math.abs(wz) > NU_EDGE) { r = 90; g = 70; b = 50; }
+                D[k] = r * f; D[k + 1] = g * f; D[k + 2] = b * f; D[k + 3] = 255;
+            }
+            x.putImageData(im, 0, 0); return { cv, x0: NU_X0, z0: NU_X0, cell: st };
+        }
+        function mmBaseDg() {
+            if (!DG.built) return null; const w = Math.round(DG.nx / 4), h = Math.round(DG.nz / 4), cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'), im = x.createImageData(w, h), D = im.data;
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const k = (j * w + i) * 4, wk = DG.base[(j * 4) * DG.nx + i * 4] === 1; D[k] = wk ? 224 : 78; D[k + 1] = wk ? 200 : 58; D[k + 2] = wk ? 150 : 40; D[k + 3] = 255; }
+            x.putImageData(im, 0, 0); return { cv, x0: DG.X0, z0: DG.Z0, cell: DG.C * 4 };
+        }
+        function mmTick(dt) {
+            const hideMaps = ['btl', 'diner', 'bowl', 'budokai', 'blitz', 'tag', 'construct']; const show = !!localActor && !fpOn && !hideMaps.includes(activeMap) && !(typeof EMU !== 'undefined' && EMU.playing);
+            if (!MM.el) {
+                const st = document.createElement('style'); st.textContent = '#mm{position:fixed;right:12px;bottom:10px;width:136px;z-index:13;pointer-events:none;text-align:center}#mm .ring{position:relative;width:136px;height:136px;border-radius:50%;border:5px solid #6b4a24;box-shadow:0 0 0 2px #2a1a0a,0 0 0 4px #c9a15a,0 4px 14px rgba(0,0,0,.6),inset 0 0 18px rgba(60,35,10,.7);overflow:hidden;background:#cdb88a}#mm canvas{position:absolute;inset:0;width:100%;height:100%}#mm .lab{margin-top:4px;display:inline-block;max-width:150px;padding:2px 9px;border-radius:9px;background:rgba(46,30,12,.82);border:1px solid #c9a15a;color:#f3e2b8;font:800 10px Nunito,Inter,system-ui,sans-serif;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media (pointer:coarse){#mm{width:104px;right:10px}#mm .ring{width:104px;height:104px}}@media (max-height:520px){#mm{width:100px}#mm .ring{width:100px;height:100px}}';
+                document.head.appendChild(st); const d = document.createElement('div'); d.id = 'mm'; d.innerHTML = '<div class="ring"><canvas width="272" height="272"></canvas></div><span class="lab"></span>'; document.body.appendChild(d); MM.el = d; MM.cv = d.querySelector('canvas'); MM.cx = MM.cv.getContext('2d'); MM.lab = d.querySelector('.lab');
+            }
+            if (!show) { if (MM.el.style.display !== 'none') MM.el.style.display = 'none'; return; } if (MM.el.style.display === 'none') MM.el.style.display = 'block';
+            MM.t += dt; if (MM.t < 0.05) return; MM.t = 0;
+            const x = MM.cx, S = MM.cv.width, C = S / 2, P = localActor.group.position; const fxv = controls.target.x - camera.position.x, fzv = controls.target.z - camera.position.z, fl = Math.hypot(fxv, fzv) || 1, fx = fxv / fl, fz = fzv / fl;
+            const nuu = activeMap === 'nuu' && NU.ready, dg = nuu && DG.on, R = dg ? 38 : nuu ? 62 : 26, k = (C - 6) / R;
+            x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, S, S); x.fillStyle = '#c9b383'; x.fillRect(0, 0, S, S);
+            const key = dg ? 'dg' : nuu ? 'nuu' : null; if (key && MM.base[key] === undefined) { try { MM.base[key] = key === 'dg' ? mmBaseDg() : mmBaseNuu(); } catch (e) { MM.base[key] = null; } }
+            const B = key && MM.base[key];
+            x.save(); x.setTransform(k * -fz, k * -fx, k * fx, k * -fz, C, C); x.translate(-P.x, -P.z);
+            if (B) { x.imageSmoothingEnabled = true; x.drawImage(B.cv, B.x0, B.z0, B.cv.width * B.cell, B.cv.height * B.cell); }
+            else { x.strokeStyle = 'rgba(90,60,30,.35)'; x.lineWidth = 0.15; const g0 = 6, gx = Math.floor(P.x / g0) * g0, gz = Math.floor(P.z / g0) * g0; for (let i = -6; i <= 6; i++) { x.beginPath(); x.moveTo(gx + i * g0, gz - 40); x.lineTo(gx + i * g0, gz + 40); x.stroke(); x.beginPath(); x.moveTo(gx - 40, gz + i * g0); x.lineTo(gx + 40, gz + i * g0); x.stroke(); } }
+            x.restore();
+            const toS = (wx, wz) => { const ox = wx - P.x, oz = wz - P.z; return [C + k * (-fz * ox + fx * oz), C + k * (-fx * ox - fz * oz)]; };
+            const dot = (wx, wz, col, r, sq) => { const [sx, sy] = toS(wx, wz); if (Math.hypot(sx - C, sy - C) > C - 5) return; x.fillStyle = col; x.strokeStyle = '#2a1a0a'; x.lineWidth = 1.5; x.beginPath(); if (sq) { x.moveTo(sx, sy - r * 1.3); x.lineTo(sx + r, sy); x.lineTo(sx, sy + r * 1.3); x.lineTo(sx - r, sy); x.closePath(); } else x.arc(sx, sy, r, 0, 6.283); x.fill(); x.stroke(); };
+            if (nuu) {
+                if (!dg) { try { dot(NU.hub.x, NU.hub.z, '#ffe27a', 5, true); for (const c of NU.cry || []) dot(c.x, c.z, '#6fd4ff', 4, true); if (DG.door) dot(DG.door.x, DG.door.z, '#b070ff', 5.5, true); } catch (e) { /* none */ } }
+                else { for (const o of NI.list) if (o.id === 'dg-exit' || o.id === 'dg-out') dot(o.x, o.z, o.id === 'dg-exit' ? '#7fe6ff' : '#b070ff', 5, true); }
+                try { for (const m of nfMobs()) { if (Math.hypot(m.x - P.x, m.z - P.z) > R * 1.1) continue; dot(m.x, m.z, m.aggro ? '#ff4a3a' : m.boss ? '#c060ff' : '#b0614a', m.boss ? 5.5 : 3.2); } } catch (e) { /* none */ }
+            }
+            try { for (const [id, q] of peers) { if (!q.actor || !q.actor.group.parent) continue; const g = q.actor.group.position, inP = !!(PARTY.members && PARTY.members.has && PARTY.members.has(id)); dot(g.x, g.z, inP ? '#5cff8a' : '#ffffff', inP ? 4.6 : 3.4); if (inP && q.name) { const [sx, sy] = toS(g.x, g.z); if (Math.hypot(sx - C, sy - C) < C - 14) { x.fillStyle = '#143d20'; x.font = '800 15px system-ui'; x.textAlign = 'center'; x.fillText(String(q.name).slice(0, 8), sx, sy - 9); } } } } catch (e) { /* none */ }
+            // you: an arrow that points where your character faces
+            const ry = localActor.group.rotation.y, [ax, ay] = toS(P.x + Math.sin(ry) * 4, P.z + Math.cos(ry) * 4), an = Math.atan2(ax - C, -(ay - C)); x.save(); x.translate(C, C); x.rotate(an); x.fillStyle = '#ff8a1e'; x.strokeStyle = '#2a1a0a'; x.lineWidth = 2; x.beginPath(); x.moveTo(0, -11); x.lineTo(7.5, 8); x.lineTo(0, 4); x.lineTo(-7.5, 8); x.closePath(); x.fill(); x.stroke(); x.restore();
+            // north on the rim
+            x.fillStyle = '#7a1c12'; x.font = '900 20px Nunito,system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('N', C - fx * (C - 16), C + fz * (C - 16));
+            const vg = x.createRadialGradient(C, C, C * 0.62, C, C, C); vg.addColorStop(0, 'rgba(70,40,10,0)'); vg.addColorStop(1, 'rgba(70,40,10,.55)'); x.fillStyle = vg; x.fillRect(0, 0, S, S);
+            let lab = ''; try { lab = dg ? 'Shadowveil Depths' : nuu ? NU_REG[nuRegionAt(P.x, P.z)].name : String(activeMap || '').replace(/^./, (c) => c.toUpperCase()); } catch (e) { lab = ''; } if (MM.lab.textContent !== lab) MM.lab.textContent = lab;
         }
 function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retryAt && Date.now() < NU.retryAt) return; NU.err = null; nuLoad(); }
         MAP_DEFS.nuu = { id: 'nuu', ground: (x, z) => nuH(x, z), clamp: nuClamp, collide: nuCollide, spawn: nuSpawn, update: nuUpdate };
@@ -13814,7 +14097,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
         try { window.__jv = { JV, jvH, jvBlk, jvCollide }; } catch (e) { /* no window */ }
         MAP_DEFS.jv = { id: 'jv', ground: (x, z) => jvH(x, z), clamp: (p) => { if (jvBlk(p.x, p.z) && JV.H) { /* collide handles it */ } }, collide: jvCollide, spawn: jvSpawn, update: jvUpdate };
 
-        window.__nuu = { shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        window.__nuu = { mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: () => dgEnter(), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
@@ -19560,12 +19843,15 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             padMove.x = mx; padMove.z = mz;
             PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = zoomHold ? 0 : ry; PAD.zoom = zoomHold ? ry : 0;
             if (PAD.sprint) padMove.run = true;
-            if (hit(5) && !(activeMap === 'tag' && tgMine()) && !hcPadOn()) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
+            if (hit(5) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
             const tagMode = activeMap === 'tag' && tgMine();      // laser tag: the triggers are weapons, not hotbars
             const gunHb = gnMode() && b[5] && !b[4];       // Gunner: hold RB for the emote hotbar (LT aims, RT fires); L3 flips left / right bar, R3 changes set
-            const held = gunHb ? (GN.hbR ? 'R' : 'L') : (tagMode || hcPadOn()) ? '' : b[6] && !b[7] ? 'L' : b[7] && !b[6] ? 'R' : '';
+            const ngOn = activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim', ngHb = ngOn && b[5] && !b[4];      // Adventia Gunner: L2 aims, R2 fires, hold RB for the cross hotbar
+            if (ngOn) { NG.adsP = !ngHb && !!b[6]; NG.fireP = !ngHb && !!b[7]; } else { NG.adsP = false; NG.fireP = false; }
+            const held = gunHb ? (GN.hbR ? 'R' : 'L') : ngHb ? (NG.hbR ? 'R' : 'L') : (tagMode || hcPadOn() || ngOn) ? '' : b[6] && !b[7] ? 'L' : b[7] && !b[6] ? 'R' : '';
             if (held) {
                 for (let k = 0; k < 8; k++) if (hit(PAD_SLOT_BTN[k])) padSlotRun(held, k);
+                if (ngHb) { if (hit(10)) NG.hbR = !NG.hbR; if (hit(11)) { PAD.set = (PAD.set + 1) % PAD_SETS.length; PAD.drawKey = ''; padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); } }
                 if (gunHb) { HC.fireP = false; GN.adsP = false; if (hit(10)) GN.hbR = !GN.hbR; if (hit(11)) { PAD.set = (PAD.set + 1) % PAD_SETS.length; PAD.drawKey = ''; padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); } }
             } else if (tagMode) {
                 tgPadAct(b, hit);
@@ -19591,8 +19877,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 else if (PAD.prev[4] && !PAD.l1Used && !PAD.l1Zoom && nowS() - (PAD.l1At || 0) < 0.45) padSheatheToggle();
             }
             if (hit(8)) { PAD.hudT = nowS(); PAD.hudHid = false; if (dockHidden) toggleDock(false); press('Tab'); }              // Back: select HUD
-            if (hit(9)) openStart('emotes');                                              // Start: main menu
-            if (hit(10) && !hcPadOn()) { if (hcMine() && b[4]) hcDraw(); else padLockToggle(); }                                                 // L3: lock on
+            if (hit(9)) toggleDock();                                              // Start: show / hide the menu bar
+            if (hit(10) && !hcPadOn() && !ngHb) { if (hcMine() && b[4]) hcDraw(); else padLockToggle(); }                                                 // L3: lock on
             if (hcPadOn()) { /* R3 cycles the lock-on target (hcPadAct) */ } else if (hit(11) && b[4] && !(activeMap === 'tag' && tgMine())) { /* L1 + R3 = auto-run (handled above) */ } else if (hit(11) && activeMap === 'tag' && tgMine()) { TG.adsT = !TG.adsT; padToast(TG.adsT ? 'Aim: on' : 'Aim: off'); } else if (hit(11)) { if (!$('screen-panel').classList.contains('hidden')) closeScreenPanel(); else padCamCycle(); }   // R3: camera
             if (PAD.lockId && (!peers.has(PAD.lockId) || !peers.get(PAD.lockId).actor.group.parent)) { PAD.lockId = null; padToast('Lock-on lost'); }
             padBarDraw(!(OB.open || EMU.playing) && (!hcPadOn() || gunHb), held);
@@ -20141,6 +20427,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (!fpOn) keepCameraInRoom();
             if (activeMap === 'nuu' && !fpOn) { try { nuKeepCam(dt); } catch (e) { if (!window.__nuCamErr) { window.__nuCamErr = e; console.error('nu cam', e); } } }
             try { gnKeepCam(dt); } catch (e) { if (!window.__gnErr) { window.__gnErr = e; console.error('gn cam', e); } }
+            try { nfGunTick(dt); } catch (e) { if (!window.__ngErr) { window.__ngErr = e; console.error('nf gun', e); } }
+            try { mmTick(dt); } catch (e) { if (!window.__mmErr) { window.__mmErr = e; console.error('minimap', e); } }
         }
 
         /* ------------------------------------------------------------------ *
@@ -21001,12 +21289,21 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         }
 
         // the bottom task bar slides away and back
-        let dockHidden = false;
+        let dockHidden = true;
         function toggleDock(force) {
             dockHidden = typeof force === 'boolean' ? force : !dockHidden;
-            const bar = document.querySelector('nav.xmb-bar'); if (bar) bar.classList.toggle('dock-hidden', dockHidden);
+            const bar = document.querySelector('nav.xmb-bar'); if (bar) bar.classList.toggle('dock-hidden', dockHidden); try { window.__dockSync && window.__dockSync(); } catch (e) { /* not ready */ }
         }
         window.__dock = () => dockHidden;
+        {   // the menu bar stays tucked away: Start, the little menu button by the bike, or a tap on the bottom edge brings it up
+            const bar = document.querySelector('nav.xmb-bar'); if (bar) bar.classList.add('dock-hidden');
+            const st = document.createElement('style'); st.textContent = '#dock-tap{position:fixed;left:0;right:0;bottom:0;height:34px;z-index:29;cursor:pointer;display:flex;align-items:flex-end;justify-content:center;touch-action:manipulation}#dock-tap i{display:block;width:84px;height:5px;margin-bottom:7px;border-radius:3px;background:rgba(255,255,255,.28);box-shadow:0 0 6px rgba(0,0,0,.4)}#dock-tap.off{display:none}#hud-menu{margin-right:8px;padding:0 13px}';
+            document.head.appendChild(st); const tap = document.createElement('div'); tap.id = 'dock-tap'; tap.innerHTML = '<i></i>'; tap.title = 'Menu'; document.body.appendChild(tap);
+            const sync = () => tap.classList.toggle('off', !dockHidden); window.__dockSync = sync; tap.addEventListener('pointerdown', (e) => { e.preventDefault(); toggleDock(false); sync(); });
+            const bike = document.getElementById('hud-bike'); if (bike) { const b = document.createElement('button'); b.id = 'hud-menu'; b.type = 'button'; b.className = 'hm-pill glass-panel'; b.title = 'Menu (Start)'; b.setAttribute('aria-label', 'Menu'); b.innerHTML = '<i class="fa-solid fa-bars"></i>'; bike.parentNode.insertBefore(b, bike.nextSibling); b.addEventListener('click', () => { toggleDock(); sync(); }); }
+            document.addEventListener('pointerdown', (e) => { if (dockHidden || !bar) return; if (e.target === renderer.domElement) { toggleDock(true); sync(); } }, true);
+            sync();
+        }
 
         /* ---- XMB: categories along the bottom, each opens a list upward. Mouse: hover or click. Keyboard: Tab to enter, arrows, Enter, Esc. ---- */
         /* ====================================================================================================
@@ -26778,6 +27075,70 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             window.addEventListener('contextmenu', (e) => { if (gnMode() && e.target === cv()) e.preventDefault(); }, true);
             document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== cv()) { GN.adsM = false; GN.fireM = false; } });
             window.addEventListener('blur', () => { GN.adsM = false; GN.fireM = false; });
+        }
+
+        /* ---- ADVENTIA: GUNNER AIM + SHOOT. Every other class plays from the cross hotbar; the Gunner aims through an over-the-shoulder camera (hold L2 / right mouse)
+           and fires where the crosshair points (R2 / left mouse). Hold RB for the cross hotbar skills (L3 flips left / right bar).
+           Other classes can opt into their own mode later by adding an entry to NF_ADV (aim: camera aim + fire, hotbar: cross bar only). ---- */
+        const NF_ADV = { hero: { mode: 'hotbar' }, fighter: { mode: 'hotbar' }, gunner: { mode: 'aim', cd: 0.28, pot: 0.36, range: 48 } };
+        const NG = { ads: 0, adsM: false, adsP: false, fireM: false, fireP: false, rig: false, yaw: 0, pitch: 0.05, fov0: 60, cd: 0, hbR: false, hit: false, kick: 0 };
+        const nfAdv = () => NF_ADV[NF.cls] || NF_ADV.hero;
+        const nfGunOn = () => { try { return activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim' && !NF.dead && !NF.tele && !NF.cast && !fpOn; } catch (e) { return false; } };
+        function nfRay(o, d, range) {
+            let best = null, bt = range;
+            for (const m of nfMobs()) {
+                const big = m.big || 1, cy = m.node.position.y + (m.node.userData.h || 1.5) * 0.5 * big, vx = m.x - o[0], vy = cy - o[1], vz = m.z - o[2], t = vx * d[0] + vy * d[1] + vz * d[2]; if (t < 0.3 || t > bt) continue;
+                if (Math.hypot(vx - d[0] * t, vy - d[1] * t, vz - d[2] * t) < 0.55 * big + 0.2) { best = m; bt = t; }
+            }
+            return { m: best, t: bt };
+        }
+        function nfGunShoot() {
+            const A = nfAdv(); if (NG.cd > 0 || NF.roll) return; NG.cd = A.cd; const g = localActor.group, P = g.position, c = camera.position, cp = Math.cos(NG.pitch), dl = [Math.sin(NG.yaw) * cp, Math.sin(NG.pitch), Math.cos(NG.yaw) * cp];
+            const ar = nfRay([c.x, c.y, c.z], dl, A.range + 8), tt = ar.m ? ar.t : Math.min(A.range, 40), tp = [c.x + dl[0] * tt, c.y + dl[1] * tt, c.z + dl[2] * tt];
+            let o = [P.x + Math.sin(NG.yaw) * 0.5, P.y + 1.3, P.z + Math.cos(NG.yaw) * 0.5], mz = null; try { mz = gnMuzzle(localActor, 'pistol'); } catch (e) { mz = null; } if (mz) o = mz.o;
+            let tx = tp[0] - o[0], ty = tp[1] - o[1], tz = tp[2] - o[2]; const l = Math.hypot(tx, ty, tz) || 1; const d = [tx / l, ty / l, tz / l];
+            const r = nfRay(o, d, A.range); let len = r.m ? r.t : A.range; if (!r.m && d[1] < -0.01) { const tg = (nuH(o[0] + d[0] * 20, o[2] + d[2] * 20) - o[1]) / d[1]; if (tg > 0 && tg < len) len = Math.min(len, tg); }
+            g.rotation.y = NG.yaw; NG.kick = 1; try { localActor.gnKick = 1; } catch (e) { /* none */ }
+            try { gnFlash(o, mz ? mz.d : d, 'pistol'); gnSnd(gnOne(GW.pistol.fire), GW.pistol.vol); gnTracer(o, d, len, 0xffe9a8, 1); } catch (e) { /* cosmetic */ }
+            try { net && net.send({ t: 'gn', w: 'pistol', o: o.map((v) => Math.round(v * 100) / 100), d: d.map((v) => Math.round(v * 1000) / 1000), l: Math.round(len * 10) / 10 }); } catch (e) { /* offline */ }
+            if (r.m) { nfTarget(r.m); nfDealDmg(r.m, A.pot * (1 + NF.lv * 0.02), false); try { fxPlay('bullet', { x: o[0] + d[0] * r.t, y: o[1] + d[1] * r.t, z: o[2] + d[2] * r.t }, { flesh: true }); } catch (e) { /* cosmetic */ } NF.comb = 6; }
+        }
+        function nfGunTick(dt) {
+            const on = nfGunOn(); NG.cd = Math.max(0, NG.cd - dt); if (NG.kick > 0) NG.kick = Math.max(0, NG.kick - dt * 6);
+            if (!on) { NG.adsM = NG.adsP = NG.fireM = NG.fireP = false; }
+            const want = on && !NF.roll && (NG.adsM || NG.adsP); NG.ads += ((want ? 1 : 0) - NG.ads) * (1 - Math.exp(-dt * 11));
+            if (want && !NG.rig) {
+                const dx = controls.target.x - camera.position.x, dz = controls.target.z - camera.position.z; NG.yaw = Math.atan2(dx, dz); NG.pitch = clamp(Math.atan2(controls.target.y - camera.position.y, Math.hypot(dx, dz)), -0.5, 0.5);
+                NG.rig = true; NG.fov0 = camera.fov; controls.enableRotate = false; controls.enableZoom = false; NF.lockOn = false;
+            }
+            if (!want && NG.rig && NG.ads < 0.03) { NG.rig = false; controls.enableRotate = true; controls.enableZoom = true; camera.fov = NG.fov0; camera.updateProjectionMatrix(); NU.camLast = null; NU.camWant = 6; try { localActor.gnPitch = 0; } catch (e) { /* none */ } }
+            const xh = document.getElementById('gn-xh'); if (!xh && NG.ads > 0.02) { try { gnUiBuild(); } catch (e) { /* ui */ } }
+            if (xh) { xh.style.opacity = String(clamp((NG.ads - 0.3) / 0.5, 0, 1)); xh.classList.toggle('hot', !!NG.hit); }
+            if (!NG.rig) return;
+            const sc = 1 - 0.35 * NG.ads; if (PAD.rx || PAD.ry) { NG.yaw -= (PAD.rx || 0) * 2.6 * sc * dt; NG.pitch = clamp(NG.pitch - (PAD.ry || 0) * 1.6 * sc * dt, -0.85, 0.85); }
+            const a = NG.ads, g = localActor.group.position, yaw = NG.yaw, pt = NG.pitch, cp = Math.cos(pt), dl = [Math.sin(yaw) * cp, Math.sin(pt), Math.cos(yaw) * cp], rt = [-Math.cos(yaw), 0, Math.sin(yaw)];
+            const dist = lerp(3.4, 1.9, a), side = lerp(0.3, 0.72, a), h = lerp(1.6, 1.55, a), pv = [g.x + rt[0] * side, g.y + h, g.z + rt[2] * side];
+            let cd = dist; for (let t = 0.5; t <= dist; t += 0.3) { const x = pv[0] - dl[0] * t, y = pv[1] - dl[1] * t, z = pv[2] - dl[2] * t; if (y < nuH(x, z) + 0.5 || (nuBlk(x, z) && y < nuH(x, z) + 3)) { cd = Math.max(0.6, t - 0.4); break; } }
+            camera.position.set(pv[0] - dl[0] * cd, Math.max(nuH(pv[0] - dl[0] * cd, pv[2] - dl[2] * cd) + 0.4, pv[1] - dl[1] * cd), pv[2] - dl[2] * cd); controls.target.set(pv[0], pv[1], pv[2]); camera.lookAt(pv[0] + dl[0] * 6, pv[1] + dl[1] * 6, pv[2] + dl[2] * 6);
+            const f = NG.fov0 * lerp(1, 0.82, a); if (Math.abs(camera.fov - f) > 0.01) { camera.fov = f; camera.updateProjectionMatrix(); }
+            try { localActor.gnPitch = pt * a; } catch (e) { /* none */ }
+            if (!NF.roll) localActor.group.rotation.y = yaw;
+            const c = camera.position; NG.hit = !!nfRay([c.x, c.y, c.z], dl, 60).m;
+            if ((NG.fireM || NG.fireP) && NG.ads > 0.5) nfGunShoot();
+        }
+        {
+            const cv = () => renderer.domElement, live = (e) => nfGunOn() && e.target === cv();
+            window.addEventListener('pointerdown', (e) => {
+                if (!live(e) || e.pointerType !== 'mouse') return;
+                if (e.button === 2) { NG.adsM = true; try { if (document.pointerLockElement !== cv()) cv().requestPointerLock(); } catch (x) { /* not supported */ } e.preventDefault(); }
+                else if (e.button === 0 && document.pointerLockElement === cv()) { NG.fireM = true; e.preventDefault(); e.stopPropagation(); }
+            }, true);
+            const up = (e) => { if (e.pointerType !== 'mouse') return; if (e.button === 2) { NG.adsM = false; if (document.pointerLockElement === cv() && activeMap === 'nuu') try { document.exitPointerLock(); } catch (x) { /* ignore */ } } else if (e.button === 0) NG.fireM = false; };
+            window.addEventListener('pointerup', up, true);
+            window.addEventListener('mousemove', (e) => { if (document.pointerLockElement === cv() && NG.rig && nfGunOn()) { const sc = (1 - 0.35 * NG.ads) * 0.0023; NG.yaw -= e.movementX * sc; NG.pitch = clamp(NG.pitch - e.movementY * sc, -0.85, 0.85); } });
+            window.addEventListener('contextmenu', (e) => { if (nfGunOn() && e.target === cv()) e.preventDefault(); }, true);
+            document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== cv()) { NG.adsM = false; NG.fireM = false; } });
+            window.addEventListener('blur', () => { NG.adsM = false; NG.fireM = false; });
         }
 
         /* ---- swords and the gun on characters ---- */
