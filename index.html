@@ -12924,7 +12924,7 @@ function kbModel(THREE, mk) {
                 const pineList = [];
                 for (const p of props.values()) {
                     const keep = p.list.filter((m) => { m.decompose(V, Q, S); return Math.hypot(V.x - hub.x, V.z - hub.z) > 17; }); if (!keep.length) continue;
-                    if (pine && /^SM_tree_0[1-6]$/.test(p.top)) { if (p.mat && p.mat.name === 'bark') { p.geo.computeBoundingBox(); const hh = p.geo.boundingBox.max.y - p.geo.boundingBox.min.y; for (const m of keep) { m.decompose(V, Q, S); pineList.push({ v: ({ SM_tree_01: 0, SM_tree_02: 2, SM_tree_03: 3, SM_tree_04: 1, SM_tree_05: 5, SM_tree_06: 4 })[p.top] % pine.nv, x: V.x, y: V.y, z: V.z, h: Math.max(9.5, hh * S.y * 1.4), r: Math.atan2(2 * (Q.w * Q.y), 1 - 2 * Q.y * Q.y), i: pineList.length }); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); } } continue; }
+                    if (pine && /^SM_tree_0[1-6]$/.test(p.top)) { if (p.mat && p.mat.name === 'bark') { p.geo.computeBoundingBox(); const hh = p.geo.boundingBox.max.y - p.geo.boundingBox.min.y; for (const m of keep) { m.decompose(V, Q, S); pineList.push({ v: ({ SM_tree_01: 0, SM_tree_02: 2, SM_tree_03: 3, SM_tree_04: 1, SM_tree_05: 5, SM_tree_06: 4 })[p.top] % pine.nv, x: V.x, y: V.y, z: V.z, h: Math.max(15, hh * S.y * 2.25), r: Math.atan2(2 * (Q.w * Q.y), 1 - 2 * Q.y * Q.y), i: pineList.length }); nuBlockDisc(V.x, V.z, Math.min(1.7, 0.85 * S.x)); } } continue; }
                     const im = new THREE.InstancedMesh(p.geo, p.mat, keep.length); keep.forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); nInst += keep.length;
                     if (/^SM_tree_0[1-6]$/.test(p.top) && p.mat && p.mat.name === 'bark') for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); }
                     else if (/stone|stump|log/.test(p.top) && !/small/.test(p.top)) { p.geo.computeBoundingBox(); const bb = p.geo.boundingBox; for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, 0.38 * Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * S.x); } }
@@ -12932,7 +12932,7 @@ function kbModel(THREE, mk) {
                 if (pine && pineList.length) {   // a few giant trees, twenty times the size of a person: landmarks you can see from across the forest
                     const GR = seeded(31337), gv = [0, 3, 4, 0]; let gn = 0, gt = 0; while (gn < 30 && gt++ < 4000) {
                         const x = (GR() * 2 - 1) * 225, z = (GR() * 2 - 1) * 225; if (Math.hypot(x - hub.x, z - hub.z) < 42 || nuBlkR(x, z) || nuBlkR(x + 3, z) || nuBlkR(x - 3, z) || nuBlkR(x, z + 3) || nuBlkR(x, z - 3)) continue;
-                        if (pineList.some((q) => q.giant && Math.hypot(q.x - x, q.z - z) < 38)) continue; const h = 30 + GR() * 18;
+                        if (pineList.some((q) => q.giant && Math.hypot(q.x - x, q.z - z) < 50)) continue; const h = 48 + GR() * 30;
                         pineList.push({ v: gv[gn % 4] % pine.nv, x, y: nuH(x, z), z, h, r: GR() * 6.283, giant: true }); nuBlockDisc(x, z, h * 0.062); gn++;
                     }
                 }
@@ -14518,7 +14518,7 @@ function kbModel(THREE, mk) {
             const glow = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x8a3cff, 0.35)); glow.position.set(0, 3.9, 0.9); glow.userData.noOutline = true; glow.visible = false; G.add(glow);
             door.userData.fx = { beam, beam2, ring, glow };
             nuBlockDisc(best.x - nx * 4.5, best.z - nz * 4.5, 6.5); nuBlockDisc(best.x + Math.cos(ry) * 5.6 - nx * 2.2, best.z - Math.sin(ry) * 5.6 - nz * 2.2, 2.4); nuBlockDisc(best.x - Math.cos(ry) * 5.6 - nx * 2.2, best.z + Math.sin(ry) * 5.6 + 0 - nz * 2.2, 2.4);
-            try { if (NU.pines) for (const t of NU.pines.list) if (Math.hypot(t.x - best.x, t.z - best.z) < (t.giant ? 38 : 9)) { t.x = 1e5; t.z = 1e5; } } catch (e) { /* none */ }   // keep the doorway clear of tree crowns, so it is easy to spot
+            try { if (NU.pines) for (const t of NU.pines.list) if (Math.hypot(t.x - best.x, t.z - best.z) < (t.giant ? 55 : 14)) { t.x = 1e5; t.z = 1e5; } } catch (e) { /* none */ }   // keep the doorway clear of tree crowns, so it is easy to spot
             const fx0 = best.x + nx * 3.6, fz0 = best.z + nz * 3.6;
             DG.door = { x: fx0, z: fz0, mesh: door, wx: best.x, wz: best.z, ry }; DG.ret = { mode: 'forest', x: fx0 + nx * 1.6, z: fz0 + nz * 1.6, ry: ry };
             NI.list.push({ id: 'dg-door', x: fx0, z: fz0, r: 5.2, label: 'Enter the portal', act: () => dgEnter(1, DG.door, DG.ret), cond: () => !DG.on && !ZN.on && !AR.busy });
@@ -21039,8 +21039,9 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             }
             const tagNow = (activeMap === 'tag' && tgMine()) || hcPadOn();
             if (b[4] && !PAD.prev[4]) PAD.l1Zoom = false;
-            if (activeMap === 'nuu' && NU.ready) {      // Adventia: hold L1 for 2 seconds, then each D-pad direction / face button picks its own hotbar set (L1 + right stick still zooms)
-                const l1Sel = !!b[4] && !!PAD.l1At && nowS() - PAD.l1At >= 0.6 && nfAdv().mode !== 'aim'; PAD.selMask = PAD.selMask || {}; PAD.selRaw = PAD.selRaw || [];
+            if (activeMap === 'nuu' && NU.ready) {      // Adventia: double-tap L1 and hold, then each D-pad direction / face button picks its own hotbar set (L1 + right stick still zooms)
+                if (hit(4)) { PAD.l1Dbl = nowS() - (PAD.l1PrevT || -9) < 0.5; PAD.l1PrevT = nowS(); if (PAD.l1Dbl) PAD.shPend = 0; } if (!b[4]) PAD.l1Dbl = false; if (PAD.shPend && nowS() > PAD.shPend) { PAD.shPend = 0; padSheatheToggle(); }
+                const l1Sel = !!b[4] && !!PAD.l1Dbl && nowS() - PAD.l1PrevT >= 0.1 && nfAdv().mode !== 'aim'; if (l1Sel) PAD.l1Used = true;      // double-tap L1 and hold on the second press: hotbar select PAD.selMask = PAD.selMask || {}; PAD.selRaw = PAD.selRaw || [];
                 { let el = document.getElementById('pad-sel'); if (!el) { el = document.createElement('div'); el.id = 'pad-sel'; el.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:60;display:none;padding:10px 14px;border-radius:14px;background:rgba(8,16,34,.94);border:2px solid #8fd8ff;color:#e8f6ff;font:800 13px system-ui,Segoe UI,Arial,sans-serif;pointer-events:none;min-width:230px'; document.body.appendChild(el); }
                   if (l1Sel) { const gl = ['▲ D-pad up', '▶ D-pad right', '▼ D-pad down', '◀ D-pad left', 'Y / △', 'B / ○', 'A / ✕', 'X / □'], h = '<div style="opacity:.7;font-size:11px;margin-bottom:6px">HOTBAR SET · press a button</div>' + PAD_SETS.slice(0, 8).map((st, k) => '<div style="padding:3px 6px;border-radius:7px;' + (k === PAD.set ? 'background:#2f6fb5;' : '') + '"><span style="display:inline-block;width:92px;opacity:.8">' + gl[k] + '</span>' + st.name + '</div>').join(''); if (el.dataset.k !== h) { el.dataset.k = h; el.innerHTML = h; } el.style.display = 'block'; } else el.style.display = 'none'; }
                 if (!b[4]) PAD.selHint = false;
@@ -21093,7 +21094,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (!hcPadOn() && !tagNow && !gnMode() && !['btl', 'diner', 'bowl', 'budokai', 'blitz'].includes(activeMap)) {      // L1 on its own (a quick tap, nothing else pressed) draws / sheathes the weapon
                 if (hit(4)) { PAD.l1At = nowS(); PAD.l1Used = false; }
                 if (b[4]) { for (let i = 0; i < 16; i++) if (i !== 4 && hit(i)) PAD.l1Used = true; if (PAD.l1Zoom || b[6] || b[7]) PAD.l1Used = true; }
-                else if (PAD.prev[4] && !PAD.l1Used && !PAD.l1Zoom && nowS() - (PAD.l1At || 0) < 0.45) padSheatheToggle();
+                else if (PAD.prev[4] && !PAD.l1Used && !PAD.l1Zoom && nowS() - (PAD.l1At || 0) < 0.45) { if (activeMap === 'nuu' && NU.ready) PAD.shPend = nowS() + 0.5; else padSheatheToggle(); }      // Adventia: a single tap waits half a second in case it is the first half of a double-tap
             }
             if (hit(8)) { PAD.hudT = nowS(); PAD.hudHid = false; if (dockHidden) toggleDock(false); press('Tab'); }              // Back: select HUD
             if (hit(9)) toggleDock();                                              // Start: show / hide the menu bar
