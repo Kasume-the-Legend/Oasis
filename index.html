@@ -13098,6 +13098,10 @@ function kbModel(THREE, mk) {
             for (const q of NS.pl) { if (q.me || !PARTY.members.has(q.id)) continue; const v = NS.vt.get(q.id); if (!v || v.d || now - v.ts > 5000 || Math.hypot(q.x - P.x, q.z - P.z) > r) continue; out.push({ id: q.id, q, v, pct: v.hp / v.hm }); }
             return out;
         }
+        function nfTgtAlly(s) {      // a party member you have targeted, for healing spells (items go through nfItemUse); null when nobody is targeted
+            const id = localActor && localActor.lookId; if (!id || !PARTY.members || !PARTY.members.has(id)) return null;
+            const al = nfAllies(24).find((x) => x.id === id); if (!al) { try { padToast('Target is too far away'); } catch (e) { /* toast */ } return null; } return al;
+        }
         function nfHealAlly(a, amt, hot) {
             const h = Math.round(amt); a.v.hp = Math.min(a.v.hm, a.v.hp + (hot ? 0 : h)); nsSend({ k: 'hl', to: a.id, h, hot: hot ? 1 : 0 }); const pp = new THREE.Vector3(a.q.x, a.q.y, a.q.z);
             nfPop(pp.clone().setY(pp.y + 2.2), '+' + h, '#7dffa0', true); nfFx('heal', pp, pp); nfThreatHeal(me.id, nfPos().x, nfPos().z, h); nsSend({ k: 'tg', a: h });
@@ -13403,11 +13407,12 @@ function kbModel(THREE, mk) {
                     if (t && s.r) { nfShapeFx('circle', t.x, t.z, 0, { r: s.r }); hitAll((m) => Math.hypot(m.x - t.x, m.z - t.z) < s.r + big(m), s.pot); } else if (t) nfDealDmg(t, s.pot, s.mag); if (s.fx) nfFx(s.fx, g.position, tpos); break;
                 }
                 case 'heal': {
+                    if (s.mp) { const ta = nfTgtAlly(s); if (ta) { nfHealAlly(ta, ta.v.hm * s.heal + NF.mag * 0.8); try { nfFace({ x: ta.q.x, z: ta.q.z }); } catch (e) { /* facing is cosmetic */ } if (s.fx) nfFx('heal', p, new THREE.Vector3(ta.q.x, ta.q.y, ta.q.z)); break; } }      // any class with a cure: cast it on the party member you target
                     if (nfMyRole() === 'healer') {   // smart heal: the party member (or you) with the lowest HP in 24 m
                         const al = nfAllies(24).sort((a, b) => a.pct - b.pct)[0]; if (al && al.pct < NF.hp / NF.hpMax) { nfHealAlly(al, al.v.hm * s.heal + NF.mag * 0.8); if (s.fx) nfFx('heal', p, p); break; }
                     }
                     const h = Math.round(NF.hpMax * s.heal + NF.mag * 0.8); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); if (s.fx) nfFx('heal', p, p); if (nfMyRole() === 'healer') { nfThreatHeal(me.id, p.x, p.z, h); nsSend({ k: 'tg', a: h }); } break; }
-                case 'hot': { const al = nfMyRole() === 'healer' ? nfAllies(24).sort((a, b) => a.pct - b.pct)[0] : null; if (al && al.pct < NF.hp / NF.hpMax) { nfHealAlly(al, al.v.hm * s.heal, true); break; } NF.hot = { left: s.sec, tick: 3, pot: s.heal }; nfPop(up, 'REGEN', '#7dffa0'); nfFx('heal', p, p); break; }
+                case 'hot': { const ta = s.mp ? nfTgtAlly(s) : null; if (ta) { nfHealAlly(ta, ta.v.hm * s.heal, true); break; } const al = nfMyRole() === 'healer' ? nfAllies(24).sort((a, b) => a.pct - b.pct)[0] : null; if (al && al.pct < NF.hp / NF.hpMax) { nfHealAlly(al, al.v.hm * s.heal, true); break; } NF.hot = { left: s.sec, tick: 3, pot: s.heal }; nfPop(up, 'REGEN', '#7dffa0'); nfFx('heal', p, p); break; }
                 case 'guard': NF.guard = s.sec; NF.gRed = s.red || 0.5; nfPop(up, 'GUARD', '#8fb8ff'); nfFx('guard', p, p); break;
                 case 'buff': NF.buffT = s.sec; nfPop(up, 'ATTACK UP', '#ffd24a', true); nfFx('guard', p, p); break;
                 case 'mp': NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * s.frac); nfPop(up, 'MP UP', '#8fb8ff', true); nfFx('heal', p, p); break;
@@ -13489,10 +13494,10 @@ function kbModel(THREE, mk) {
             if (k === 'phoenix') { if (NF.dead) { nfDownAct('phoenix'); return; } const f = nfFallNear(); if (f) { nfPhoenixOther(f); return; } try { padToast('Stand by a fallen ally\'s crystal'); } catch (e) { /* toast */ } return; }
             if (NF.dead) return; const now = performance.now() / 1000; if (NF.itemT > now) return; const bag = btBagLoad(), nm = (BT_ITEMS[k] || { n: k }).n;
             if (!(bag[k] > 0)) { try { padToast('No ' + nm); } catch (e) { /* toast */ } return; }
-            if ((k === 'potion' || k === 'hipotion') && localActor.lookId && PARTY.members.has(localActor.lookId)) {      // a party member is targeted: the potion goes to them
+            if ((k === 'potion' || k === 'hipotion' || k === 'elixir') && localActor.lookId && PARTY.members.has(localActor.lookId)) {      // a party member is targeted: the potion goes to them
                 const al = nfAllies(15).find((x) => x.id === localActor.lookId);
                 if (!al) { padToast('Too far away'); return; } if (al.v.hp >= al.v.hm - 0.5) { nfPop(nfPos().clone().setY(nfPos().y + 2), (al.q.name || 'Ally') + ' is at full HP', '#cfd8e0'); return; }
-                nfHealAlly(al, al.v.hm * (k === 'potion' ? 0.3 : 0.65)); btBagAdd(k, -1); NF.itemT = now + NF_ITEM_CD; NF.itemRef = 0; return;
+                nfHealAlly(al, al.v.hm * (k === 'potion' ? 0.3 : k === 'hipotion' ? 0.65 : 1)); btBagAdd(k, -1); NF.itemT = now + NF_ITEM_CD; NF.itemRef = 0; return;
             }
             const P = nfPos(), up = P.clone().setY(P.y + 2), hfull = NF.hp >= NF.hpMax - 0.5, mfull = NF.mp >= NF.mpMax - 0.5;
             if (k === 'potion' || k === 'hipotion') { if (hfull) { nfPop(up, 'HP is full', '#cfd8e0'); return; } const h = Math.round(NF.hpMax * (k === 'potion' ? 0.3 : 0.65)); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); try { nfFx('heal', P, P); } catch (e) { /* fx */ } }
@@ -21035,8 +21040,10 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             const tagNow = (activeMap === 'tag' && tgMine()) || hcPadOn();
             if (b[4] && !PAD.prev[4]) PAD.l1Zoom = false;
             if (activeMap === 'nuu' && NU.ready) {      // Adventia: hold L1 for 2 seconds, then each D-pad direction / face button picks its own hotbar set (L1 + right stick still zooms)
-                const l1Sel = !!b[4] && !!PAD.l1At && nowS() - PAD.l1At >= 2 && nfAdv().mode !== 'aim'; PAD.selMask = PAD.selMask || {}; PAD.selRaw = PAD.selRaw || [];
-                if (l1Sel && !PAD.selHint) { PAD.selHint = true; padToast('Hotbar select: press a D-pad or face button'); } if (!b[4]) PAD.selHint = false;
+                const l1Sel = !!b[4] && !!PAD.l1At && nowS() - PAD.l1At >= 0.6 && nfAdv().mode !== 'aim'; PAD.selMask = PAD.selMask || {}; PAD.selRaw = PAD.selRaw || [];
+                { let el = document.getElementById('pad-sel'); if (!el) { el = document.createElement('div'); el.id = 'pad-sel'; el.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:60;display:none;padding:10px 14px;border-radius:14px;background:rgba(8,16,34,.94);border:2px solid #8fd8ff;color:#e8f6ff;font:800 13px system-ui,Segoe UI,Arial,sans-serif;pointer-events:none;min-width:230px'; document.body.appendChild(el); }
+                  if (l1Sel) { const gl = ['▲ D-pad up', '▶ D-pad right', '▼ D-pad down', '◀ D-pad left', 'Y / △', 'B / ○', 'A / ✕', 'X / □'], h = '<div style="opacity:.7;font-size:11px;margin-bottom:6px">HOTBAR SET · press a button</div>' + PAD_SETS.slice(0, 8).map((st, k) => '<div style="padding:3px 6px;border-radius:7px;' + (k === PAD.set ? 'background:#2f6fb5;' : '') + '"><span style="display:inline-block;width:92px;opacity:.8">' + gl[k] + '</span>' + st.name + '</div>').join(''); if (el.dataset.k !== h) { el.dataset.k = h; el.innerHTML = h; } el.style.display = 'block'; } else el.style.display = 'none'; }
+                if (!b[4]) PAD.selHint = false;
                 for (let k = 0; k < 8; k++) { const bi = PAD_SLOT_BTN[k], raw = !!b[bi]; if (l1Sel && raw && !PAD.selRaw[bi] && k < PAD_SETS.length) { PAD.set = k; PAD.drawKey = ''; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage */ } padToast('Hotbar set ' + (k + 1) + ' · ' + PAD_SETS[k].name); PAD.selMask[bi] = true; } if (!raw) PAD.selMask[bi] = false; PAD.selRaw[bi] = raw; if (PAD.selMask[bi]) b[bi] = false; }
             }
             const zoomHold = b[4] && !tagNow && !fpOn;                       // hold L1 + right stick up / down = zoom in / out
@@ -21053,7 +21060,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = zoomHold ? 0 : ry; PAD.zoom = zoomHold ? ry : 0;
             if (PAD.sprint) padMove.run = true;
             if (activeMap === 'nuu' && NU.sw && hit(5) && NU.ready && nfAdv().mode !== 'aim' && !NF.dead && !NF.cast) { PAD.auto = false; nfRoll(); }      // Adventia: R1 is the dash
-            if ((activeMap === 'nuu' ? false : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.setAt = nowS(); PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
+            if ((activeMap === 'nuu' ? (!NU.sw && hit(5) && !b[4] && !b[6] && !b[7] && nowS() - (PAD.trigUp || -9) > 0.35 && nowS() - (PAD.setAt || 0) > 0.4) : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.setAt = nowS(); PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
             const tagMode = activeMap === 'tag' && tgMine();      // laser tag: the triggers are weapons, not hotbars
             const gunHb = gnMode() && b[5] && !b[4];       // Gunner: hold RB for the emote hotbar (LT aims, RT fires); L3 flips left / right bar, R3 changes set
             const ngOn = activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim', ngHb = ngOn && b[5] && !b[4];      // Adventia Gunner: L2 aims, R2 fires, hold RB for the cross hotbar
