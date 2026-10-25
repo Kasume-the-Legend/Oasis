@@ -12924,7 +12924,7 @@ function kbModel(THREE, mk) {
                 const pineList = [];
                 for (const p of props.values()) {
                     const keep = p.list.filter((m) => { m.decompose(V, Q, S); return Math.hypot(V.x - hub.x, V.z - hub.z) > 17; }); if (!keep.length) continue;
-                    if (pine && /^SM_tree_0[1-6]$/.test(p.top)) { if (p.mat && p.mat.name === 'bark') { p.geo.computeBoundingBox(); const hh = p.geo.boundingBox.max.y - p.geo.boundingBox.min.y; for (const m of keep) { m.decompose(V, Q, S); pineList.push({ v: ({ SM_tree_01: 0, SM_tree_02: 2, SM_tree_03: 3, SM_tree_04: 1, SM_tree_05: 5, SM_tree_06: 4 })[p.top] % pine.nv, x: V.x, y: V.y, z: V.z, h: Math.max(15, hh * S.y * 2.25), r: Math.atan2(2 * (Q.w * Q.y), 1 - 2 * Q.y * Q.y), i: pineList.length }); nuBlockDisc(V.x, V.z, Math.min(1.7, 0.85 * S.x)); } } continue; }
+                    if (pine && /^SM_tree_0[1-6]$/.test(p.top)) { if (p.mat && p.mat.name === 'bark') { p.geo.computeBoundingBox(); const hh = p.geo.boundingBox.max.y - p.geo.boundingBox.min.y; for (const m of keep) { m.decompose(V, Q, S); pineList.push({ v: ({ SM_tree_01: 0, SM_tree_02: 2, SM_tree_03: 3, SM_tree_04: 1, SM_tree_05: 5, SM_tree_06: 4 })[p.top] % pine.nv, x: V.x, y: V.y, z: V.z, h: Math.max(9.5, hh * S.y * 1.4), r: Math.atan2(2 * (Q.w * Q.y), 1 - 2 * Q.y * Q.y), i: pineList.length }); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); } } continue; }
                     const im = new THREE.InstancedMesh(p.geo, p.mat, keep.length); keep.forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; im.userData.noOutline = true; root.add(im); nInst += keep.length;
                     if (/^SM_tree_0[1-6]$/.test(p.top) && p.mat && p.mat.name === 'bark') for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, Math.min(1.1, 0.55 * S.x)); }
                     else if (/stone|stump|log/.test(p.top) && !/small/.test(p.top)) { p.geo.computeBoundingBox(); const bb = p.geo.boundingBox; for (const m of keep) { m.decompose(V, Q, S); nuBlockDisc(V.x, V.z, 0.38 * Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * S.x); } }
@@ -12932,7 +12932,7 @@ function kbModel(THREE, mk) {
                 if (pine && pineList.length) {   // a few giant trees, twenty times the size of a person: landmarks you can see from across the forest
                     const GR = seeded(31337), gv = [0, 3, 4, 0]; let gn = 0, gt = 0; while (gn < 30 && gt++ < 4000) {
                         const x = (GR() * 2 - 1) * 225, z = (GR() * 2 - 1) * 225; if (Math.hypot(x - hub.x, z - hub.z) < 42 || nuBlkR(x, z) || nuBlkR(x + 3, z) || nuBlkR(x - 3, z) || nuBlkR(x, z + 3) || nuBlkR(x, z - 3)) continue;
-                        if (pineList.some((q) => q.giant && Math.hypot(q.x - x, q.z - z) < 50)) continue; const h = 48 + GR() * 30;
+                        if (pineList.some((q) => q.giant && Math.hypot(q.x - x, q.z - z) < 38)) continue; const h = 30 + GR() * 18;
                         pineList.push({ v: gv[gn % 4] % pine.nv, x, y: nuH(x, z), z, h, r: GR() * 6.283, giant: true }); nuBlockDisc(x, z, h * 0.062); gn++;
                     }
                 }
@@ -14518,7 +14518,7 @@ function kbModel(THREE, mk) {
             const glow = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 7.6), fxm(0x8a3cff, 0.35)); glow.position.set(0, 3.9, 0.9); glow.userData.noOutline = true; glow.visible = false; G.add(glow);
             door.userData.fx = { beam, beam2, ring, glow };
             nuBlockDisc(best.x - nx * 4.5, best.z - nz * 4.5, 6.5); nuBlockDisc(best.x + Math.cos(ry) * 5.6 - nx * 2.2, best.z - Math.sin(ry) * 5.6 - nz * 2.2, 2.4); nuBlockDisc(best.x - Math.cos(ry) * 5.6 - nx * 2.2, best.z + Math.sin(ry) * 5.6 + 0 - nz * 2.2, 2.4);
-            try { if (NU.pines) for (const t of NU.pines.list) if (Math.hypot(t.x - best.x, t.z - best.z) < (t.giant ? 55 : 14)) { t.x = 1e5; t.z = 1e5; } } catch (e) { /* none */ }   // keep the doorway clear of tree crowns, so it is easy to spot
+            try { if (NU.pines) for (const t of NU.pines.list) if (Math.hypot(t.x - best.x, t.z - best.z) < (t.giant ? 38 : 9)) { t.x = 1e5; t.z = 1e5; } } catch (e) { /* none */ }   // keep the doorway clear of tree crowns, so it is easy to spot
             const fx0 = best.x + nx * 3.6, fz0 = best.z + nz * 3.6;
             DG.door = { x: fx0, z: fz0, mesh: door, wx: best.x, wz: best.z, ry }; DG.ret = { mode: 'forest', x: fx0 + nx * 1.6, z: fz0 + nz * 1.6, ry: ry };
             NI.list.push({ id: 'dg-door', x: fx0, z: fz0, r: 5.2, label: 'Enter the portal', act: () => dgEnter(1, DG.door, DG.ret), cond: () => !DG.on && !ZN.on && !AR.busy });
@@ -16254,7 +16254,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
         let hugSendT = 0; const hugBroadcast = () => { clearTimeout(hugSendT); hugSendT = setTimeout(() => { try { net && net.send({ t: 'hc', c: hugClean(HUGC) }); } catch (e) { /* offline */ } }, 250); };
         function hugSpace() {   // move me to the chosen distance from my partner, facing them
             const a = localActor; if (!a || !a.hugWith) return; const pa = hugActor(a.hugWith); if (!pa) return; const lp = a.group.position, pp = pa.group.position; let dx = lp.x - pp.x, dz = lp.z - pp.z; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
-            lp.set(pp.x + dx * HUGC.d, lp.y, pp.z + dz * HUGC.d); a.group.rotation.y = Math.atan2(-dx, -dz); try { playerVelocity.set(0, 0, 0); } catch (e) { /* velocity */ }
+            lp.set(pp.x + dx * HUGC.d, lp.y, pp.z + dz * HUGC.d); a.group.rotation.y = Math.atan2(-dx, -dz); try { playerVelocity.set(0, 0, 0); } catch (e) { /* velocity */ } try { if (a.prev) a.prev.copy(lp); a.speed = 0; } catch (e) { /* tracking */ }      // the shift is not a walk: without this a fast slider drag reads as walking off and ends the hug
         }
         /* ---------- Blitzball class: Wakka's stance, five emotes and a ball that follows the hand ---------- */
         const _blq1 = new THREE.Quaternion(), _blq2 = new THREE.Quaternion(), _blr = new THREE.Vector3(), _bld = new THREE.Vector3(), _blw = new THREE.Vector3();
@@ -16391,7 +16391,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
                 top.appendChild(bt('Reset', () => { Object.assign(HUGC, HUGC_DEF); HUG.dist = HUGC.d; hugSave(); hugSpace(); hugBroadcast(); sync(); })); top.appendChild(bt('✕', () => { HUGUI.hidden = true; el.style.display = 'none'; })); el.appendChild(top);
                 for (const [k, lb, mn, mx, st, fm] of rows) { const r = document.createElement('label'); r.style.cssText = 'display:flex;align-items:center;gap:6px'; const sp = document.createElement('span'); sp.style.cssText = 'width:92px'; sp.textContent = lb; const i = document.createElement('input'); i.type = 'range'; i.min = mn; i.max = mx; i.step = st; i.style.cssText = 'flex:1;min-width:0'; const v = document.createElement('b'); v.style.cssText = 'width:42px;text-align:right;color:#e6edf7'; ctl[k] = { i, v };
                     i.oninput = () => { HUGC[k] = +i.value; HUGC.d = hugClean(HUGC).d; HUG.dist = HUGC.d; v.textContent = fm(HUGC[k]); hugSave(); if (k === 'd') hugSpace(); hugBroadcast(); }; r.append(sp, i, v); el.appendChild(r); }
-                sync(); for (const ev of ['pointerdown', 'keydown']) el.addEventListener(ev, (e) => e.stopPropagation()); document.body.appendChild(el);
+                sync(); for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchmove', 'keydown', 'wheel']) el.addEventListener(ev, (e) => e.stopPropagation()); el.style.touchAction = 'none'; document.body.appendChild(el);
             }
             HUGUI.el.style.display = 'grid';
         }
