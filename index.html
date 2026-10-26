@@ -1041,9 +1041,10 @@
             <input id="screen-url" type="text" autocomplete="off" spellcheck="false" placeholder="Paste a YouTube, vdo.ninja or video link" class="flex-1 min-w-0 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-psGlow">
             <button id="screen-play" type="button" class="shrink-0 bg-psGlow hover:bg-blue-600 px-3 py-2 rounded-lg text-xs font-semibold transition"><i class="fa-solid fa-play mr-1"></i> Play</button>
         </div>
-        <p class="text-[10px] text-gray-400 mb-3">YouTube and vdo.ninja links play for <b>everyone</b> in this channel. Video files, direct video links and other web pages play for <b>you only</b>.</p>
+        <p class="text-[10px] text-gray-400 mb-3">YouTube and vdo.ninja links play for <b>everyone</b> in this channel. <b>Video files from your storage</b> are streamed live to everyone in the room too (switch it off with <i>Sharing my videos</i>). Direct video links and other web pages play for <b>you only</b>.</p>
         <div class="flex flex-wrap items-center gap-2 mb-3">
             <button id="tv-open" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-white/10 hover:bg-white/20"><i class="fa-solid fa-folder-open mr-1"></i> Open files&hellip;</button>
+            <button id="tv-share" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600/70" title="Stream videos from your storage to everyone in the room">Sharing my videos: On</button>
             <button id="tv-full" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-white/10 hover:bg-white/20"><i class="fa-solid fa-expand mr-1"></i> Full screen</button>
                 <button id="tv-theater" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-white/10 hover:bg-white/20" title="Show the screen flat on top of the view. Fixes a blank picture on phones."><i class="fa-solid fa-film"></i> Theater</button>
             <button id="screen-stop" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-white/10 hover:bg-rose-600/70">Stop</button>
@@ -3977,7 +3978,7 @@ function kbModel(THREE, mk) {
             if (p.av && p.av.state === 'loading') avActive = Math.max(0, avActive - 1);
             p.actor.dispose(); try { cmpnPeerGone(p); } catch (e) { /* ignore */ }
             peers.delete(id);
-            emuPeerGone(id);
+            emuPeerGone(id); vsPeerGone(id);
             if (announce) sysChat(`${p.name} left the room.`);
             renderPlayers();
             announceRoom();
@@ -4611,6 +4612,7 @@ function kbModel(THREE, mk) {
                     showSource(src, { from: p.name });
                     break;
                 }
+                case 'vshare': vsOnMsg(from, m); break;
                 case 'screenStop': {
                     const p = peers.get(from);
                     if (!p || !room || !SCREEN_SITES[room.map]) return;
@@ -4649,8 +4651,8 @@ function kbModel(THREE, mk) {
             const mine = net = new Net(id, onNetMessage, {
                 maxPeers: NET.roomCap,
                 password: isPrivate ? code : null,                                             // the room code doubles as the encryption password
-                onPeer: (pid) => { if (net === mine) { net.send({ ...helloMsg(false), to: pid }); emuOnPeer(pid); try { bkBroadcast(pid); } catch (e) { /* no bike */ } } },
-                onStream: (stream, pid) => { if (net === mine) emuOnStream(stream, pid); },     // someone's connection just came up: introduce ourselves
+                onPeer: (pid) => { if (net === mine) { net.send({ ...helloMsg(false), to: pid }); emuOnPeer(pid); try { setTimeout(vsTick, 600); } catch (e) { /* none */ } try { bkBroadcast(pid); } catch (e) { /* no bike */ } } },
+                onStream: (stream, pid) => { if (net === mine) { emuOnStream(stream, pid); vsOnStream(stream, pid); } },     // someone's connection just came up: introduce ourselves
                 onProgress: (pid, pct) => { const q = peers.get(pid); if (q) { q.last = Date.now(); if (q.av) { q.av.pct = pct; q.av.progress = Date.now(); renderPlayersSoon(); } } },     // a big avatar is arriving: that player is alive, and we can show how far it is
                 onStatus: showNetStatus
             });
@@ -7483,6 +7485,7 @@ function kbModel(THREE, mk) {
             if (s.kind === 'yt') { const t = ytTitle(s.id); if (!t) ytFetch(s.id, null, () => { try { renderScreenPanel(); } catch (e) { /* not ready */ } }); return 'YouTube \u00b7 ' + (t || 'youtube.com/watch?v=' + s.id); }
             if (s.kind === 'vdo') return 'vdo.ninja \u00b7 ' + (s.view ? 'view ' + s.view : 'room ' + s.room + (s.scene !== null ? ' (scene)' : ''));
             if (s.kind === 'game') return 'Retro game \u00b7 ' + s.name + ' (' + (EMU_SYS[s.sys] || '') + ')';
+            if (s.kind === 'vshare') return 'Video \u00b7 ' + s.name;
             if (s.kind === 'file') return s.name + (screenState.queue.length > 1 ? `  (${screenState.qi + 1} of ${screenState.queue.length})` : '');
             try { return (s.kind === 'video' ? 'Video \u00b7 ' : 'Web page \u00b7 ') + new URL(s.url).host; } catch (e) { return s.url; }
         }
@@ -7524,10 +7527,98 @@ function kbModel(THREE, mk) {
         }
         function disposeFrame() {
             if (!screenFrame) return;
+            if (screenFrame === VS.el) vsDrop();
             if (screenFrame.tagName === 'VIDEO') { screenFrame.pause(); screenFrame.srcObject = null; screenFrame.removeAttribute('src'); screenFrame.load(); } else screenFrame.src = 'about:blank';
             screenFrame.remove();
             screenFrame = null;
         }
+        // ---- your own videos, for the whole room ----
+        // A file from your storage can't be sent as a link (it only exists on your device), so the TV picture and sound are captured
+        // and streamed over the same direct connections the Retro-game stream uses. Everyone in the room sees what you see.
+        const VS = { on: (() => { try { return localStorage.getItem('psTvShare') !== '0'; } catch (e) { return true; } })(), stream: null, el: null, name: '', sent: new Set(), announced: false, streams: new Map(), timer: null, note: '' };
+        const vsTn = () => (tvTent() ? String(TN.inst) : undefined);
+        const vsLink = (pid) => net && net.links.find((x) => x.peers.has(pid) && x.room.addStream);
+        function vsTune(pid) {
+            try {
+                const l = vsLink(pid), pc = l && l.room.getPeers && l.room.getPeers()[pid];
+                if (!pc || !pc.getSenders) return;
+                for (const sd of pc.getSenders()) {
+                    if (!sd.track || sd.track.kind !== 'video') continue;
+                    try { sd.track.contentHint = 'detail'; } catch (e) { /* unsupported */ }
+                    const prm = sd.getParameters();
+                    if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}];
+                    prm.encodings[0].maxFramerate = 30; prm.encodings[0].maxBitrate = 3500000;
+                    prm.degradationPreference = 'maintain-resolution';
+                    sd.setParameters(prm).catch(() => {});
+                }
+            } catch (e) { /* best effort */ }
+        }
+        function vsSendTo(pid) {
+            if (!VS.stream || !net || VS.sent.has(pid)) return;
+            const l = vsLink(pid); if (!l) return;                 // video needs a direct connection (the relay server only carries messages)
+            VS.sent.add(pid);
+            net.send({ t: 'vshare', on: true, name: VS.name, tn: vsTn(), to: pid });
+            try { l.room.addStream(VS.stream, { target: pid }); } catch (e) { console.warn('could not send the video', e); }
+            for (const ms of [400, 1500, 4000]) setTimeout(() => vsTune(pid), ms);
+        }
+        function vsRemoveFrom(pid) { const l = vsLink(pid); if (l && VS.stream) { try { l.room.removeStream(VS.stream, { target: pid }); } catch (e) { /* gone */ } } VS.sent.delete(pid); }
+        function vsDrop() {                                        // the video element is going away: unhook its picture from everyone (no message)
+            if (VS.stream) { for (const pid of [...VS.sent]) vsRemoveFrom(pid); try { VS.stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* ended */ } }
+            VS.stream = null; VS.el = null; VS.sent.clear();
+        }
+        function vsOff() { if (VS.announced) { VS.announced = false; net && net.send({ t: 'vshare', on: false, tn: vsTn() }); } }
+        function vsStart(v, src) {
+            if (!VS.on || !net || !hasScreen() || VS.el === v) return;
+            const cap = v.captureStream || v.mozCaptureStream;
+            if (!cap) { VS.note = "This browser can't share local videos with the room (no captureStream). Chrome, Edge, Firefox and Android Chrome can."; setScreenNote(VS.note); return; }
+            try { VS.stream = cap.call(v); } catch (e) { VS.note = "Couldn't capture this video to share it: " + (e && e.message || e); setScreenNote(VS.note); return; }
+            VS.el = v; VS.name = String(src.name || 'a video').slice(0, 120); VS.announced = true; VS.note = '';
+            if (!VS.timer) VS.timer = setInterval(vsTick, 2000);
+            vsTick();
+            sysChat(`Streaming ${VS.name} to everyone in the room.`);
+            renderScreenPanel();
+        }
+        function vsTick() {                                        // people who arrive later (or switch rooms) get the picture too; people who leave stop costing bandwidth
+            if (!VS.stream || !net) { if (!VS.stream && VS.timer) { clearInterval(VS.timer); VS.timer = null; } return; }
+            for (const pid of peers.keys()) if (net.route.has(pid)) vsSendTo(pid);
+            for (const pid of [...VS.sent]) if (!peers.has(pid)) vsRemoveFrom(pid);
+            const n = $('screen-now'); if (n && $('screen-panel')) renderScreenPanel();
+        }
+        function vsSetOn(on) {
+            VS.on = !!on; try { localStorage.setItem('psTvShare', on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+            if (!on) { vsDrop(); vsOff(); sysChat('Your videos now play for you only.'); }
+            else { const src = screenState.local, v = tvVideo(); if (src && src.kind === 'file' && v) { if (v.readyState >= 2) vsStart(v, src); } sysChat('Your videos will play for everyone in the room.'); }
+            renderScreenPanel();
+        }
+        function vsOnMsg(from, m) {                                // someone in the room is streaming a video from their storage
+            const p = peers.get(from);
+            if (!p || !room || !SCREEN_SITES[room.map]) return;
+            if (String(m.tn || '') !== (tvTent() ? String(TN.inst) : '')) return;
+            const cur = screenState.shared, mine = cur && cur.kind === 'vshare' && cur.host === from;
+            if (m.on === false) { if (mine) { screenState.shared = null; applyScreen(); screenApplyAudio(); renderScreenPanel(); sysChat(`${p.name} stopped their video.`); } return; }
+            if (m.on !== true) return;
+            const name = String(m.name || 'a video').replace(/[\u0000-\u001f<>]/g, '').slice(0, 120) || 'a video';
+            const now = Date.now(); if (now - (p.lastVs || 0) < 300) return; p.lastVs = now;
+            if (mine && cur.name === name) return;
+            screenState.shared = { kind: 'vshare', name, host: from, by: p.name, at: now, seq: ++screenState.seq };
+            if (!screenState.local) screenState.muted = true;      // browsers need a click before sound
+            applyScreen(); screenApplyAudio(); renderScreenPanel();
+            sysChat(screenState.local ? `${p.name} is playing "${name}" on the TV. Stop your own video to watch along.` : `${p.name} is playing "${name}" on the TV. Press F near it to unmute.`);
+        }
+        function vsOnStream(stream, pid) {
+            VS.streams.set(pid, stream);
+            const s = activeSrc();
+            if (s && s.kind === 'vshare' && s.host === pid && screenFrame && screenFrame.tagName === 'VIDEO' && screenFrame.srcObject !== stream) {
+                screenFrame.srcObject = stream;
+                screenFrame.play().catch(() => { screenFrame.muted = true; screenState.muted = true; screenFrame.play().catch(() => {}); renderScreenPanel(); });
+            }
+        }
+        function vsPeerGone(id) {
+            VS.streams.delete(id); VS.sent.delete(id);
+            if (screenState.shared && screenState.shared.kind === 'vshare' && screenState.shared.host === id) { screenState.shared = null; try { applyScreen(); screenApplyAudio(); renderScreenPanel(); } catch (e) { /* tv not ready */ } }
+        }
+
+        window.__vs = { VS, vsOnMsg, vsOnStream, vsPeerGone, vsTick, screenState, openLocalFiles: (l) => openLocalFiles(l), tvVideo: () => tvVideo() };
         function buildMedia(src) {
             if (src.kind === 'game') {                                  // the room's game: a live picture-and-sound stream
                 const v = document.createElement('video');
@@ -7536,12 +7627,20 @@ function kbModel(THREE, mk) {
                 if (EMU.stream) v.srcObject = EMU.stream;
                 return v;
             }
+            if (src.kind === 'vshare') {                                // a video from somebody's storage, streamed live
+                const v = document.createElement('video');
+                v.autoplay = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.muted = screenState.muted; v.volume = clamp(screenState.volume / 100, 0, 1);
+                v.style.cssText = 'width:1280px;height:720px;display:block;background:#000;object-fit:contain;';
+                const st = VS.streams.get(src.host); if (st) v.srcObject = st;
+                return v;
+            }
             if (src.kind === 'video' || src.kind === 'file') {
                 const v = document.createElement('video');
                 v.src = src.url; v.autoplay = true; v.preload = 'auto'; v.playsInline = true; v.setAttribute('playsinline', '');
                 v.muted = screenState.muted; v.volume = clamp(screenState.volume / 100, 0, 1);
                 v.style.cssText = 'width:1280px;height:720px;display:block;background:#000;object-fit:contain;';
                 v.addEventListener('ended', tvEnded);
+                if (src.kind === 'file') v.addEventListener('playing', () => { if (screenFrame === v) vsStart(v, src); });
                 v.addEventListener('error', () => setScreenNote("This browser can't play that video (its format or codec isn't supported). MP4 (H.264) and WebM work almost everywhere."));
                 for (const ev of ['timeupdate', 'loadedmetadata', 'play', 'pause']) v.addEventListener(ev, tvTick);
                 return v;
@@ -7578,12 +7677,13 @@ function kbModel(THREE, mk) {
             if (!playing) tvPillUpdate();
             if (!playing) {                                       // leaving the mall / stopping: the sound must stop too
                 if (document.fullscreenElement === cssScreen.element && document.exitFullscreen) document.exitFullscreen().catch(() => {});
-                disposeFrame(); screenState.applied = null;
+                disposeFrame(); screenState.applied = null; vsOff();
                 return;
             }
             const tag = src.kind + ':' + src.seq;
             if (screenState.applied === tag) return;
             disposeFrame();
+            if (src.kind !== 'file') vsOff();
             screenFrame = buildMedia(src);
             cssScreen.element.appendChild(screenFrame);
             screenState.applied = tag;
@@ -7623,6 +7723,7 @@ function kbModel(THREE, mk) {
             if (!from) {
                 if (!screenState.local && screenState.shared && screenState.shared.kind === 'game') { emuStop(); return; }
                 if (screenState.local) clearLocal();
+                else if (screenState.shared && screenState.shared.kind === 'vshare') { const by = screenState.shared.by; screenState.shared = null; if (!quiet) sysChat(`You stopped watching ${by}'s video. It keeps playing for everyone else.`); applyScreen(); screenApplyAudio(); renderScreenPanel(); return; }
                 else if (screenState.shared) { screenState.shared = null; net && net.send({ t: 'screenStop', tn: tvTent() ? String(TN.inst) : undefined }); }
                 else return;
                 if (!quiet) sysChat(screenState.shared ? 'Back to what the channel is watching.' : 'You turned the Central TV off.');
@@ -7637,7 +7738,7 @@ function kbModel(THREE, mk) {
         }
         function screenReset() {                                  // new room: whatever was on belongs to the old one
             closeScreenPanel();                                    // its controls belong to the old room's TV too
-            screenState.shared = null; clearLocal(); screenState.applied = null;
+            screenState.shared = null; clearLocal(); screenState.applied = null; vsDrop(); vsOff();
             applyScreen();
             renderScreenPanel();
         }
@@ -7660,7 +7761,7 @@ function kbModel(THREE, mk) {
             screenState.local = { kind: 'file', name: q.name, url: q.url, at: Date.now(), seq: ++screenState.seq };
             screenState.muted = false;
             applyScreen(); screenApplyAudio(); renderScreenPanel();
-            if (i === 0 || screenState.queue.length === 1) sysChat(screenState.queue.length > 1 ? `Playing ${screenState.queue.length} videos on the Central TV for you only.` : 'Playing your video on the Central TV for you only.');
+            if (i === 0 || screenState.queue.length === 1) sysChat(screenState.queue.length > 1 ? `Playing ${screenState.queue.length} videos on the Central TV for you only.` : (VS.on ? 'Playing your video on the Central TV. It will stream to everyone in the room once it starts.' : 'Playing your video on the Central TV for you only.'));
         }
         function tvEnded() {                                      // next in the queue, otherwise the TV goes back to the channel
             if (screenState.local && screenState.local.kind === 'file' && screenState.qi + 1 < screenState.queue.length) { playQueueItem(screenState.qi + 1); return; }
@@ -7825,15 +7926,17 @@ function kbModel(THREE, mk) {
             if (!$('screen-panel')) return;
             const src = activeSrc(), priv = !!screenState.local;
             $('screen-now').textContent = src ? srcLabel(src) + (priv ? '' : (screenState.shared.by ? `  (put on by ${screenState.shared.by})` : '  (you)')) : 'The TV is off. Paste a link or open a file.';
-            const badge = $('tv-badge');
-            badge.textContent = !src ? 'OFF' : priv ? 'ONLY YOU' : 'EVERYONE';
-            badge.className = 'text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full ' + (!src ? 'bg-white/10 text-gray-400' : priv ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300');
-            $('screen-stop').textContent = priv || !src ? 'Stop' : 'Stop for everyone';
+            const badge = $('tv-badge'), streaming = priv && VS.stream && src.kind === 'file';
+            if (streaming) $('screen-now').textContent += `  \u00b7 streaming to ${VS.sent.size} ${VS.sent.size === 1 ? 'person' : 'people'}`;
+            badge.textContent = !src ? 'OFF' : streaming ? 'EVERYONE' : priv ? 'ONLY YOU' : 'EVERYONE';
+            badge.className = 'text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full ' + (!src ? 'bg-white/10 text-gray-400' : priv && !streaming ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300');
+            $('screen-stop').textContent = (priv || !src || (src.kind === 'vshare')) ? 'Stop' : 'Stop for everyone';
+            { const sh = $('tv-share'); if (sh) { sh.textContent = VS.on ? 'Sharing my videos: On' : 'Sharing my videos: Off'; sh.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition ' + (VS.on ? 'bg-emerald-600/70 hover:bg-emerald-600' : 'bg-white/10 hover:bg-white/20'); } }
             $('screen-mute').textContent = screenState.muted ? 'Unmute' : 'Mute';
             $('screen-fade').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition ' + (screenState.fade ? 'bg-psGlow text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20');
             $('screen-vol').value = screenState.volume;
             $('tv-full').disabled = !src; $('tv-full').classList.toggle('opacity-40', !src);
-            $('tv-transport').classList.toggle('hidden', !tvVideo() || !!(src && src.kind === 'game'));
+            $('tv-transport').classList.toggle('hidden', !tvVideo() || !!(src && (src.kind === 'game' || src.kind === 'vshare')));
             const multi = screenState.queue.length > 1 && src && src.kind === 'file';
             $('tv-prev').classList.toggle('hidden', !multi); $('tv-next').classList.toggle('hidden', !multi);
             const open = $('screen-open');
@@ -11061,7 +11164,7 @@ function kbModel(THREE, mk) {
             ['workbench', 'Workbench', '🔨', '#7a5a3a', 1, 1, 'Survival'], ['mshelf', 'Metal shelving', '🗄️', '#6d7075', 1, 1, 'Survival'], ['cot', 'Camp cot', '🛏️', '#6e7a4f', 1, 1, 'Survival'],
             ['locker', 'Locker', '🚪', '#5b7a5b', 1, 1, 'Survival'], ['sandbags', 'Sandbags', '🧱', '#b79c6a', 1, 1, 'Survival'], ['tires', 'Tire stack', '🛞', '#2c2c2e', 1, 1, 'Survival'],
             ['pallet', 'Pallet', '🟫', '#a67649', 1, 0, 'Survival'], ['generator', 'Generator', '⚡', '#b8463a', 1, 1, 'Survival'], ['stove', 'Wood stove', '♨️', '#2f2f33', 1, 1, 'Survival'],
-            ['gbed', 'Garden bed', '🌱', '#6b4a2f', 0, 1, 'Garden'], ['gcoop', 'Hen coop', '🐔', '#8a5a3c', 0, 1, 'Garden'], ['gpond', 'Fish pond', '🐟', '#3a8fd0', 0, 1, 'Garden'], ['ghive', 'Bee hive', '🐝', '#e8b030', 0, 1, 'Garden'], ['gpen', 'Livestock pen', '🐖', '#8a5a3c', 0, 1, 'Garden'], ['gsprk', 'Sprinkler', '💦', '#4fb4ff', 0, 0, 'Garden'], ['gscare', 'Scarecrow', '🎃', '#7a6aa0', 0, 1, 'Garden'], ['gfence', 'Garden fence', '🚧', '#8a5a3c', 0, 1, 'Garden']
+            ['gbed', 'Garden bed', '🌱', '#6b4a2f', 0, 1, 'Garden'], ['gcoop', 'Hen coop', '🐔', '#8a5a3c', 0, 1, 'Garden'], ['gpond', 'Fish pond', '🐟', '#3a8fd0', 0, 1, 'Garden'], ['ghive', 'Bee hive', '🐝', '#e8b030', 0, 1, 'Garden'], ['gpen', 'Livestock pen', '🐖', '#8a5a3c', 0, 1, 'Garden'], ['gsprk', 'Sprinkler', '💦', '#4fb4ff', 0, 0, 'Garden'], ['gscare', 'Scarecrow', '🎃', '#7a6aa0', 0, 1, 'Garden'], ['gfence', 'Garden fence', '🚧', '#8a5a3c', 0, 1, 'Garden'], ['gfarm', 'Farm plot 4×4', '🌾', '#6b4a2f', 0, 0, 'Garden']
         ];
         const DC_GROUP = {};
         for (const k of ['sofa3', 'sofa2', 'sectional', 'armchair', 'module', 'corner', 'ottoman', 'stool']) DC_GROUP[k] = 'Seating';
@@ -11075,6 +11178,7 @@ function kbModel(THREE, mk) {
         Object.assign(DC_SKIN_OF, { chair: 'wood', bench: 'wood', dtable: 'wood', rtable: 'wood', desk: 'wood', nightstand: 'wood', dresser: 'wood', wardrobe: 'wood', cabinet: 'wood', chest: 'wood', crate: 'wood', pallet: 'wood', workbench: 'wood', pouf: 'leather', ochair: 'fabric', cot: 'fabric', mirror: 'wood', gclock: 'wood' });
 
         function dcMakeMore(kind, K) {
+            if (kind === 'gfarm') return gfBuild(kind, K);
             if (/^g(bed|coop|pond|hive|pen|sprk|scare|fence)$/.test(kind)) return gdBuild(kind, K);
             const { g, std, tint, P, RB, leg, metal, brass, white, woodDark, table } = K;
             const CY = (rt, rb, h, seg = 20, open = false) => new THREE.CylinderGeometry(rt, rb, h, seg, 1, open), BX = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -13420,8 +13524,8 @@ function kbModel(THREE, mk) {
         }
         function nfFxTick(dt) { for (const f of NF.fx.slice()) { f.t += dt; const k = Math.min(1, f.t / f.dur); try { f.upd(k); } catch (e) { /* gone */ } if (k >= 1) { f.mesh.removeFromParent(); f.mesh.geometry && f.mesh.geometry.dispose(); f.mesh.material && f.mesh.material.dispose(); NF.fx.splice(NF.fx.indexOf(f), 1); } } }
         function nfDealDmg(m, mul, mag) {
-            if (m.dead) return 0; const crit = Math.random() < 0.1, lvf = Math.max(0.5, Math.min(1.5, 1 + (NF.lv - m.lv) * 0.05)), base = (mag ? NF.mag : NF.atk) * (NF.buffT > 0 ? 1.3 : 1) * nfFoodAtk() * mul * (0.9 + Math.random() * 0.2) * lvf * (1 - Math.min(0.35, (NU_CLS[m.cls] ? NU_CLS[m.cls].def : 1) * 0.08)), d = Math.max(1, Math.round(base * (crit ? 1.6 : 1)));
-            try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } try { nfRumble(crit ? 0.55 : 0.28, crit ? 0.45 : 0.22, crit ? 130 : 70); } catch (e) { /* rumble */ } try { nfHitBurst(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) * 0.6, m.z), NF.glow ? NF.hitCol : (mag ? 0xc9a8ff : 0xcfeaff), crit || mul >= 1.5); } catch (e) { /* cosmetic */ } m.hp -= d; m.mine = true; const thr = Math.round(d * NF_THR[nfMyRole()]); nfThreatAdd(m, me.id, thr); if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id, th: thr }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
+            if (m.dead) return 0; const crit = Math.random() < 0.1 + Math.min(0.5, (nfBf() && nfBf().crit) || 0), lvf = Math.max(0.5, Math.min(1.5, 1 + (NF.lv - m.lv) * 0.05)), base = (mag ? NF.mag : NF.atk) * (NF.buffT > 0 ? 1.3 : 1) * nfFoodAtk() * mul * (0.9 + Math.random() * 0.2) * lvf * (1 - Math.min(0.35, (NU_CLS[m.cls] ? NU_CLS[m.cls].def : 1) * 0.08)), d = Math.max(1, Math.round(base * (crit ? 1.6 : 1)));
+            try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } try { nfRumble(crit ? 0.55 : 0.28, crit ? 0.45 : 0.22, crit ? 130 : 70); } catch (e) { /* rumble */ } try { nfHitBurst(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) * 0.6, m.z), NF.glow ? NF.hitCol : (mag ? 0xc9a8ff : 0xcfeaff), crit || mul >= 1.5); } catch (e) { /* cosmetic */ } m.hp -= d; try { const L = nfBf() && nfBf().leech; if (L && !NF.dead && NF.hp < NF.hpMax) { const hh = Math.max(1, Math.round(d * L)); NF.hp = Math.min(NF.hpMax, NF.hp + hh); const tn = performance.now(); if (tn - (NF.lchT || 0) > 900) { NF.lchT = tn; nfPop(nfPos().clone().setY(nfPos().y + 2.0), '+' + hh, '#9affb0'); } } } catch (e) { /* leech */ } m.mine = true; const thr = Math.round(d * NF_THR[nfMyRole()]); nfThreatAdd(m, me.id, thr); if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id, th: thr }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
             NF.lb = Math.min(100, NF.lb + (m.boss ? 2 : 3)); if (m.fate) m.fate.hit = true; if (!m.aggro) nfAggro(m); if (m.hp <= 0) nfMobDie(m); return d;
         }
         function nfCan(s) { if (NF.dead) return false; if (s.k === 'none') { try { padToast('Empty Blue Magic slot: Devour a weakened monster to learn its attack'); nfPop(nfPos().clone().setY(nfPos().y + 2), 'Empty slot', '#9fd0ff'); } catch (e) { /* toast */ } return false; } if (s.mp > 0 && nfStHas('silence')) { try { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Silenced', '#a9bde0'); padToast('Silenced: eat Echo Honey Tonic or Grandma’s Remedy'); } catch (e) { /* toast */ } return false; } const now = performance.now() / 1000; if (s.gcd && NF.gcd > 0) return false; if (s.cd && (NF.cds[s.id] || 0) > now) return false; if (s.mp && NF.mp < s.mp * (NF.simCost || 1)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb8ff'); return false; } if (s.heatCost && ((NF.heat || 0) < s.heatCost || NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), NF.oh > 0 ? 'Already Overheated' : 'Need ' + s.heatCost + ' Heat', '#ffb347'); return false; } if (s.needOH && !(NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Hypercharge first', '#ffb347'); return false; } if (NF.lbSeq) return false; if (s.lb && NF.lb < 100) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Limit gauge not full', '#ffd24a'); return false; } if (NF.cast) return false; return true; }
@@ -14168,7 +14272,7 @@ function kbModel(THREE, mk) {
         const simSave = () => { try { localStorage.setItem('oasis.sim', JSON.stringify({ on: SIM.on, rest: SIM.rest, hun: SIM.hun, hyg: SIM.hyg, soap: SIM.soap })); } catch (e) { /* storage */ } };
         const SIM_RATE = { hun: 100 / 3900, rest: 100 / 4600, hyg: 100 / 5200 };           // points per second of play: each runs from full to empty in about one game day
         const simLv = (v) => (v >= 50 ? 0 : v >= 25 ? 1 : v > 0 ? 2 : 3);
-        function simMods() { const m = simMods0(); if (nfStHas('slow')) m.spd = Math.max(m.spd, 1) * 1.25; return m; }
+        function simMods() { const m = simMods0(); if (nfStHas('slow')) m.spd = Math.max(m.spd, 1) * 1.25; const b = nfBf(); if (b) { if (b.mpc) m.cost = Math.max(0.5, m.cost * (1 - Math.min(0.5, b.mpc))); if (b.haste) m.spd = Math.max(0.6, m.spd * (1 - Math.min(0.3, b.haste))); } return m; }
         function simMods0() {   // hungry: moves queue slower · tired: moves cost more MP · dirty: you walk slower; the very bottom also costs max HP/MP
             if (!SIM.on) return { hp: 1, mp: 1, spd: 1, cost: 1, move: 1 }; const r = simLv(SIM.rest), h = simLv(SIM.hun), y = simLv(SIM.hyg);
             let hp = 1 + [0, 0, 0, -0.12][h] + [0, 0, 0, -0.08][r], mp = 1 + [0, 0, 0, -0.1][r] + [0, 0, 0, -0.08][y], spd = 1 + [0, 0.1, 0.22, 0.4][h], cost = 1 + [0, 0.12, 0.3, 0.6][r], move = [1, 0.96, 0.88, 0.75][y];
@@ -14264,8 +14368,25 @@ function kbModel(THREE, mk) {
             const seen = new Set(Object.values(FOOD_MEAL).map((m) => m.set.slice().sort().join(',')));
             for (const [id, n, ico, set, t, cu, d, o] of X) { const key = set.slice().sort().join(','); if (seen.has(key)) { console.warn('duplicate recipe', id); continue; } seen.add(key); FOOD_MEAL[id] = { n, ico, set, t, cu, d, heal: o.heal || 0.1, hp: 0, mp: 0, len: o.len || 0, cure: o.cure, bf: o.bf }; }
         }
-        const FOOD = { ing: {}, meal: {}, known: {}, cooked: {} };
-        function foodLoad() { try { const o = JSON.parse(localStorage.getItem('oasis.food') || '{}'); FOOD.ing = o.ing || {}; FOOD.meal = o.meal || {}; FOOD.known = o.known || {}; FOOD.cooked = o.cooked || {}; } catch (e) { /* fresh */ } }
+        // ---- seasonings: grind a basic ingredient into spice, add one to a dish (the Chef can add two) for an extra buff layer ----
+        const FOOD_SPICE = {
+            pepper: { n: 'Chili Flakes', ico: '🌶️', bf: { atk: 0.08, crit: 0.06 } }, herb: { n: 'Herb Rub', ico: '🌿', bf: { mpc: 0.1 } }, honey: { n: 'Honey Glaze', ico: '🍯', bf: {}, hp: 0.015 },
+            onion: { n: 'Onion Salt', ico: '🧂', bf: { def: 0.06 } }, tomato: { n: 'Tomato Zest', ico: '🍅', bf: { haste: 0.08 } }, mushroom: { n: 'Umami Dust', ico: '🍄', bf: { leech: 0.04 } },
+            berry: { n: 'Berry Sugar', ico: '🫐', bf: { spd: 0.06 } }, rice: { n: 'Rice Vinegar', ico: '🍶', bf: { sres: 0.5 } }, fish: { n: 'Fish Sauce', ico: '🐟', bf: { atk: 0.05, leech: 0.02 } }
+        };
+        const FOOD_PAIR = {   // signature pairings: a dish with the right seasoning becomes something more (a seasoning also doubles down 1.5× if its ingredient is already in the dish)
+            'powersteak|pepper': { n: 'Berserker’s Feast', bf: { atk: 0.1, crit: 0.1 } }, 'ironbowl|onion': { n: 'Fortress Plate', bf: { def: 0.1, sres: 0.25 } }, 'swiftskewer|berry': { n: 'Gale Runner', bf: { spd: 0.1, haste: 0.08 } },
+            'wardsoup|rice': { n: 'Purified Broth', bf: {}, hp: 0.02, cleanse: 1 }, 'echotonic|herb': { n: 'Mage’s Draught', bf: { mpc: 0.12 } }, 'remedy|honey': { n: 'Sweet Remedy', bf: {}, hp: 0.03, cleanse: 1 },
+            'curry|pepper': { n: 'Five-Alarm Curry', bf: { atk: 0.12, crit: 0.08 } }, 'sashimi|fish': { n: 'Sea Feast', bf: { leech: 0.05 } }, 'stew|mushroom': { n: 'Earth Stew', bf: { def: 0.1, leech: 0.03 } },
+            'paella|tomato': { n: 'Sunset Paella', bf: { haste: 0.1, spd: 0.05 } }, 'roastbeef|herb': { n: 'Herb Crown Roast', bf: { atk: 0.1, mpc: 0.1 } }, 'feast|honey': { n: 'Hunter’s Banquet', bf: { atk: 0.08, def: 0.08, spd: 0.05 }, hp: 0.02 }
+        };
+        function foodLayer(bk, mul, sps, M) {
+            const bf = {}, names = [], pairs = []; let hp = 0, cleanse = false, chef = NF.cls === 'chef' ? 1.25 : 1; const add = (o, f) => { for (const [a, v] of Object.entries(o || {})) { if (a === 'ward') bf.ward = 1; else bf[a] = (bf[a] || 0) + v * f; } };
+            for (const s of sps) { const S = FOOD_SPICE[s]; if (!S) continue; const res = M.set.includes(s) ? 1.5 : 1; add(S.bf, mul * res * chef); hp += (S.hp || 0) * mul * res * chef; names.push(S.n + (res > 1 ? ' (resonant)' : '')); const P = FOOD_PAIR[bk + '|' + s]; if (P) { add(P.bf, mul); hp += (P.hp || 0) * mul; if (P.cleanse) cleanse = true; pairs.push({ k: bk + '|' + s, n: P.n }); } }
+            return { bf, hp, names, pairs, cleanse };
+        }
+        const FOOD = { ing: {}, meal: {}, known: {}, cooked: {}, spice: {}, pairs: {} };
+        function foodLoad() { try { const o = JSON.parse(localStorage.getItem('oasis.food') || '{}'); FOOD.ing = o.ing || {}; FOOD.meal = o.meal || {}; FOOD.known = o.known || {}; FOOD.cooked = o.cooked || {}; FOOD.spice = o.spice || {}; FOOD.pairs = o.pairs || {}; } catch (e) { /* fresh */ } }
         function foodSave() { try { localStorage.setItem('oasis.food', JSON.stringify(FOOD)); } catch (e) { /* storage */ } }
         foodLoad();
         function foodAdd(bucket, k, n) { FOOD[bucket][k] = Math.max(0, (FOOD[bucket][k] || 0) + n); if (!FOOD[bucket][k]) delete FOOD[bucket][k]; foodSave(); }
@@ -14337,7 +14458,7 @@ function kbModel(THREE, mk) {
         function nfStAdd(k, sec) {
             if (!NF_ST[k] || NF.dead) return; const up = nfPos().clone().setY(nfPos().y + 2.4);
             if (nfBf() && nfBf().ward) { nfPop(up, 'Warded', '#9fe8ff'); return; }
-            const was = nfStHas(k); NF.st[k] = Math.max(NF.st[k] || 0, sec || NF_ST[k].t); nfPop(up, NF_ST[k].ic + ' ' + NF_ST[k].n, NF_ST[k].col, true); if (!was) { try { padToast(NF_ST[k].n + ': ' + NF_ST[k].d + '. Eat medicine to cure it.'); } catch (e) { /* toast */ } } try { simApply(); } catch (e) { /* sim */ } nfStUi();
+            const was = nfStHas(k); NF.st[k] = Math.max(NF.st[k] || 0, (sec || NF_ST[k].t) * (1 - Math.min(0.8, (nfBf() && nfBf().sres) || 0))); nfPop(up, NF_ST[k].ic + ' ' + NF_ST[k].n, NF_ST[k].col, true); if (!was) { try { padToast(NF_ST[k].n + ': ' + NF_ST[k].d + '. Eat medicine to cure it.'); } catch (e) { /* toast */ } } try { simApply(); } catch (e) { /* sim */ } nfStUi();
         }
         function nfStHit(m) { const k = NF_ST_BY[m.cls]; if (!k) return; const ch = m.boss ? 0.5 : m.rank ? 0.35 : 0.2; if (Math.random() < ch) nfStAdd(k, NF_ST[k].t + (m.boss ? 10 : 0)); }
         function nfStCure(list, burnt) {
@@ -14356,26 +14477,35 @@ function kbModel(THREE, mk) {
             if (NF.fd) { const b = NF.fd.bf; parts.push('<span style="border-color:#8fe29a;color:#b8ffc4">' + (b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋') + ' ' + NF.fd.n + ' ' + Math.ceil(NF.fd.left) + 's</span>'); }
             const h = parts.join(''); if (el.innerHTML !== h) el.innerHTML = h; const on = activeMap === 'nuu' && NU.ready; if (el.style.display !== (on ? 'flex' : 'none')) el.style.display = on ? 'flex' : 'none';
         }
-        const nfBfText = (M) => { const b = M.bf || {}, o = []; if (b.atk) o.push('ATK +' + Math.round(b.atk * 100) + '%'); if (b.def) o.push('damage taken -' + Math.round(b.def * 100) + '%'); if (b.spd) o.push('move +' + Math.round(b.spd * 100) + '%'); if (b.ward) o.push('immune to bad statuses'); if (M.cure) o.push('cures ' + (M.cure === 'all' ? 'everything' : M.cure.map((k) => NF_ST[k].n).join(', '))); return o.join(' · '); };
+        const nfBfText = (M) => { const b = M.bf || {}, o = []; if (b.crit) o.push('crit +' + Math.round(b.crit * 100) + '%'); if (b.leech) o.push('leech ' + Math.round(b.leech * 100) + '%'); if (b.mpc) o.push('MP cost -' + Math.round(b.mpc * 100) + '%'); if (b.haste) o.push('actions ' + Math.round(b.haste * 100) + '% faster'); if (b.sres) o.push('status time -' + Math.round(Math.min(0.8, b.sres) * 100) + '%'); if (b.atk) o.push('ATK +' + Math.round(b.atk * 100) + '%'); if (b.def) o.push('damage taken -' + Math.round(b.def * 100) + '%'); if (b.spd) o.push('move +' + Math.round(b.spd * 100) + '%'); if (b.ward) o.push('immune to bad statuses'); if (M.cure) o.push('cures ' + (M.cure === 'all' ? 'everything' : M.cure.map((k) => NF_ST[k].n).join(', '))); return o.join(' · '); };
         function foodEat(k) {
             if (activeMap !== 'nuu' || !NU.ready) { sysChat('Food can only be eaten in Adventia.'); return; } if (NF.dead) return;
-            const bk = k.split(':')[0], ql = k.split(':')[1], mul = ql === 'p' ? 1.3 : ql === 'b' ? 0.5 : 1, M = FOOD_MEAL[bk]; if (!M || !(FOOD.meal[k] > 0)) return; const P = nfPos(), up = P.clone().setY(P.y + 2);
-            const full = NF.hp >= NF.hpMax - 0.5 && NF.mp >= NF.mpMax - 0.5 && !(M.len > 0 && (M.hp || M.mp)) && !M.bf && !(M.cure && Object.keys(NF.st).length); if (full) { nfPop(up, 'Not hungry', '#cfd8e0'); return; }
+            const bk = k.split(':')[0], ql = k.split(':')[1], mul = ql === 'p' ? 1.3 : ql === 'b' ? 0.5 : 1, M = FOOD_MEAL[bk], sps = String(k.split(':')[2] || '').split('+').filter((x) => FOOD_SPICE[x]); if (!M || !(FOOD.meal[k] > 0)) return; const P = nfPos(), up = P.clone().setY(P.y + 2);
+            const full = NF.hp >= NF.hpMax - 0.5 && NF.mp >= NF.mpMax - 0.5 && !(M.len > 0 && (M.hp || M.mp)) && !M.bf && !sps.length && !(M.cure && Object.keys(NF.st).length); if (full) { nfPop(up, 'Not hungry', '#cfd8e0'); return; }
             if (localActor.lookId && PARTY.members.has(localActor.lookId)) { const al = nfAllies(15).find((x) => x.id === localActor.lookId); if (!al) { padToast('Too far away'); return; } if (al.v.hp >= al.v.hm - 0.5 && !M.len) { nfPop(up, (al.q.name || 'Ally') + ' is not hungry', '#cfd8e0'); return; } foodAdd('meal', k, -1); const hf = Math.min(1, M.heal * mul); nsSend({ k: 'hl', to: al.id, hf, fd: M.len ? { n: M.n, len: Math.round(M.len * (ql === 'b' ? 0.6 : 1)), hp: M.hp * mul, mp: M.mp * mul } : undefined }); nfPop(new THREE.Vector3(al.q.x, al.q.y + 2.2, al.q.z), M.ico + ' +' + Math.round(al.v.hm * hf), '#7dffa0', true); try { nfFx('heal', new THREE.Vector3(al.q.x, al.q.y, al.q.z), new THREE.Vector3(al.q.x, al.q.y, al.q.z)); } catch (e) { /* fx */ } return; }
             foodAdd('meal', k, -1); try { simAdd('hun', Math.round((22 + 11 * M.set.length) * (ql === 'p' ? 1.2 : ql === 'b' ? 0.5 : 1))); } catch (e) { /* sim */ } const h = Math.round(NF.hpMax * M.heal * mul); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, M.ico + ' +' + h, '#7dffa0', true); try { nfFx('heal', P, P); } catch (e) { /* fx */ }
             if (M.cure) { const cured = nfStCure(M.cure, ql === 'b'); try { padToast(cured.length ? 'Cured: ' + cured.map((x) => NF_ST[x].n).join(', ') : 'Nothing to cure, but it was tasty'); if (cured.length) nfPop(up.clone().setY(up.y + 0.6), '✨ ' + cured.map((x) => NF_ST[x].n).join(', ') + ' cured', '#9fffd0', true); } catch (e) { /* toast */ } }
-            if (M.len > 0) { NF.fd = { n: M.n, left: Math.round(M.len * (ql === 'b' ? 0.6 : 1) * (NF.cls === 'chef' && M.bf ? 1.5 : 1)), tick: 3, hp: M.hp * mul, mp: M.mp * mul, bf: M.bf ? Object.fromEntries(Object.entries(M.bf).map(([a, v]) => [a, typeof v === 'number' && a !== 'ward' ? v * mul : v])) : null }; try { padToast('Well Fed: ' + M.n + (M.hp ? '  ·  HP regen' : '') + (M.mp ? '  ·  MP regen' : '') + (M.bf ? '  ·  ' + nfBfText(M) : '')); } catch (e) { /* toast */ } nfStUi(); }
+            const lay = sps.length ? foodLayer(bk, mul, sps, M) : null; if (lay && lay.cleanse) { const cl = nfStCure('all', false); if (cl.length) { try { nfPop(up.clone().setY(up.y + 0.6), '✨ cleansed', '#9fffd0', true); } catch (e) { /* pop */ } } }
+            const lenB = M.len > 0 ? M.len : (lay ? 60 : 0);
+            if (lenB > 0) {
+                const bf = M.bf ? Object.fromEntries(Object.entries(M.bf).map(([a, v]) => [a, typeof v === 'number' && a !== 'ward' ? v * mul : v])) : {}; if (lay) for (const [a, v] of Object.entries(lay.bf)) bf[a] = a === 'ward' ? 1 : (bf[a] || 0) + v;
+                const nm = M.n + (lay ? (lay.pairs.length ? ' · ' + lay.pairs.map((q) => q.n).join(', ') : ' + ' + sps.map((x) => FOOD_SPICE[x].n).join(' + ')) : '');
+                NF.fd = { n: nm, left: Math.round(lenB * (ql === 'b' ? 0.6 : 1) * (NF.cls === 'chef' && (M.bf || lay) ? 1.5 : 1)), tick: 3, hp: M.hp * mul + (lay ? lay.hp : 0), mp: M.mp * mul, bf: Object.keys(bf).length ? bf : null };
+                try { padToast('Well Fed: ' + nm + (NF.fd.hp ? '  ·  HP regen' : '') + (NF.fd.mp ? '  ·  MP regen' : '') + (NF.fd.bf ? '  ·  ' + nfBfText({ bf: NF.fd.bf }) : '')); } catch (e) { /* toast */ }
+                if (lay) for (const q of lay.pairs) if (!FOOD.pairs[q.k]) { FOOD.pairs[q.k] = 1; foodSave(); try { nuShowBanner('NEW PAIRING', q.n.toUpperCase()); } catch (e) { /* banner */ } }
+                try { simApply(); } catch (e) { /* sim */ } nfStUi();
+            }
             try { nsbBell(0, 880, 0.05, 0.5); nsbBell(0.1, 1175, 0.04, 0.6); } catch (e) { /* audio */ }
         }
         function foodTick(dt) {   // "Well Fed": steady regen from a cooked meal
-            const f = NF.fd; if (!f) return; if (NF.dead) { NF.fd = null; return; } f.left -= dt; f.tick -= dt;
+            const f = NF.fd; if (!f) return; if (NF.dead) { NF.fd = null; try { simApply(); } catch (e) { /* sim */ } return; } f.left -= dt; f.tick -= dt;
             if (f.tick <= 0) { f.tick = 3; const P = nfPos(); if (f.hp && NF.hp < NF.hpMax) { const h = Math.max(1, Math.round(NF.hpMax * f.hp)); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(P.clone().setY(P.y + 2.2), '+' + h, '#9affb0'); } if (f.mp && NF.mp < NF.mpMax) { const m = Math.max(1, Math.round(NF.mpMax * f.mp)); NF.mp = Math.min(NF.mpMax, NF.mp + m); nfPop(P.clone().setY(P.y + 2.0), '+' + m + ' MP', '#8fb8ff'); } }
-            if (f.left <= 0) NF.fd = null;
+            if (f.left <= 0) { NF.fd = null; try { simApply(); nfStUi(); } catch (e) { /* sim */ } }
         }
         function foodEatRaw(k) { const I = FOOD_ING[k]; if (!I || !I.raw || !(FOOD.ing[k] > 0)) { sysChat('Cook this at a camp kitchen (pitch a tent, then step up to the stove).'); return; } if (activeMap !== 'nuu' || !NU.ready || NF.dead) { sysChat('Food can only be eaten in Adventia.'); return; } const P = nfPos(); if (NF.hp >= NF.hpMax - 0.5) { nfPop(P.clone().setY(P.y + 2), 'HP is full', '#cfd8e0'); return; } foodAdd('ing', k, -1); try { simAdd('hun', 6); } catch (e) { /* sim */ } const h = Math.round(NF.hpMax * I.raw); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(P.clone().setY(P.y + 2), I.ico + ' +' + h, '#7dffa0', true); }
         function foodItems() {
             const out = []; if (SIM.soap > 0) out.push({ id: 'i:soap', k: 'item', fk: 'soap', fsoap: true, name: 'Soap', size: 0, qty: SIM.soap, ico: '🧼', desc: 'Restores hygiene (+45). Use it anywhere in Adventia, or lather up in a tent shower for a full wash.', use: 'Wash' }); for (const k of Object.keys(FOOD_ING)) if (FOOD.ing[k] > 0) { const I = FOOD_ING[k]; out.push({ id: 'i:f-' + k, k: 'item', fk: k, fing: true, name: I.n, size: 0, qty: FOOD.ing[k], ico: I.ico, desc: I.d + ' Cook it at the camp kitchen in your tent.', use: I.raw ? 'Eat raw' : 'About cooking' }); }
-            for (const k of Object.keys(FOOD.meal)) if (FOOD.meal[k] > 0 && FOOD_MEAL[k.split(':')[0]]) { const ql = k.split(':')[1], M = FOOD_MEAL[k.split(':')[0]]; out.push({ id: 'i:m-' + k, k: 'item', fk: k, fmeal: true, name: (ql === 'p' ? '★ ' : ql === 'b' ? 'Burnt ' : '') + M.n, size: 0, qty: FOOD.meal[k], ico: M.ico, desc: (ql === 'p' ? 'Perfectly cooked: 30% stronger. ' : ql === 'b' ? 'Burnt: half as strong. ' : '') + M.d + (M.len ? ' (HP' + (M.hp ? ' regen' : '') + (M.hp && M.mp ? ' &' : '') + (M.mp ? ' MP regen' : '') + ' for ' + M.len + 's)' : ''), use: 'Eat' }); }
+            for (const k of Object.keys(FOOD.meal)) if (FOOD.meal[k] > 0 && FOOD_MEAL[k.split(':')[0]]) { const ql = k.split(':')[1], M = FOOD_MEAL[k.split(':')[0]]; const spk = String(k.split(':')[2] || '').split('+').filter((x) => FOOD_SPICE[x]); out.push({ id: 'i:m-' + k, k: 'item', fk: k, fmeal: true, name: (ql === 'p' ? '★ ' : ql === 'b' ? 'Burnt ' : '') + M.n + (spk.length ? ' · ' + spk.map((x) => FOOD_SPICE[x].ico).join('') : ''), size: 0, qty: FOOD.meal[k], ico: M.ico, desc: (ql === 'p' ? 'Perfectly cooked: 30% stronger. ' : ql === 'b' ? 'Burnt: half as strong. ' : '') + (spk.length ? 'Seasoned with ' + spk.map((x) => FOOD_SPICE[x].n).join(' and ') + '. ' : '') + M.d + (M.len ? ' (HP' + (M.hp ? ' regen' : '') + (M.hp && M.mp ? ' &' : '') + (M.mp ? ' MP regen' : '') + ' for ' + M.len + 's)' : ''), use: 'Eat' }); }
             return out;
         }
         /* ---- the camp kitchen ---- */
@@ -14390,15 +14520,18 @@ function kbModel(THREE, mk) {
         }
         function ckRender(msg) {
             if (!CK.el) return; if (CK.view === 'book') { ckBookRender(); return; } const P = CK.el.querySelector('.ckp'), ing = Object.keys(FOOD_ING).filter((k) => FOOD.ing[k] > 0);
-            CK.sel = CK.sel.filter((k) => FOOD.ing[k] > 0); const m = ckMatch(CK.sel), M = m ? FOOD_MEAL[m] : null, known = m && FOOD.known[m];
+            CK.sel = CK.sel.filter((k) => FOOD.ing[k] > 0); CK.spice = (CK.spice || []).filter((k) => FOOD.spice[k] > 0).slice(0, NF.cls === 'chef' ? 2 : 1); const m = ckMatch(CK.sel), M = m ? FOOD_MEAL[m] : null, known = m && FOOD.known[m];
             P.innerHTML = '<h2>🍳 Camp Kitchen</h2><div class="sub">Pick ingredients to throw in the pan. Each dish uses one of each. Try combinations to discover recipes.</div>'
                 + '<div class="grid">' + (ing.length ? ing.map((k) => '<div tabindex="0" class="ing' + (CK.sel.includes(k) ? ' on' : '') + '" data-k="' + k + '"><i>×' + FOOD.ing[k] + '</i><b>' + FOOD_ING[k].ico + '</b><span>' + FOOD_ING[k].n + '</span></div>').join('') : '<div style="grid-column:1/-1;opacity:.7;padding:10px;text-align:center">Your pantry is empty. Forage in the forest (berries, wheat, potatoes, eggs, honey, herbs) and take raw meat from monsters.</div>') + '</div>'
+                + '<div class="sub" style="margin-top:8px">🧂 Spice rack: pick a seasoning for an extra buff layer' + (NF.cls === 'chef' ? ' (Chef: up to two)' : '') + '. A seasoning made from something already in the dish is 50% stronger.</div><div class="grid">' + Object.keys(FOOD_SPICE).map((k) => '<div tabindex="0" class="ing' + ((CK.spice || []).includes(k) ? ' on' : '') + '" data-s="' + k + '" title="' + nfBfText({ bf: FOOD_SPICE[k].bf }) + (FOOD_SPICE[k].hp ? ' · HP regen' : '') + '"><i>×' + (FOOD.spice[k] || 0) + '</i><b>' + FOOD_SPICE[k].ico + '</b><span>' + FOOD_SPICE[k].n + '</span></div>').join('') + '</div><div class="btns" style="flex-wrap:wrap">' + Object.keys(FOOD_SPICE).filter((k) => FOOD.ing[k] > 0).map((k) => '<button class="cl" data-g="' + k + '">Grind ' + FOOD_ING[k].ico + ' → 3 ' + FOOD_SPICE[k].ico + '</button>').join('') + '</div>'
                 + '<div class="pot">' + (CK.sel.length ? CK.sel.map((k) => FOOD_ING[k].ico).join(' + ') + (M ? '  →  ' + (known || m === 'mash' ? M.ico + ' ' + M.n : '❔ ???') : '') : 'The pan is empty') + '</div>'
                 + '<div class="res">' + (msg || '') + '</div>'
                 + '<div class="btns"><button class="cl" data-a="clear">Clear</button><button class="go" data-a="cook"' + (CK.sel.length ? '' : ' disabled') + '>Cook</button><button class="cl" data-a="book">📖 Cookbook</button><button class="cl" data-a="close">Close</button></div>'
                 + '<div class="sub" style="margin-top:10px">📖 ' + Object.keys(FOOD.known).length + ' recipes found. Open the Cookbook for recipes, cures, buffs and where to find every ingredient.</div>';
-            P.querySelectorAll('.ing').forEach((e) => e.addEventListener('click', () => { const k = e.dataset.k, i = CK.sel.indexOf(k); if (i >= 0) CK.sel.splice(i, 1); else if (CK.sel.length < 5) CK.sel.push(k); ckRender(); }));
-            P.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { const a = b.dataset.a; if (a === 'clear') { CK.sel = []; ckRender(); } else if (a === 'close') ckClose(); else if (a === 'book') { CK.view = 'book'; CK.stove = true; ckRender(); } else ckCook(); }));
+            P.querySelectorAll('.ing[data-s]').forEach((e) => e.addEventListener('click', () => { const k = e.dataset.s, i = (CK.spice = CK.spice || []).indexOf(k); if (i >= 0) CK.spice.splice(i, 1); else if (!(FOOD.spice[k] > 0)) { ckRender('Out of ' + FOOD_SPICE[k].n + '. Grind some from ' + FOOD_ING[k].n + '.'); return; } else { if (CK.spice.length >= (NF.cls === 'chef' ? 2 : 1)) CK.spice.shift(); CK.spice.push(k); } ckRender(); }));
+            P.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.g; if (!(FOOD.ing[k] > 0)) return; foodAdd('ing', k, -1); FOOD.spice[k] = (FOOD.spice[k] || 0) + 3; foodSave(); try { nsbN(0, 0.25, 900, 500, 1, 0.05, 'lowpass', 0, 0.2); } catch (e) { /* audio */ } ckRender('Ground ' + FOOD_ING[k].ico + ' into 3 × ' + FOOD_SPICE[k].ico + ' ' + FOOD_SPICE[k].n + '.'); }));
+            P.querySelectorAll('.ing:not([data-s])').forEach((e) => e.addEventListener('click', () => { const k = e.dataset.k, i = CK.sel.indexOf(k); if (i >= 0) CK.sel.splice(i, 1); else if (CK.sel.length < 5) CK.sel.push(k); ckRender(); }));
+            P.querySelectorAll('button[data-a]').forEach((b) => b.addEventListener('click', () => { const a = b.dataset.a; if (a === 'clear') { CK.sel = []; ckRender(); } else if (a === 'close') ckClose(); else if (a === 'book') { CK.view = 'book'; CK.stove = true; ckRender(); } else ckCook(); }));
         }
         /* ---- the pan: a Cooking-Mama style minigame. Set the burner, stir, flip, and watch the heat. ---- */
         function ckBand(m) {
@@ -14409,7 +14542,7 @@ function kbModel(THREE, mk) {
         function ckCook() {
             try { nsbT(0, 1400, 1400, 0.03, 0.05, 'square', 0, 0.05, 0.001); nsbT(0.12, 1500, 1500, 0.03, 0.05, 'square', 0, 0.05, 0.001); for (let i = 0; i < 4; i++) nsbN(0.3 + i * 0.1, 0.18, 400, 150, 1, 0.06, 'lowpass', 0, 0.1); } catch (e) { /* audio */ }
             const m = ckMatch(CK.sel); if (!m || CK.sel.some((k) => !(FOOD.ing[k] > 0))) return; const n = CK.sel.length;
-            CK.g = { m, sel: CK.sel.slice(), band: ckBand(m), ph: 0, pt: 0, dial: 0.15, temp: 0.05, inb: 0, tin: 0, tt: 0, stir: 0.45, stirOk: 0, stirT: 0, flips: 0, flipHits: 0, flipN: 2, fpos: 0, fdir: 1, fc: 0.5, fz: 0.2 - Math.min(0.06, n * 0.012), fspd: 1.05 + n * 0.1, burn: 0, rot: 0, hop: 0, ang: null, last: 0, pops: [], steam: [], drop: 0, msg: 'Turn the burner up to the green band.', fin: 0 };
+            CK.g = { m, sel: CK.sel.slice(), sp: (CK.spice || []).filter((k) => FOOD.spice[k] > 0).slice(0, NF.cls === 'chef' ? 2 : 1), band: ckBand(m), ph: 0, pt: 0, dial: 0.15, temp: 0.05, inb: 0, tin: 0, tt: 0, stir: 0.45, stirOk: 0, stirT: 0, flips: 0, flipHits: 0, flipN: 2, fpos: 0, fdir: 1, fc: 0.5, fz: 0.2 - Math.min(0.06, n * 0.012), fspd: 1.05 + n * 0.1, burn: 0, rot: 0, hop: 0, ang: null, last: 0, pops: [], steam: [], drop: 0, msg: 'Turn the burner up to the green band.', fin: 0 };
             ckGameRound(); ckGameLoop();
         }
         function ckGameRound() {
@@ -14555,11 +14688,11 @@ function kbModel(THREE, mk) {
         }
         function ckFinish() {
             const g = CK.g; CK.g = null; if (!g) return; if (g.sel.some((k) => !(FOOD.ing[k] > 0))) { ckRender('The ingredients are gone.'); return; }
-            for (const k of g.sel) foodAdd('ing', k, -1); const q = g.score >= 0.78 ? 'p' : g.score < 0.4 ? 'b' : '', key = g.m + (q ? ':' + q : '');
+            for (const k of g.sel) foodAdd('ing', k, -1); const q = g.score >= 0.78 ? 'p' : g.score < 0.4 ? 'b' : '', sps = (g.sp || []).filter((k) => FOOD.spice[k] > 0), key = g.m + (sps.length ? ':' + q + ':' + sps.join('+') : (q ? ':' + q : '')); for (const k of sps) { FOOD.spice[k] -= 1; if (FOOD.spice[k] <= 0) delete FOOD.spice[k]; } CK.spice = [];
             foodAdd('meal', key, 1); const first = !FOOD.known[g.m] && g.m !== 'mash'; { FOOD.cooked = FOOD.cooked || {}; const cc = FOOD.cooked[g.m] = FOOD.cooked[g.m] || { n: 0, p: 0, b: 0 }; cc.n++; if (q === 'p') cc.p++; if (q === 'b') cc.b++; } if (g.m !== 'mash') FOOD.known[g.m] = 1; foodSave(); CK.sel = [];
             try { tnPlate(key); } catch (e) { /* not in a tent */ }
             try { nsbT(0, 700, 650, 0.1, 0.05, 'triangle', 0, 0.2, 0.002); if (q === 'b') { nsbN(0, 0.5, 600, 300, 1, 0.05, 'lowpass', 0, 0.5); } else { nsbBell(0, 784, 0.06, 0.7); nsbBell(0.12, 988, 0.05, 0.7); nsbBell(0.24, 1319, 0.05, 0.9); if (q === 'p') { nsbBell(0.4, 1568, 0.05, 1); nsbBell(0.5, 2093, 0.04, 1.1); } } } catch (e) { /* audio */ }
-            ckRender((first ? '✨ New recipe! ' : '') + (q === 'p' ? '★ Perfect ' : q === 'b' ? 'Burnt ' : 'Cooked ') + FOOD_MEAL[g.m].ico + ' ' + FOOD_MEAL[g.m].n + '!');
+            ckRender((first ? '✨ New recipe! ' : '') + (q === 'p' ? '★ Perfect ' : q === 'b' ? 'Burnt ' : 'Cooked ') + FOOD_MEAL[g.m].ico + ' ' + FOOD_MEAL[g.m].n + (sps.length ? ' with ' + sps.map((x) => FOOD_SPICE[x].ico).join('') : '') + '!');
         }
         function ckClose() { CK.g = null; CK.view = ''; CK.stove = undefined; if (CK.el) CK.el.classList.remove('on'); }
         function ckOpen() {
@@ -14587,7 +14720,7 @@ function kbModel(THREE, mk) {
             const v = new THREE.Vector3(it.group.position.x, it.group.position.y + 1.9, it.group.position.z).project(camera); if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) { SV.el.style.display = 'none'; return; }
             const rc = renderer.domElement.getBoundingClientRect(); SV.el.style.display = 'block'; SV.el.style.transform = 'translate(' + Math.round(rc.left + (v.x * 0.5 + 0.5) * rc.width - 23) + 'px,' + Math.round(rc.top + (-v.y * 0.5 + 0.5) * rc.height - 52) + 'px)';
         }
-        { let last = 0; const loop = (t) => { if (t - last > 90) { last = t; try { if (typeof renderer !== 'undefined' && renderer && typeof camera !== 'undefined') svTick(); gdTick(); } catch (e) { /* not ready */ } } requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+        { let last = 0; const loop = (t) => { if (t - last > 90) { last = t; try { if (typeof renderer !== 'undefined' && renderer && typeof camera !== 'undefined') svTick(); gdTick(); gfTick(); } catch (e) { /* not ready */ } } requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
         /* ---- the Cookbook: recipes found, dishes cooked, where every ingredient comes from, and which dish cures which status ---- */
         const CB_T = { b: 'Breakfast', l: 'Lunch', d: 'Dinner', m: 'Medicine' };
         const GD_MOD = {
@@ -14609,7 +14742,7 @@ function kbModel(THREE, mk) {
         }
         function ckBookRender() {
             cbCss(); const P = CK.el.querySelector('.ckp'), tab = CK.tab || 'all', ids = Object.keys(FOOD_MEAL).filter((k) => k !== 'mash'), nk = ids.filter((k) => FOOD.known[k]).length, total = Object.values(FOOD.cooked || {}).reduce((a, c) => a + c.n, 0);
-            const TABS = [['all', 'All'], ['b', 'Breakfast'], ['l', 'Lunch'], ['d', 'Dinner'], ['m', 'Medicine'], ['buff', 'Buffs'], ['cures', 'Cures'], ['src', 'Ingredients']];
+            const TABS = [['all', 'All'], ['b', 'Breakfast'], ['l', 'Lunch'], ['d', 'Dinner'], ['m', 'Medicine'], ['buff', 'Buffs'], ['spice', 'Spices'], ['cures', 'Cures'], ['src', 'Ingredients']];
             const chip = (k) => '<span class="cbi' + (FOOD.ing[k] > 0 ? ' ok' : '') + '">' + FOOD_ING[k].ico + ' ' + FOOD_ING[k].n + ' <i>×' + (FOOD.ing[k] || 0) + '</i></span>';
             const fx = (M) => 'Heals ' + Math.round(M.heal * 100) + '%' + (M.hp ? ' · HP regen' : '') + (M.mp ? ' · MP regen' : '') + (nfBfText(M) ? ' · ' + nfBfText(M) : '');
             const entry = (k) => {
@@ -14619,7 +14752,11 @@ function kbModel(THREE, mk) {
                 return '<div>' + tg + '❔ <b>???</b> <span class="mut">· ' + M.set.length + ' ingredients</span>' + (eff ? '<br><span class="fx">' + eff + '</span>' : '') + (eff ? '<br><span class="mut">Hint: it uses ' + FOOD_ING[M.set[0]].ico + ' ' + FOOD_ING[M.set[0]].n + '</span>' : '') + '</div>';
             };
             let body = '';
-            if (tab === 'cures') {
+            if (tab === 'spice') {
+                body = Object.keys(FOOD_SPICE).map((k) => { const S = FOOD_SPICE[k]; return '<div>' + S.ico + ' <b>' + S.n + '</b> <span class="mut">· in your rack: ' + (FOOD.spice[k] || 0) + ' · grind 1 ' + FOOD_ING[k].ico + ' ' + FOOD_ING[k].n + ' into 3</span><br><span class="fx">' + (nfBfText({ bf: S.bf }) || '') + (S.hp ? (nfBfText({ bf: S.bf }) ? ' · ' : '') + 'HP regen +' + (S.hp * 100).toFixed(1) + '% / 3s' : '') + '</span></div>'; }).join('')
+                    + '<div class="sub" style="margin-top:8px">Signature pairings</div>' + (Object.keys(FOOD_PAIR).map((pk) => { const [d, sp] = pk.split('|'), P = FOOD_PAIR[pk], M = FOOD_MEAL[d]; if (!M) return ''; if (FOOD.pairs[pk]) return '<div>✨ <b>' + P.n + '</b> <span class="mut">· ' + M.ico + ' ' + M.n + ' + ' + FOOD_SPICE[sp].ico + ' ' + FOOD_SPICE[sp].n + '</span><br><span class="fx">' + nfBfText({ bf: P.bf }) + (P.cleanse ? ' · cleanses every status' : '') + (P.hp ? ' · HP regen' : '') + '</span></div>'; return FOOD.known[d] ? '<div class="mut">❔ A hidden pairing with ' + M.ico + ' <b>' + M.n + '</b>. Hint: a seasoning made from ' + FOOD_ING[sp].ico + '</div>' : ''; }).join('') || '')
+                    + '<div class="mut">One seasoning per dish (the Chef can use two and gets +25% from each). A seasoning made from an ingredient already in the dish is 50% stronger. Buffs from the dish, seasoning and pairing all stack into one Well Fed effect, so what you cook is part of your build.</div>';
+            } else if (tab === 'cures') {
                 body = Object.keys(NF_ST).map((s) => { const by = Object.keys(NF_ST_BY).filter((c) => NF_ST_BY[c] === s), cures = ids.filter((k) => FOOD_MEAL[k].cure && (FOOD_MEAL[k].cure === 'all' || FOOD_MEAL[k].cure.includes(s)));
                     return '<div>' + NF_ST[s].ic + ' <b>' + NF_ST[s].n + '</b> <span class="mut">· ' + NF_ST[s].d + '</span><br><span class="mut">Inflicted by ' + by.join(' and ') + ' monsters</span><br>' + cures.map((k) => (FOOD.known[k] ? FOOD_MEAL[k].ico + ' <b>' + FOOD_MEAL[k].n + '</b> ' + FOOD_MEAL[k].set.map(chip).join('') : '❔ Unknown cure (' + FOOD_MEAL[k].set.length + ' ingredients, uses ' + FOOD_ING[FOOD_MEAL[k].set[0]].ico + ')') + '<br>').join('') + '</div>'; }).join('')
                     + '<div class="mut">Cook a cure and keep a few in your pack. Eat it to cleanse the status. Burnt medicine only cures one thing. The Chef also makes buff dishes last 50% longer.</div>';
@@ -14699,6 +14836,102 @@ function kbModel(THREE, mk) {
             P.innerHTML = h; el.classList.add('on');
             P.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { if (!DC.owner) return; it.gd = { c: b.dataset.c, p: 0, l: Date.now() }; gdVis(it); gdSaveNow(); try { nsbBell(0, 660, 0.05, 0.4); } catch (e) { /* audio */ } gdOpen(it, '🌱 Planted ' + FOOD_ING[b.dataset.c].ico + ' ' + FOOD_ING[b.dataset.c].n + '.'); }));
             P.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => { const a = b.dataset.a; if (a === 'x') gdClose(); else if (a === 'clear') { if (!DC.owner) return; it.gd = null; gdVis(it); gdSaveNow(); gdOpen(it, 'Cleared.'); } else if (a === 'harv') { if (!DC.owner || !gdRipe(it)) return; const C = GD_CROP[it.gd.c], n = C.y[0] + Math.floor(Math.random() * (C.y[1] - C.y[0] + 1)) + (NF.cls === 'chef' ? 1 : 0), c = it.gd.c; foodAdd('ing', c, n); it.gd = null; gdVis(it); gdSaveNow(); try { nsbBell(0, 880, 0.05, 0.5); nsbBell(0.1, 1175, 0.04, 0.6); } catch (e) { /* audio */ } sysChat('🧺 Harvested ' + FOOD_ING[c].ico + ' ' + FOOD_ING[c].n + ' ×' + n); gdOpen(it, '🧺 Harvested ' + FOOD_ING[c].ico + ' ' + FOOD_ING[c].n + ' ×' + n + '. Plant again?'); } }));
+        }
+        /* ---- farm plots: modular 4×4 fields on a 1 m grid. Hoe, seed, water, harvest and clear, Animal Crossing style ---- */
+        const GF = { tool: 'hoe', crop: 'tomato', area: false, cur: null, bar: null, pick: false, last: 0, save: 0, use: 0, near: false };
+        const GF_CROPS = ['berry', 'wheat', 'potato', 'herb', 'tomato', 'onion', 'mushroom', 'pepper', 'rice'], GF_SPK = 6, GF_WET = 240000;
+        const GF_TOOLS = [['hoe', '🪏', 'Hoe', 'Till grass into soil'], ['seed', '🌱', 'Seeds', 'Plant the chosen seed in tilled soil (tap again to change seed)'], ['water', '💧', 'Water', 'Wet soil grows crops. A sprinkler keeps tiles near it wet.'], ['harv', '🧺', 'Harvest', 'Pick ripe crops'], ['clear', '🧹', 'Clear', 'Pull up a crop, or turn bare soil back into grass']];
+        const gfEnc = (t) => (!t ? '' : t.c ? t.c + ':' + (+t.p).toFixed(3) + ':' + Math.round(t.l || 0) + ':' + Math.round(t.wu || 0) : 't');
+        const gfDec = (s) => { if (!s) return null; if (s === 't') return { t: 1 }; const a = String(s).split(':'); if (!GF_CROPS.includes(a[0])) return { t: 1 }; return { t: 1, c: a[0], p: clamp(+a[1] || 0, 0, 1), l: +a[2] || Date.now(), wu: +a[3] || 0 }; };
+        const gfTiles = (it) => (it.fm && it.fm.length === 16 ? it.fm : (it.fm = Array(16).fill(null)));
+        const gfCtr = (it, i) => ({ x: it.x - 2 + 0.5 + (i % 4), z: it.z - 2 + 0.5 + Math.floor(i / 4) });
+        const gfStage = (t) => (!t || !t.c ? 0 : t.p < 0.34 ? 1 : t.p < 0.67 ? 2 : t.p < 1 ? 3 : 4);
+        function gfAt(x, z) { for (const it of DC.items.values()) { if (it.k !== 'gfarm') continue; const lx = x - (it.x - 2), lz = z - (it.z - 2); if (lx >= 0 && lx < 4 && lz >= 0 && lz < 4) return { it, idx: Math.floor(lz) * 4 + Math.floor(lx) }; } return null; }
+        function gfBuild(kind, K) {
+            const { g, std, P } = K, wood = std(0x8a5a3c), box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+            for (const [x, z, w, d] of [[0, -1.97, 4, 0.1], [0, 1.97, 4, 0.1], [-1.97, 0, 0.1, 4], [1.97, 0, 0.1, 4]]) P(box(w, 0.07, d), wood, x, 0.035, z);
+            const t = new THREE.Group(); t.name = 'gftiles'; g.add(t); return true;
+        }
+        function gfPlant(par, k, st) {
+            const col = GD_COL[k] || 0x4fae4a, M = (c, e) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8, emissive: e || 0, emissiveIntensity: e ? 0.35 : 0 }), add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; par.add(m); return m; };
+            if (st < 3) { const sc = st === 1 ? 0.45 : 0.8; for (let i = 0; i < 3; i++) { const a = i * 2.1; add(new THREE.ConeGeometry(0.06 + 0.03 * sc, 0.18 + 0.32 * sc, 6), M(0x4fae4a), Math.cos(a) * 0.1 * sc, 0.1 + 0.16 * sc, Math.sin(a) * 0.1 * sc); } return; }
+            if (k === 'berry') { add(new THREE.SphereGeometry(0.32, 9, 7), M(0x2e7d32), 0, 0.3, 0).scale.set(1.1, 0.85, 1.1); for (let i = 0; i < 7; i++) add(new THREE.SphereGeometry(0.06, 6, 5), M(col, col), Math.cos(i * 1.2) * 0.3, 0.3 + (i % 3) * 0.1, Math.sin(i * 1.2) * 0.3); }
+            else if (k === 'wheat' || k === 'rice') { for (let i = 0; i < 10; i++) { const a = i * 0.9, r = 0.05 + (i % 4) * 0.08; add(new THREE.CylinderGeometry(0.012, 0.02, 0.7, 4), M(k === 'wheat' ? 0xb9a24a : 0x9ac060), Math.cos(a) * r * 2.4, 0.35, Math.sin(a) * r * 2.4); add(new THREE.CapsuleGeometry(0.03, 0.14, 3, 5), M(col), Math.cos(a) * r * 2.4, 0.74, Math.sin(a) * r * 2.4); } }
+            else if (k === 'potato') { add(new THREE.SphereGeometry(0.34, 9, 6), M(0x4e8f3a), 0, 0.18, 0).scale.y = 0.55; for (let i = 0; i < 4; i++) add(new THREE.SphereGeometry(0.1, 7, 6), M(0xb89a5a), Math.cos(i * 1.6) * 0.3, 0.06, Math.sin(i * 1.6) * 0.3).scale.y = 0.7; }
+            else if (k === 'herb') { for (let i = 0; i < 6; i++) { const a = i * 1.05; add(new THREE.ConeGeometry(0.07, 0.42, 6), M(i % 2 ? 0x5fc05a : 0x3f9a46), Math.cos(a) * 0.14, 0.22, Math.sin(a) * 0.14); } }
+            else if (k === 'tomato' || k === 'pepper') { add(new THREE.SphereGeometry(0.3, 9, 7), M(0x2f7a35), 0, 0.3, 0).scale.set(1.1, 0.9, 1.1); for (let i = 0; i < 6; i++) add(k === 'tomato' ? new THREE.SphereGeometry(0.075, 8, 6) : new THREE.ConeGeometry(0.045, 0.2, 5), M(col, col), Math.cos(i * 1.1) * 0.3, 0.2 + (i % 3) * 0.12, Math.sin(i * 1.1) * 0.3); }
+            else if (k === 'onion') { for (let i = 0; i < 5; i++) { const a = i * 1.25; add(new THREE.CylinderGeometry(0.02, 0.03, 0.5, 5), M(0x4fae4a), Math.cos(a) * 0.12, 0.3, Math.sin(a) * 0.12); add(new THREE.SphereGeometry(0.1, 8, 6), M(0xe0b25a), Math.cos(a) * 0.25, 0.06, Math.sin(a) * 0.25).scale.y = 0.75; } }
+            else if (k === 'mushroom') { for (let i = 0; i < 4; i++) { const a = i * 1.6, r = 0.18 + (i % 2) * 0.1, h = 0.18 + (i % 3) * 0.06; add(new THREE.CylinderGeometry(0.04, 0.05, h, 6), M(0xf0e6d0), Math.cos(a) * r, h / 2, Math.sin(a) * r); add(new THREE.SphereGeometry(0.13, 9, 6), M(col), Math.cos(a) * r, h + 0.02, Math.sin(a) * r).scale.y = 0.55; } }
+            else add(new THREE.SphereGeometry(0.25, 8, 6), M(col), 0, 0.3, 0);
+        }
+        function gfTileVis(it, i, t, wet) {
+            const root = it.group && it.group.getObjectByName('gftiles'); if (!root) return; const old = root.getObjectByName('t' + i); if (old) { root.remove(old); try { disposeObject(old); } catch (e) { /* ok */ } }
+            const c = gfCtr(it, i), g = new THREE.Group(); g.name = 't' + i; g.position.set(c.x - it.x, 0, c.z - it.z); root.add(g);
+            const pl = (w, d, col, y) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ color: col, roughness: 1 })); m.rotation.x = -Math.PI / 2; m.position.y = y; m.receiveShadow = true; g.add(m); return m; };
+            pl(0.98, 0.98, (i + Math.floor(i / 4)) % 2 ? 0x66a746 : 0x70b04e, 0.02);
+            if (t) { pl(0.94, 0.94, wet ? 0x3a2616 : 0x74502f, 0.045); for (const dz of [-0.28, 0, 0.28]) pl(0.9, 0.07, wet ? 0x2c1c10 : 0x5c3c22, 0.05).position.z = dz; }
+            if (t && t.c) { const st = gfStage(t); gfPlant(g, t.c, st); g.children.forEach((m) => { if (m.isMesh && m.geometry.type !== 'PlaneGeometry') m.position.y += 0.05; }); if (st >= 4) { const sp = gdSprite(FOOD_ING[t.c].ico); sp.scale.set(0.55, 0.55, 0.55); sp.position.set(0, 1.05, 0); sp.userData.gfi = 1; g.add(sp); } }
+        }
+        function gfNearField() { if (!localActor || !localActor.group) return false; const p = localActor.group.position; for (const it of DC.items.values()) if (it.k === 'gfarm' && Math.abs(it.x - p.x) < 5.5 && Math.abs(it.z - p.z) < 5.5) return true; return false; }
+        function gfTarget() { const g = localActor.group, p = g.position, f = 0.95; return gfAt(p.x + Math.sin(g.rotation.y) * f, p.z + Math.cos(g.rotation.y) * f) || gfAt(p.x, p.z); }
+        function gfCursor() {
+            const on = GF.near && DC.owner && !DC.edit; if (!on) { if (GF.cur) GF.cur.visible = false; return; }
+            if (!GF.cur || GF.cur.parent !== DC.root) { if (GF.cur) { GF.cur.removeFromParent(); } const g = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color: 0xffe27a, depthTest: false, transparent: true, opacity: 0.95 }); for (const [x, z, w, d] of [[0, -0.5, 1, 0.07], [0, 0.5, 1, 0.07], [-0.5, 0, 0.07, 1], [0.5, 0, 0.07, 1]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, d), m); b.position.set(x, 0, z); b.userData.noOutline = true; b.renderOrder = 20; g.add(b); } g.userData.noOutline = true; DC.root.add(g); GF.cur = g; }
+            const T = gfTarget(); if (!T) { GF.cur.visible = false; return; } const c = gfCtr(T.it, T.idx); GF.cur.visible = true; GF.cur.position.set(c.x, T.it.y + 0.09, c.z); const s = (GF.area ? 3 : 1) * (1 + Math.sin(Date.now() / 160) * 0.025); GF.cur.scale.set(s, 1, s);
+        }
+        function gfApply(it, idx, tool) {
+            const T = gfTiles(it), t = T[idx], now = Date.now();
+            if (tool === 'hoe') { if (t) return false; T[idx] = { t: 1 }; return true; }
+            if (tool === 'seed') { if (!t || t.c) return false; T[idx] = { t: 1, c: GF.crop, p: 0, l: now, wu: 0 }; return true; }
+            if (tool === 'water') { if (!t || (t.wu || 0) > now + GF_WET * 0.8) return false; t.wu = now + GF_WET; t.l = t.l || now; return true; }
+            if (tool === 'harv') { if (!t || !t.c || t.p < 1) return false; const C = GD_CROP[t.c], n = C.y[0] + Math.floor(Math.random() * (C.y[1] - C.y[0] + 1)) + (NF.cls === 'chef' ? 1 : 0); foodAdd('ing', t.c, n); GF.got = GF.got || {}; GF.got[t.c] = (GF.got[t.c] || 0) + n; T[idx] = { t: 1, wu: t.wu || 0 }; return true; }
+            if (tool === 'clear') { if (!t) return false; T[idx] = t.c ? { t: 1, wu: t.wu || 0 } : null; return true; }
+            return false;
+        }
+        function gfUse() {
+            if (!DC.owner || DC.edit || performance.now() - GF.use < 160) return; GF.use = performance.now(); const T = gfTarget(); if (!T) { padToast('Stand next to your field'); return; }
+            gfTick(true); const c = gfCtr(T.it, T.idx), cells = []; for (let dx = GF.area ? -1 : 0; dx <= (GF.area ? 1 : 0); dx++) for (let dz = GF.area ? -1 : 0; dz <= (GF.area ? 1 : 0); dz++) { const q = gfAt(c.x + dx, c.z + dz); if (q) cells.push(q); }
+            GF.got = {}; let n = 0; for (const q of cells) if (gfApply(q.it, q.idx, GF.tool)) { n++; q.it._fsig = []; }
+            if (!n) { const h = { hoe: 'Already tilled', seed: GF.tool === 'seed' && !gfTiles(T.it)[T.idx] ? 'Till the soil first with the hoe' : 'Nothing to plant here', water: 'Already watered, or nothing to water', harv: 'Nothing ripe here', clear: 'Nothing to clear' }; padToast(h[GF.tool]); return; }
+            try { if (GF.tool === 'hoe') nsbN(0, 0.2, 350, 120, 1, 0.07, 'lowpass', 0, 0.15); else if (GF.tool === 'water') nsbN(0, 0.45, 2400, 1200, 1, 0.035, 'highpass', 0, 0.3); else if (GF.tool === 'seed') nsbBell(0, 520, 0.04, 0.3); else if (GF.tool === 'harv') { nsbBell(0, 880, 0.05, 0.5); nsbBell(0.1, 1175, 0.04, 0.6); } else nsbN(0, 0.15, 500, 250, 1, 0.05, 'lowpass', 0, 0.1); } catch (e) { /* audio */ }
+            if (GF.tool === 'harv') { const s = Object.keys(GF.got).map((k) => FOOD_ING[k].ico + ' ' + FOOD_ING[k].n + ' ×' + GF.got[k]).join(', '); padToast('🧺 ' + s); sysChat('🧺 Harvested ' + s); }
+            else padToast({ hoe: 'Tilled ' + n, seed: 'Planted ' + n + ' ' + FOOD_ING[GF.crop].ico, water: 'Watered ' + n, clear: 'Cleared ' + n }[GF.tool]);
+            gfTick(true); gdSaveNow();
+        }
+        function gfBar() {
+            if (GF.bar) return GF.bar; cbCss(); const st = document.createElement('style'); st.textContent = '#gf-bar{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:21;display:none;flex-direction:column;align-items:center;gap:6px;font:700 12px system-ui,sans-serif;user-select:none;-webkit-user-select:none}#gf-bar .row{display:flex;gap:6px;background:rgba(34,24,14,.88);border:2px solid #c59a52;border-radius:16px;padding:6px 8px;box-shadow:0 4px 14px rgba(0,0,0,.45)}#gf-bar button{background:#4a3a28;color:#fff3d8;border:2px solid #7a5f3a;border-radius:12px;min-width:54px;padding:5px 6px;font:700 11px system-ui;cursor:pointer;line-height:1.15;touch-action:manipulation}#gf-bar button b{display:block;font-size:22px}#gf-bar button.on{background:#e5a93c;color:#2a1a08;border-color:#ffe27a}#gf-bar .use{background:#4fae4a;border-color:#a8f0a0;min-width:64px}#gf-bar .pk{display:none;flex-wrap:wrap;gap:4px;justify-content:center;max-width:430px;background:rgba(34,24,14,.92);border:2px solid #c59a52;border-radius:14px;padding:6px}#gf-bar .pk.on{display:flex}#gf-bar .pk button{min-width:62px}';
+            document.head.appendChild(st); const d = document.createElement('div'); d.id = 'gf-bar'; document.body.appendChild(d); GF.bar = d; for (const ev of ['pointerdown', 'touchstart']) d.addEventListener(ev, (e) => e.stopPropagation());
+            d.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a; if (a === 'use') gfUse(); else if (a === 'area') { GF.area = !GF.area; gfBarRender(); } else if (a === 'crop') { GF.crop = b.dataset.c; GF.pick = false; GF.tool = 'seed'; gfBarRender(); } else if (a) { if (a === 'seed' && GF.tool === 'seed') GF.pick = !GF.pick; else { GF.tool = a; GF.pick = a === 'seed' ? GF.pick : false; } gfBarRender(); } });
+            window.addEventListener('keydown', (e) => { if (!GF.near || !DC.owner || DC.edit || (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) return; if (e.code === 'KeyE' && !e.repeat) gfUse(); else if (e.code === 'BracketRight' || e.code === 'BracketLeft') { const i = GF_TOOLS.findIndex((q) => q[0] === GF.tool); GF.tool = GF_TOOLS[(i + (e.code === 'BracketRight' ? 1 : GF_TOOLS.length - 1)) % GF_TOOLS.length][0]; GF.pick = false; gfBarRender(); } });
+            gfBarRender(); return d;
+        }
+        function gfBarRender() {
+            const d = GF.bar; if (!d) return; d.innerHTML = '<div class="pk' + (GF.pick ? ' on' : '') + '">' + GF_CROPS.map((c) => '<button data-a="crop" data-c="' + c + '" class="' + (GF.crop === c ? 'on' : '') + '"><b>' + FOOD_ING[c].ico + '</b>' + FOOD_ING[c].n.split(' ').slice(-1)[0] + '<br>' + GD_CROP[c].m + 'm</button>').join('') + '</div><div class="row">' + GF_TOOLS.map((q) => '<button data-a="' + q[0] + '" title="' + q[3] + '" class="' + (GF.tool === q[0] ? 'on' : '') + '"><b>' + (q[0] === 'seed' ? FOOD_ING[GF.crop].ico : q[1]) + '</b>' + q[2] + '</button>').join('') + '<button data-a="area" title="Apply the tool to a 3×3 patch" class="' + (GF.area ? 'on' : '') + '"><b>▦</b>3×3</button><button data-a="use" class="use"><b>✋</b>Use (E)</button></div>';
+        }
+        function gfBarUpdate(any) { const on = any && GF.near && DC.owner && !DC.edit && dcMapOn(); const d = on ? gfBar() : GF.bar; if (d) { const v = on ? 'flex' : 'none'; if (d.style.display !== v) d.style.display = v; } }
+        function gfTick(force) {
+            if (typeof DC === 'undefined' || !DC.items.size || !localActor || !localActor.group) { gfBarUpdate(false); return; }
+            const now = Date.now(); GF.near = dcMapOn() && gfNearField(); if (!force && now - GF.last < 400) { gfCursor(); gfBarUpdate(GF.near); return; } GF.last = now;
+            const sp = []; for (const o of DC.items.values()) if (o.k === 'gsprk') sp.push(o); let dirty = false, ripe = 0, any = false;
+            for (const it of DC.items.values()) {
+                if (it.k !== 'gfarm' || !it.group) continue; any = true; const T = gfTiles(it); if (it._ftok !== it.group) { it._ftok = it.group; it._fsig = []; } it._fsig = it._fsig || [];
+                for (let i = 0; i < 16; i++) {
+                    const t = T[i], c = gfCtr(it, i), spk = sp.some((o) => Math.hypot(o.x - c.x, o.z - c.z) < GF_SPK);
+                    if (t && t.c && t.p < 1) { const l = t.l || now, el = now - l; if (el > 0) { const wt = spk ? el : Math.max(0, Math.min(now, t.wu || 0) - l); t.p = Math.min(1, t.p + wt / (GD_CROP[t.c].m * 60000)); t.l = now; if (wt > 0) dirty = true; if (t.p >= 1 && !t.rn) { t.rn = 1; ripe++; } } }
+                    const wet = !!t && (spk || (t.wu || 0) > now), sig = (t ? (t.c ? 2 : 1) : 0) + '|' + gfStage(t) + '|' + (wet ? 1 : 0) + '|' + (t && t.c ? t.c : ''); if (it._fsig[i] !== sig) { it._fsig[i] = sig; gfTileVis(it, i, t, wet); }
+                }
+                const r = it.group.getObjectByName('gftiles'); if (r) for (const g of r.children) for (const m of g.children) if (m.userData.gfi) m.position.y = 1.05 + Math.sin(now / 420 + g.position.x) * 0.06;
+            }
+            if (ripe && DC.owner) { try { padToast('🌾 ' + ripe + ' crop' + (ripe > 1 ? 's are' : ' is') + ' ready to harvest!'); } catch (e) { /* toast */ } }
+            if (dirty && DC.owner && now - GF.save > 30000) { GF.save = now; try { dcSave(); } catch (e) { /* save */ } }
+            gfCursor(); gfBarUpdate(any);
+        }
+        function gfStarter() {
+            if (!DC.owner || !dcMapOn()) { sysChat('Open one of your own custom rooms (Builder’s Plot is best) to lay out a farm.'); return; }
+            const sp = dcSpotInFront(), ox = Math.round(sp.x / 4) * 4, oz = Math.round(sp.z / 4) * 4, put = (k, x, z) => dcAdd({ t: 'b', k, n: dcCat(k)[1], x, y: activeMap === 'plot' ? bpFloorAt(x, z, getGroundHeight(x, z)) : 0, z, r: 0, s: 1, c: dcCat(k)[3], sol: !!dcCat(k)[5] }, { select: false, save: false });
+            for (const [x, z] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) put('gfarm', ox + x, oz + z);
+            put('gsprk', ox, oz); put('gscare', ox + 2, oz - 4.5); put('gcoop', ox - 6, oz - 1.5); put('gpond', ox + 6.6, oz - 1.5); put('ghive', ox - 6, oz + 2.5); put('gpen', ox + 6.6, oz + 2.8);
+            dcChanged(); sysChat('🌾 Farm laid out: four 4×4 field plots with a sprinkler in the middle, plus a coop, pond, hive, pen and scarecrow. Walk up to a field: the tool bar appears. Hoe → Seeds → Water, then Harvest when crops glow. Add more field plots from Decorate → Garden; they snap to the grid and join up.');
         }
         function gdStarter() {
             if (!DC.owner || !dcMapOn()) { sysChat('Open one of your own custom rooms to build a garden.'); return; }
@@ -16210,7 +16443,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
             try { renderer.domElement.addEventListener('webglcontextlost', () => add('WebGL context lost: the graphics driver dropped the page')); } catch (e) { /* no renderer yet */ }
             setInterval(() => { try { let el = document.getElementById('nu-diag'); if (activeMap !== 'nuu' || !buf.length || closed) { if (el) el.style.display = 'none'; return; } const t = buf.join('\n\n'); if (!el) { el = document.createElement('pre'); el.id = 'nu-diag'; el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:min(92vw,640px);max-height:45vh;overflow:auto;margin:0;padding:8px 10px;border-radius:8px;background:rgba(60,0,0,.92);color:#ffd8d8;font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word;cursor:pointer'; el.title = 'tap to close'; el.addEventListener('pointerdown', (e) => { e.stopPropagation(); closed = true; el.style.display = 'none'; }); document.body.appendChild(el); } el.style.display = 'block'; if (t !== shown) { shown = t; el.textContent = 'ADVENTIA DIAGNOSTIC (send me this):\n' + t; } } catch (e) { /* diag */ } }, 1500);
         })();
-        window.__nuu = { yt: { ytTitle, ytFetch, srcLabel, ytIsIdLabel, YT_T }, st: { add: nfStAdd, has: nfStHas, cure: nfStCure, tick: nfStTick, eat: foodEat }, gd: { THREE, tick: gdTick, make: dcMake, mods: GD_MOD, open: gdOpen, starter: gdStarter, vis: gdVis, DC }, cb: { open: cbOpen }, sim: { SIM, simTick, simMods, simAdd, simSoap, shower: tnShower, ui: simUi }, lb: { start: (t) => { const s = NF_SK.find((q) => q.lb); NF.lb = 100; nfUse(NF_SK.indexOf(s)); return !!NF.lbSeq; }, seq: () => NF.lbSeq && { i: NF.lbSeq.i, n: NF.lbSeq.n }, sep: nuSeparate, NF, spawn: nuSpawnExtra, mobs: nfMobs, tick: nfLbTick }, spell: { fx: (id, k) => { const s = NF_SK.find((q) => q.id === id) || { id, r: 5 }; const p = nfPos(); const t = new THREE.Vector3(p.x + 6, p.y, p.z); t.userData = { h: 2 }; return nfSpellFx(s, p, t); }, castfx: (id) => { const s = NF_SK.find((q) => q.id === id); NF.cast = { s, dur: s.cast, t0: performance.now() / 1000 }; nfCastFx(s); return NF.fx.length; }, anim: (id, ph) => { const s = NF_SK.find((q) => q.id === id); nfMageAnim(s, ph); return localActor.emote; }, NF }, lk: { cycle: nfCycle, spawn: nuSpawnExtra, NF }, gun: { use: (i) => nfUse(i), mod: nfGunMod, tick: nfMachTick, ui: nfGunUi, sk: () => NF_SK, NF, set: (id) => nfApplyClass(id, true) }, food: { sv: () => ({ DC, SV, svTick, ap: activeMap }), ckAct, ckKey, ckSim, ckDraw, ckTheme, FOOD, ckOpen, ckCook, ckMatch, foodEat, foodItems, gaPick, ck: CK, nodes: () => NU.gaN, add: foodAdd, fd: () => NF.fd }, dgT: () => { try { nfDangerTick(); return "ok"; } catch (e) { return String(e.stack).slice(0, 300); } }, telBuild: nfTelBuild, glow: (s) => { nfBladeGlow(s); return NF.glow; }, tick: nfGlowTick, die: () => nfDie(), revive: nfRevive, ret: nfReturn, itemUse: nfItemUse, fallNear: nfFallNear, fallBuild: nfFallBuild, down: nfDownAct, thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle, plate: tnPlate }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        window.__nuu = { yt: { ytTitle, ytFetch, srcLabel, ytIsIdLabel, YT_T }, st: { add: nfStAdd, has: nfStHas, cure: nfStCure, tick: nfStTick, eat: foodEat }, gf: { tick: gfTick, apply: gfApply, at: gfAt, enc: gfEnc, dec: gfDec, GF, clean: (r) => dcCleanItem(r), wire: (it) => dcWireItem(it), place: (it) => dcPlace(it), starter: gfStarter }, gd: { THREE, tick: gdTick, make: dcMake, mods: GD_MOD, open: gdOpen, starter: gdStarter, vis: gdVis, DC }, cb: { open: cbOpen }, sim: { SIM, simTick, simMods, simAdd, simSoap, shower: tnShower, ui: simUi }, lb: { start: (t) => { const s = NF_SK.find((q) => q.lb); NF.lb = 100; nfUse(NF_SK.indexOf(s)); return !!NF.lbSeq; }, seq: () => NF.lbSeq && { i: NF.lbSeq.i, n: NF.lbSeq.n }, sep: nuSeparate, NF, spawn: nuSpawnExtra, mobs: nfMobs, tick: nfLbTick }, spell: { fx: (id, k) => { const s = NF_SK.find((q) => q.id === id) || { id, r: 5 }; const p = nfPos(); const t = new THREE.Vector3(p.x + 6, p.y, p.z); t.userData = { h: 2 }; return nfSpellFx(s, p, t); }, castfx: (id) => { const s = NF_SK.find((q) => q.id === id); NF.cast = { s, dur: s.cast, t0: performance.now() / 1000 }; nfCastFx(s); return NF.fx.length; }, anim: (id, ph) => { const s = NF_SK.find((q) => q.id === id); nfMageAnim(s, ph); return localActor.emote; }, NF }, lk: { cycle: nfCycle, spawn: nuSpawnExtra, NF }, gun: { use: (i) => nfUse(i), mod: nfGunMod, tick: nfMachTick, ui: nfGunUi, sk: () => NF_SK, NF, set: (id) => nfApplyClass(id, true) }, food: { sv: () => ({ DC, SV, svTick, ap: activeMap }), ckAct, ckKey, ckSim, ckDraw, ckTheme, FOOD, ckOpen, ckCook, ckMatch, foodEat, foodItems, gaPick, ck: CK, nodes: () => NU.gaN, add: foodAdd, fd: () => NF.fd }, dgT: () => { try { nfDangerTick(); return "ok"; } catch (e) { return String(e.stack).slice(0, 300); } }, telBuild: nfTelBuild, glow: (s) => { nfBladeGlow(s); return NF.glow; }, tick: nfGlowTick, die: () => nfDie(), revive: nfRevive, ret: nfReturn, itemUse: nfItemUse, fallNear: nfFallNear, fallBuild: nfFallBuild, down: nfDownAct, thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle, plate: tnPlate }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
@@ -20239,6 +20472,7 @@ window.__ts = TSK;
         function dcPlace(it) {
             BP.dirty = true;
             if (!it.group) return;
+            if (it.k === 'gfarm') { it.x = Math.round((it.x - 2) / 4) * 4 + 2; it.z = Math.round((it.z - 2) / 4) * 4 + 2; it.r = 0; it.s = 1; }
             it.group.position.set(it.x, it.y, it.z); it.group.rotation.y = it.r * Math.PI / 180; it.group.scale.setScalar(it.s);
             if (DC.sel === it.id && DC.selBox) DC.selBox.update();
         }
@@ -20253,11 +20487,12 @@ window.__ts = TSK;
                 const q = bpSnap(it, it.x, it.z); it.x = q[0]; it.z = q[1]; it.y = pbBaseY(it.k, clamp(Math.round((it.y - (PB_KINDS[it.k][3] === 'wall' ? PB_SLAB : 0)) / PB_LV), 0, 10));
             }
             else { if (!dcOkId(r.a)) return null; it.a = r.a; }
+            if (r.k === 'gfarm' && Array.isArray(r.fm)) { it.fm = r.fm.slice(0, 16).map(gfDec); while (it.fm.length < 16) it.fm.push(null); }
             if (r.gd && typeof r.gd === 'object' && typeof r.gd.c === 'string' && GD_CROP[r.gd.c]) it.gd = { c: r.gd.c, p: dcNum(r.gd.p, 0, 1, 0), l: Number.isFinite(+r.gd.l) ? +r.gd.l : Date.now() };
             if (t === 'p') { it.ar = dcNum(r.ar, 0.2, 5, 1); it.f = Object.prototype.hasOwnProperty.call(DC_FRAMES, r.f) ? r.f : 'black'; }
             return it;
         }
-        const dcWireItem = (it) => { const o = { id: it.id, t: it.t, n: it.n, x: +it.x.toFixed(3), y: +it.y.toFixed(3), z: +it.z.toFixed(3), r: +it.r.toFixed(1), s: +it.s.toFixed(3), c: it.c || '', sol: it.sol ? 1 : 0, lock: it.lock ? 1 : 0 }; if (it.d) o.d = it.d; if (it.k) o.k = it.k; if (it.a) o.a = it.a; if (it.m) o.m = it.m; if (it.gd) o.gd = it.gd; if (it.t === 'p') { o.ar = it.ar; o.f = it.f; } return o; };
+        const dcWireItem = (it) => { const o = { id: it.id, t: it.t, n: it.n, x: +it.x.toFixed(3), y: +it.y.toFixed(3), z: +it.z.toFixed(3), r: +it.r.toFixed(1), s: +it.s.toFixed(3), c: it.c || '', sol: it.sol ? 1 : 0, lock: it.lock ? 1 : 0 }; if (it.d) o.d = it.d; if (it.k) o.k = it.k; if (it.a) o.a = it.a; if (it.m) o.m = it.m; if (it.gd) o.gd = it.gd; if (it.fm && it.fm.some(Boolean)) o.fm = it.fm.map(gfEnc); if (it.t === 'p') { o.ar = it.ar; o.f = it.f; } return o; };
         const dcWire = () => ({ items: [...DC.items.values()].map(dcWireItem), style: DC.style });
         // undo / redo: snapshots of the whole layout (cheap: a layout is a few kilobytes of JSON)
         DC.hist = { s: [], i: -1, t: 0, busy: false };
@@ -20278,7 +20513,7 @@ window.__ts = TSK;
                     seen.add(n.id); const old = DC.items.get(n.id);
                     if (!old) { DC.items.set(n.id, n); dcInstantiate(n); continue; }
                     const same = old.a === n.a && old.k === n.k && old.t === n.t && old.c === n.c && old.f === n.f && old.m === n.m;
-                    Object.assign(old, { x: n.x, y: n.y, z: n.z, r: n.r, s: n.s, sol: n.sol, c: n.c, f: n.f, n: n.n, m: n.m, lock: n.lock, d: n.d, gd: n.gd });
+                    Object.assign(old, { x: n.x, y: n.y, z: n.z, r: n.r, s: n.s, sol: n.sol, c: n.c, f: n.f, n: n.n, m: n.m, lock: n.lock, d: n.d, gd: n.gd, fm: n.fm });
                     if (!same) { old.a = n.a; old.k = n.k; old.ar = n.ar; dcInstantiate(old); } else dcPlace(old);
                 }
                 for (const [id, it] of [...DC.items]) if (!seen.has(id)) { dcRemoveGroup(it); DC.items.delete(id); }
@@ -22671,6 +22906,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (/^\/blue\s*$/i.test(text)) { blBook(); return true; }
             if (/^\/(cookbook|recipes)\s*$/i.test(text)) { cbOpen(); return true; }
             if (/^\/garden\s*$/i.test(text)) { gdStarter(); return true; }
+            if (/^\/farm\s*$/i.test(text)) { gfStarter(); return true; }
             if (/^\/(companions?|npcs?|cmp)$/i.test(text)) { cmpOpen(); return true; }
             if (/^\/diner$/i.test(text)) { dinerOpen(); return true; }
             if (/^\/(bowl|bowling)$/i.test(text)) { bowlOpen(); return true; }
@@ -30463,6 +30699,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             $('screen-vol').addEventListener('input', (e) => { screenState.volume = clamp(+e.target.value || 0, 0, 100); try { localStorage.setItem('psHomeScreenVol', String(screenState.volume)); } catch (err) { /* storage unavailable */ } if (screenState.muted && screenState.volume > 0 && tvVideo()) screenState.muted = false; screenApplyAudio(); renderScreenPanel(); });
             $('screen-fade').addEventListener('click', () => { screenState.fade = !screenState.fade; screenApplyAudio(); renderScreenPanel(); });
             $('tv-open').addEventListener('click', () => $('tv-file').click());
+            $('tv-share').addEventListener('click', () => vsSetOn(!VS.on));
             $('tv-file').addEventListener('change', (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; if (files.length) openLocalFiles(files); });
             $('tv-full').addEventListener('click', tvFullscreen);
             $('tv-theater').addEventListener('click', () => tvTheater());
