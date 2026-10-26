@@ -178,7 +178,7 @@ button{font-family:inherit;color:var(--ink)}
  #log{left:auto;right:max(10px,env(safe-area-inset-right));bottom:auto;top:max(8px,env(safe-area-inset-top));width:min(300px,40vw);height:70px;font-size:13px;pointer-events:none;justify-content:flex-start;text-align:right}
  #hints{display:none}
 }
-@media (max-height:520px){ .fr .n{font-size:14px}.fr .hp{font-size:19px}.fr .st{font-size:16px} #log{font-size:13px;height:64px} }
+@media (max-height:520px){ #radarw{width:104px;height:104px;min-width:0;min-height:0;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 66px)} #clock{height:28px}#clock::before{font-size:11px}#time{font-size:20px}#tA,#tB{height:26px}#tA .sc,#tB .sc{font-size:20px}#tA::before,#tB::before{width:16px;height:16px} .fr .n{font-size:14px}.fr .hp{font-size:19px}.fr .st{font-size:16px} #log{font-size:13px;height:64px} }
 @media (pointer:fine){#touch{display:none}}
 #tcopy{position:fixed;left:50%;top:24%;transform:translateX(-50%);z-index:12;background:rgba(40,20,0,.88);border:2px solid var(--g);color:var(--g);padding:8px 20px;border-radius:10px;font-weight:900;font-size:22px;letter-spacing:3px;text-align:center;cursor:pointer;animation:tcp .45s infinite alternate}#tcopy small{display:block;font-size:11px;letter-spacing:1px;color:#fff}@keyframes tcp{to{transform:translateX(-50%) scale(1.1)}}
 </style>
