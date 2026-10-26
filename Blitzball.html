@@ -69,6 +69,9 @@ button{font-family:inherit;color:var(--ink)}
 #cd{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:Orbitron;font-weight:900;font-size:min(20vw,170px);color:#fff;text-shadow:0 0 30px #00cfff,0 0 60px #0077ff}
 #cd span{animation:cdp .9s ease-out}
 @keyframes cdp{from{transform:scale(2.2);opacity:0}30%{opacity:1}to{transform:scale(.9);opacity:.2}}
+#fade{position:fixed;inset:0;z-index:7;pointer-events:none;background:#000;opacity:0;transition:opacity .6s ease}
+.bo{position:fixed;left:14%;top:30%;font-family:Rajdhani,sans-serif;font-weight:700;font-size:clamp(28px,5vw,54px);letter-spacing:1px;color:#ff9a2e;text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000,0 0 16px rgba(255,150,40,.7);animation:boin 1.7s ease-out forwards}
+@keyframes boin{0%{opacity:0;transform:scale(1.6)}12%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0}}
 #flash{position:fixed;inset:0;z-index:7;pointer-events:none;background:#fff;opacity:0}
 #flash.go{animation:fl .9s ease-out}
 @keyframes fl{0%{opacity:.7}100%{opacity:0}}
@@ -198,7 +201,7 @@ button{font-family:inherit;color:var(--ink)}
   <div class="panel" id="hints"><b>WASD</b> swim · <b>Q/E</b> up/down<br><b>SHIFT</b> boost · <b>SPACE</b> command / tackle<br><b>C</b> camera · <b>TAB</b> switch · <b>T</b> auto · <b>P</b> pause</div>
  </div>
 </div>
-<div id="tcopy" class="hide"></div><div id="banner"></div><div id="cd"></div>
+<div id="tcopy" class="hide"></div><div id="banner"></div><div id="cd"></div><div id="fade"></div>
 <div id="enc" class="panel gold hide"></div>
 <div id="meter" class="panel gold hide"><div class="o" style="color:var(--g);letter-spacing:3px;font-size:13px">POWER TIMING</div><div class="tr"><div class="z1" id="mz1"></div><div class="z2" id="mz2"></div><div class="nd" id="mnd"></div></div><div style="font-size:12px;color:#bfeaff">Press <span class="kb">SPACE</span> / tap in the green</div></div>
 <div id="touch" class="hide"><div id="joy"><i id="joyk"></i></div>
@@ -911,7 +914,7 @@ function banner(txt, sub, cls, dur = 2.2, tm) { if (Array.isArray(txt)) txt = tm
 function flash() { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 function updScore() { $('scA').textContent = M.score[0]; $('scB').textContent = M.score[1]; }
 const tn = (p) => `<b style="color:${p.def.css}">${p.name}</b>`;
-function cinema(type, extra) { M.cin = { type, ...extra }; M.cinT = 0; }
+function cinema(type, extra) { M.cin = { type, ...extra, at: T.t }; M.cinT = 0; }
 
 /* ------------------------------------------------------------------ BALL */
 function assignCarrier(p) {
@@ -1176,8 +1179,27 @@ function idleStep(dt) { stepPlayers(dt * 0.0); }
 
 /* ------------------------------------------------------------------ MATCH FLOW */
 function halfName() { return M.golden ? 'GOLDEN GOAL' : M.half === 1 ? '1ST HALF' : '2ND HALF'; }
+/* Blitzoff: the ball is held in a spout on the floor, then shoots up through the water and the kicking team's midfielder catches it */
+const KO_LEN = 4.4, KO_FLOOR = -(R - 7);
+function koSetup() {
+    M.ko = { shown: false, rung: false, caught: false }; M.B.carrier = null; M.B.flight = null; M.B.pos.set(0, KO_FLOOR, 0); M.B.vel && M.B.vel.set(0, 0, 0); M.B.loose = 0;
+    const f = $('fade'); if (f) { f.style.transition = 'none'; f.style.opacity = '1'; void f.offsetWidth; f.style.transition = 'opacity .7s ease'; setTimeout(() => { f.style.opacity = '0'; }, 120); }
+    $('cd').innerHTML = '';
+}
+function ringFlat(pos, col, big) { const m = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.22, 8, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = Math.PI / 2; m.position.copy(pos); m.userData = { age: 0 }; m.scale.setScalar(big ? 1.4 : 1); scene.add(m); bursts.push(m); }
+function koStep(dt) {
+    const o = M.ko; if (!o) return; const e = KO_LEN - M.modeT, B = M.B, kicker = M.players.find((q) => q.team === M.kick && q.role === 'MF');
+    if (e < 1.5) { B.pos.set(0, KO_FLOOR + Math.sin(T.t * 3) * 0.25, 0); B.spin += dt * 2; if (!o.rung && e > 0.35) { o.rung = true; ringFlat(new V3(0, KO_FLOOR - 1, 0), 0xcdf3ff, true); burst(B.pos, 26, 0xcdf3ff, 6, 1.2); } }
+    else if (!o.caught) {
+        const k = Math.min(1, (e - 1.5) / 1.8), ease = 1 - Math.pow(1 - k, 2); if (!o.up) { o.up = true; ringFlat(new V3(0, KO_FLOOR - 1, 0), 0xffe0a0, true); burst(B.pos, 40, 0xffffff, 12, 1.2); AU.shotSnd && AU.shotSnd(); }
+        B.pos.set(0, KO_FLOOR + (0 - KO_FLOOR) * ease, 0); B.spin += dt * 16; if (Math.random() < 0.9) burst(B.pos, 3, 0xcdf3ff, 3, 0.9);
+        if (k >= 1 && kicker) { o.caught = true; takeBall(kicker); say(`${tn(kicker)} catches the ball!`); AU.catchSnd && AU.catchSnd(); }
+    } else carryBall();
+    if (!o.shown && e > 1.1) { o.shown = true; $('cd').innerHTML = '<div class="bo">Blitzoff!</div>'; AU.go && AU.go(); }
+    if (e > 3.0 && $('cd').innerHTML) $('cd').innerHTML = '';
+}
 function startKickoff(kt) {
-    M.kick = kt; placeKickoff(kt); M.mode = 'kickoff'; M.modeT = 3.4; M.cdn = 4; M.B.lastTeam = kt; M.lock = null; M.holdT = 0; M.holdFn = null; M.cin = null; $('half').textContent = halfName();
+    M.kick = kt; placeKickoff(kt); M.mode = 'kickoff'; M.modeT = KO_LEN; M.cdn = 0; koSetup(); M.B.lastTeam = kt; M.lock = null; M.holdT = 0; M.holdFn = null; M.cin = null; $('half').textContent = halfName();
     say(`${halfName() === 'GOLDEN GOAL' ? '<b>Golden goal!</b> Next goal wins. ' : ''}${M.teams[kt].name} kick off.`); AU.whistle(1);
 }
 function endHalf() {
@@ -1196,10 +1218,10 @@ function endMatch() {
 }
 function stepFlow(dt) {
     if (M.mode === 'kickoff') {
-        M.modeT -= dt; const n = Math.ceil(M.modeT); if (n < M.cdn && n >= 1 && n <= 3) { M.cdn = n; $('cd').innerHTML = `<span>${n}</span>`; AU.tick(); }
-        carryBall(); if (M.modeT <= 0) { M.mode = 'play'; M.cdn = 0; $('cd').innerHTML = ''; AU.go(); banner('GO!', '', '', 0.9); updateCtrl(); }
+        M.modeT -= dt; koStep(dt);
+        if (M.modeT <= 0) { M.mode = 'play'; M.cdn = 0; M.ko = null; $('cd').innerHTML = ''; if (!M.B.carrier) { const k0 = M.players.find((q) => q.team === M.kick && q.role === 'MF'); if (k0) takeBall(k0); } updateCtrl(); }
     } else if (M.mode === 'goal') {
-        M.modeT -= dt; if (M.modeT <= 0) { if (M.golden) endMatch(); else startKickoff(M.kick); }
+        M.modeT -= dt; if (M.modeT < 0.6 && !M.golden) { const f = $('fade'); if (f) f.style.opacity = '1'; } if (M.modeT <= 0) { if (M.golden) endMatch(); else startKickoff(M.kick); }
     } else if (M.mode === 'half') {
         if (M.halfWait) return; M.modeT -= dt; if (M.modeT <= 0) { if (M.golden && M.half === 2) { M.half = 3; M.time = 90; startKickoff(Math.random() < 0.5 ? 0 : 1); } else { M.half = 2; M.time = M.halfLen; startKickoff(1 - M.firstKick); } }
     } else if (M.mode === 'play') stepPlay(dt);
@@ -1303,26 +1325,90 @@ function actSwitch(s = localSeat()) {
     if (!s) return; if (isGuest()) { netSend({ t: 'act', a: 'sw' }); AU.ui(); return; } if (M.mode !== 'play') return;
     const ref = M.B.carrier ? M.B.carrier.pos : M.B.pos, l = field(s.team).filter((p) => p === s.ctrl || !seatOf(p)).sort((a, b) => a.pos.distanceTo(ref) - b.pos.distanceTo(ref)); const i = l.indexOf(s.ctrl); s.ctrl = l[(i + 1) % l.length]; s.lock = 3; if (s.kind === 'local') AU.ui();
 }
-function actCam() { camMode = (camMode + 1) % 3; SET.cam = camMode; saveSet(); $('camname').textContent = 'CAM · ' + CAMN[camMode]; AU.ui(); }
+function actCam() { camMode = CAMORD[(CAMORD.indexOf(camMode) + 1) % CAMORD.length]; SET.cam = camMode; saveSet(); $('camname').textContent = 'CAM · ' + CAMN[camMode]; say('Camera: ' + CAMN[camMode]); AU.ui(); }
 function actAssist() { M.assist = !M.assist; SET.assist = M.assist; saveSet(); if (isGuest()) netSend({ t: 'act', a: 'assist', v: M.assist ? 1 : 0 }); $('cMode').textContent = M.assist ? 'AUTO' : 'MANUAL'; say(M.assist ? 'Auto-assist on: encounters are handled for you.' : 'Manual encounters.'); }
 
 /* ------------------------------------------------------------------ CAMERA */
-let camMode = SET.cam || 0; const CAMN = ['BEHIND', 'BROADCAST', 'TACTICAL'];
+if (!SET.camv) { SET.cam = 3; SET.camv = 1; saveSet(); }           // the FFX-style director camera is the new default
+let camMode = SET.cam || 0; const CAMN = ['BEHIND', 'BROADCAST', 'TACTICAL', 'DIRECTOR (AUTO)', 'CLOSE-UP', 'LOW ANGLE', 'SIDE WIDE', 'OVERHEAD'], CAMORD = [3, 0, 4, 5, 6, 7, 1, 2];
 const camPos = new V3(-30, 12, 0), camLook = new V3(), camTmpP = new V3(), camTmpL = new V3(); let camFov = 62;
 function cinActive() {
     const c = M.cin; if (!c) return false;
     if (c.type === 'enc') return M.lock === 'menu' || M.holdT > 0; if (c.type === 'pass' || c.type === 'shot') return !!M.B.flight; if (c.type === 'goal') return M.mode === 'goal'; return false;
 }
+/* ---- the FFX director: hard cuts between a set of named shots, like the broadcast in the game ---- */
+const DIRC = { shot: 'chase', until: 0, last: '', key: '', flip: 1 };
+const CAMSHOTS = { chase: 'DIRECTOR · CHASE', low: 'DIRECTOR · LOW ANGLE', front: 'DIRECTOR · CLOSE-UP', side: 'DIRECTOR · SIDE', high: 'DIRECTOR · OVERHEAD', wide: 'DIRECTOR · WIDE', goalview: 'DIRECTOR · GOAL VIEW' };
+const _cf = new V3(), _cs = new V3(), _cg = new V3();
+/* fills P (position) and L (look-at) for a named shot around subject s; returns the field of view */
+function camShot(name, s, P, L) {
+    const B = M.B, f = s ? s.pos : B.pos, g = goalPos(s ? s.team : M.myTeam);
+    const fw = _cf.copy(s && s.fwd ? s.fwd : new V3(myDir(), 0, 0)); if (s && s.vel && s.vel.lengthSq() > 4) fw.copy(s.vel).normalize(); fw.y *= 0.4; fw.normalize();
+    const sd = _cs.crossVectors(fw, Y); if (sd.lengthSq() < 0.05) sd.set(0, 0, 1); sd.normalize(); sd.multiplyScalar(DIRC.flip);
+    const tg = _cg.copy(g).sub(f).setY(0); if (tg.lengthSq() < 1) tg.copy(fw); tg.normalize();
+    switch (name) {
+        case 'low': P.copy(f).addScaledVector(fw, -12).addScaledVector(sd, 3.5).addScaledVector(Y, -5.5); L.copy(f).addScaledVector(fw, 5).addScaledVector(Y, 3.5); return 68;
+        case 'front': P.copy(f).addScaledVector(fw, 9.5).addScaledVector(sd, 2.2).addScaledVector(Y, 1.4); L.copy(f).addScaledVector(Y, 0.9); return 46;
+        case 'side': P.copy(f).addScaledVector(sd, 23).addScaledVector(fw, -4).addScaledVector(Y, 3.5); L.copy(f).addScaledVector(fw, 7); return 60;
+        case 'high': P.copy(f).addScaledVector(Y, 31).addScaledVector(fw, -13); L.copy(f).addScaledVector(fw, 9); return 58;
+        case 'wide': P.set(f.x * 0.6, 12, (f.z >= 0 ? -1 : 1) * 56 * DIRC.flip); L.set(f.x * 0.9, f.y * 0.5, f.z * 0.5); return 72;
+        case 'goalview': P.copy(f).addScaledVector(tg, -15).addScaledVector(sd, 7).addScaledVector(Y, 5); L.copy(f).lerp(g, 0.62); return 60;
+        default: P.copy(f).addScaledVector(fw, -15).addScaledVector(Y, 6.5); L.copy(f).addScaledVector(fw, 20); return 62;      // chase
+    }
+}
+function dirPick(s) {
+    const B = M.B, g = goalPos(s ? s.team : M.myTeam), near = s && s.pos.distanceTo(g) < 42;
+    const pool = near ? ['goalview', 'goalview', 'chase', 'low', 'side', 'front'] : ['chase', 'chase', 'low', 'front', 'side', 'high', 'wide'];
+    let n; do { n = pool[(Math.random() * pool.length) | 0]; } while (n === DIRC.last && pool.length > 1);
+    DIRC.last = DIRC.shot; DIRC.shot = n; DIRC.flip = Math.random() < 0.5 ? 1 : -1;
+    DIRC.until = T.t + (n === 'front' ? rnd(2.4, 3.4) : n === 'wide' ? rnd(3.5, 5) : rnd(3.6, 6.4));
+}
+let camSnapNext = false;
 function updCamera(dt) {
     board.sp.visible = false;
-    const B = M.B, ctrl = M.ctrl || B.carrier, d = myDir(); let fov = 62, k = 3.2; const P = camTmpP, L = camTmpL;
-    if (M.mode === 'title') { const a = T.t * 0.12; P.set(Math.cos(a) * 48, 10 + Math.sin(a * 0.7) * 5, Math.sin(a) * 48); L.set(0, 0, 0); k = 1.2; }
+    const B = M.B, ctrl = M.ctrl || B.carrier, d = myDir(); let fov = 62, k = 3.2; const P = camTmpP, L = camTmpL; let key = 'm' + camMode;
+    const subj = B.carrier || ctrl;
+    if (M.mode === 'title' || M.mode === 'end') { const a = T.t * 0.12; P.set(Math.cos(a) * 48, 10 + Math.sin(a * 0.7) * 5, Math.sin(a) * 48); L.set(0, 0, 0); k = 1.2; key = 'orbit'; }
     else if (cinActive()) {
-        const c = M.cin; k = 4.5;
-        if (c.type === 'enc') { const a = c.a.pos, b = c.b.pos, f = a.clone().lerp(b, 0.5), dir = b.clone().sub(a).normalize(), side = new V3().crossVectors(dir, Y).normalize(); if (side.lengthSq() < 0.1) side.set(0, 0, 1); P.copy(f).addScaledVector(side, 11).addScaledVector(Y, 3.5).addScaledVector(dir, -3); L.copy(f); fov = 52; }
-        else if (c.type === 'pass') { const f = B.flight; if (f) { const e = flightEnd(), dir = e.clone().sub(f.from).setY(0).normalize(); P.copy(B.pos).addScaledVector(dir, -13).add(new V3(0, 5, 0)).addScaledVector(new V3().crossVectors(dir, Y), 6); L.copy(B.pos).addScaledVector(dir, 6); } fov = 60; }
-        else if (c.type === 'shot') { const g = goalPos(c.t), dir = g.clone().sub(c.from.pos).normalize(); P.copy(B.pos).addScaledVector(dir, -12).add(new V3(0, 2.2, 0)).addScaledVector(new V3().crossVectors(dir, Y), 4); L.copy(B.pos).lerp(g, 0.45); fov = 58; k = 5; }
-        else if (c.type === 'goal') { const a = T.t * 0.7, f = B.pos; P.set(f.x + Math.cos(a) * 17, f.y + 5, f.z + Math.sin(a) * 17); L.copy(f); fov = 52; k = 2.5; board.sp.visible = true; board.sp.position.set(f.x * 0.85, f.y + 7.5, f.z * 0.85); }
+        const c = M.cin; k = 4.5; const age = T.t - (c.at || T.t); key = 'c' + c.type;
+        if (c.type === 'enc') {
+            const a = c.a.pos, b = c.b.pos, f = a.clone().lerp(b, 0.5), dir = b.clone().sub(a).normalize(), side = new V3().crossVectors(dir, Y).normalize(); if (side.lengthSq() < 0.1) side.set(0, 0, 1);
+            const v = (M.encN || 0) % 3; key += v;
+            if (v === 0) { P.copy(f).addScaledVector(side, 11).addScaledVector(Y, 3.5).addScaledVector(dir, -3); L.copy(f); fov = 52; }                           // the two-shot from the side
+            else if (v === 1) { P.copy(a).addScaledVector(dir, -6.5).addScaledVector(side, 1.8).addScaledVector(Y, 2.4); L.copy(b).addScaledVector(Y, 0.6); fov = 44; k = 6; }   // over the carrier's shoulder
+            else { P.copy(f).addScaledVector(side, 7).addScaledVector(Y, -5.5).addScaledVector(dir, 2); L.copy(f).addScaledVector(Y, 1.2); fov = 56; k = 5; }                       // looking up at the clash
+        }
+        else if (c.type === 'pass') {
+            const f = B.flight;
+            if (f) {
+                const e = flightEnd(), dir = e.clone().sub(f.from).setY(0).normalize(), prog = f.t / Math.max(0.01, f.dur);
+                if (prog > 0.6 && f.follow) { key += 'B'; P.copy(e).addScaledVector(dir, 8.5).addScaledVector(Y, 1.6).addScaledVector(new V3().crossVectors(dir, Y), 2); L.copy(B.pos).lerp(e, 0.5); fov = 48; k = 7; }     // cut to the receiver's face as the ball arrives
+                else { P.copy(B.pos).addScaledVector(dir, -13).add(new V3(0, 5, 0)).addScaledVector(new V3().crossVectors(dir, Y), 6); L.copy(B.pos).addScaledVector(dir, 6); fov = 60; }
+            }
+        }
+        else if (c.type === 'shot') {
+            const g = goalPos(c.t), dir = g.clone().sub(c.from.pos).normalize(), f = B.flight, prog = f ? f.t / Math.max(0.01, f.dur) : 0;
+            if (prog > 0.5) { key += 'G'; P.copy(g).addScaledVector(dir, 9).addScaledVector(Y, 3).addScaledVector(new V3().crossVectors(dir, Y), 5); L.copy(B.pos).lerp(g, 0.3); fov = 58; k = 7; }   // behind the goal, the ball flying at us
+            else { P.copy(B.pos).addScaledVector(dir, -12).add(new V3(0, 2.2, 0)).addScaledVector(new V3().crossVectors(dir, Y), 4); L.copy(B.pos).lerp(g, 0.45); fov = 58; k = 5; }
+        }
+        else if (c.type === 'goal') {
+            const f = B.pos, g = goalPos(c.t), dir = g.clone().normalize();
+            if (age < 1.0) { key += 'L'; P.copy(g).addScaledVector(dir, -13).addScaledVector(Y, 2.5).addScaledVector(new V3().crossVectors(dir, Y), 5); L.copy(g); fov = 62; k = 6; }     // the goal line as it goes in
+            else { const a = T.t * 0.7; P.set(f.x + Math.cos(a) * 17, f.y + 5, f.z + Math.sin(a) * 17); L.copy(f); fov = 52; k = 2.5; board.sp.visible = true; board.sp.position.set(f.x * 0.85, f.y + 7.5, f.z * 0.85); }
+        }
+    } else if (M.mode === 'kickoff' && M.ko && M.modeT > 0 && M.modeT <= KO_LEN) {
+        const e = KO_LEN - M.modeT, bp = M.B.pos; key = 'ko' + (e < 1.5 ? 0 : e < 3.2 ? 1 : 2); k = e < 1.5 ? 2.5 : 5;
+        if (e < 1.5) { P.set(7 - e * 0.9, KO_FLOOR + 5.5 - e * 0.4, 11 - e * 1.3); L.set(0, KO_FLOOR + 1, 0); fov = 52; }              // low over the floor, the ball in its spout
+        else if (e < 3.2) { P.set(9, Math.max(KO_FLOOR + 3, bp.y - 7), 13); L.copy(bp); fov = 56; }                                       // following the ball up
+        else { P.set(-16 * d, 7, 20); L.set(0, 0, 0); fov = 62; }                                                                   // the catch, wide
+    } else if (M.mode === 'kickoff' || M.mode === 'half') {
+        const a = T.t * 0.25; P.set(Math.cos(a) * 26, 36, 30 * d + Math.sin(a) * 14); L.set(0, 0, 0); fov = 60; k = 1.6; key = 'kick';
+    } else if (camMode === 3) {
+        if (T.t >= DIRC.until || !subj) dirPick(subj);
+        fov = camShot(DIRC.shot, subj, P, L); k = 4.2; key = 'd' + DIRC.shot + DIRC.until;
+        $('camname').textContent = CAMSHOTS[DIRC.shot];
+    } else if (camMode >= 4) {
+        const nm = camMode === 4 ? 'front' : camMode === 5 ? 'low' : camMode === 6 ? 'side' : 'high'; DIRC.flip = 1; fov = camShot(nm, subj, P, L); k = 3.4;
     } else {
         const bx = B.pos.x;
         if (camMode === 0) { const f = ctrl ? ctrl.pos.clone().lerp(B.pos, 0.3) : B.pos; P.set(f.x - 17 * d, f.y + 8.5, f.z); L.set(f.x + 22 * d, f.y * 0.8, f.z * 0.9); fov = 62 + (ctrl && ctrl.boost ? 8 : 0); k = 3.6; }
@@ -1330,8 +1416,11 @@ function updCamera(dt) {
         else { P.set(bx * 0.8, 60, 18 * d); L.set(bx * 0.8, 0, 0); fov = 56; k = 2.2; }
     }
     if (P.length() > R - 3) P.setLength(R - 3);
+    if (key !== DIRC.key) { if (/^(d|cpassB|cshotG|cgoalL)/.test(key) || /^(d|cpassB|cshotG|cgoalL)/.test(DIRC.key)) camSnapNext = true; DIRC.key = key; }
     const s = 1 - Math.exp(-k * dt); if (dt === 0) return;
-    camPos.lerp(P, s); camLook.lerp(L, Math.min(1, s * 1.6)); camera.position.copy(camPos);
+    if (camSnapNext) { camSnapNext = false; camPos.copy(P); camLook.copy(L); camFov = fov; }
+    else { camPos.lerp(P, s); camLook.lerp(L, Math.min(1, s * 1.6)); }
+    camera.position.copy(camPos);
     if (M.shake > 0) { camera.position.add(new V3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).multiplyScalar(M.shake * 0.8)); M.shake = Math.max(0, M.shake - dt * 1.5); }
     camera.lookAt(camLook); camFov = lerp(camFov, fov, Math.min(1, dt * 3)); if (Math.abs(camera.fov - camFov) > 0.05) { camera.fov = camFov; camera.updateProjectionMatrix(); }
 }
@@ -1824,6 +1913,7 @@ function showHelp() {
     <li><b>Space / CMD</b> opens the command menu at any time when you are free. Shots can use special techniques (Jecht Shot…) and a <b>power timing meter</b>: stop it in the green.</li>
     <li>Defending: swim into the carrier and press <b>Space</b> to tackle. <b>Tab</b> switches player. The ball carrier loses HP; at zero HP he gets tired and slow.</li>
     <li><b>C</b> camera · <b>T</b> auto-assist (the AI plays encounters for you) · <b>J</b> auto swim · <b>P</b> pause · <b>M</b> music.</li><li><b>Techcopy:</b> in the Team screen each player marks an opponent. When that opponent uses a technique, press <b>X</b> (pad <b>B</b>) quickly to learn it. Players level up after each half, unlocking technique slots (Team screen). <b>F</b> opens the formation list.</li></ul>
+    <p class="rec" style="margin:6px 0">Blitzball model: "Blitzball" by DDO1_Models (sketchfab.com/DDO1_Models), CC BY 4.0.</p>
     <div class="row"><button class="btn gold" id="hb">Back</button></div></div>`; $('hb').onclick = () => { AU.back(); show('pause', false); if (M.mode === 'title') showTitle(); else togglePause(true); }; $('hb').focus();
 }
 function showSettings(from) {
