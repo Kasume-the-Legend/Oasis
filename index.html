@@ -3005,7 +3005,7 @@ function kbModel(THREE, mk) {
 
             // A new message pops up just above the name plate and pushes older ones up; they fade out after a few seconds.
             showBubble(text, fill) {
-                const now = nowS();
+                const now = nowS(); try { spkPop(this, text, fill); } catch (e) { /* overlay is optional */ }
                 const made = makeBubble(text, colorFor(this.id), validHex(fill) || undefined);
                 this.group.add(made.sprite);
                 this.bubbles.push({ sprite: made.sprite, w: made.w, h: made.h, hFlat: made.hFlat, flat: false, born: now, until: now + clamp(3.5 + String(text).length * 0.07, 4, 9), y: null });
@@ -13525,7 +13525,7 @@ function kbModel(THREE, mk) {
         function nfFxTick(dt) { for (const f of NF.fx.slice()) { f.t += dt; const k = Math.min(1, f.t / f.dur); try { f.upd(k); } catch (e) { /* gone */ } if (k >= 1) { f.mesh.removeFromParent(); f.mesh.geometry && f.mesh.geometry.dispose(); f.mesh.material && f.mesh.material.dispose(); NF.fx.splice(NF.fx.indexOf(f), 1); } } }
         function nfDealDmg(m, mul, mag) {
             if (m.dead) return 0; const crit = Math.random() < 0.1 + Math.min(0.5, (nfBf() && nfBf().crit) || 0), lvf = Math.max(0.5, Math.min(1.5, 1 + (NF.lv - m.lv) * 0.05)), base = (mag ? NF.mag : NF.atk) * (NF.buffT > 0 ? 1.3 : 1) * nfFoodAtk() * mul * (0.9 + Math.random() * 0.2) * lvf * (1 - Math.min(0.35, (NU_CLS[m.cls] ? NU_CLS[m.cls].def : 1) * 0.08)), d = Math.max(1, Math.round(base * (crit ? 1.6 : 1)));
-            try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } try { nfRumble(crit ? 0.55 : 0.28, crit ? 0.45 : 0.22, crit ? 130 : 70); } catch (e) { /* rumble */ } try { nfHitBurst(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) * 0.6, m.z), NF.glow ? NF.hitCol : (mag ? 0xc9a8ff : 0xcfeaff), crit || mul >= 1.5); } catch (e) { /* cosmetic */ } m.hp -= d; try { const L = nfBf() && nfBf().leech; if (L && !NF.dead && NF.hp < NF.hpMax) { const hh = Math.max(1, Math.round(d * L)); NF.hp = Math.min(NF.hpMax, NF.hp + hh); const tn = performance.now(); if (tn - (NF.lchT || 0) > 900) { NF.lchT = tn; nfPop(nfPos().clone().setY(nfPos().y + 2.0), '+' + hh, '#9affb0'); } } } catch (e) { /* leech */ } m.mine = true; const thr = Math.round(d * NF_THR[nfMyRole()]); nfThreatAdd(m, me.id, thr); if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id, th: thr }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
+            try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } try { nfRumble(crit ? 0.55 : 0.28, crit ? 0.45 : 0.22, crit ? 130 : 70); } catch (e) { /* rumble */ } try { nfHitBurst(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) * 0.6, m.z), NF.glow ? NF.hitCol : (mag ? 0xc9a8ff : 0xcfeaff), crit || mul >= 1.5); } catch (e) { /* cosmetic */ } m.hp -= d; try { nfLogAdd('dealt', 'You hit ' + String(m.name || m.cls || 'a monster') + (m.boss ? ' (boss)' : '') + ' for ' + d + (crit ? ' (critical)' : ''), { d }); } catch (e) { /* log */ } try { const L = nfBf() && nfBf().leech; if (L && !NF.dead && NF.hp < NF.hpMax) { const hh = Math.max(1, Math.round(d * L)); NF.hp = Math.min(NF.hpMax, NF.hp + hh); const tn = performance.now(); if (tn - (NF.lchT || 0) > 900) { NF.lchT = tn; nfPop(nfPos().clone().setY(nfPos().y + 2.0), '+' + hh, '#9affb0'); } } } catch (e) { /* leech */ } m.mine = true; const thr = Math.round(d * NF_THR[nfMyRole()]); nfThreatAdd(m, me.id, thr); if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id, th: thr }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
             NF.lb = Math.min(100, NF.lb + (m.boss ? 2 : 3)); if (m.fate) m.fate.hit = true; if (!m.aggro) nfAggro(m); if (m.hp <= 0) nfMobDie(m); return d;
         }
         function nfCan(s) { if (NF.dead) return false; if (s.k === 'none') { try { padToast('Empty Blue Magic slot: Devour a weakened monster to learn its attack'); nfPop(nfPos().clone().setY(nfPos().y + 2), 'Empty slot', '#9fd0ff'); } catch (e) { /* toast */ } return false; } if (s.mp > 0 && nfStHas('silence')) { try { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Silenced', '#a9bde0'); padToast('Silenced: eat Echo Honey Tonic or Grandma’s Remedy'); } catch (e) { /* toast */ } return false; } const now = performance.now() / 1000; if (s.gcd && NF.gcd > 0) return false; if (s.cd && (NF.cds[s.id] || 0) > now) return false; if (s.mp && NF.mp < s.mp * (NF.simCost || 1)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb8ff'); return false; } if (s.heatCost && ((NF.heat || 0) < s.heatCost || NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), NF.oh > 0 ? 'Already Overheated' : 'Need ' + s.heatCost + ' Heat', '#ffb347'); return false; } if (s.needOH && !(NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Hypercharge first', '#ffb347'); return false; } if (NF.lbSeq) return false; if (s.lb && NF.lb < 100) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Limit gauge not full', '#ffd24a'); return false; } if (NF.cast) return false; return true; }
@@ -13782,7 +13782,7 @@ function kbModel(THREE, mk) {
         function nfAggro(m) { if (!m.aggro) { try { NSX.growl(m); } catch (e) { /* audio */ } } m.aggro = true; if (m.group) for (const o of m.group.mobs) if (!o.dead) o.aggro = true; NF.comb = 6; }
         function nfShareN() { try { if (!PARTY.code || !NS.pl) return 1; let n = 1; for (const q of NS.pl) if (!q.me && PARTY.members.has(q.id)) n++; return n; } catch (e) { return 1; } }
         function nfMobDie(m, remote) {
-            if (m.dead) return; m.dead = true; if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); try { if (m.node.visible) nuShatter(m.node, m.big || 1); } catch (e) { /* cosmetic */ } m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
+            if (m.dead) return; m.dead = true; try { nfLogAdd('kill', String(m.name || m.cls || 'A monster') + (m.boss ? ' (boss)' : '') + ' was defeated', { boss: !!m.boss }); } catch (e) { /* log */ } if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); try { if (m.node.visible) nuShatter(m.node, m.big || 1); } catch (e) { /* cosmetic */ } m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
             try { if (!remote || m.mine) nfFoodDrop(m); } catch (e) { /* food */ }
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
             { const sN = nfShareN(), own = !remote || m.mine, xs = sN > 1 ? xp / sN : xp;      // the whole party shares a kill's XP equally, whoever landed the blow
@@ -13797,7 +13797,7 @@ function kbModel(THREE, mk) {
         function nfPlayerHurt(d, from) {
             try { if (!NF.dead && !(NF.inv > 0)) { NSX.playerHit(); nfRumble(Math.min(1, 0.4 + d / Math.max(1, NF.hpMax) * 3), 0.65, 130 + Math.min(260, d * 3)); } } catch (e) { /* audio */ }
             if (NF.dead) return; if (NF.inv > 0) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); if (nfMyRole() === 'tank') d = Math.round(d * 0.8); if (NF.def > 0) d = Math.round(d * (1 - Math.min(0.6, NF.def / (NF.def + 260)))); if (nfBf() && nfBf().def) d = Math.round(d * (1 - nfBf().def)); d = Math.max(1, Math.round(d)); NF.hp -= d; try { if (from && from.cls && d > 0) nfStHit(from); } catch (e) { /* status */ } NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
-            if (NF.tele) nfTeleCancel('Teleport interrupted'); if (NF.hp <= 0) nfDie();
+            if (NF.tele) nfTeleCancel('Teleport interrupted'); try { nfLogAdd('hurt', 'You took ' + Math.round(d) + ' damage from ' + String((from && (from.name || from.cls)) || 'an enemy') + ' (' + Math.max(0, Math.round(NF.hp)) + '/' + Math.round(NF.hpMax) + ' HP)', { d, aoe: !!NFLOG.aoe, frac: Math.max(0, NF.hp) / Math.max(1, NF.hpMax) }); } catch (e) { /* log */ } if (NF.hp <= 0) nfDie();
         }
         /* ---- DOWN: you fall where you stand and a pale crystal with floating shards marks the spot. A Phoenix Down (yours, or a friend's) stands you back up at 25% HP; or you can return to an aether crystal. ---- */
         const NF_ITEM_CD = 2.5;
@@ -13877,7 +13877,7 @@ function kbModel(THREE, mk) {
             const f = nfFallNear(); h.style.display = f ? 'block' : 'none'; if (f) h.textContent = (btBagLoad().phoenix | 0) > 0 ? '🪶 Use a Phoenix Down on ' + f.name + '  (F / ✋)' : f.name + ' has fallen · you need a Phoenix Down';
         }
         async function nfDie() {
-            if (NF.dead) return; NF.dead = true; nfRumble(1, 1, 600); NF.cast = null; NF.tgt = null; NF.roll = null; NF.hot = null; nuShowBanner('YOU HAVE FALLEN', 'USE A PHOENIX DOWN OR RETURN TO A CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
+            if (NF.dead) return; NF.dead = true; try { nfLogAdd('down', 'You were knocked down', {}); } catch (e) { /* log */ } nfRumble(1, 1, 600); NF.cast = null; NF.tgt = null; NF.roll = null; NF.hot = null; nuShowBanner('YOU HAVE FALLEN', 'USE A PHOENIX DOWN OR RETURN TO A CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
             const P = nfPos(), fx = Math.round(P.x * 100) / 100, fy = Math.round(P.y * 100) / 100, fz = Math.round(P.z * 100) / 100;
             try { nsSend({ k: 'pd', x: fx, y: fy, z: fz }); } catch (e) { /* offline */ } let hid = null; try { hid = localActor.holder || localActor.group; if (hid.visible) { nuShatter(hid, 1.3); hid.visible = false; if (localActor.label) localActor.label.visible = false; } else hid = null; } catch (e) { hid = null; }   // the same polygon shatter the monsters get
             NF.hid = hid; await new Promise((r) => setTimeout(r, 700)); if (!NF.dead) return; nfFallBuild(me.id, me.name || 'You', fx, fy, fz, true); nfDownUi(true);
@@ -13950,7 +13950,7 @@ function kbModel(THREE, mk) {
             const kinds = m.boss ? ['circle', 'cone', 'line', 'self', 'donut'] : [NU_TELE[m.cls] || 'circle']; let kind = kinds[Math.floor(Math.random() * kinds.length)];
             const wind = m.boss ? 1.8 : 1.5, ang = Math.atan2(p.x - m.x, p.z - m.z), sc = m.boss ? 1.3 : 1, T = { kind, t: 0, wind, m, ang, dmg: m.atk * sc, x: m.x, z: m.z };
             if (kind === 'circle') { T.r = m.boss ? 5.5 : 3.6; T.x = p.x; T.z = p.z; T.dmg *= 1.7; } else if (kind === 'self') { T.r = m.boss ? 7.5 : 4.6; T.dmg *= 1.6; } else if (kind === 'donut') { T.r = m.boss ? 11 : 8; T.ri = m.boss ? 4.2 : 3; T.dmg *= 1.8; } else if (kind === 'cone') { T.r = m.boss ? 10 : 7; T.a = 1.15; T.dmg *= 1.9; } else { T.len = m.boss ? 18 : 13; T.w = m.boss ? 3.4 : 2.4; T.dmg *= 2.0; }
-            nfTelBuild(m, T); if (m.sid) nsSend({ k: 't', id: m.sid, T: { kind: T.kind, x: nsRound(T.x, 20), z: nsRound(T.z, 20), ang: nsRound(ang, 100), r: T.r, ri: T.ri, a: T.a, len: T.len, w: T.w, dmg: Math.round(T.dmg), wind: T.wind } });
+            nfTelBuild(m, T); try { nfLogAdd('tele', String(m.name || m.cls || 'An enemy') + (m.boss ? ' (boss)' : '') + ' is winding up a ' + kind + ' ground attack (red zone)', { boss: !!m.boss, kind }); } catch (e) { /* log */ } if (m.sid) nsSend({ k: 't', id: m.sid, T: { kind: T.kind, x: nsRound(T.x, 20), z: nsRound(T.z, 20), ang: nsRound(ang, 100), r: T.r, ri: T.ri, a: T.a, len: T.len, w: T.w, dmg: Math.round(T.dmg), wind: T.wind } });
             m.wind = true; m.aoeT = m.boss ? 5 + Math.random() * 3 : 7 + Math.random() * 4; m.atkT = Math.max(m.atkT, 1.2); m.ang = ang; if (m.boss) nfPop(new THREE.Vector3(m.x, m.node.position.y + 3.4, m.z), kind === 'line' ? 'CHARGE!' : kind === 'cone' ? 'CLEAVE!' : kind === 'self' ? 'SHOCKWAVE!' : kind === 'donut' ? 'GET IN!' : 'SLAM!', '#ff6a5a', true);
         }
         function nfTelHit(T, p) {
@@ -13976,7 +13976,7 @@ function kbModel(THREE, mk) {
             const p = nfPos(); for (const T of NF.tels.slice()) {
                 T.t += dt; const k = Math.min(1, T.t / T.wind); T.fill.material.opacity = 0.3 + 0.45 * k;
                 if (T.m.dead || (T.m.reset && !T.m.aggro)) { T.t = T.wind + 1; T.cancel = true; }
-                if (T.t >= T.wind) { if (!T.cancel && !NF.dead && nfTelHit(T, p)) nfPlayerHurt(T.dmg * (0.9 + Math.random() * 0.2), T.m); if (!T.cancel) { const fl = new THREE.Mesh(T.fill.geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })); fl.rotation.copy(T.fill.rotation); T.g.add(fl); setTimeout(() => { fl.removeFromParent(); fl.material.dispose(); }, 130); } T.m.wind = false; setTimeout(() => { T.g.removeFromParent(); T.fill.geometry.dispose(); T.fill.material.dispose(); }, 140); NF.tels.splice(NF.tels.indexOf(T), 1); }
+                if (T.t >= T.wind) { if (!T.cancel && !NF.dead && nfTelHit(T, p)) { NFLOG.aoe = true; try { nfPlayerHurt(T.dmg * (0.9 + Math.random() * 0.2), T.m); } finally { NFLOG.aoe = false; } } if (!T.cancel) { const fl = new THREE.Mesh(T.fill.geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })); fl.rotation.copy(T.fill.rotation); T.g.add(fl); setTimeout(() => { fl.removeFromParent(); fl.material.dispose(); }, 130); } T.m.wind = false; setTimeout(() => { T.g.removeFromParent(); T.fill.geometry.dispose(); T.fill.material.dispose(); }, 140); NF.tels.splice(NF.tels.indexOf(T), 1); }
             }
         }
         /* ---- shared world: everyone in Adventia sees the same monsters, FATEs and Hunts ----
@@ -22920,6 +22920,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             { const pm = /^\/(?:p|party)(?:\s+(.*))?$/i.exec(text); if (pm) { if (pm[1]) return partyChat(pm[1]); partyToggle(true); return true; } }
             { const fm = /^\/fx(?:\s+(.*))?$/i.exec(text); if (fm) return fxCommand(fm[1]); }
             { if (/^\/ship\s*$/i.test(text)) { shipBoard(); return true; } }
+            { const cm = /^\/cmpbattle(?:\s+(on|off))?$/i.exec(text); if (cm) { if (cm[1]) cmpBattleSet(cm[1].toLowerCase() === 'on'); sysChat('Companions ' + (CMPBT.on ? 'comment on fights (they read the battle log). /cmpbattle off quiets them.' : 'stay quiet during fights. /cmpbattle on lets them comment.')); return true; } }
             { const cm = /^\/cmpshare(?:\s+(on|off))?$/i.exec(text); if (cm) { if (cm[1]) cmpnShareSet(cm[1].toLowerCase() === 'on'); sysChat('Companions are ' + (CMPN.share ? 'shown to other players (their words go to your party only). /cmpshare off hides them.' : 'hidden from other players. /cmpshare on shows them.')); return true; } }
             if (/^\/(games?|cards?|tt|c4)$/i.test(text)) { gmOpen(); return true; }
             if (text.startsWith('/') && EMOTES[text.slice(1)]) { performEmote(text.slice(1)); return true; }
@@ -31230,9 +31231,98 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             try { if (K.e) { const nm = K.e + (1 + ((Math.random() * 3) | 0)); if (EMOTES[nm] || (typeof HERO_ACTS !== 'undefined' && HERO_ACTS[nm])) a.playEmote(nm); } } catch (e) { /* no clip */ }
             nfFx(cl === 'gunner' ? 'bolt' : 'slash', ag.position, tp); nfDealDmg(fo, K.pot * (1 + NF.lv * 0.02), false);
         }
+        /* ---- companions in a fight: they read the hidden battle log, step out of red zones, and speak where you can see them ---- */
+        const NFLOG = { ev: [] };
+        function nfLogAdd(k, s, o) { try { NFLOG.ev.push({ t: Date.now(), k, s: String(s).slice(0, 150) }); if (NFLOG.ev.length > 80) NFLOG.ev.shift(); cmpBattleSense(k, s, o || {}); } catch (e) { /* the log is never allowed to break a fight */ } }
+        const CMPBT = { on: (() => { try { return localStorage.getItem('oasis.cmp.battle') !== '0'; } catch (e) { return true; } })(), last: 0, inFight: false, start: 0, lastEv: 0, hurtLow: false, kills: 0, took: 0, dealt: 0, acc: 0, mid: 0, dodged: 0 };
+        function cmpBattleSet(on) { CMPBT.on = !!on; try { localStorage.setItem('oasis.cmp.battle', on ? '1' : '0'); } catch (e) { /* private mode */ } }
+        const CMPB_SAY = {
+            low: ['Hang in there, I am right behind you!', 'You are getting hurt, drink something!', 'Careful, you are low!', 'Back off a second and heal!'],
+            down: ['No! Hold on, I will get you up!', 'They got you! Somebody grab a Phoenix Down!', 'You are down, I am coming!'],
+            tele: ['Big one coming, watch the red!', 'Move out of the red!', 'Get out of the circle!', 'That glow is a hit, step aside!'],
+            boss: ['That is the boss down. Great work!', 'We did it! It is finally down!', 'Boss defeated, nice one!'],
+            end: ['That was a good fight.', 'Nice work, that went well.', 'Another one down. What next?', 'We make a good team.'],
+            aoe: ['You stood in the red, step out next time!', 'Ouch, that zone got you!', 'Watch the floor, the red hurts!'],
+            dodge: ['Moving!', 'Not me!', 'Out of the red!', 'Got it, stepping out!'],
+            mid: ['Still going strong!', 'Keep it up, we are doing fine.', 'Stay on it, you are doing great.']
+        };
+        function cmpBattleCanned(c, tag) { const L = CMPB_SAY[tag]; const r = CMP.active.get(c.id); if (!L || !r || !r.actor) return; cmpSay(r, c, L[(Math.random() * L.length) | 0]); }
+        function cmpBattleTalk(tag, hint, force) {
+            const now = Date.now(); if (!CMPBT.on || activeMap !== 'nuu' || (!force && now - CMPBT.last < 14000)) return;
+            const pool = [...CMP.active.values()].filter((r) => r.actor && !CMP.busy.has(r.c.id)); if (!pool.length) return;
+            const r = pool[(Math.random() * pool.length) | 0], c = r.c; CMPBT.last = now;
+            if (CMP.ai.key || CMP.keyless) {
+                const log = NFLOG.ev.slice(-14).map((e) => '- ' + e.s).join('\n');
+                cmpReply(c, '[Battle moment: ' + hint + ' React out loud in ONE short line (20 words at most), in your own voice, like a teammate who just watched it happen. Do not recite numbers.]', '[BATTLE LOG: hidden from the player, only you can read it. Newest last.]\n' + log, true, true);
+            } else cmpBattleCanned(c, tag);
+        }
+        function cmpBattleSense(k, s, o) {
+            const now = Date.now();
+            if (k === 'dealt' || k === 'hurt' || k === 'tele') { if (!CMPBT.inFight) { CMPBT.inFight = true; CMPBT.start = now; CMPBT.kills = 0; CMPBT.took = 0; CMPBT.dealt = 0; CMPBT.hurtLow = false; CMPBT.mid = now; } CMPBT.lastEv = now; }
+            if (k === 'dealt') CMPBT.dealt += o.d || 0; else if (k === 'hurt') CMPBT.took += o.d || 0; else if (k === 'kill') CMPBT.kills++;
+            if (!CMPBT.on || !CMP.active.size) return;
+            if (k === 'down') cmpBattleTalk('down', 'The player just fell in battle.', true);
+            else if (k === 'hurt' && o.aoe) cmpBattleTalk('aoe', 'The player got caught in a red danger zone.');
+            else if (k === 'hurt' && o.frac < 0.35 && !CMPBT.hurtLow) { CMPBT.hurtLow = true; cmpBattleTalk('low', 'The player is badly hurt (under a third of their health).'); }
+            else if (k === 'tele' && o.boss) cmpBattleTalk('tele', 'The boss just started a big ground attack (' + (o.kind || 'a zone') + ').');
+            else if (k === 'kill' && o.boss) cmpBattleTalk('boss', 'The boss is down!', true);
+        }
+        function cmpBattleTick(dt) {
+            CMPBT.acc += dt; if (CMPBT.acc < 1) return; CMPBT.acc = 0; const now = Date.now();
+            if (CMPBT.inFight && now - CMPBT.lastEv > 7000) { CMPBT.inFight = false; if (now - CMPBT.start > 6000 && CMPBT.kills > 0) cmpBattleTalk('end', 'The fight just ended: ' + CMPBT.kills + ' down, the player took ' + (CMPBT.took > 0 ? 'some' : 'no') + ' damage.'); }
+            else if (CMPBT.inFight && now - CMPBT.mid > 35000 && now - CMPBT.start > 15000) { CMPBT.mid = now; cmpBattleTalk('mid', 'The fight is still going.'); }
+        }
+        /* stepping out of enemy red zones */
+        const cmpLiveTels = () => (typeof NF !== 'undefined' && NF.tels ? NF.tels.filter((T) => !T.cancel && T.t < T.wind + 0.05) : []);
+        function cmpSafeSpot(px, pz, inZ) {
+            const P = localActor.group.position; let best = null, bs = 1e9;
+            for (let rad = 2.2; rad <= 16; rad += 1.6) { for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, x = px + Math.sin(a) * rad, z = pz + Math.cos(a) * rad; if (inZ(x, z)) continue; const dp = Math.hypot(x - P.x, z - P.z); if (dp > 20) continue; const sc = rad + dp * 0.15; if (sc < bs) { bs = sc; best = { x, z, y: nuH(x, z) }; } } if (best) break; }
+            return best || { x: px + 6, z: pz, y: nuH(px + 6, pz) };
+        }
+        function cmpDodge(r, ag, t) {
+            if (activeMap !== 'nuu') return null; const live = cmpLiveTels(); if (!live.length) { if (r.dg && r.dg.fled && Date.now() - CMPBT.dodged > 25000) { CMPBT.dodged = Date.now(); nfLogAdd('dodge', r.c.name + ' stepped out of the red zone in time'); if (Math.random() < 0.45) cmpBattleTalk('dodge', 'You just stepped out of a red zone in time.', true); } r.dg = null; return null; }
+            const inZ = (x, z) => live.some((T) => nfTelHit(T, { x, z })), px = ag.position.x, pz = ag.position.z;
+            if (inZ(px, pz)) {
+                const now = performance.now(); if (!r.dg) r.dg = { at: now + 120 + Math.random() * 380, tgt: null, fled: false };
+                if (now < r.dg.at) return null;
+                if (!r.dg.tgt || inZ(r.dg.tgt.x, r.dg.tgt.z)) r.dg.tgt = cmpSafeSpot(px, pz, inZ);
+                r.dg.fled = true; return r.dg.tgt;
+            }
+            if (r.dg && r.dg.fled) { if (t && inZ(t.x, t.z)) return { x: px, z: pz, y: ag.position.y }; return null; }
+            if (t && inZ(t.x, t.z)) return { x: px, z: pz, y: ag.position.y };          // never walk into a warning
+            return null;
+        }
+        /* speech beside the speaker's head, readable in first person (and when they are behind you: pinned to the screen edge with an arrow) */
+        const SPK = { css: false, map: new Map(), raf: 0 };
+        function spkPop(actor, text, fill) {
+            if (!fpOn || !actor || actor === localActor || !actor.group || !text) return;
+            if (!SPK.css) { SPK.css = true; const st = document.createElement('style'); st.textContent = '.spk{position:fixed;left:0;top:0;z-index:22;max-width:min(260px,44vw);padding:6px 10px 7px;border-radius:12px;background:rgba(14,20,36,.88);border:2px solid #6aa8ff;color:#fff;font:600 14px/1.3 Nunito,Inter,system-ui,sans-serif;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.45);transition:opacity .25s;opacity:0;text-shadow:0 1px 2px #000}.spk.on{opacity:1}.spk b{display:block;font-size:11px;letter-spacing:.5px;margin-bottom:1px;color:var(--c,#9fd0ff)}.spk i{position:absolute;top:50%;width:0;height:0;margin-top:-7px;border:7px solid transparent}.spk.r i{left:-14px;border-right-color:var(--c,#6aa8ff)}.spk.l i{right:-14px;border-left-color:var(--c,#6aa8ff)}.spk.e{font-size:13px}'; document.head.appendChild(st); }
+            let e = SPK.map.get(actor); if (!e) { const el = document.createElement('div'); el.className = 'spk'; el.innerHTML = '<b></b><span></span><i></i>'; document.body.appendChild(el); e = { el, actor }; SPK.map.set(actor, e); }
+            const col = validHex(fill) || '#6aa8ff'; e.el.style.setProperty('--c', col); e.el.style.borderColor = col; e.el.children[0].textContent = String(actor.name || ''); e.el.children[1].textContent = String(text).slice(0, 240);
+            e.until = performance.now() + Math.max(4000, Math.min(9000, 3500 + String(text).length * 70)); e.el.classList.add('on');
+            if (!SPK.raf) SPK.raf = requestAnimationFrame(spkLoop);
+        }
+        function spkLoop() {
+            SPK.raf = 0; const now = performance.now(), W = window.innerWidth, H = window.innerHeight, v = new THREE.Vector3(), q = new THREE.Vector3();
+            for (const [actor, e] of [...SPK.map]) {
+                if (!fpOn || now > e.until || !actor.group || !actor.group.parent) { e.el.remove(); SPK.map.delete(actor); continue; }
+                actor.group.getWorldPosition(v); v.y += 1.8 * (actor.group.scale.y || 1);
+                q.copy(v).applyMatrix4(camera.matrixWorldInverse); const behind = q.z > 0; v.project(camera);
+                const el = e.el, w = el.offsetWidth, h = el.offsetHeight; let x, y, side;
+                if (behind || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) {                                // off screen: pin to the edge toward them
+                    const right = behind ? q.x > 0 : v.x > 0; side = right ? 'l' : 'r'; x = right ? W - w - 28 : 28; y = Math.max(60, Math.min(H - h - 60, behind ? H * 0.45 : (0.5 - v.y * 0.5) * H - h / 2)); el.classList.add('e');
+                } else {
+                    el.classList.remove('e'); const sx = (v.x * 0.5 + 0.5) * W, sy = (-v.y * 0.5 + 0.5) * H; const rightSide = sx < W / 2;      // beside the head, toward the middle of the screen
+                    side = rightSide ? 'r' : 'l'; x = rightSide ? sx + 34 : sx - 34 - w; y = sy - h / 2 - 8; x = Math.max(8, Math.min(W - w - 8, x)); y = Math.max(8, Math.min(H - h - 8, y));
+                }
+                el.className = 'spk on ' + side + (el.classList.contains('e') ? ' e' : ''); el.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+            }
+            if (SPK.map.size) SPK.raf = requestAnimationFrame(spkLoop);
+        }
         function cmpFrame(dt) {
             if (!CMP.active.size) { CMP.trail.length = 0; return; }
             try { cmpSimTick(dt); } catch (e) { /* needs are cosmetic */ }
+            try { cmpBattleTick(dt); } catch (e) { /* chatter is cosmetic */ }
             const g = localActor.group, P = g.position; let snap = false;
             if (activeMap !== CMP.map) { CMP.map = activeMap; CMP.trail.length = 0; snap = true; }
             const L = CMP.trail, last = L[L.length - 1]; if (!last || Math.hypot(P.x - last.x, P.z - last.z) > 0.4) { L.push({ x: P.x, y: P.y, z: P.z }); if (L.length > 500) L.shift(); } else last.y = P.y;
@@ -31243,9 +31333,10 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
                 let fo = null; if (activeMap === 'nuu' && NU.ready && !NF.dead) { try { fo = nfCmpFoe(r); } catch (e) { fo = null; } }
                 if (fo) { const K = NF_CMP[(r.c && r.c.cls) || 'hero'] || NF_CMP.hero, fdx = ag.position.x - fo.x, fdz = ag.position.z - fo.z, fl = Math.hypot(fdx, fdz) || 1, stop = K.rng * 0.8 + (fo.big || 1) * 0.7 + i * 0.5; t = { x: fo.x + fdx / fl * stop, z: fo.z + fdz / fl * stop, y: nuH(fo.x + fdx / fl * stop, fo.z + fdz / fl * stop) }; }
                 r.actor.group.visible = activeMap !== 'btl';
+                let flee = false; try { const dg = cmpDodge(r, ag, t); if (dg) { t = dg; flee = true; } } catch (e) { /* dodge is a bonus */ }
                 let dx = t.x - ag.position.x, dz = t.z - ag.position.z, d = Math.hypot(dx, dz);
                 if (snap || d > 45) { const an = cmpAnchor(i); ag.position.set(an.x, an.y, an.z); r.actor.firstFrame = true; dx = dz = d = 0; }
-                let step = 0; if (d > 0.12) { const spd = Math.min(fo ? 9 : 7.2, 0.5 + d * 2.6) * cmpSimMods(r.c).move; step = Math.min(d, spd * dt); ag.position.x += dx / d * step; ag.position.z += dz / d * step; }
+                let step = 0; if (d > 0.12) { const spd = flee ? 11.5 : Math.min(fo ? 9 : 7.2, 0.5 + d * 2.6) * cmpSimMods(r.c).move; step = Math.min(d, spd * dt); ag.position.x += dx / d * step; ag.position.z += dz / d * step; }
                 ag.position.y += (t.y - ag.position.y) * (1 - Math.exp(-dt * 10));
                 const want = fo && d < 3 ? Math.atan2(fo.x - ag.position.x, fo.z - ag.position.z) : step > 0.004 ? Math.atan2(dx, dz) : Math.atan2(P.x - ag.position.x, P.z - ag.position.z);
                 if (fo) { try { nfCmpStep(r, fo, ag, dt); } catch (e) { /* cosmetic */ } }
