@@ -15691,6 +15691,38 @@ function kbModel(THREE, mk) {
             hurt(m) { const k = nsxNear(m); if (k < 0.05) return; nsxBurst(0, 0.07, 3000, 900, 0.9, 0.05 * k, 'bandpass'); nsxTone(0, 260 + Math.random() * 120, 120, 0.12, 0.035 * k, 'square'); },
             playerHit() { nsxBurst(0, 0.1, 1200, 300, 1, 0.09, 'lowpass'); nsxTone(0, 110, 55, 0.18, 0.1, 'sine'); }
         };
+        // ---- ADVENTIA (Forest of Nuu) sound: the old synth + class-weapon sounds are replaced by the Pixel Combat SFX (base + extra) and the voice pack
+        // (your Pitch / Variety sliders). Only NSX.shatter (a foe is defeated) stays stock. Set AD_STOCK_SFX to true to bring the old sounds back.
+        const AD_STOCK_SFX = false;
+        if (!AD_STOCK_SFX) {
+            const adMob = (m) => ({ id: 'ad' + (m && m.id !== undefined ? m.id : 'x'), isFoe: true, big: !!(m && (m.boss || m.big)) });
+            const adPc = (k) => { try { gnSndInit(); } catch (e) { /* audio not ready */ } try { pcLayer(k); pcExtra(k); } catch (e) { /* sfx optional */ } };
+            const adV = (cat, who, ch, force) => { try { btVoicePre(); btVoice(cat, who, ch, force); } catch (e) { /* voice optional */ } };
+            let adImp = 0;
+            NSX.swing = (m) => { const k = nsxNear(m); if (k < 0.05) return; adPc('claw'); if (k > 0.3) adV('grunt', adMob(m), 0.35); };
+            NSX.growl = (m) => { const k = nsxNear(m); if (k < 0.05) return; adPc('claw'); if (k > 0.25) adV(m && m.boss ? 'shout' : 'grunt', adMob(m), 0.8); };
+            NSX.hurt = (m) => { const k = nsxNear(m); if (k < 0.05) return; adPc('foehit'); if (k > 0.3) adV('damage', adMob(m), 0.5); };
+            NSX.playerHit = () => { adPc('foehit'); adV('damage', undefined, 0.7); };
+            NSX.impact = (m, mag, crit) => { const t = performance.now(); if (t - adImp < 45) return; adImp = t; const k = nsxNear(m); if (k < 0.08) return; adPc(crit ? 'crit' : mag ? 'bolt' : 'hit'); if (k > 0.3) adV('damage', adMob(m), crit ? 0.6 : 0.3); };
+            NSX.slice = () => { /* impact() covers it */ };
+            NSX.whoosh = () => { adPc('swing'); adV('grunt', undefined, 0.45); };
+            NSX.aura = () => { adPc('cast'); adV('shout', undefined, 0.5); };
+            NSX.kbSummon = (on) => { adPc(on ? 'cast' : 'ready'); };
+            NSX.levelUp = () => { adPc('heal'); adV('win', undefined, 1, true); };
+            NSX.skill = (s) => {
+                if (!s) return; const k = s.k, nm = String(s.n || '').toLowerCase(), mag = !!s.mag;
+                const el = /fire|flare|ifrit|burst|meteo|ultima|ember|blaze|fireball/.test(nm) ? 'fire' : /blizzard|ice|shiva|frost|freeze/.test(nm) ? 'ice' : /thunder|ramuh|bolt|zap|lightning|trinity/.test(nm) ? 'thunder' : /holy|cure|regen|bene|light|assize|physick/.test(nm) ? 'holy' : null;
+                let pc = 'swing', v = ['grunt', 0.5];
+                if (k === 'heal' || k === 'hot' || k === 'mp' || k === 'buff') { pc = 'heal'; v = ['ok', 0.5]; }
+                else if (k === 'guard') { pc = 'dodge'; v = ['ok', 0.4]; }
+                else if (k === 'lb') { pc = 'limit'; v = ['shout', 1]; }
+                else if (k === 'summon') { pc = 'cast'; v = ['shout', 0.8]; }
+                else if (k === 'taunt') { pc = 'quake'; v = ['shout', 0.8]; }
+                else if (k === 'steal' || k === 'dash') { pc = 'dodge'; v = ['grunt', 0.6]; }
+                else if (mag || el) { pc = el === 'fire' ? 'fire' : el === 'ice' ? 'ice' : el === 'thunder' ? 'bolt' : el === 'holy' ? 'heal' : 'cast'; v = ['shout', 0.7]; }
+                adPc(pc); adV(v[0], undefined, v[1]);
+            };
+        }
         /* ---- Sword-Art-Online style defeat: the enemy holds its shape for a breath as glowing polygon shards, then bursts and drifts away as light ---- */
 
         /* ---- pyreflies: soft glowing motes that drift up through Adventia, tinted by the season (a night-time spectacle, a faint shimmer by day) ---- */
@@ -30356,7 +30388,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             let tx = tp[0] - o[0], ty = tp[1] - o[1], tz = tp[2] - o[2]; const l = Math.hypot(tx, ty, tz) || 1; const d = [tx / l, ty / l, tz / l];
             const r = nfRay(o, d, A.range); let len = r.m ? r.t : A.range; if (!r.m && d[1] < -0.01) { const tg = (nuH(o[0] + d[0] * 20, o[2] + d[2] * 20) - o[1]) / d[1]; if (tg > 0 && tg < len) len = Math.min(len, tg); }
             g.rotation.y = NG.yaw; NG.kick = 1; try { localActor.gnKick = 1; } catch (e) { /* none */ }
-            try { gnFlash(o, mz ? mz.d : d, 'pistol'); gnSnd(gnOne(GW.pistol.fire), GW.pistol.vol); gnTracer(o, d, len, 0xffe9a8, 1); } catch (e) { /* cosmetic */ }
+            try { gnFlash(o, mz ? mz.d : d, 'pistol'); if (typeof AD_STOCK_SFX !== 'undefined' && !AD_STOCK_SFX) { try { gnSndInit(); pcLayer('gun'); pcExtra('gun'); btVoicePre(); btVoice('grunt', undefined, 0.2); } catch (e) { /* sfx optional */ } } else gnSnd(gnOne(GW.pistol.fire), GW.pistol.vol); gnTracer(o, d, len, 0xffe9a8, 1); } catch (e) { /* cosmetic */ }
             try { net && net.send({ t: 'gn', w: 'pistol', o: o.map((v) => Math.round(v * 100) / 100), d: d.map((v) => Math.round(v * 1000) / 1000), l: Math.round(len * 10) / 10 }); } catch (e) { /* offline */ }
             if (r.m) { nfTarget(r.m); nfDealDmg(r.m, A.pot * (1 + NF.lv * 0.02), false); try { fxPlay('bullet', { x: o[0] + d[0] * r.t, y: o[1] + d[1] * r.t, z: o[2] + d[2] * r.t }, { flesh: true }); } catch (e) { /* cosmetic */ } NF.comb = 6; }
         }
