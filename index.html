@@ -14444,7 +14444,7 @@ function kbModel(THREE, mk) {
         function mgTick(dt) {
             for (const k of ['mgProt', 'mgShell', 'mgHaste']) if (NF[k] > 0) { NF[k] -= dt; if (NF[k] <= 0) { NF[k] = 0; try { nfPop(mgPos(), (k === 'mgProt' ? 'Protect' : k === 'mgShell' ? 'Shell' : 'Haste') + ' wore off', '#cfd8e0'); } catch (e) { /* pop */ } } }
             MG.t += dt; if (MG.t < 0.3) return; MG.t = 0;
-            const on = activeMap === 'nuu' && NU.ready && !NF.dead; if (!MG.hud) mgHudBuild(); MG.hud.style.display = on && !(NF.ui && NF.ui.root && !NF.ui.root.classList.contains('on')) ? 'flex' : 'none';
+            const on = activeMap === 'nuu' && NU.ready && !NF.dead; if (!MG.hud) mgHudBuild(); MG.hud.style.display = on && window.__mgHud && !(NF.ui && NF.ui.root && !NF.ui.root.classList.contains('on')) ? 'flex' : 'none';
             if (on && !MG.hint) { MG.hint = 1; mgSave(); nuShowBanner('MAGIC', 'V DRAW · M MAGIC MENU · NO MP NEEDED'); }
             if (on) mgHudRefresh(); else if (MG.open) mgClose();
         }
@@ -14770,9 +14770,15 @@ function kbModel(THREE, mk) {
             NF.stU = (NF.stU || 0) - dt; if (ch || NF.stU <= 0) { NF.stU = 1; nfStUi(); }
         }
         function nfStUi() {
-            let el = document.getElementById('nf-st'); if (!el) { const st = document.createElement('style'); st.textContent = '#nf-st{position:fixed;left:12px;top:132px;z-index:20;display:flex;flex-wrap:wrap;gap:4px;max-width:260px;pointer-events:none;font:700 11px system-ui,sans-serif}#nf-st span{background:rgba(10,14,22,.78);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:2px 8px;color:#fff;text-shadow:0 1px 2px #000}'; document.head.appendChild(st); el = document.createElement('div'); el.id = 'nf-st'; document.body.appendChild(el); }
-            const parts = []; for (const k of Object.keys(NF.st)) parts.push('<span style="border-color:' + NF_ST[k].col + ';color:' + NF_ST[k].col + '">' + NF_ST[k].ic + ' ' + NF_ST[k].n + ' ' + Math.ceil(NF.st[k]) + 's</span>');
-            if (NF.fd) { const b = NF.fd.bf; parts.push('<span style="border-color:#8fe29a;color:#b8ffc4">' + (b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋') + ' ' + NF.fd.n + ' ' + Math.ceil(NF.fd.left) + 's</span>'); }
+            let el = document.getElementById('nf-st'); if (!el) { const st = document.createElement('style'); st.textContent = '#nf-st{position:fixed;left:12px;top:132px;z-index:20;display:flex;flex-wrap:wrap;gap:4px;max-width:260px;pointer-events:none;font:700 11px system-ui,sans-serif}#nf-st span{background:rgba(10,14,22,.78);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:2px 8px;color:#fff;text-shadow:0 1px 2px #000}'
+                + '#nf-pf #nf-st.in{position:static;flex:0 0 auto;flex-wrap:nowrap;gap:0;max-width:none;margin-left:auto;align-self:flex-end;padding-bottom:3px}#nf-pf #nf-st.in span{position:relative;box-sizing:border-box;width:25px;height:25px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 14px/1 system-ui,sans-serif;letter-spacing:0;background:rgba(10,14,22,.9);box-shadow:0 2px 5px rgba(0,0,0,.7)}#nf-pf #nf-st.in span b{position:absolute;right:-4px;bottom:-5px;min-width:13px;padding:0 2px;border-radius:7px;background:rgba(0,0,0,.82);font:800 9px/13px Nunito,system-ui,sans-serif;letter-spacing:0;text-align:center;color:inherit;text-shadow:none}'; document.head.appendChild(st); el = document.createElement('div'); el.id = 'nf-st'; document.body.appendChild(el); }
+            const host = document.querySelector('#nf-pf .c .nfl');   // the status icons ride on top of the HP bar, stacked at its right end (they fall back to the old floating spot if the HUD is not built yet)
+            if (host) { if (el.parentNode !== host) host.appendChild(el); } else if (el.parentNode !== document.body) document.body.appendChild(el);
+            el.classList.toggle('in', !!host);
+            const items = []; for (const k of Object.keys(NF.st)) items.push({ col: NF_ST[k].col, ic: NF_ST[k].ic, n: NF_ST[k].n, s: Math.ceil(NF.st[k]) });
+            if (NF.fd) { const b = NF.fd.bf; items.push({ col: '#8fe29a', ic: (b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋'), n: NF.fd.n, s: Math.ceil(NF.fd.left) }); }
+            const ov = host && items.length > 1 ? Math.max(3, Math.min(14, (25 * items.length - 72) / (items.length - 1))) : 0;   // the more icons, the more they overlap, so the stack never grows past the HP number
+            const parts = items.map((it, i) => host ? '<span style="border-color:' + it.col + ';color:' + it.col + ';' + (i ? 'margin-left:-' + ov.toFixed(1) + 'px;' : '') + '">' + it.ic + '<b>' + it.s + '</b></span>' : '<span style="border-color:' + it.col + ';color:' + it.col + '">' + it.ic + ' ' + it.n + ' ' + it.s + 's</span>');
             const h = parts.join(''); if (el.innerHTML !== h) el.innerHTML = h; const on = activeMap === 'nuu' && NU.ready; if (el.style.display !== (on ? 'flex' : 'none')) el.style.display = on ? 'flex' : 'none';
         }
         const nfBfText = (M) => { const b = M.bf || {}, o = []; if (b.crit) o.push('crit +' + Math.round(b.crit * 100) + '%'); if (b.leech) o.push('leech ' + Math.round(b.leech * 100) + '%'); if (b.mpc) o.push('MP cost -' + Math.round(b.mpc * 100) + '%'); if (b.haste) o.push('actions ' + Math.round(b.haste * 100) + '% faster'); if (b.sres) o.push('status time -' + Math.round(Math.min(0.8, b.sres) * 100) + '%'); if (b.atk) o.push('ATK +' + Math.round(b.atk * 100) + '%'); if (b.def) o.push('damage taken -' + Math.round(b.def * 100) + '%'); if (b.spd) o.push('move +' + Math.round(b.spd * 100) + '%'); if (b.ward) o.push('immune to bad statuses'); if (M.cure) o.push('cures ' + (M.cure === 'all' ? 'everything' : M.cure.map((k) => NF_ST[k].n).join(', '))); return o.join(' · '); };
@@ -19383,8 +19389,8 @@ function btMusicStop() {
         const GFX_SH = { off: { n: 'Off', on: false, max: 512, every: 1 }, low: { n: 'Low', on: true, max: 512, every: 3 }, med: { n: 'Medium', on: true, max: 1024, every: 2 }, high: { n: 'High', on: true, max: 2048, every: 1 }, ultra: { n: 'Ultra', on: true, max: 4096, every: 1 } };
         const GFX = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('oasis.gfx') || '{}') || {}; } catch (e) { /* storage */ } const fresh = !s.preset && s.res === undefined, pr = GFX_PRESETS[s.preset] ? s.preset : (fresh ? 'balanced' : 'custom'), P = GFX_PRESETS[pr] || {};
             const res = ['auto', '0.5', '0.6', '0.75', '1', '1.25', '1.5', 'native'].includes(s.res) ? s.res : (P.res || 'auto'), cap = [0, 30, 45, 60, 90].includes(+s.cap) && s.cap !== undefined ? +s.cap : (P.cap === undefined ? 0 : P.cap);
-            return { preset: pr, res, cap, shadow: GFX_SH[s.shadow] ? s.shadow : (P.shadow || 'ultra'), emu: ['first', 'balanced', 'full'].includes(s.emu) ? s.emu : (P.emu || 'first'), fps: !!s.fps, fresh, last: 0, fc: 0, ft: 0, sw: 0, shown: 0, el: null, panel: null, bench: null }; })();
-        function gfxSave() { try { localStorage.setItem('oasis.gfx', JSON.stringify({ preset: GFX.preset, res: GFX.res, cap: GFX.cap, fps: GFX.fps, emu: GFX.emu, shadow: GFX.shadow })); } catch (e) { /* storage */ } }
+            return { preset: pr, res, cap, shadow: GFX_SH[s.shadow] ? s.shadow : (P.shadow || 'ultra'), emu: ['first', 'balanced', 'full'].includes(s.emu) ? s.emu : (P.emu || 'first'), fps: !!s.fps, mg: (window.__mgHud = !!s.mg), fresh, last: 0, fc: 0, ft: 0, sw: 0, shown: 0, el: null, panel: null, bench: null }; })();
+        function gfxSave() { try { localStorage.setItem('oasis.gfx', JSON.stringify({ preset: GFX.preset, res: GFX.res, cap: GFX.cap, fps: GFX.fps, emu: GFX.emu, shadow: GFX.shadow, mg: GFX.mg })); } catch (e) { /* storage */ } }
         function gfxFixedRatio() { const d = window.devicePixelRatio || 1; return GFX.res === 'native' ? Math.min(d, 2) : Math.min(+GFX.res, Math.max(d, 1.5)); }
         const gfxEmuCap = () => (GFX.emu === 'full' ? 4 : GFX.emu === 'first' ? 0.75 : 1);   // the drawing size while a game is on
         const gfxEmuSkip = () => { if (GFX.emu === 'full') return 1; if (GFX.emu === 'balanced') return 2; try { return tvTheaterOn ? 12 : 4; } catch (e) { return 4; } };   // draw the world every Nth frame while a game is on
@@ -19438,6 +19444,7 @@ function btMusicStop() {
                 if (k && k.startsWith('ac-')) { acClick(k); return; }
                 if (GFX.bench && k !== 'fps') return;
                 if (k === 'fps') GFX.fps = !GFX.fps;
+                else if (k === 'mg') { GFX.mg = !GFX.mg; window.__mgHud = GFX.mg; }
                 else if (k === 'preset') { gfxSetPreset(v); }
                 else if (k === 'auto') { gfxBench(); return; }
                 else if (k === 'res') { GFX.res = v; GFX.preset = 'custom'; gfxApply(); }
@@ -19464,7 +19471,8 @@ function btMusicStop() {
 <div class="row"><b>While a game is running</b><div class="opts">${o('emu', GFX.emu, [['first', 'Game first'], ['balanced', 'Balanced'], ['full', 'Full world']])}</div><p>How much the 3D world draws while an emulator game is on.</p></div>
 <hr><div class="row"><b>Screen shape</b><div class="opts">${o('fit', fit, [['fill', 'Fill screen'], ['wide', 'Wide picture'], ['169', 'Framed']])}</div><p>Fill uses the whole screen. Framed keeps the chosen shape with black bars. Wide keeps the menus in the shape and lets the picture fill the screen.</p></div>
 <div class="row"><b>Aspect ratio</b><div class="opts">${o('ar', Math.round(ar * 1000), [[1778, '16:9'], [1600, '16:10'], [1500, '3:2'], [1333, '4:3'], [2370, '21:9']])}</div><p>Used by Framed and Wide.</p></div>
-<hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>` + csHtml() + acHtml();
+<hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>
+<div class="row"><b>Draw magic buttons</b><div class="opts">${o('mg', GFX.mg ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>The Draw / Magic on-screen buttons in Adventia. Hidden by default. The V key and the controller buttons still work.</p></div>` + csHtml() + acHtml();
         }
         function gfxToggle(on) { gfxBuild(); const open = on === undefined ? GFX.panel.classList.contains('hidden') : !!on; GFX.panel.classList.toggle('hidden', !open); if (open) { try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (e) { /* none */ } gfxRender(); } }
         setTimeout(() => { const b = document.getElementById('btn-settings'); if (b) b.addEventListener('click', () => gfxToggle(true)); }, 0);
