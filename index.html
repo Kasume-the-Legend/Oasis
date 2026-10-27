@@ -12903,7 +12903,11 @@ function kbModel(THREE, mk) {
         function nuCollide(pos) {
             if (!NU.nav) return; const L = NU.last; if (Math.hypot(pos.x - L.x, pos.z - L.z) > 3 || L.y === 0) L.set(pos.x, 1, pos.z);
             if (!nuBlkR(pos.x, pos.z)) { L.set(pos.x, 1, pos.z); return; }
-            if (!nuBlkR(pos.x, L.z)) pos.z = L.z; else if (!nuBlkR(L.x, pos.z)) pos.x = L.x; else { pos.x = L.x; pos.z = L.z; }
+            if (!nuBlkR(pos.x, L.z)) pos.z = L.z; else if (!nuBlkR(L.x, pos.z)) pos.x = L.x; else if (!nuBlkR(L.x, L.z)) { pos.x = L.x; pos.z = L.z; }
+            else {   // soft-lock rescue: the last good spot is itself blocked, so snap to the nearest free spot instead of freezing in place
+                for (let r = 0.25; r <= 4.01; r += 0.25) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.2832, nx = pos.x + Math.cos(a) * r, nz = pos.z + Math.sin(a) * r; if (!nuBlkR(nx, nz)) { pos.x = nx; pos.z = nz; L.set(nx, 1, nz); return; } }
+                pos.x = L.x; pos.z = L.z;
+            }
         }
         function nuClamp(p) { if (p.x > 2500) { znClamp(p); return; } if (p.x > 1000) { p.x = Math.max(DG.X0 + 2, Math.min(DG.X0 + DG.W - 2, p.x)); p.z = Math.max(DG.Z0 + 2, Math.min(DG.Z0 + DG.D - 2, p.z)); return; } p.x = Math.max(-NU_EDGE, Math.min(NU_EDGE, p.x)); p.z = Math.max(-NU_EDGE, Math.min(NU_EDGE, p.z)); }
         const NU_ZCRY = [{ id: 'zn-town', name: 'Carvernia Hold', zone: 'town' }];   // crystals outside the forest that are part of the aether network too
