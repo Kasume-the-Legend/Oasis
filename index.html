@@ -1085,7 +1085,7 @@
             <div id="emu-slots" class="grid grid-cols-4 gap-1.5 mb-2"></div>
             <div class="mb-2"><button id="emu-play" type="button" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600/80 hover:bg-emerald-500">Play</button></div>
             <p id="emu-status" class="text-[11px] text-amber-300/90 break-words mb-1"></p>
-            <p class="text-[10px] text-gray-400 leading-relaxed">Load a game file you own. It runs on your computer and streams to the room; everyone who plugs in plays on the same TV. <b>Keyboard:</b> arrows or WASD, Z/X = B/A, C/V = Y/X, Q/E = L/R, Enter = Start, Shift = Select. A <b>controller</b> works too (hold Back to step away). Press <b>P</b> to pick the controls back up, <b>Esc</b> to walk around again.</p>
+            <p class="text-[10px] text-gray-400 leading-relaxed">Load a game file you own. It runs on your computer and streams to the room; everyone who plugs in plays on the same TV. <b>Keyboard:</b> arrows or WASD, Z/X = B/A, C/V = Y/X, Q/E = L/R, Enter = Start, Shift = Select. A <b>controller</b> works too (hold Back to step away). Press <b>P</b> to pick the controls back up, <b>Esc</b> to walk around again. <b>PlayStation 2</b> (pick it from the list) is one player and needs the Play! engine files in a <code>ps2</code> folder next to this page, served with cross-origin isolation.</p>
         </div>
         <p id="screen-note" class="text-[11px] text-amber-300/90 leading-relaxed break-words"></p>
         <a id="screen-open" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" class="inline-block mt-1 text-[11px] text-gray-400 hover:text-white underline">Open in a new tab</a>
@@ -7647,6 +7647,7 @@ function kbModel(THREE, mk) {
             }
             const f = document.createElement('iframe');
             f.setAttribute('title', 'Central TV');
+            if (window.crossOriginIsolated) f.setAttribute('credentialless', '');   // keeps YouTube and other embeds working on an isolated page (Chromium)
             f.setAttribute('allowfullscreen', '');
             f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');   // YouTube refuses embeds that send no referrer
             f.style.cssText = 'width:1280px;height:720px;border:0;display:block;background:#000;';
@@ -8003,8 +8004,8 @@ function kbModel(THREE, mk) {
          *  its picture and sound are streamed to everyone in the room over the same peer-to-peer connections, and each person who "plugs in"
          *  as player 1-4 sends their own keyboard / controller presses back to the host, who feeds them into that player's port.
          * ------------------------------------------------------------------ */
-        const EMU_SYS = { nes: 'Nintendo (NES)', snes: 'Super Nintendo', segaMD: 'Sega Genesis / Mega Drive', segaMS: 'Sega Master System', gb: 'Game Boy / Color', gba: 'Game Boy Advance', n64: 'Nintendo 64', psx: 'PlayStation', arcade: 'Arcade / Neo Geo' };
-        const EMU_EXT = { nes: 'nes', fds: 'nes', unf: 'nes', sfc: 'snes', smc: 'snes', fig: 'snes', md: 'segaMD', gen: 'segaMD', smd: 'segaMD', sms: 'segaMS', gb: 'gb', gbc: 'gb', gba: 'gba', z64: 'n64', n64: 'n64', v64: 'n64', cue: 'psx', pbp: 'psx', chd: 'psx', iso: 'psx', zip: 'arcade' };
+        const EMU_SYS = { nes: 'Nintendo (NES)', snes: 'Super Nintendo', segaMD: 'Sega Genesis / Mega Drive', segaMS: 'Sega Master System', gb: 'Game Boy / Color', gba: 'Game Boy Advance', n64: 'Nintendo 64', psx: 'PlayStation', ps2: 'PlayStation 2', arcade: 'Arcade / Neo Geo' };
+        const EMU_EXT = { nes: 'nes', fds: 'nes', unf: 'nes', sfc: 'snes', smc: 'snes', fig: 'snes', md: 'segaMD', gen: 'segaMD', smd: 'segaMD', sms: 'segaMS', gb: 'gb', gbc: 'gb', gba: 'gba', z64: 'n64', n64: 'n64', v64: 'n64', cue: 'psx', pbp: 'psx', chd: 'psx', iso: 'psx', zip: 'arcade', cso: 'ps2', isz: 'ps2' };
         // keyboard -> RetroPad button numbers (0 B, 1 Y, 2 Select, 3 Start, 4-7 up/down/left/right, 8 A, 9 X, 10 L, 11 R, 12 L2, 13 R2, 14 L3, 15 R3)
         const EMU_KEYS = { ArrowUp: 4, KeyW: 4, ArrowDown: 5, KeyS: 5, ArrowLeft: 6, KeyA: 6, ArrowRight: 7, KeyD: 7, KeyZ: 0, KeyJ: 0, KeyX: 8, KeyK: 8, KeyC: 1, KeyU: 1, KeyV: 9, KeyI: 9, KeyQ: 10, KeyE: 11, Digit1: 12, Digit3: 13, Enter: 3, Space: 3, ShiftLeft: 2, ShiftRight: 2, Backspace: 2 };
         const EMU_PAD = [[0, 0], [1, 8], [2, 1], [3, 9], [4, 10], [5, 11], [6, 12], [7, 13], [8, 2], [9, 3], [10, 14], [11, 15], [12, 4], [13, 5], [14, 6], [15, 7]];   // standard gamepad button -> RetroPad button
@@ -8013,6 +8014,101 @@ function kbModel(THREE, mk) {
         const emuSleep = (ms) => new Promise((r) => setTimeout(r, ms));
         const emuNameOf = (id) => (id === me.id ? me.name : ((peers.get(id) || {}).name || 'Player'));
         const emuSetStatus = (t) => { EMU.status = t || ''; renderEmu(); };
+
+        // ---- PlayStation 2: the Play! emulator's WebAssembly build (Play.js + Play.wasm), not EmulatorJS.
+        // It needs (1) a page served cross-origin isolated (COOP + COEP headers) and (2) the two engine files in ./ps2/ next to this page
+        // (or set window.__PS2_ENGINE to another same-origin folder before this script runs). One player: the web build only has a keyboard pad.
+        const PS2_BASE = () => { let b = new URL(window.__PS2_ENGINE || './ps2/', location.href).href; if (!b.endsWith('/')) b += '/'; return b; };
+        const ps2Name = (n) => { n = String(n || 'game').replace(/[^\w.\- ()\[\]]+/g, '_').slice(0, 80); return /\.(iso|cso|chd|isz|bin)$/i.test(n) ? n : n + '.iso'; };
+        function ps2Unavailable() {
+            if (!window.crossOriginIsolated || typeof SharedArrayBuffer === 'undefined') return 'PlayStation 2 needs this page to be served with the headers Cross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: credentialless (or require-corp); the emulator uses browser threads that are blocked otherwise. See serve-ps2.js.';
+            return '';
+        }
+        // a PS1 disc is at most about 700 MB, so a bigger .iso / .chd is almost certainly a PS2 DVD
+        function emuGuessSys(file) {
+            const ext = (file.name.split('.').pop() || '').toLowerCase(), s = EMU_EXT[ext] || '';
+            return s === 'psx' && file.size > 8e8 && (ext === 'iso' || ext === 'chd') ? 'ps2' : s;
+        }
+        // RetroPad button number -> the key Play! listens for  [code, key, keyCode]
+        const PS2_KEYS = {
+            0: ['KeyZ', 'z', 90], 1: ['KeyA', 'a', 65], 2: ['Backspace', 'Backspace', 8], 3: ['Enter', 'Enter', 13],       // B = Cross, Y = Square, Select, Start
+            4: ['ArrowUp', 'ArrowUp', 38], 5: ['ArrowDown', 'ArrowDown', 40], 6: ['ArrowLeft', 'ArrowLeft', 37], 7: ['ArrowRight', 'ArrowRight', 39],
+            8: ['KeyX', 'x', 88], 9: ['KeyS', 's', 83],                                                                     // A = Circle, X = Triangle
+            10: ['Digit1', '1', 49], 11: ['Digit8', '8', 56], 12: ['Digit2', '2', 50], 13: ['Digit9', '9', 57], 14: ['Digit3', '3', 51], 15: ['Digit0', '0', 48]   // L1 R1 L2 R2 L3 R3
+        };
+        const PS2_STICKS = [   // axis -> [key for negative, key for positive]: left X, left Y, right X, right Y
+            [['KeyF', 'f', 70], ['KeyH', 'h', 72]], [['KeyT', 't', 84], ['KeyG', 'g', 71]],
+            [['KeyJ', 'j', 74], ['KeyL', 'l', 76]], [['KeyI', 'i', 73], ['KeyK', 'k', 75]]
+        ];
+        function ps2Fire(win, type, k) {
+            try {
+                const t = win.document.getElementById('outputCanvas') || win.document;
+                t.dispatchEvent(new win.KeyboardEvent(type, { key: k[1], code: k[0], keyCode: k[2], which: k[2], bubbles: true, cancelable: true, view: win }));
+            } catch (e) { /* engine not ready yet */ }
+        }
+        function ps2Press(win, bit, down) { const k = PS2_KEYS[bit]; if (k && win) ps2Fire(win, down ? 'keydown' : 'keyup', k); }
+        // host: turn this player's RetroPad state into key presses for the PS2 engine (player 1 only)
+        function ps2Apply(slot, mask, ax) {
+            if (slot !== 0) return;
+            const w = EMU.frame && EMU.frame.contentWindow; if (!w) return;
+            const want = new Map();
+            for (let i = 0; i < 16; i++) if ((mask >> i) & 1) want.set(PS2_KEYS[i][0], PS2_KEYS[i]);
+            for (let a = 0; a < 4; a++) { const v = ax[a] || 0; if (v < -0.5) want.set(PS2_STICKS[a][0][0], PS2_STICKS[a][0]); else if (v > 0.5) want.set(PS2_STICKS[a][1][0], PS2_STICKS[a][1]); }
+            const have = EMU.ps2Keys || (EMU.ps2Keys = new Map());
+            for (const [c, k] of have) if (!want.has(c)) { ps2Fire(w, 'keyup', k); have.delete(c); }
+            for (const [c, k] of want) if (!have.has(c)) { ps2Fire(w, 'keydown', k); have.set(c, k); }
+        }
+        // runs INSIDE the hidden frame: tap the audio (so it can be streamed), load Play.js, feed it the disc image and boot it
+        function ps2Inner(cfg) {
+            var Orig = AudioNode.prototype.connect; window.__taps = [];
+            function setup(c) {
+                if (c.__oasis) return; c.__oasis = true;
+                var d = c.createMediaStreamDestination(), g = c.createGain(); g.gain.value = 0; Orig.call(g, c.destination);
+                c.__tap = d; c.__sil = g; window.__taps.push(d.stream);
+                try { c.resume(); } catch (e) { /* needs a gesture */ }
+            }
+            AudioNode.prototype.connect = function (dest) {
+                try { var c = this.context; if (dest && c && dest === c.destination && c.createMediaStreamDestination) { setup(c); Orig.call(this, c.__tap); Orig.call(this, c.__sil); return dest; } } catch (e) { /* fall through */ }
+                return Orig.apply(this, arguments);
+            };
+            function fail(m) { try { console.error('PS2:', m); var o = {}; o[cfg.msg] = 'error'; o.text = String((m && m.message) || m); parent.postMessage(o, '*'); } catch (e) { /* parent gone */ } }
+            (async function () {
+                try {
+                    if (!self.crossOriginIsolated) throw new Error('the page is not cross-origin isolated');
+                    var canvas = document.getElementById('outputCanvas');
+                    canvas.addEventListener('pointerdown', function () { canvas.focus(); });
+                    var mod;
+                    try { mod = await import(cfg.base + 'Play.js'); } catch (e) { throw new Error('could not load ' + cfg.base + 'Play.js (' + ((e && e.message) || e) + ')'); }
+                    var Play = mod.default || mod.Play;
+                    if (typeof Play !== 'function') throw new Error('Play.js does not export the emulator');
+                    var M = await Play({
+                        canvas: canvas,
+                        locateFile: function (p) { return new URL(p, cfg.base).href; },
+                        mainScriptUrlOrBlob: new URL('Play.js', cfg.base).href,
+                        printErr: function (t) { console.warn(t); }
+                    });
+                    window.__ps2 = M;
+                    var blob = await (await fetch(cfg.url)).blob(), done = true;
+                    try { M.FS.mkdir('/work'); } catch (e) { /* exists */ }
+                    M.discImageDevice = {
+                        getFileSize: function () { return blob.size; },
+                        read: function (dst, off, size) {
+                            done = false;
+                            blob.slice(off, off + size).arrayBuffer().then(function (b) { M.HEAPU8.set(new Uint8Array(b), dst); done = true; }, function (e) { done = true; fail(e); });
+                        },
+                        isDone: function () { return done; }
+                    };
+                    M.ccall('initVm', '', [], []);
+                    M.bootDiscImage(cfg.name);
+                    canvas.focus();
+                    setTimeout(function () { var o = {}; o[cfg.msg] = 'start'; parent.postMessage(o, '*'); }, 1500);
+                } catch (e) { fail(e); }
+            })();
+        }
+        function ps2Doc(cfg) {
+            const j = JSON.stringify(cfg).replace(/</g, '\\u003c');
+            return '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{width:100%;height:100%;display:block;object-fit:contain;outline:0;background:#000}</style></head><body><canvas id="outputCanvas" width="640" height="480" tabindex="0"></canvas><script>(' + ps2Inner.toString() + ')(' + j + ');<\/script></body></html>';
+        }
 
         // runs INSIDE the hidden frame, before the emulator loads: settings for the emulator, and a tap on its audio so it can be streamed
         function emuInner(cfg) {
@@ -8037,30 +8133,32 @@ function kbModel(THREE, mk) {
             return '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#g{width:100%;height:100%}</style></head><body><div id="g"></div><script>(' + emuInner.toString() + ')(' + j + ');<\/script><script src="' + cfg.loader.replace(/"/g, '') + '"><\/script></body></html>';
         }
         const emuGM = () => { const w = EMU.frame && EMU.frame.contentWindow; return w && w.EJS_emulator && w.EJS_emulator.gameManager && w.EJS_emulator.gameManager.simulateInput ? w.EJS_emulator.gameManager : null; };
-        window.addEventListener('message', (e) => { if (EMU.frame && e.source === EMU.frame.contentWindow && e.data && e.data.oasisEmu === 'start') EMU.started = true; });
+        window.addEventListener('message', (e) => { if (EMU.frame && e.source === EMU.frame.contentWindow && e.data) { if (e.data.oasisEmu === 'start') EMU.started = true; else if (e.data.oasisEmu === 'error') EMU.err = String(e.data.text || 'the emulator failed to start').slice(0, 200); } });
 
         // ---- host: load the game, capture its picture and sound
         async function emuStart(file) {
             if (!file) return;
             if (!room || !hasScreen()) { emuSetStatus('Go to a room with a TV first (the Central Mall or your Harbor Studio).'); return; }
             if (EMU.on) { emuSetStatus(EMU.isHost ? 'Stop the current game first.' : `${EMU.hostName} already has a game on. Ask them to stop it first.`); return; }
-            const sys = $('emu-sys').value || EMU_EXT[(file.name.split('.').pop() || '').toLowerCase()] || '';
+            const sys = $('emu-sys').value || emuGuessSys(file);
             if (!sys) { emuSetStatus('I cannot tell which console that file is for. Pick the console from the list, then load it again.'); return; }
-            if (file.size > 1.2e9) { emuSetStatus('That file is over 1.2 GB, which is too large.'); return; }
+            if (sys === 'ps2') { const why = ps2Unavailable(); if (why) { emuSetStatus(why); return; } }
+            if (file.size > (sys === 'ps2' ? 9e9 : 1.2e9)) { emuSetStatus(sys === 'ps2' ? 'That file is over 9 GB, which is too large.' : 'That file is over 1.2 GB, which is too large.'); return; }
             const token = ++EMU.token;
             const url = URL.createObjectURL(file), urls = [url]; let bios = '';
-            if (EMU.bios) { bios = URL.createObjectURL(EMU.bios); urls.push(bios); }
-            Object.assign(EMU, { on: true, isHost: true, host: me.id, hostName: me.name, sys, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), slots: [me.id, '', '', ''], mine: 0, wantPlay: false, urls, stream: null, started: false, applied: [], last: '' });
+            if (EMU.bios && sys !== 'ps2') { bios = URL.createObjectURL(EMU.bios); urls.push(bios); }
+            Object.assign(EMU, { on: true, isHost: true, host: me.id, hostName: me.name, sys, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), slots: [me.id, '', '', ''], mine: 0, wantPlay: false, urls, stream: null, started: false, applied: [], last: '', err: '', ps2Keys: null });
             const f = document.createElement('iframe');
             f.id = 'emu-frame'; f.setAttribute('allow', 'autoplay; gamepad; fullscreen');
             f.style.cssText = 'position:fixed;left:-700px;top:0;width:640px;height:480px;border:0;pointer-events:none;';
-            f.srcdoc = emuDoc({ core: sys, url, bios, name: EMU.name, data: window.__EMU_DATA || EMU_CDN, loader: window.__EMU_LOADER || EMU_CDN + 'loader.js' });
+            f.srcdoc = sys === 'ps2' ? ps2Doc({ url, name: ps2Name(file.name), base: PS2_BASE(), msg: 'oasisEmu' }) : emuDoc({ core: sys, url, bios, name: EMU.name, data: window.__EMU_DATA || EMU_CDN, loader: window.__EMU_LOADER || EMU_CDN + 'loader.js' });
             document.body.appendChild(f); EMU.frame = f;
             emuShowOnTv(me.name); emuBroadcast(); renderEmu();
-            emuSetStatus(`Loading ${EMU_SYS[sys]}... the first time, the emulator core downloads from cdn.emulatorjs.org (a few MB).`);
+            emuSetStatus(sys === 'ps2' ? 'Starting PlayStation 2 (loading the emulator engine, this can take a moment)...' : `Loading ${EMU_SYS[sys]}... the first time, the emulator core downloads from cdn.emulatorjs.org (a few MB).`);
             const t0 = Date.now();
-            while (EMU.token === token && !EMU.started && Date.now() - t0 < 240000) await emuSleep(400);
+            while (EMU.token === token && !EMU.started && !EMU.err && Date.now() - t0 < 240000) await emuSleep(400);
             if (EMU.token !== token) return;
+            if (EMU.err) { emuSetStatus(`PlayStation 2 did not start: ${EMU.err}. Stop the game and check the setup.`); return; }
             const cv = EMU.started && f.contentDocument && f.contentDocument.querySelector('canvas');
             if (!cv || !cv.captureStream) { emuSetStatus('The game did not start (the core may not support that file, or a BIOS is missing). Stop and try another file.'); return; }
             const tracks = [...cv.captureStream(60).getVideoTracks()];
@@ -8128,7 +8226,7 @@ function kbModel(THREE, mk) {
             if (EMU.isHost && EMU.stream) EMU.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) { /* ended */ } });
             if (EMU.frame) { EMU.frame.remove(); EMU.frame = null; }
             EMU.urls.forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* none */ } }); EMU.urls = [];
-            Object.assign(EMU, { on: false, isHost: false, host: null, hostName: '', sys: '', name: '', slots: ['', '', '', ''], mine: -1, wantPlay: false, stream: null, applied: [], last: '', started: false, status: '' });
+            Object.assign(EMU, { on: false, isHost: false, host: null, hostName: '', sys: '', name: '', slots: ['', '', '', ''], mine: -1, wantPlay: false, stream: null, applied: [], last: '', started: false, status: '', err: '', ps2Keys: null });
             emuHideFromTv(); renderEmu();
         }
         const emuReset = () => { if (!EMU.on) return; if (EMU.isHost && net) net.send({ t: 'emu', on: false }); emuTeardown(); };
@@ -8136,10 +8234,10 @@ function kbModel(THREE, mk) {
         // ---- plugging in
         function emuAssign(id, slot) {
             if (!EMU.on || !EMU.isHost) return false;
-            const want = Number.isInteger(slot) && slot >= 0 && slot < 4 ? slot : -1;
+            const want = Number.isInteger(slot) && slot >= 0 && slot < (EMU.sys === 'ps2' ? 1 : 4) ? slot : -1;
             if (want >= 0 && EMU.slots[want] && EMU.slots[want] !== id) return false;
             const s = want >= 0 ? want : (EMU.slots.includes(id) ? EMU.slots.indexOf(id) : EMU.slots.indexOf(''));
-            if (s < 0) return false;
+            if (s < 0 || (EMU.sys === 'ps2' && s > 0)) return false;
             emuFree(id, true);
             EMU.slots[s] = id;
             if (id === me.id) { EMU.mine = s; if (EMU.wantPlay) { EMU.wantPlay = false; emuSetPlaying(true); } }
@@ -8155,7 +8253,7 @@ function kbModel(THREE, mk) {
         function emuJoin(slot) {
             if (!EMU.on) return;
             EMU.wantPlay = true;
-            if (EMU.isHost) { if (!emuAssign(me.id, slot)) { EMU.wantPlay = false; emuSetStatus('That player slot is taken.'); } }
+            if (EMU.isHost) { if (!emuAssign(me.id, slot)) { EMU.wantPlay = false; emuSetStatus(EMU.sys === 'ps2' ? 'PlayStation 2 is one player here, and player 1 is taken.' : 'That player slot is taken.'); } }
             else net && net.send({ t: 'emujoin', slot, to: EMU.host });
         }
         function emuLeaveSlot() {
@@ -8194,6 +8292,7 @@ function kbModel(THREE, mk) {
         }
         // host: press / release this player's buttons in the emulator
         function emuApply(slot, mask, ax) {
+            if (EMU.sys === 'ps2') { ps2Apply(slot, mask, ax); return; }
             const gm = emuGM(); if (!gm || slot < 0) return;
             const prev = EMU.applied[slot] || { m: 0, a: [0, 0, 0, 0] };
             try {
@@ -8227,7 +8326,7 @@ function kbModel(THREE, mk) {
         function emuPadSample(gp, b, dt) {
             let m = 0; for (const [i, bit] of EMU_PAD) if (b[i]) m |= 1 << bit;
             const ax = [0, 1, 2, 3].map((i) => { const v = gp.axes[i] || 0; return Math.abs(v) < PAD.dead ? 0 : clamp(v, -1, 1); });
-            if (EMU.sys !== 'n64') { if (ax[0] < -0.5) m |= 1 << 6; if (ax[0] > 0.5) m |= 1 << 7; if (ax[1] < -0.5) m |= 1 << 4; if (ax[1] > 0.5) m |= 1 << 5; }   // the stick doubles as a D-pad, except on N64 where it is the analog stick
+            if (EMU.sys !== 'n64' && EMU.sys !== 'ps2') { if (ax[0] < -0.5) m |= 1 << 6; if (ax[0] > 0.5) m |= 1 << 7; if (ax[1] < -0.5) m |= 1 << 4; if (ax[1] > 0.5) m |= 1 << 5; }   // the stick doubles as a D-pad, except on N64 where it is the analog stick
             EMU.padMask = m; EMU.padAx = ax.map((v) => Math.round(v * 127));
             if (b[8]) { EMU.padHold += dt; if (EMU.padHold > 1.2) { emuSetPlaying(false); return; } } else EMU.padHold = 0;   // hold Back / Select to step away from the game
             emuPush();
@@ -8256,6 +8355,7 @@ function kbModel(THREE, mk) {
                 b.type = 'button'; b.disabled = !EMU.on || (!!id && !mine);
                 b.className = 'px-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition truncate ' + (mine ? 'bg-psGlow text-white' : id ? 'bg-white/15 text-gray-200' : 'bg-white/10 hover:bg-white/20 text-gray-300') + (b.disabled && !id ? ' opacity-40' : '');
                 b.textContent = `P${i + 1} · ` + (id ? emuNameOf(id) : (EMU.on ? 'plug in' : 'free'));
+                if (EMU.on && EMU.sys === 'ps2' && i > 0) { b.textContent = `P${i + 1} \u00b7 n/a`; b.disabled = true; b.classList.add('opacity-40'); }
                 b.title = mine ? 'Click to unplug' : id ? 'Taken' : 'Plug in as player ' + (i + 1);
                 b.addEventListener('click', () => { if (mine) emuLeaveSlot(); else emuJoin(i); });
                 row.append(b);
@@ -14092,6 +14192,7 @@ function kbModel(THREE, mk) {
         function nsOnMsg(from, m) {
             if (m.to && m.to !== me.id) return; if (activeMap !== 'nuu' || !NU.ready) return; const k = m.k;
             if (k === 'tn') { tnOnMsg(from, m); return; }
+            if (k === 'tp') { try { tnPlateMsg(from, m); } catch (e) { /* plate */ } return; }
             if (k === 'vt') { if (!NS.vt) NS.vt = new Map(); if (typeof from === 'string' && Number.isFinite(+m.hp) && Number.isFinite(+m.hm)) NS.vt.set(from, { hp: +m.hp, hm: Math.max(1, +m.hm), mp: +m.mp || 0, mm: Math.max(1, +m.mm || 1), lv: Math.max(1, Math.min(99, +m.lv || 1)), c: String(m.c || '').slice(0, 16), d: m.d ? 1 : 0, ts: Date.now() }); return; }
             if (k === 's' && Array.isArray(m.u)) {
                 for (const u of m.u.slice(0, 80)) {
@@ -16343,24 +16444,41 @@ function kbModel(THREE, mk) {
             for (let i = 0; i < S.N; i++) { const k = S.on ? ((S.t * 0.9 + S.ph[i]) % 1) : 2; if (k > 1) { P.setY(i, -5); continue; } P.setXYZ(i, Math.sin(i * 12.9) * 0.28 * (0.4 + k), 2.35 - k * 2.3, Math.cos(i * 7.7) * 0.28 * (0.4 + k)); } P.needsUpdate = true;
             if (S.on && Math.random() < dt * 14) { try { nsbN(0, 0.25, 5000, 3500, 0.5, 0.025, 'highpass', 0, 0.2); } catch (e) { /* audio */ } }
         }
-        function tnPlate(key) {   // diner-style: the finished dish is set down on a plate in front of you; walk up and eat it
+        function tnPlate(key, rem) {   // diner-style: the finished dish is set down on a plate in front of you; walk up and eat it
             if (!tvTent() || !localActor || !localActor.group) return; const Z = ZN.zones.tent, C = Z && Z.inst && Z.inst[TN.slot], M = FOOD_MEAL[key.split(':')[0]]; if (!C || !M) return; const oz = TN.slot * TN_STEP; TN.plates = TN.plates || [];
-            TN.plates = TN.plates.filter((q) => q.slot === TN.slot && q.g.parent); if (TN.plates.length >= 3) tnPlateEat(TN.plates[0], true);
-            const g = localActor.group, a = g.rotation.y || 0, n = TN.plates.length; let x = g.position.x + Math.sin(a) * 1.5, z = g.position.z + Math.cos(a) * 1.5; const dx = x - Z.cx, dz = z - oz - Z.cz, d = Math.hypot(dx, dz); if (d > 6.2) { x = Z.cx + dx * 6.2 / d; z = Z.cz + oz + dz * 6.2 / d; }
-            x += Math.cos(a) * 0.55 * (n - 0.5 * Math.min(n, 1)) * (n % 2 ? 1 : -1); const grp = new THREE.Group(), mat = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: tnRamp() });
+            TN.plates = TN.plates.filter((q) => q.slot === TN.slot && q.g.parent); if (TN.plates.length >= (rem ? 6 : 3)) tnPlateEat(TN.plates[0], true);
+            const g = localActor.group, a = rem ? rem.a : (g.rotation.y || 0), n = TN.plates.length; let x = g.position.x + Math.sin(a) * 1.5, z = g.position.z + Math.cos(a) * 1.5; const dx = x - Z.cx, dz = z - oz - Z.cz, d = Math.hypot(dx, dz); if (d > 6.2) { x = Z.cx + dx * 6.2 / d; z = Z.cz + oz + dz * 6.2 / d; }
+            x += Math.cos(a) * 0.55 * (n - 0.5 * Math.min(n, 1)) * (n % 2 ? 1 : -1); if (rem) { x = rem.x; z = rem.gz + oz; } const grp = new THREE.Group(), mat = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: tnRamp() });
             const top = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.06, 20), mat(0xb9915a)), leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.66, 8), mat(0x5a3b22)), foot = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.3, 0.05, 14), mat(0x5a3b22));
             top.position.y = 0.72; leg.position.y = 0.36; foot.position.y = 0.03; const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.22, 0.05, 20), mat(0xf6f3ea)); pl.position.y = 0.78; const rim = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.018, 6, 24), mat(0xd9b26a)); rim.rotation.x = Math.PI / 2; rim.position.y = 0.8;
             const c = document.createElement('canvas'); c.width = c.height = 96; const cx2 = c.getContext('2d'); cx2.font = '70px serif'; cx2.textAlign = 'center'; cx2.textBaseline = 'middle'; cx2.fillText(M.ico, 48, 52); const tex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
             const food = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })); food.scale.set(0.62, 0.62, 1); food.position.y = 1.1; food.userData.noOutline = true;
             const steam = []; for (let i = 0; i < 3; i++) { const sp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false })); sp.userData.ph = i * 2.1; sp.userData.noOutline = true; steam.push(sp); grp.add(sp); }
             grp.add(top, leg, foot, pl, rim, food); grp.traverse((o) => { o.userData.noOutline = true; }); grp.position.set(x, 0, z - oz); grp.rotation.y = a; C.G.add(grp);
-            const q = { g: grp, slot: TN.slot, key, steam, t: 0, id: 'tnplate' + (++TN.pid || (TN.pid = 1)) }; TN.plates.push(q);
+            const pid = (++TN.pid || (TN.pid = 1)); const q = { g: grp, slot: TN.slot, key, steam, t: 0, id: 'tnplate' + pid, own: !rem, gid: rem ? rem.gid : String(me.id) + ':' + pid, tn: String(TN.inst) }; TN.plates.push(q);
+            if (!rem) { try { nsSend({ k: 'tp', op: 'add', tn: q.tn, id: q.gid, key, x: +x.toFixed(2), z: +(z - oz).toFixed(2), a: +a.toFixed(3) }); } catch (e) { /* offline */ } }   // everyone in the tent sees the dish
             NI.list.push({ id: q.id, x, z, r: 1.7, label: 'Eat ' + M.n, act: () => tnPlateEat(q), cond: () => ZN.on && ZN.key === 'tent' && TN.slot === q.slot && !AR.busy });
             try { nsbBell(0.05, 1568, 0.03, 0.4); nsbT(0, 900, 700, 0.08, 0.05, 'triangle', 0, 0.2, 0.002); } catch (e) { /* audio */ }
         }
         function tnPlateEat(q, drop) {
-            const before = FOOD.meal[q.key] | 0; if (!drop) { try { foodEat(q.key); } catch (e) { /* none */ } if ((FOOD.meal[q.key] | 0) >= before && before > 0) return; }
+            if (!drop) {
+                if (q.own) { const before = FOOD.meal[q.key] | 0; try { foodEat(q.key); } catch (e) { /* none */ } if ((FOOD.meal[q.key] | 0) >= before && before > 0) return; }
+                else {   // a dish another player cooked: borrow one portion so foodEat works, and hand it back if you could not eat (not hungry)
+                    foodAdd('meal', q.key, 1); const b = FOOD.meal[q.key] | 0; try { foodEat(q.key); } catch (e) { /* none */ }
+                    if ((FOOD.meal[q.key] | 0) >= b) { foodAdd('meal', q.key, -1); return; }
+                }
+            }
             if (q.g.parent) q.g.parent.remove(q.g); NI.list = NI.list.filter((o) => o.id !== q.id); TN.plates = (TN.plates || []).filter((o) => o !== q);
+            if (q.own || !drop) { try { nsSend({ k: 'tp', op: 'rm', tn: q.tn, id: q.gid, eat: drop ? 0 : 1 }); } catch (e) { /* offline */ } }
+        }
+        function tnPlateMsg(from, m) {   // plates are shared by everyone inside the same tent
+            if (!tnInside() || String(m.tn || '') !== String(TN.inst) || typeof m.id !== 'string' || m.id.length > 60) return;
+            TN.plates = TN.plates || []; const q = TN.plates.find((o) => o.gid === m.id);
+            if (m.op === 'add') { if (q || typeof m.key !== 'string' || !FOOD_MEAL[m.key.split(':')[0]] || !Number.isFinite(+m.x) || !Number.isFinite(+m.z)) return; tnPlate(m.key.slice(0, 60), { x: +m.x, gz: +m.z, a: +m.a || 0, gid: m.id }); return; }
+            if (m.op === 'rm' && q) {
+                if (q.g.parent) q.g.parent.remove(q.g); NI.list = NI.list.filter((o) => o.id !== q.id); TN.plates = TN.plates.filter((o) => o !== q);
+                if (q.own && m.eat && (FOOD.meal[q.key] | 0) > 0) foodAdd('meal', q.key, -1);   // the cook's stock pays for the portion someone else ate
+            }
         }
         function tnPlatesTick(dt) { for (const q of TN.plates || []) { q.t += dt; q.steam.forEach((sp, i) => { const k = ((q.t * 0.5 + sp.userData.ph) % 1.6) / 1.6; sp.position.set(Math.sin(q.t * 2 + i) * 0.06, 0.9 + k * 0.55, 0); sp.material.opacity = 0.35 * (1 - k); sp.scale.setScalar(0.6 + k); }); } }
         function tnCook() { try { ckOpen(); } catch (e) { console.warn('kitchen', e); } }
@@ -23043,7 +23161,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const j = JSON.stringify(cfg).replace(/</g, '\\u003c');
             return '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#g{width:100%;height:100%}</style></head><body><div id="g"></div><script>(' + oboyInner.toString() + ')(' + j + ');<\/script><script src="' + cfg.loader.replace(/"/g, '') + '"><\/script></body></html>';
         }
-        const oboyGM = () => { const w = OB.frame && OB.frame.contentWindow; return w && w.EJS_emulator && w.EJS_emulator.gameManager && w.EJS_emulator.gameManager.simulateInput ? w.EJS_emulator.gameManager : null; };
+        const oboyGM = () => { const w = OB.frame && OB.frame.contentWindow; if (w && OB.sys === 'ps2') return { simulateInput: (s, n, v) => { if (s === 0 && n < 16) ps2Press(w, n, !!v); } }; return w && w.EJS_emulator && w.EJS_emulator.gameManager && w.EJS_emulator.gameManager.simulateInput ? w.EJS_emulator.gameManager : null; };
         function oboyColor(c) {
             if (!/^#[0-9a-f]{6}$/i.test(c || '')) return; OB.color = c;
             try { if (localActor) { localActor.setOboy(OB.open, c); if (OB.open) net && net.send({ t: 'oboy', on: true, c }); } } catch (e) { /* not ready */ } $('oboy').style.setProperty('--ob', c); $('ob-color').value = c;
@@ -23068,15 +23186,16 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function oboyUnload() { if (OB.frame) { OB.frame.remove(); OB.frame = null; } if (OB.url) { URL.revokeObjectURL(OB.url); OB.url = null; } $('ob-empty').style.display = ''; }
         function oboyLoad(file) {
             if (!file) return;
-            const sys = $('ob-sys').value || EMU_EXT[(file.name.split('.').pop() || '').toLowerCase()] || '';
+            const sys = $('ob-sys').value || emuGuessSys(file);
             if (!sys) { sysChat('O-Boy: I cannot tell which console that file is for. Pick one from the list.'); return; }
-            if (file.size > 1.2e9) { sysChat('O-Boy: that file is over 1.2 GB.'); return; }
+            if (sys === 'ps2') { const why = ps2Unavailable(); if (why) { sysChat('O-Boy: ' + why); return; } }
+            if (file.size > (sys === 'ps2' ? 9e9 : 1.2e9)) { sysChat(sys === 'ps2' ? 'O-Boy: that file is over 9 GB.' : 'O-Boy: that file is over 1.2 GB.'); return; }
             oboyUnload(); OB.sys = sys; $('ob-sys').value = sys;
             OB.url = URL.createObjectURL(file);
             const f = document.createElement('iframe'); f.setAttribute('allow', 'autoplay; gamepad; fullscreen'); f.title = 'O-Boy screen';
-            f.srcdoc = oboyDoc({ core: sys, url: OB.url, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), data: window.__EMU_DATA || EMU_CDN, loader: window.__EMU_LOADER || EMU_CDN + 'loader.js' });
+            f.srcdoc = sys === 'ps2' ? ps2Doc({ url: OB.url, name: ps2Name(file.name), base: PS2_BASE(), msg: 'oasisOboy' }) : oboyDoc({ core: sys, url: OB.url, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), data: window.__EMU_DATA || EMU_CDN, loader: window.__EMU_LOADER || EMU_CDN + 'loader.js' });
             $('ob-screen').appendChild(f); OB.frame = f; $('ob-empty').style.display = 'none';
-            sysChat(`O-Boy: loading ${EMU_SYS[sys]} (the first time the core downloads from cdn.emulatorjs.org).`);
+            sysChat(sys === 'ps2' ? 'O-Boy: starting PlayStation 2 (keys: arrows, A/S/Z/X, 1 2 3 / 8 9 0, Enter, Backspace).' : `O-Boy: loading ${EMU_SYS[sys]} (the first time the core downloads from cdn.emulatorjs.org).`);
             setTimeout(oboyFocus, 400);
         }
         function setupOboy() {
@@ -23096,7 +23215,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 b.addEventListener('pointerup', () => press(0)); b.addEventListener('pointercancel', () => press(0));
             }
             const hb = $('hud-oboy'); if (hb) hb.addEventListener('click', (e) => { e.preventDefault(); oboyToggle(); hb.blur(); });
-            window.addEventListener('message', (e) => { if (OB.frame && e.source === OB.frame.contentWindow && e.data && e.data.oasisOboy === 'start') { sysChat('O-Boy: game started.'); oboyFocus(); } });
+            window.addEventListener('message', (e) => { if (OB.frame && e.source === OB.frame.contentWindow && e.data) { if (e.data.oasisOboy === 'start') { sysChat('O-Boy: game started.'); oboyFocus(); } else if (e.data.oasisOboy === 'error') sysChat('O-Boy: PlayStation 2 did not start: ' + String(e.data.text || 'unknown error').slice(0, 200)); } });
         }
 
         // GTA-style tap to sprint: tap Shift (or R1 / RB) repeatedly and you break into a sprint; stop tapping and you ease back to a jog. Holding Shift still runs.
