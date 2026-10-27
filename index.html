@@ -18542,7 +18542,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 else {
                     t.hp = Math.max(0, t.hp - q.d); btNum(p[0], hy + 0.6, p[1], String(q.d), (q.crit ? 'crit ' : '') + (t.isFoe ? '' : 'hurt')); if (q.weak) btNum(p[0], hy + 1.2, p[1], 'Weak!', 'weak'); t.hitT = BT.t; if (t.isFoe) t.hit = 0.35; else { t.limit = Math.min(1, t.limit + q.d / t.hpMax * 1.1); const a = btActorOf(t.id); if (a && !t.def) { a.btK = 'hurt'; a.btT = 0; } }
                     btFxBurst(p[0], hy, p[1], t.isFoe ? 0xffffff : 0xff6a6a, 8, 3, 0.5, 0.06);
-                    if (!t.isFoe) { try { if (t.hp <= 0) btVoice('death', t, 1, true); else btVoice('damage', t, 0.55); } catch (e) { /* voice */ } }
+                    try { if (!t.isFoe) { if (t.hp <= 0) btVoice('death', t, 1, true); else btVoice('damage', t, 0.55); } else if (t.hp <= 0) btVoice('death', t, 1, true); else btVoice('damage', t, 0.35); } catch (e) { /* voice */ }
                     if (t.hp <= 0) { t.dead = true; t.dieT = 0; if (!t.isFoe) { t.hp = 0; t.atb = 0; } }
                 }
                 btStFx(t, q);
@@ -18984,12 +18984,12 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 if (have.length >= 3) { do { pick = have[Math.floor(Math.random() * have.length)]; } while (pick === BTV.last[lk] && have.length > 1); } else pick = names[Math.floor(Math.random() * names.length)];
                 BTV.last[lk] = pick; BTV.spk[id] = now + (cat === 'death' ? 1500 : 900); BTV.any = now;
                 if (have.length < names.length) btvLoad(names[Math.floor(Math.random() * names.length)]);   // keep growing the pool in the background
-                let h = 0; for (const ch of id + ':' + BTV.seed) h = (h * 31 + ch.charCodeAt(0)) | 0; const mine = !u || String(u.id) === String(me.id), rate = (mine ? BTV.pitch : 1 + ((Math.abs(h) % 1000) / 500 - 1) * BTV.spread * 0.3) * (0.97 + Math.random() * 0.06);   // you use the Pitch slider; every other fighter keeps their own pitch, spread out by the Variety slider
+                let h = 0; for (const ch of id + ':' + BTV.seed) h = (h * 31 + ch.charCodeAt(0)) | 0; const mine = !u || String(u.id) === String(me.id), rate = (mine ? BTV.pitch : 1 + ((Math.abs(h) % 1000) / 500 - 1) * BTV.spread * 0.3) * (u && u.isFoe ? (u.big ? 0.55 : 0.75) : 1) * (0.97 + Math.random() * 0.06);   // you use the Pitch slider; every other fighter keeps their own pitch, spread out by the Variety slider
                 btvLoad(pick).then((b) => { if (!b || !BTV.on) return; const ac = dnAC; if (!ac) return; if (ac.state === 'suspended') ac.resume(); const s = ac.createBufferSource(); s.buffer = b; s.playbackRate.value = rate; const gn = ac.createGain(); gn.gain.value = Math.min(1.5, BTV.vol * (cat === 'shout' ? 1.05 : 0.9)); s.connect(gn); gn.connect(ac.destination); s.start(); });
             } catch (e) { /* voices are optional */ }
         }
         function btVoiceWin() { const live = BT.party.filter((q) => !q.dead && !q.isFoe).slice(0, 2); live.forEach((q, i) => setTimeout(() => btVoice('win', q, 1, true), 450 + i * 550)); }
-        function btSfx(k) {
+        function btSfxStock(k) {
             if (BT.music.mute) return;
             try { if (k === 'ready') btVoice('ok', btUnit(me.id), 0.4); else if (k === 'no') btVoice('no', btUnit(me.id), 0.3); } catch (e) { /* voice */ }
             if ((k === 'move' || k === 'ok') && btCursorSnd(k === 'ok')) return;
@@ -18998,6 +18998,22 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             if (k === 'gil') { dnBeep(1568, 0.09, 'triangle', 0.05); setTimeout(() => dnBeep(2093, 0.18, 'triangle', 0.05), 80); return; }
             if (k === 'hit') dnBeep(190, 0.09, 'square', 0.05, 70); else if (k === 'crit') { dnBeep(260, 0.12, 'sawtooth', 0.06, 60); } else if (k === 'heal') { dnBeep(660, 0.25, 'sine', 0.05, 1100); } else if (k === 'bolt') dnBeep(1100, 0.3, 'sawtooth', 0.05, 90);
             else if (k === 'fire') dnBeep(320, 0.4, 'sawtooth', 0.045, 70); else if (k === 'ice') dnBeep(1500, 0.3, 'triangle', 0.045, 500); else if (k === 'move') dnBeep(900, 0.03, 'square', 0.025); else if (k === 'ok') dnBeep(1320, 0.06, 'square', 0.035); else if (k === 'no') dnBeep(240, 0.08, 'square', 0.035); else if (k === 'ko') dnBeep(220, 0.5, 'sawtooth', 0.05, 40); else if (k === 'ready') { dnBeep(880, 0.07, 'triangle', 0.04); setTimeout(() => dnBeep(1320, 0.09, 'triangle', 0.04), 70); }
+        }
+        // ---- battle sound is now your new Pixel Combat SFX (pcLayer) + the voice pack (Pitch / Variety sliders) + ONE old stock sound: the shatter when a foe is defeated.
+        // Set BT_STOCK_SFX to true to bring the old synth + sample battle sounds back.
+        const BT_STOCK_SFX = false;
+        const BT_SFX_VOICE = { swing: ['grunt', 0.4], punch: ['grunt', 0.5], claw: ['grunt', 0.5], gun: ['grunt', 0.25], crit: ['shout', 0.5], heal: ['ok', 0.5], cast: ['shout', 0.7], quake: ['shout', 1], limit: ['shout', 1], dodge: ['grunt', 0.5], ready: ['ok', 0.4], no: ['no', 0.3] };
+        function btSfx(k) {
+            if (BT_STOCK_SFX) { btSfxStock(k); return; }
+            if (BT.music.mute) return;
+            if (k === 'ko') { try { NSX.shatter(1); } catch (e) { /* no audio */ } return; }
+            try { gnSndInit(); } catch (e) { /* audio not ready */ } try { pcLayer(k); pcExtra(k); } catch (e) { /* the new Pixel Combat SFX (assets/pc-sfx.json + pc-sfx-extra.json) */ }
+            const m = BT_SFX_VOICE[k]; if (!m) return;
+            try {
+                const an = BT.anims && BT.anims[0]; let u = btUnit(me.id);
+                if (k === 'dodge') { const t0 = an && an.ev && an.ev.tgt && btUnit(an.ev.tgt[0]); if (t0) u = t0; } else if (k !== 'ready' && k !== 'no' && an && an.u) u = an.u;
+                btVoice(m[0], u, m[1]);
+            } catch (e) { /* voice */ }
         }
         // the menu cursor uses the sound you picked for Triple Triad (Games > Triple Triad > Cursor sound) when there is one
         function btCursorSnd(strong) { try { if (typeof TTU === 'undefined' || !TTU.src || (typeof TTM !== 'undefined' && TTM.mute)) return false; const n = performance.now(); if (n - (BT.curAt || 0) < 60) return true; BT.curAt = n; ttsfxPlay(TTU, strong ? 0.85 : 0.55); return true; } catch (e) { return false; } }
@@ -29787,7 +29803,9 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         const PCS = { man: null, state: 0, vol: 1, last: {} };
         function pcInit() {
             if (PCS.state) return; PCS.state = 1;
-            fetch('assets/pc-sfx.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((j) => {
+            const ldj = (u, opt) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).catch((e) => { if (opt) return null; throw e; });   // the extra pack is optional
+            Promise.all([ldj('assets/pc-sfx.json'), ldj('assets/pc-sfx-extra.json', true)]).then(([j0, j1]) => {
+                const j = Object.assign({}, j0, j1 || {}); j.__man = Object.assign({}, j0.__man || {}, (j1 && j1.__man) || {});
                 try { dnBeep(1, 0.001, 'sine', 0.0001); } catch (e) { /* audio not ready */ } const ac = dnAC; if (!ac) { PCS.state = 0; return; }
                 PCS.man = j.__man || {};
                 for (const [k, b64] of Object.entries(j)) { if (typeof b64 !== 'string') continue; const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); ac.decodeAudioData(u8.buffer, (b) => { GNS.buf[k] = b; }, () => { /* undecodable */ }); }
@@ -29802,6 +29820,25 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             } catch (e) { return false; }
         }
         window.pcSfx = pcSfx;
+        // ---- the EXTRA Pixel Combat pack (assets/pc-sfx-extra.json, 2 variations each): one more quiet layer per battle event so repeats vary more.
+        // each entry: [banks to pick from, volume, chance]
+        const PC_EXTRA = {
+            cast: [['cast_aura_up', 'cast_strong_energy', 'cast_energy_noise', 'cast_high_powering_up', 'cast_mecha_energy_gathering', 'cast_complex_rise'], 0.35, 0.5],
+            heal: [['buff_invigoration', 'buff_shimmering_winds', 'buff_water_buff', 'use_mecha_repair', 'use_magic_item'], 0.4, 0.6],
+            hit: [['hit_spell_hit', 'hit_synth_hit', 'hit_swish_clap', 'hit_zap_clap'], 0.3, 0.4],
+            foehit: [['hit_bitcrusher', 'hit_hit_rattle', 'exp_crunching', 'exp_cruncher'], 0.3, 0.4],
+            crit: [['exp_crunchy_burst', 'hit_laser_electric_zap', 'exp_grainy_burst'], 0.4, 0.6],
+            punch: [['mel_magic_kick', 'rel_whimsy_kick'], 0.3, 0.4],
+            gun: [['rel_mecha_laser_machine_gun', 'proj_comical_shot'], 0.2, 0.3],
+            fire: [['exp_flare_ignite', 'cast_appear_firewall', 'exp_bit_bomb'], 0.4, 0.6],
+            bolt: [['hit_laser_electric_zap', 'mov_noise_zap', 'mov_sparkle_zap'], 0.4, 0.6],
+            ice: [['cast_underwater', 'rel_wet_splash'], 0.4, 0.6],
+            dodge: [['mel_sword_deflect', 'mel_sword_parry', 'imp_deflected_impact'], 0.35, 0.6],
+            no: [['buff_mecha_barrier_fail', 'ui_lock', 'buff_turn_locked'], 0.3, 0.5],
+            limit: [['exp_mecha_engine_blast', 'exp_mecha_core_damage', 'exp_grainy_burst'], 0.5, 0.8],
+            quake: [['exp_mecha_engine_blast', 'exp_mecha_core_damage'], 0.5, 0.8]
+        };
+        function pcExtra(k) { const e = PC_EXTRA[k]; if (!e || Math.random() > e[2]) return; pcSfx(e[0][Math.floor(Math.random() * e[0].length)], e[1], 1); }
         // battle sounds: layered on top of the existing ones, or (heal, gil) replacing the synth beep once the pack is loaded
         function pcLayer(k) {
             const P = (b, v, r, d) => { if (d) setTimeout(() => pcSfx(b, v, r), d); else return pcSfx(b, v, r); }, O = (a) => a[Math.floor(Math.random() * a.length)];
