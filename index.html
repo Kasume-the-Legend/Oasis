@@ -13295,7 +13295,7 @@ function kbModel(THREE, mk) {
                     let who = onMe ? 'YOU' : ((peers.get(t.tid) || {}).name || (t.tid ? 'ALLY' : '--')); et.textContent = 'ENMITY ' + Math.round(pc) + '%   ▶ ' + String(who).toUpperCase().slice(0, 14) + (role !== 'tank' && onMe ? '  - PULLING AGGRO' : role === 'tank' && !onMe && pc < 100 ? '  - TAUNT!' : '');
                 }
             } else u.tf.classList.remove('on');
-            const now = performance.now() / 1000; nfXbTick(now); try { nfPartyTick(u, now); } catch (e) { /* party list */ } try { tnSync(); tnBroadcast(false); } catch (e) { /* tents */ } if (u.fate && (ZN.on || DG.on)) u.fate.classList.remove('on'); try { if (NU.lbl) { const t = DG.on ? String(DG.th.name).toUpperCase() + ' · DUNGEON' : ZN.on ? (ZN.key === 'tent' ? 'CAMP · ' : 'FLOOR 2 · ') + String(ZN.zones[ZN.key].name).toUpperCase() : 'FLOOR 1 · FOREST OF NUU'; if (NU.lbl.textContent !== t) NU.lbl.textContent = t; } } catch (e) { /* label */ } { const dt = Math.min(0.5, Math.max(0, now - (NU.mtT || now))); NU.mtT = now; nuMusicTick(dt); }
+            const now = performance.now() / 1000; nfXbTick(now); try { saoSelfTick(); } catch (e) { /* hp bar */ } try { nfPartyTick(u, now); } catch (e) { /* party list */ } try { tnSync(); tnBroadcast(false); } catch (e) { /* tents */ } if (u.fate && (ZN.on || DG.on)) u.fate.classList.remove('on'); try { if (NU.lbl) { const t = DG.on ? String(DG.th.name).toUpperCase() + ' · DUNGEON' : ZN.on ? (ZN.key === 'tent' ? 'CAMP · ' : 'FLOOR 2 · ') + String(ZN.zones[ZN.key].name).toUpperCase() : 'FLOOR 1 · FOREST OF NUU'; if (NU.lbl.textContent !== t) NU.lbl.textContent = t; } } catch (e) { /* label */ } { const dt = Math.min(0.5, Math.max(0, now - (NU.mtT || now))); NU.mtT = now; nuMusicTick(dt); }
             if (NF.cast) { u.cast.classList.add('on'); u.cast.querySelector('span').textContent = NF.cast.n; u.cast.querySelector('i').style.width = Math.min(100, (now - NF.cast.t0) / NF.cast.dur * 100) + '%'; } else u.cast.classList.remove('on');
         }
         /* ---- skills (FFXIV style: global cooldown, casts that break when you move, auto-attack when a hostile is in reach) ---- */
@@ -13883,9 +13883,34 @@ function kbModel(THREE, mk) {
             try { nsSend({ k: 'pd', x: fx, y: fy, z: fz }); } catch (e) { /* offline */ } let hid = null; try { hid = localActor.holder || localActor.group; if (hid.visible) { nuShatter(hid, 1.3); hid.visible = false; if (localActor.label) localActor.label.visible = false; } else hid = null; } catch (e) { hid = null; }   // the same polygon shatter the monsters get
             NF.hid = hid; await new Promise((r) => setTimeout(r, 700)); if (!NF.dead) return; nfFallBuild(me.id, me.name || 'You', fx, fy, fz, true); nfDownUi(true);
         }
+        /* ---- Sword-Art-Online style health bar: a curved ribbon that drains, with the diamond cursor above it ---- */
+        function saoDraw(c, frac, kind) {
+            const g = c.getContext('2d'), W = c.width, H = c.height; frac = Math.max(0, Math.min(1, frac)); g.clearRect(0, 0, W, H);
+            const col = frac > 0.5 ? ['#b9ff5a', '#4fd02a', '#2a8a1a'] : frac > 0.2 ? ['#ffe97a', '#f0b820', '#a87a10'] : ['#ff9a8a', '#ee3a2a', '#9a1a12'];
+            const dm = kind === 'foe' ? ['#ffc0d0', '#ff4a7a', '#a01040'] : kind === 'ally' ? ['#c8ffc8', '#4fe07a', '#1a8a40'] : ['#d0f0ff', '#58c8ff', '#1a6aa8'];
+            const cx = W / 2, dy = H * 0.27, r = H * 0.17;   // the diamond
+            g.beginPath(); g.moveTo(cx, dy - r * 1.5); g.lineTo(cx + r, dy); g.lineTo(cx, dy + r * 1.5); g.lineTo(cx - r, dy); g.closePath();
+            const dg = g.createLinearGradient(cx, dy - r * 1.5, cx, dy + r * 1.5); dg.addColorStop(0, dm[0]); dg.addColorStop(0.5, dm[1]); dg.addColorStop(1, dm[2]); g.fillStyle = dg; g.fill(); g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
+            // the ribbon: a slanted band bowing downward in the middle, like a curved bar seen from the front
+            const x0 = W * 0.06, x1 = W * 0.94, ty = H * 0.5, by = H * 0.8, bow = H * 0.1, sk = W * 0.035;
+            const path = (xe) => { g.beginPath(); g.moveTo(x0 + sk, ty); g.quadraticCurveTo((x0 + xe) / 2 + sk, ty + bow, xe + sk, ty + bow * 0.2 * 0); g.lineTo(xe - sk, by); g.quadraticCurveTo((x0 + xe) / 2 - sk, by + bow, x0 - sk, by); g.closePath(); };
+            g.save(); path(x1); g.fillStyle = 'rgba(8,16,20,.72)'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = 'rgba(235,255,245,.9)'; g.stroke(); g.restore();
+            if (frac > 0.002) { const xe = frac >= 0.995 ? W : x0 + (x1 - x0) * frac; g.save(); path(x1); g.clip(); g.beginPath(); g.rect(0, 0, xe, H); g.clip(); const fg = g.createLinearGradient(0, ty, 0, by + bow); fg.addColorStop(0, col[0]); fg.addColorStop(0.45, col[1]); fg.addColorStop(1, col[2]); g.fillStyle = fg; g.fillRect(0, ty - 2, W, by - ty + bow + 6); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, ty, W, (by - ty) * 0.28); g.restore(); }
+        }
+        function saoMake(kind, getFrac) {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 96; const tex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })); sp.scale.set(1.9, 0.71, 1); sp.renderOrder = 999; sp.userData.noOutline = true; sp.userData.lastF = -1;
+            sp.userData.draw = () => { const f = getFrac(); saoDraw(c, f, kind); tex.needsUpdate = true; sp.userData.lastF = f; }; sp.userData.draw(); return sp;
+        }
+        function saoSelfTick() {
+            if (!localActor || !localActor.group) return; const on = NF.hpMax > 0 && !NF.dead && !fpOn && (activeMap === 'nuu' && NU.ready) && !(localActor.sitSmooth > 0.5);
+            let b = NF.selfBar; if (!on) { if (b) b.visible = false; return; }
+            if (!b) { b = NF.selfBar = saoMake('self', () => NF.hp / NF.hpMax); localActor.group.add(b); }
+            const h = (localActor.height || 1.7) * (localActor.tweak ? localActor.tweak.scale : 1); const ly = localActor.label ? localActor.label.position.y : h + 0.2; b.position.set(0, ly + 0.55, 0); b.visible = true;
+            const f = NF.hp / NF.hpMax; if (Math.abs(f - b.userData.lastF) > 0.004) b.userData.draw();
+        }
         function nfBar(m) {
-            if (m.bar || m.dead) return; const c = document.createElement('canvas'); c.width = 128; c.height = 16; const tex = new THREE.CanvasTexture(c), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })); sp.scale.set(1.5, 0.19, 1); sp.renderOrder = 999; sp.position.set(0, ((m.node.userData.h || 1.6) + 0.5) / (m.size || 1), 0); sp.userData.noOutline = true; m.node.add(sp); m.bar = sp;
-            sp.userData.draw = () => { const g = c.getContext('2d'); g.clearRect(0, 0, 128, 16); g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(0, 0, 128, 16); g.fillStyle = m.hp / m.hpMax > 0.3 ? '#e8503a' : '#ff9a30'; g.fillRect(2, 2, Math.max(0, 124 * m.hp / m.hpMax), 12); g.strokeStyle = 'rgba(255,255,255,.7)'; g.strokeRect(0.5, 0.5, 127, 15); tex.needsUpdate = true; }; sp.userData.draw(); m._bhp = m.hp;
+            if (m.bar || m.dead) return; const sp = saoMake('foe', () => m.hp / m.hpMax); sp.scale.set(m.boss ? 2.6 : 1.9, m.boss ? 0.97 : 0.71, 1); sp.position.set(0, ((m.node.userData.h || 1.6) + 0.9) / (m.size || 1), 0); m.node.add(sp); m.bar = sp; m._bhp = m.hp;
         }
         /* ---- monsters: spawners hold Shuffle Strike class monsters, named with the area's prefixes, real-time, FFXIV-style aggro and leash ---- */
         function nuMakeSpawners() {
@@ -17422,14 +17447,39 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
             if (ENM.cache.has(type)) return Promise.resolve(ENM.cache.get(type)); if (ENM.bad.has(type)) return Promise.resolve(null); if (ENM.pend.has(type)) return ENM.pend.get(type);
             const pr = fetch('enemies/' + type + '.glb').then((r) => { if (!r.ok) throw new Error('enemies/' + type + '.glb ' + r.status); return r.arrayBuffer(); }).then((buf) => new Promise((ok, no) => gltfLoader.parse(inlineGlbImages(buf), '', ok, no))).then((gl) => {
                 const sc = gl.scene, root = new THREE.Group(); sc.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(sc), c = bb.getCenter(new THREE.Vector3()); sc.position.set(-c.x, -bb.min.y, -c.z); root.add(sc); root.userData.h = Math.max(0.5, bb.max.y - bb.min.y);
-                sc.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.userData.noOutline = true; o.frustumCulled = false; } }); ENM.cache.set(type, root); return root;
+                sc.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; } }); try { toonify(root); outlineAll(root, { min: 0, any: true, thick: root.userData.h > 5 ? 0.07 : 0.035 }); } catch (e) { /* plain shading */ } ENM.cache.set(type, root); return root;
             }).catch((e) => { console.warn('enemy model', type, e); ENM.bad.add(type); return null; });
             ENM.pend.set(type, pr); return pr;
         }
         function enmMount(g, type, root) {
             if (!g || g.userData.enm || !root) return; g.userData.enm = type; for (const c of g.children.slice()) c.visible = false;      // the built-in monster stays (hidden) for its animation parts
-            const inst = root.clone(true); inst.traverse((o) => { if (o.isMesh && o.material) o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone(); }); g.add(inst); g.userData.h = root.userData.h;
+            const inst = root.clone(true); inst.traverse((o) => { if (o.isMesh && o.material) { if (o.userData.isOutline) return; o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone(); } }); g.add(inst); g.userData.h = root.userData.h; enmAnimAdd(inst, type);
             const nd = g.parent; if (nd && nd.userData) { nd.userData.h = root.userData.h; for (const c of nd.children) if (c.isSprite) c.position.y = (root.userData.h + 0.95) / (nd.scale.x || 1); }
+        }
+        /* ---- life for the static models: each type breathes, bobs, sways or squashes in code, and moves more while it travels ---- */
+        const ENM_STYLE = (() => {
+            const S = { float: { by: 0.16, bf: 1.6, sw: 0.07, sf: 1.1, ps: 0.05, br: 0.015, mv: 1.3 }, slime: { by: 0, sq: 0.1, qf: 2.4, br: 0.0, mv: 2.2, hop: 0.12 }, crawl: { by: 0.03, bf: 9, sw: 0.05, sf: 7, ps: 0.03, br: 0.02, mv: 2.0 }, beast: { by: 0.07, bf: 5, sw: 0.03, sf: 2.5, ps: 0.06, br: 0.025, mv: 2.0 }, heavy: { by: 0.03, bf: 2.2, sw: 0.025, sf: 1.4, ps: 0.02, br: 0.02, mv: 1.6 }, snake: { by: 0.02, bf: 2, sw: 0.18, sf: 2.2, ps: 0.05, br: 0.02, mv: 1.5, yaw: 0.22 }, bird: { by: 0.22, bf: 2.6, sw: 0.1, sf: 2.6, ps: 0.08, br: 0.03, mv: 1.4, flap: 1 }, hop: { by: 0, sq: 0.08, qf: 3.5, mv: 1.8, hop: 0.2 } };
+            const m = {}; for (const k of ['banshee', 'wraith', 'vwraith', 'reaper', 'lich', 'lichking', 'drone', 'sdrone', 'bomb', 'cbomb', 'spore']) m[k] = S.float; for (const k of ['slime', 'egel', 'fgel', 'vgel', 'gilded']) m[k] = S.slime; for (const k of ['beetle', 'scorp', 'cscorp', 'mantis']) m[k] = S.crawl; for (const k of ['wolf', 'awolf', 'fwolf', 'raptor', 'behemoth', 'drake', 'cdrake']) m[k] = S.beast; for (const k of ['dknight', 'pknight', 'colossus', 'titan', 'rubyweapon', 'bone', 'guard', 'golem', 'igolem']) m[k] = S.heavy; for (const k of ['viper', 'vine', 'sprout', 'hydra']) m[k] = S.snake; for (const k of ['harpy', 'roc']) m[k] = S.bird; m.mimic = S.hop; return m;
+        })();
+        const ENM_ANIM = { list: [], on: false, t0: performance.now(), v: new THREE.Vector3() };
+        function enmAnimAdd(inst, type) {
+            ENM_ANIM.list.push({ inst, st: ENM_STYLE[type] || ENM_STYLE.heavy, ph: Math.random() * 6.283, mv: 0, p: null, py: inst.position.y, ps: inst.scale.clone(), pr: inst.rotation.clone() });
+            if (!ENM_ANIM.on) { ENM_ANIM.on = true; ENM_ANIM.last = performance.now(); requestAnimationFrame(enmAnimLoop); }
+        }
+        function enmAnimLoop(now) {
+            requestAnimationFrame(enmAnimLoop); const dt = Math.min(0.1, (now - ENM_ANIM.last) / 1000); ENM_ANIM.last = now; if (dt <= 0) return; const t = now / 1000, L = ENM_ANIM.list, v = ENM_ANIM.v;
+            for (let i = L.length - 1; i >= 0; i--) {
+                const a = L[i], o = a.inst; let r = o; while (r.parent) r = r.parent; if (!r.isScene) { if (!o.parent || a.lost++ > 600) { L.splice(i, 1); } else a.lost = (a.lost || 0); continue; } a.lost = 0;
+                if (!o.visible) continue; o.getWorldPosition(v); if (typeof camera !== 'undefined' && camera.position.distanceToSquared(v) > 6400) continue;
+                const sp = a.p ? Math.hypot(v.x - a.p.x, v.z - a.p.z) / dt : 0; if (!a.p) a.p = v.clone(); else a.p.copy(v); const k = Math.min(1, sp / 2.2); a.mv += (k - a.mv) * Math.min(1, dt * 8);
+                const st = a.st, f = 1 + a.mv * (st.mv - 1), tt = t + a.ph;
+                const bob = Math.sin(tt * st.bf * f) * (st.by || 0) * (0.5 + a.mv * 0.8), hop = st.hop ? Math.abs(Math.sin(tt * 4 * f)) * st.hop * (0.3 + a.mv) : 0;
+                o.position.y = a.py + bob + hop;
+                const br = (st.br || 0) * Math.sin(tt * 1.7), sq = st.sq ? Math.sin(tt * st.qf * f) * st.sq : 0;
+                o.scale.set(a.ps.x * (1 + br - sq * 0.6), a.ps.y * (1 + br * 1.5 + sq), a.ps.z * (1 + br - sq * 0.6));
+                o.rotation.z = a.pr.z + Math.sin(tt * (st.sf || 1) * f) * (st.sw || 0) * (0.6 + a.mv * 0.6); o.rotation.x = a.pr.x + (st.ps ? Math.sin(tt * (st.bf || 2) * f * 0.5) * st.ps * (0.4 + a.mv) : 0); o.rotation.y = a.pr.y + (st.yaw ? Math.sin(tt * 1.3) * st.yaw : 0);
+                if (st.flap) { const fl = Math.sin(tt * 7 * f); o.scale.x = a.ps.x * (1 + fl * 0.08 * (0.5 + a.mv)); }
+            }
         }
         function enmApply(g, type) { if (!g || !ENM.types.has(type) || ENM.bad.has(type)) return g; const root = ENM.cache.get(type); if (root) enmMount(g, type, root); else enmLoad(type).then((r) => { if (r) enmMount(g, type, r); }); return g; }
         function btBuildFoe(type) {
