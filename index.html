@@ -13884,33 +13884,39 @@ function kbModel(THREE, mk) {
             NF.hid = hid; await new Promise((r) => setTimeout(r, 700)); if (!NF.dead) return; nfFallBuild(me.id, me.name || 'You', fx, fy, fz, true); nfDownUi(true);
         }
         /* ---- Sword-Art-Online style health bar: a curved ribbon that drains, with the diamond cursor above it ---- */
-        function saoDraw(c, frac, kind) {
-            const g = c.getContext('2d'), W = c.width, H = c.height; frac = Math.max(0, Math.min(1, frac)); g.clearRect(0, 0, W, H);
-            const col = frac > 0.5 ? ['#b9ff5a', '#4fd02a', '#2a8a1a'] : frac > 0.2 ? ['#ffe97a', '#f0b820', '#a87a10'] : ['#ff9a8a', '#ee3a2a', '#9a1a12'];
-            const dm = kind === 'foe' ? ['#ffc0d0', '#ff4a7a', '#a01040'] : kind === 'ally' ? ['#c8ffc8', '#4fe07a', '#1a8a40'] : ['#d0f0ff', '#58c8ff', '#1a6aa8'];
-            const cx = W / 2, dy = H * 0.27, r = H * 0.17;   // the diamond
-            g.beginPath(); g.moveTo(cx, dy - r * 1.5); g.lineTo(cx + r, dy); g.lineTo(cx, dy + r * 1.5); g.lineTo(cx - r, dy); g.closePath();
-            const dg = g.createLinearGradient(cx, dy - r * 1.5, cx, dy + r * 1.5); dg.addColorStop(0, dm[0]); dg.addColorStop(0.5, dm[1]); dg.addColorStop(1, dm[2]); g.fillStyle = dg; g.fill(); g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
-            // the ribbon: a slanted band bowing downward in the middle, like a curved bar seen from the front
-            const x0 = W * 0.06, x1 = W * 0.94, ty = H * 0.5, by = H * 0.8, bow = H * 0.1, sk = W * 0.035;
-            const path = (xe) => { g.beginPath(); g.moveTo(x0 + sk, ty); g.quadraticCurveTo((x0 + xe) / 2 + sk, ty + bow, xe + sk, ty + bow * 0.2 * 0); g.lineTo(xe - sk, by); g.quadraticCurveTo((x0 + xe) / 2 - sk, by + bow, x0 - sk, by); g.closePath(); };
-            g.save(); path(x1); g.fillStyle = 'rgba(8,16,20,.72)'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = 'rgba(235,255,245,.9)'; g.stroke(); g.restore();
-            if (frac > 0.002) { const xe = frac >= 0.995 ? W : x0 + (x1 - x0) * frac; g.save(); path(x1); g.clip(); g.beginPath(); g.rect(0, 0, xe, H); g.clip(); const fg = g.createLinearGradient(0, ty, 0, by + bow); fg.addColorStop(0, col[0]); fg.addColorStop(0.45, col[1]); fg.addColorStop(1, col[2]); g.fillStyle = fg; g.fillRect(0, ty - 2, W, by - ty + bow + 6); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, ty, W, (by - ty) * 0.28); g.restore(); }
+        const SAO_LAYERS = [['#b9ff5a', '#4fd02a', '#2a8a1a'], ['#ffe97a', '#f0b820', '#a87a10'], ['#ffb86a', '#f07a20', '#9a4208'], ['#ff9a8a', '#ee3a2a', '#9a1a12'], ['#e0a0ff', '#a040e0', '#4a1070']];
+        function saoDraw(c, frac, kind, layers) {
+            const g = c.getContext('2d'), W = c.width, H = c.height; frac = Math.max(0, Math.min(1, frac)); layers = layers || 1; g.clearRect(0, 0, W, H);
+            const n = frac <= 0 ? 0 : Math.min(layers, Math.ceil(frac * layers - 1e-6)), within = n ? frac * layers - (n - 1) : 0;   // bars still standing, and how full the top one is
+            const lc = (k) => layers === 1 ? (frac > 0.5 ? SAO_LAYERS[0] : frac > 0.2 ? SAO_LAYERS[1] : SAO_LAYERS[3]) : SAO_LAYERS[(layers - 1 - k) % SAO_LAYERS.length];
+            const x0 = W * 0.05, x1 = W * 0.64, ty = H * 0.16, by = H * 0.64, bow = H * 0.12, sk = W * 0.03, I = 6;
+            const path = (xa, xe, i) => { g.beginPath(); g.moveTo(xa + sk + i, ty + i); g.quadraticCurveTo((xa + xe) / 2 + sk, ty + bow + i, xe + sk - i, ty + i * 0.3); g.lineTo(xe - sk - i, by - i); g.quadraticCurveTo((xa + xe) / 2 - sk, by + bow - i, xa - sk + i, by - i); g.closePath(); };
+            const fillCol = (col, xa, xb) => { g.save(); path(x0, x1, I); g.clip(); g.beginPath(); g.rect(xa, 0, xb - xa, H); g.clip(); const fg = g.createLinearGradient(0, ty, 0, by + bow); fg.addColorStop(0, col[0]); fg.addColorStop(0.5, col[1]); fg.addColorStop(1, col[2]); g.fillStyle = fg; g.fillRect(0, 0, W, H); g.restore(); };
+            // frame: thick white border, dark track, a small tab hanging off the left end and a detached slanted cap on the right
+            g.lineJoin = 'round'; g.fillStyle = '#b8bec4'; g.fillRect(x0 - sk + 4, by - 2, 9, 12);
+            path(x0, x1, 0); g.fillStyle = '#fff'; g.fill(); path(x0, x1, I); g.fillStyle = 'rgba(10,22,18,.9)'; g.fill();
+            if (n > 1) fillCol(lc(n - 2), x0 - sk, x1 + sk);
+            if (n >= 1) fillCol(lc(n - 1), x0 - sk, within >= 0.995 ? x1 + sk : x0 + (x1 - x0) * within);
+            const cx0 = x1 + sk * 2.4, cx1 = cx0 + W * 0.08; g.beginPath(); g.moveTo(cx0 + sk, ty + 2); g.lineTo(cx1 + sk, ty + 1); g.lineTo(cx1 - sk, by - 1); g.lineTo(cx0 - sk, by - 1); g.closePath(); g.fillStyle = '#fff'; g.fill();
+            g.beginPath(); g.moveTo(cx0 + sk + I * 0.9, ty + 2 + I); g.lineTo(cx1 + sk - I * 0.9, ty + 1 + I); g.lineTo(cx1 - sk - I * 0.4, by - 1 - I); g.lineTo(cx0 - sk + I * 0.9, by - 1 - I); g.closePath(); const top = n ? lc(n - 1) : null; g.fillStyle = frac > 0.97 && top ? top[1] : 'rgba(10,22,18,.9)'; g.fill();
+            if (layers > 1 && n > 0) { g.font = 'bold ' + Math.round(H * 0.45) + 'px sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.85)'; g.fillStyle = '#fff'; const tx = cx1 + sk + 8, ty2 = H * 0.42; g.strokeText('x' + n, tx, ty2); g.fillText('x' + n, tx, ty2); }
         }
-        function saoMake(kind, getFrac) {
-            const c = document.createElement('canvas'); c.width = 256; c.height = 96; const tex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
-            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })); sp.scale.set(1.9, 0.71, 1); sp.renderOrder = 999; sp.userData.noOutline = true; sp.userData.lastF = -1;
-            sp.userData.draw = () => { const f = getFrac(); saoDraw(c, f, kind); tex.needsUpdate = true; sp.userData.lastF = f; }; sp.userData.draw(); return sp;
+        function saoMake(kind, getFrac, layers) {
+            const c = document.createElement('canvas'); c.width = 320; c.height = 64; const tex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })); sp.scale.set(1.35, 0.27, 1); sp.renderOrder = 999; sp.userData.noOutline = true; sp.userData.lastF = -1;
+            sp.userData.draw = () => { const f = getFrac(); saoDraw(c, f, kind, layers); tex.needsUpdate = true; sp.userData.lastF = f; }; sp.userData.draw(); return sp;
         }
+        const _sb = new THREE.Vector3();
         function saoSelfTick() {
             if (!localActor || !localActor.group) return; const on = NF.hpMax > 0 && !NF.dead && !fpOn && (activeMap === 'nuu' && NU.ready) && !(localActor.sitSmooth > 0.5);
             let b = NF.selfBar; if (!on) { if (b) b.visible = false; return; }
             if (!b) { b = NF.selfBar = saoMake('self', () => NF.hp / NF.hpMax); localActor.group.add(b); }
-            const h = (localActor.height || 1.7) * (localActor.tweak ? localActor.tweak.scale : 1); const ly = localActor.label ? localActor.label.position.y : h + 0.2; b.position.set(0, ly + 0.55, 0); b.visible = true;
+            const h = (localActor.height || 1.7) * (localActor.tweak ? localActor.tweak.scale : 1); const ly = localActor.label ? localActor.label.position.y : h + 0.2; const hd = h * 0.97, g = localActor.group; _sb.set(0, 0, 0).setFromMatrixColumn(camera.matrixWorld, 0).normalize().multiplyScalar(0.62); _sb.x += g.position.x; _sb.y = g.position.y + hd; _sb.z += g.position.z + _sb.z * 0; b.position.copy(g.worldToLocal(_sb)); b.visible = true;
             const f = NF.hp / NF.hpMax; if (Math.abs(f - b.userData.lastF) > 0.004) b.userData.draw();
         }
+        function saoFade(m) { const b = m.bar; if (!b) return; const d = camera.position.distanceTo(m.node.position), o = Math.max(0, Math.min(1, (42 - d) / 10)); if (Math.abs(b.material.opacity - o) > 0.02) b.material.opacity = o; b.visible = o > 0.02; }
         function nfBar(m) {
-            if (m.bar || m.dead) return; const sp = saoMake('foe', () => m.hp / m.hpMax); sp.scale.set(m.boss ? 2.6 : 1.9, m.boss ? 0.97 : 0.71, 1); sp.position.set(0, ((m.node.userData.h || 1.6) + 0.9) / (m.size || 1), 0); m.node.add(sp); m.bar = sp; m._bhp = m.hp;
+            if (m.bar || m.dead) return; const lay = m.boss ? 4 : m.rank === 'S' ? 3 : m.rank === 'A' ? 2 : 1, sp = saoMake('foe', () => m.hp / m.hpMax, lay); { const z = 1 / (m.size || 1), bw = (m.boss ? 1.7 : 1.3) * (lay > 1 ? 1.2 : 1); sp.scale.set(bw * z, bw * 0.2 * z, 1); } sp.position.set(0, ((m.node.userData.h || 1.6) + 0.6) / (m.size || 1), 0); m.node.add(sp); m.bar = sp; m._bhp = m.hp;
         }
         /* ---- monsters: spawners hold Shuffle Strike class monsters, named with the area's prefixes, real-time, FFXIV-style aggro and leash ---- */
         function nuMakeSpawners() {
@@ -14042,7 +14048,7 @@ function kbModel(THREE, mk) {
             if (m.lunge > 0) { m.lunge -= dt; lunge = Math.sin(Math.max(0, m.lunge) / 0.18 * Math.PI) * 0.5; }
             m.node.position.set(m.x + Math.sin(m.ang) * lunge, nuH(m.x, m.z), m.z + Math.cos(m.ang) * lunge); m.node.rotation.x = tilt; let da = m.ang - m.node.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); m.node.rotation.y += da * Math.min(1, dt * 8);
             if (m.hurt && performance.now() - m.hurt < 120) m.node.scale.setScalar(m.size * 1.07); else m.node.scale.setScalar(m.size);
-            if (m.bar && m._bhp !== m.hp) { m._bhp = m.hp; m.bar.userData.draw(); }
+            if (m.bar && m._bhp !== m.hp) { m._bhp = m.hp; m.bar.userData.draw(); } if (m.bar) saoFade(m);
             if (!m.bar && (m.aggro || NF.tgt === m)) nfBar(m); if (m.bar && !m.aggro && NF.tgt !== m && m.hp >= m.hpMax) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
         }
         function nsSpec(m) { return { sid: m.sid, ...m.spec, x: nsRound(m.x, 10), z: nsRound(m.z, 10), hp: Math.round(m.hp), ang: nsRound(m.ang, 100) }; }
@@ -14150,7 +14156,7 @@ function kbModel(THREE, mk) {
             let lunge = 0; if (m.lunge > 0) { m.lunge -= dt; lunge = Math.sin(Math.max(0, m.lunge) / 0.18 * Math.PI) * 0.5; }
             m.node.position.set(m.x + Math.sin(m.ang) * lunge, nuH(m.x, m.z), m.z + Math.cos(m.ang) * lunge); m.node.rotation.x = tilt; let da = m.ang - m.node.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); m.node.rotation.y += da * Math.min(1, dt * 8);
             if (m.hurt && performance.now() - m.hurt < 120) m.node.scale.setScalar(m.size * 1.07); else m.node.scale.setScalar(m.size);
-            if (m.bar && m._bhp !== m.hp) { m._bhp = m.hp; m.bar.userData.draw(); }
+            if (m.bar && m._bhp !== m.hp) { m._bhp = m.hp; m.bar.userData.draw(); } if (m.bar) saoFade(m);
             if (!m.bar && (m.aggro || NF.tgt === m)) nfBar(m); if (m.bar && !m.aggro && NF.tgt !== m && m.hp >= m.hpMax) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
         }
         /* ---- Hunt marks: B-rank respawns in 5 s, A-rank every 4-6 h, S-rank needs its own weather/time and returns after 48-84 h ---- */
