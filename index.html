@@ -994,6 +994,8 @@
                 <div id="cls-card" class="text-[11px] text-gray-300 leading-relaxed bg-black/30 border border-white/5 rounded-lg p-3"></div>
             </div>
 
+            <div id="voice-panel" class="mb-4 rounded-xl border border-white/10 bg-black/30 p-3"></div>
+            <div id="sfx-panel" class="mb-4 rounded-xl border border-white/10 bg-black/30 p-3"></div>
             <label class="text-xs text-gray-400 block mb-2">Movement style <span class="text-gray-500">(V to toggle)</span></label>
             <div class="grid grid-cols-2 gap-2 mb-1">
                 <button id="move-strafe">Strafe</button>
@@ -5000,6 +5002,7 @@ function kbModel(THREE, mk) {
             $('char-confirm').textContent = pending ? 'Equip' : (editable ? 'Apply' : 'Close');
             Object.keys(keys).forEach((k) => (keys[k] = false));
             renderGenderChoice();
+            try { vpRender(); } catch (e) { /* voices optional */ } try { spRender(); } catch (e) { /* sfx picker optional */ }
             $('char-modal').classList.remove('hidden');
         }
         function renderBaseButtons() {
@@ -19013,6 +19016,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 let names = BTV.man[cat + '_' + g];
                 if (cfg && cfg.actor && cfg.actor !== 'auto' && cfg.actor !== 'custom' && BTV.am) for (const gg of ['m', 'f']) { const l = BTV.am[cat + '_' + gg] && BTV.am[cat + '_' + gg][cfg.actor]; if (l && l.length) { names = l; g = gg; break; } }   // a chosen voice actor
                 if (!names || !names.length) return;
+                if (cfg && cfg.pick && cfg.pick[cat] && cfg.pick[cat].length) { const pk = names.filter((n) => cfg.pick[cat].includes(n)); if (pk.length) names = pk; }   // only the lines ticked in Character Setup
                 const have = names.filter((n) => BTV.buf[n]), lk = cat + g + ((cfg && cfg.actor) || ''); let pick;
                 if (have.length >= 3) { do { pick = have[Math.floor(Math.random() * have.length)]; } while (pick === BTV.last[lk] && have.length > 1); } else pick = names[Math.floor(Math.random() * names.length)];
                 BTV.last[lk] = pick; BTV.spk[id] = now + (cat === 'death' ? 1500 : 900); BTV.any = now;
@@ -19072,6 +19076,96 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 else if (t.dataset.vfile && t.files && t.files.length) { const sk = t.dataset.vfile, sel = document.querySelector('[data-vcat="' + sk + '"]'); btvAddClips(sk, sel ? sel.value : 'grunt', Array.from(t.files)); t.value = ''; }
             } catch (x) { /* voice settings optional */ }
         });
+        /* ---- CHARACTER SETUP: choose which battle voice lines play (per character, per type); none ticked = random from all ---- */
+        const VP = { sk: 'me', open: {}, bound: false };
+        function vpEsc(x) { return String(x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+        function btvNames(sk, cat) {
+            const cfg = BTV.ch[sk], man = BTV.man; if (!man) return []; let g = 'm';
+            try { const u = sk === 'me' ? null : BT.party.filter((q) => q.bot)[+sk.slice(1)], a = u ? btActorOf(u.id) : localActor; if (a && a.gender === 'female') g = 'f'; } catch (e) { /* default male */ }
+            let names = man[cat + '_' + g];
+            if (cfg && cfg.actor && cfg.actor !== 'auto' && cfg.actor !== 'custom' && BTV.am) for (const gg of ['m', 'f']) { const l = BTV.am[cat + '_' + gg] && BTV.am[cat + '_' + gg][cfg.actor]; if (l && l.length) { names = l; break; } }
+            return names || [];
+        }
+        function btvPreview(name, sk) { btvLoad(name).then((b) => { const ac = dnAC; if (!b || !ac) return; if (ac.state === 'suspended') ac.resume(); const s = ac.createBufferSource(); s.buffer = b; s.playbackRate.value = sk === 'me' ? BTV.pitch : 1; const gn = ac.createGain(); gn.gain.value = Math.min(1.5, BTV.vol); s.connect(gn); gn.connect(ac.destination); s.start(); }); }
+        function vpHtml() {
+            const sk = VP.sk, cfg = BTV.ch[sk] || { actor: 'auto', off: [], custom: {} }, slots = [['me', 'You']].concat([0, 1, 2, 3].map((i) => ['b' + i, btNm(BT.allyNames[i] || '') || ['Pip', 'Kiwi', 'Mochi', 'Nori'][i]]));
+            const head = `<div class="flex items-center justify-between mb-2"><label class="text-xs text-gray-300 font-semibold">🔊 Battle voices</label><label class="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer"><input id="vp-on" type="checkbox" ${BTV.on ? 'checked' : ''}> On</label></div>`
+                + `<div class="flex items-center gap-2 mb-2 text-[11px] text-gray-300"><span>Volume</span><input id="vp-vol" type="range" min="0" max="100" value="${Math.round(BTV.vol * 100)}" class="flex-1"></div>`
+                + `<div class="grid grid-cols-2 gap-2 mb-2"><select id="vp-slot" class="bg-white/10 rounded-lg text-xs p-1.5">${slots.map(([k, n]) => `<option value="${k}" ${k === sk ? 'selected' : ''}>${vpEsc(n)}</option>`).join('')}</select><select id="vp-actor" class="bg-white/10 rounded-lg text-xs p-1.5"><option value="auto" ${cfg.actor === 'auto' ? 'selected' : ''}>Auto (by gender)</option>${BTV_ACTORS.map(([a, g]) => `<option value="${a}" ${cfg.actor === a ? 'selected' : ''}>${a} (${g})</option>`).join('')}<option value="custom" ${cfg.actor === 'custom' ? 'selected' : ''}>Custom clips</option></select></div>`;
+            if (cfg.actor === 'custom') return head + '<p class="text-[11px] text-gray-400">Custom clips play instead of the stock voices. Add or clear them in the battle Cast panel.</p>';
+            const rows = BTV_CATS.map(([k, label]) => {
+                const names = btvNames(sk, k), pick = ((cfg.pick && cfg.pick[k]) || []).filter((n) => names.includes(n)), on = !(cfg.off || []).includes(k);
+                const sum = label + ' · ' + (!on ? 'off' : pick.length ? pick.length + ' of ' + names.length + ' lines' : 'random, all ' + names.length);
+                const list = names.map((n, i) => `<div class="flex items-center gap-2 py-0.5"><input type="checkbox" data-vp-c="${k}" value="${vpEsc(n)}" ${pick.includes(n) ? 'checked' : ''}><button type="button" data-vp-play="${vpEsc(n)}" class="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[11px]">▶</button><span class="text-[11px] text-gray-300 truncate" title="${vpEsc(n)}">Line ${i + 1}</span></div>`).join('');
+                return `<details data-vp-d="${k}" ${VP.open[k] ? 'open' : ''} class="mb-1 rounded-lg bg-white/5 px-2 py-1"><summary class="cursor-pointer text-[11px] text-gray-200 flex items-center gap-2"><input type="checkbox" data-vp-t="${k}" ${on ? 'checked' : ''}><span>${sum}</span></summary><div class="mt-1 max-h-40 overflow-y-auto custom-scrollbar">${list || '<span class="text-[11px] text-gray-500">No lines for this voice.</span>'}</div>${pick.length ? `<button type="button" data-vp-all="${k}" class="mt-1 text-[10px] text-gray-400 underline">Clear ticks (random from all)</button>` : ''}</details>`;
+            }).join('');
+            return head + rows + '<p class="text-[10px] text-gray-500 leading-relaxed mt-2">Tick the lines you want and only those play, picked at random among the ticked. Leave a type with no ticks to play any of its lines. The box next to a type turns it on or off. ▶ previews a line.</p>';
+        }
+        function vpRender() {
+            const p = document.getElementById('voice-panel'); if (!p) return; vpBind(p);
+            if (!BTV.man) { p.innerHTML = '<div class="text-xs text-gray-300 font-semibold mb-1">🔊 Battle voices</div><p class="text-[11px] text-gray-400">Loading voice list…</p>'; btvMan().then((m) => { if (m) vpRender(); else p.innerHTML = '<div class="text-xs text-gray-300 font-semibold mb-1">🔊 Battle voices</div><p class="text-[11px] text-gray-400">Voice files not found. The voice/ folder (with manifest.json) must sit next to index.html.</p>'; }); return; }
+            p.innerHTML = vpHtml();
+        }
+        function vpBind(p) {
+            if (VP.bound) return; VP.bound = true;
+            const sync = () => { btvChSave(); try { BT.castRev++; } catch (x) { /* no battle yet */ } };
+            p.addEventListener('change', (e) => {
+                try {
+                    const t = e.target, d = t.dataset || {}, c = () => btvCfg(VP.sk);
+                    if (t.id === 'vp-on') { BTV.on = t.checked; btvSave(); }
+                    else if (t.id === 'vp-vol') { BTV.vol = clamp(+t.value / 100, 0, 1); btvSave(); }
+                    else if (t.id === 'vp-slot') { VP.sk = t.value; vpRender(); }
+                    else if (t.id === 'vp-actor') { c().actor = t.value; c().pick = {}; sync(); vpRender(); }
+                    else if (d.vpT) { c().off = (c().off || []).filter((x) => x !== d.vpT); if (!t.checked) c().off.push(d.vpT); sync(); vpRender(); }
+                    else if (d.vpC) { const cf = c(); cf.pick = cf.pick || {}; const arr = (cf.pick[d.vpC] || []).filter((x) => x !== t.value); if (t.checked) arr.push(t.value); if (arr.length) cf.pick[d.vpC] = arr; else delete cf.pick[d.vpC]; sync(); vpRender(); }
+                } catch (x) { /* voice settings optional */ }
+            });
+            p.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('button'); if (!b) return; const d = b.dataset; if (d.vpPlay) btvPreview(d.vpPlay, VP.sk); else if (d.vpAll) { const cf = btvCfg(VP.sk); if (cf.pick) delete cf.pick[d.vpAll]; sync(); vpRender(); } });
+            p.addEventListener('toggle', (e) => { const d = e.target && e.target.dataset; if (d && d.vpD) VP.open[d.vpD] = e.target.open; }, true);
+        }
+        /* ---- CHARACTER SETUP: choose which battle sound effects play (swings, skills, limits, support magic, magic); none ticked = the usual random mix ---- */
+        const SP = { pick: {}, pitch: {}, all: {}, open: {}, bound: false, tries: 0, cands: {"swing": ["mov_bamboo_whip", "rel_flying_blades", "mov_simple_whoosh", "mov_reso_swish", "mov_windy_swipy", "mel_sword_slash", "mel_bit_sword", "mel_gut_punch", "mel_hollow_punch", "mel_clap_slapper", "mel_gut_kick", "mel_crunch_kick", "mov_sand_swipe", "mov_wind_sweep_swish"], "skill": ["imp_critical_strike", "imp_star_sparkle", "mel_sword_critical", "mel_kick_critical", "hit_speedcore", "hit_mecha_armor_piercer", "exp_laser_impact", "exp_mecha_engine_burst", "imp_wubwub_impact", "exp_thud", "exp_nova_whiplash", "exp_eruption", "exp_bass_hit", "exp_mecha_engine_impact", "rel_skipping_impact", "imp_crunchy_burst"], "limit": ["rel_mecha_laser_release", "imp_mecha_white_laser", "imp_mecha_pink_laser", "imp_mecha_purple_laser", "mel_homerunner", "exp_mecha_multiple_bangs", "exp_mecha_piercing_punch", "exp_nova_whiplash", "exp_magisplosion", "exp_mecha_detonator", "exp_mecha_manablast", "exp_mecha_intense_hit"], "heal": ["rel_mana_sparkles", "imp_magic_sparkles", "proj_toon_sparkle", "imp_glistening_shimmers", "mov_whimsy_chimes", "cast_casting_buff", "cast_aura_rise", "cast_growing_strength", "buff_mecha_level_up", "buff_mecha_generic_short", "buff_mecha_lock_in", "buff_simple_heal", "buff_mecha_regen", "buff_healing_gusts", "buff_stats_up", "buff_generic_buff"], "magic": ["rel_high_tech_spell", "rel_magisparkle", "rel_rising_lasers", "mov_sparkling_by", "exp_magically", "exp_mana_bomb", "cast_energy_riser", "cast_zap_up", "cast_zappy_tone", "cast_hollow_spell", "cast_zippy_particle", "cast_wet_electricity", "cast_weirdness", "cast_sphere_quick", "cast_sphere_up", "cast_tube_riser", "cast_pew_laser", "cast_pierce", "cast_bubblewrap", "cast_mecha_vibration", "cast_mecha_laser_prepare", "rel_fire_sphere", "rel_flame_ball", "exp_pyro_burst", "exp_phoenix_spark", "exp_scorched", "exp_small_flare", "exp_fire_hit", "exp_flare_nova", "rel_flare_gun", "imp_flare_hit", "rel_electric_sphere", "imp_jacobs_ladder", "exp_voltaic_blast", "exp_shimmer_electric", "exp_electric_hit", "use_retro_zap", "imp_bubbly_zaps", "hit_zap_laser", "hit_zap_metal", "imp_sparkly_star", "rel_shimmery_bubbles", "proj_water_bolt", "mov_sparkly_water", "mov_watery_laser", "imp_metallic_bubble", "imp_glassy_sprites", "imp_energy_crystal"]}, groups: {"swing": ["Swings", ["swing", "punch", "claw"]], "skill": ["Skills", ["crit", "quake"]], "limit": ["Limits", ["limit"]], "heal": ["Support magic", ["heal"]], "magic": ["Magic", ["cast", "fire", "bolt", "ice"]]} };
+        SP.groups.damage = ['Damage (when something is hit)', ['hit', 'foehit']]; SP.cands.damage = ["imp_flick", "imp_whimsimpact", "mel_swish_hit", "hit_smack", "hit_strong_smack", "hit_sweep_hit", "hit_bit_kick", "hit_fleeting_hit", "hit_plastic_zap", "imp_crunchy_energy", "imp_energetic_impact", "mel_gut_punch", "mel_hollow_punch", "hit_hit_noise", "hit_gore_pierce", "hit_mecha_gore_cruncher", "hit_noisy_hit", "hit_mecha_downer"];
+        try { const j = JSON.parse(localStorage.getItem('oasisBtlSfxPick') || '{}'); if (j && typeof j === 'object') SP.pick = j; } catch (e) { /* storage */ }
+        try { const j = JSON.parse(localStorage.getItem('oasisBtlSfxPitch') || '{}'); if (j && typeof j === 'object') for (const g in j) if (Number.isFinite(+j[g])) SP.pitch[g] = clamp(+j[g], 0.6, 1.6); } catch (e) { /* storage */ }
+        function spSave() { try { localStorage.setItem('oasisBtlSfxPick', JSON.stringify(SP.pick)); localStorage.setItem('oasisBtlSfxPitch', JSON.stringify(SP.pitch)); } catch (e) { /* storage */ } }
+        function sfxGroupOf(k) { for (const g in SP.groups) if (SP.groups[g][1].includes(k)) return g; return null; }
+        function sfxPlayPicked(k) {   // true when you ticked sounds for this kind of effect and one of them was played
+            const g = sfxGroupOf(k), pk = g && SP.pick[g]; PCS.rate = (g && SP.pitch[g]) || 1; if (PCS.rate !== 1) setTimeout(() => { PCS.rate = 1; }, 450);   // your Pitch slider for this kind of effect
+            if (!pk || !pk.length || !PCS.man) return false;
+            const ok = pk.filter((n) => PCS.man[n]); if (!ok.length) return false;
+            return pcSfx(ok[Math.floor(Math.random() * ok.length)], 0.7, 1) || false;
+        }
+        function spPlay(n, g) { PCS.rate = SP.pitch[g] || 1; pcSfx(n, 0.7, 1); setTimeout(() => { PCS.rate = 1; }, 450); }
+        function spRender() {
+            const p = document.getElementById('sfx-panel'); if (!p) return; spBind(p);
+            const head = '<div class="text-xs text-gray-300 font-semibold mb-2">💥 Battle sound effects</div>';
+            if (!PCS.man) { try { gnSndInit(); } catch (e) { /* audio */ } if (SP.tries++ < 12) { p.innerHTML = head + '<p class="text-[11px] text-gray-400">Loading sounds…</p>'; setTimeout(spRender, 600); } else p.innerHTML = head + '<p class="text-[11px] text-gray-400">Sound files not found. The assets/ folder (pc-sfx.json) must sit next to index.html.</p>'; return; }
+            SP.tries = 0; const every = Object.keys(PCS.man).sort();
+            p.innerHTML = head + Object.keys(SP.groups).map((g) => {
+                const pk = (SP.pick[g] || []).filter((n) => PCS.man[n]), cur = SP.cands[g].filter((n) => PCS.man[n]), names = SP.all[g] ? every : cur.concat(pk.filter((n) => !cur.includes(n))), pt = SP.pitch[g] || 1;
+                const list = names.map((n) => `<div class="flex items-center gap-2 py-0.5"><input type="checkbox" data-sp-c="${g}" value="${vpEsc(n)}" ${pk.includes(n) ? 'checked' : ''}><button type="button" data-sp-play="${vpEsc(n)}" class="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[11px]">▶</button><span class="text-[11px] text-gray-300 truncate" title="${vpEsc(n)}">${vpEsc(n.replace(/^[a-z]{2,4}_/, '').replace(/_/g, ' '))}</span></div>`).join('');
+                return `<details data-sp-d="${g}" ${SP.open[g] ? 'open' : ''} class="mb-1 rounded-lg bg-white/5 px-2 py-1"><summary class="cursor-pointer text-[11px] text-gray-200">${SP.groups[g][0]} · ${pk.length ? pk.length + ' sound' + (pk.length > 1 ? 's' : '') + ' picked' : 'random mix'}${pt !== 1 ? ' · pitch x' + pt.toFixed(2) : ''}</summary>`
+                    + `<div class="flex items-center gap-2 my-1 text-[11px] text-gray-300"><span>Pitch</span><input type="range" min="0.6" max="1.6" step="0.05" value="${pt}" data-sp-p="${g}" class="flex-1"><span class="w-10 text-right">x${pt.toFixed(2)}</span><button type="button" data-sp-pr="${g}" class="text-[10px] text-gray-400 underline">Reset</button></div>`
+                    + `<div class="mt-1 max-h-40 overflow-y-auto custom-scrollbar">${list}</div><div class="flex gap-3 mt-1"><button type="button" data-sp-more="${g}" class="text-[10px] text-gray-400 underline">${SP.all[g] ? 'Show fewer sounds' : 'Show all ' + every.length + ' sounds'}</button>${pk.length ? `<button type="button" data-sp-all="${g}" class="text-[10px] text-gray-400 underline">Clear ticks (random mix)</button>` : ''}</div></details>`;
+            }).join('') + '<p class="text-[10px] text-gray-500 leading-relaxed mt-2">Tick the sounds you want and only those play for that kind of attack, picked at random among the ticked. No ticks keeps the normal random mix. The Pitch slider shifts every sound of that kind (below x1 is deeper, above is higher), so your effects sound unlike other players. Magic covers cast, fire, thunder and ice. Skills covers crits and quakes. ▶ previews a sound at your pitch.</p>';
+        }
+        function spBind(p) {
+            if (SP.bound) return; SP.bound = true;
+            p.addEventListener('change', (e) => {
+                const t = e.target, d = t.dataset || {};
+                if (d.spP) { SP.pitch[d.spP] = clamp(+t.value, 0.6, 1.6); spSave(); spRender(); return; }
+                const g = d.spC; if (!g) return; const arr = (SP.pick[g] || []).filter((x) => x !== t.value); if (t.checked) arr.push(t.value); if (arr.length) SP.pick[g] = arr; else delete SP.pick[g]; spSave(); spRender();
+            });
+            p.addEventListener('click', (e) => {
+                const b = e.target.closest && e.target.closest('button'); if (!b) return; const d = b.dataset;
+                if (d.spPlay) { const dt = b.closest('details'); spPlay(d.spPlay, dt && dt.dataset.spD); }
+                else if (d.spAll) { delete SP.pick[d.spAll]; spSave(); spRender(); }
+                else if (d.spMore) { SP.all[d.spMore] = !SP.all[d.spMore]; spRender(); }
+                else if (d.spPr) { delete SP.pitch[d.spPr]; spSave(); spRender(); }
+            });
+            p.addEventListener('toggle', (e) => { const d = e.target && e.target.dataset; if (d && d.spD) SP.open[d.spD] = e.target.open; }, true);
+        }
         function btVoiceWin() { const live = BT.party.filter((q) => !q.dead && !q.isFoe).slice(0, 2); live.forEach((q, i) => setTimeout(() => btVoice('win', q, 1, true), 450 + i * 550)); }
         function btSfxStock(k) {
             if (BT.music.mute) return;
@@ -19093,7 +19187,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             if (BT.music.mute) return;
             if (k === 'ko') { try { NSX.shatter(1); } catch (e) { /* no audio */ } return; }
             { const a0 = BT.anims && BT.anims[0]; if (a0 && a0.u && a0.u.isFoe && k !== 'ready' && k !== 'no' && k !== 'dodge') { BT_NOPC = true; try { btSfxStock(k); } catch (e) { /* sound */ } BT_NOPC = false; return; } }   // enemy attacks: stock sound, no voice
-            try { gnSndInit(); } catch (e) { /* audio not ready */ } try { pcLayer(k); pcExtra(k); } catch (e) { /* the new Pixel Combat SFX (assets/pc-sfx.json + pc-sfx-extra.json) */ }
+            try { gnSndInit(); } catch (e) { /* audio not ready */ } try { if (!sfxPlayPicked(k)) { pcLayer(k); pcExtra(k); } } catch (e) { /* the new Pixel Combat SFX (assets/pc-sfx.json + pc-sfx-extra.json) */ }
             const m = BT_SFX_VOICE[k]; if (!m) return;
             try {
                 const an = BT.anims && BT.anims[0]; let u = btUnit(me.id);
@@ -29903,7 +29997,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
                 if (!PCS.state) pcInit(); const ac = dnAC, n = PCS.man && PCS.man[bank]; if (!ac || !n) return false;
                 let i, t = 0; do { i = 1 + Math.floor(Math.random() * n); } while (n > 1 && i === PCS.last[bank] && ++t < 6); PCS.last[bank] = i;
                 const b = GNS.buf[bank + '_' + i]; if (!b) return false; if (ac.state === 'suspended') ac.resume();
-                const s = ac.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * (0.97 + Math.random() * 0.06); const g = ac.createGain(); g.gain.value = Math.min(1.5, vol * PCS.vol); s.connect(g); g.connect(ac.destination); s.start(); return true;
+                const s = ac.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * (PCS.rate || 1) * (0.97 + Math.random() * 0.06); const g = ac.createGain(); g.gain.value = Math.min(1.5, vol * PCS.vol); s.connect(g); g.connect(ac.destination); s.start(); return true;
             } catch (e) { return false; }
         }
         window.pcSfx = pcSfx;
