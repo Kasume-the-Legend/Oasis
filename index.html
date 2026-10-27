@@ -13889,17 +13889,14 @@ function kbModel(THREE, mk) {
             const g = c.getContext('2d'), W = c.width, H = c.height; frac = Math.max(0, Math.min(1, frac)); layers = layers || 1; g.clearRect(0, 0, W, H);
             const n = frac <= 0 ? 0 : Math.min(layers, Math.ceil(frac * layers - 1e-6)), within = n ? frac * layers - (n - 1) : 0;   // bars still standing, and how full the top one is
             const lc = (k) => layers === 1 ? (frac > 0.5 ? SAO_LAYERS[0] : frac > 0.2 ? SAO_LAYERS[1] : SAO_LAYERS[3]) : SAO_LAYERS[(layers - 1 - k) % SAO_LAYERS.length];
-            const x0 = W * 0.05, x1 = W * 0.64, ty = H * 0.16, by = H * 0.64, bow = H * 0.12, sk = W * 0.03, I = 6;
-            const path = (xa, xe, i) => { g.beginPath(); g.moveTo(xa + sk + i, ty + i); g.quadraticCurveTo((xa + xe) / 2 + sk, ty + bow + i, xe + sk - i, ty + i * 0.3); g.lineTo(xe - sk - i, by - i); g.quadraticCurveTo((xa + xe) / 2 - sk, by + bow - i, xa - sk + i, by - i); g.closePath(); };
-            const fillCol = (col, xa, xb) => { g.save(); path(x0, x1, I); g.clip(); g.beginPath(); g.rect(xa, 0, xb - xa, H); g.clip(); const fg = g.createLinearGradient(0, ty, 0, by + bow); fg.addColorStop(0, col[0]); fg.addColorStop(0.5, col[1]); fg.addColorStop(1, col[2]); g.fillStyle = fg; g.fillRect(0, 0, W, H); g.restore(); };
-            // frame: thick white border, dark track, a small tab hanging off the left end and a detached slanted cap on the right
-            g.lineJoin = 'round'; g.fillStyle = '#b8bec4'; g.fillRect(x0 - sk + 4, by - 2, 9, 12);
-            path(x0, x1, 0); g.fillStyle = '#fff'; g.fill(); path(x0, x1, I); g.fillStyle = 'rgba(10,22,18,.9)'; g.fill();
-            if (n > 1) fillCol(lc(n - 2), x0 - sk, x1 + sk);
-            if (n >= 1) fillCol(lc(n - 1), x0 - sk, within >= 0.995 ? x1 + sk : x0 + (x1 - x0) * within);
-            const cx0 = x1 + sk * 2.4, cx1 = cx0 + W * 0.08; g.beginPath(); g.moveTo(cx0 + sk, ty + 2); g.lineTo(cx1 + sk, ty + 1); g.lineTo(cx1 - sk, by - 1); g.lineTo(cx0 - sk, by - 1); g.closePath(); g.fillStyle = '#fff'; g.fill();
-            g.beginPath(); g.moveTo(cx0 + sk + I * 0.9, ty + 2 + I); g.lineTo(cx1 + sk - I * 0.9, ty + 1 + I); g.lineTo(cx1 - sk - I * 0.4, by - 1 - I); g.lineTo(cx0 - sk + I * 0.9, by - 1 - I); g.closePath(); const top = n ? lc(n - 1) : null; g.fillStyle = frac > 0.97 && top ? top[1] : 'rgba(10,22,18,.9)'; g.fill();
-            if (layers > 1 && n > 0) { g.font = 'bold ' + Math.round(H * 0.45) + 'px sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.85)'; g.fillStyle = '#fff'; const tx = cx1 + sk + 8, ty2 = H * 0.42; g.strokeText('x' + n, tx, ty2); g.fillText('x' + n, tx, ty2); }
+            const x0 = W * 0.06, x1 = W * (layers > 1 ? 0.8 : 0.94), ty = H * 0.2, by = H * 0.66, bow = H * 0.14, sk = W * 0.035;
+            const path = (xe) => { g.beginPath(); g.moveTo(x0 + sk, ty); g.quadraticCurveTo((x0 + xe) / 2 + sk, ty + bow, xe + sk, ty); g.lineTo(xe - sk, by); g.quadraticCurveTo((x0 + xe) / 2 - sk, by + bow, x0 - sk, by); g.closePath(); };
+            const fill = (xa, xb, col) => { g.save(); path(x1); g.clip(); g.beginPath(); g.rect(xa, 0, xb - xa, H); g.clip(); const fg = g.createLinearGradient(0, ty, 0, by + bow); fg.addColorStop(0, col[0]); fg.addColorStop(0.45, col[1]); fg.addColorStop(1, col[2]); g.fillStyle = fg; g.fillRect(0, ty - 2, W, by - ty + bow + 6); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, ty, W, (by - ty) * 0.28); g.restore(); };
+            g.save(); path(x1); g.fillStyle = 'rgba(8,16,20,.72)'; g.fill(); g.restore();
+            if (n > 1) fill(x0 - sk, x1 + sk, lc(n - 2));     // the next bar waiting underneath
+            if (n >= 1) fill(x0 - sk, within >= 0.995 ? x1 + sk : x0 + (x1 - x0) * within, lc(n - 1));
+            g.save(); path(x1); g.lineWidth = 3; g.strokeStyle = 'rgba(235,255,245,.9)'; g.stroke(); g.restore();
+            if (layers > 1 && n > 0) { g.font = 'bold ' + Math.round(H * 0.5) + 'px sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.85)'; g.fillStyle = '#fff'; const tx = x1 + sk + 8, ty2 = H * 0.46; g.strokeText('x' + n, tx, ty2); g.fillText('x' + n, tx, ty2); }
         }
         function saoMake(kind, getFrac, layers) {
             const c = document.createElement('canvas'); c.width = 320; c.height = 64; const tex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
@@ -16636,7 +16633,8 @@ function kbModel(THREE, mk) {
                 const st = document.createElement('style'); st.textContent = '#mm{position:fixed;right:12px;bottom:10px;width:136px;z-index:13;pointer-events:none;text-align:center}#mm .ring{position:relative;width:136px;height:136px;border-radius:50%;border:5px solid #6b4a24;box-shadow:0 0 0 2px #2a1a0a,0 0 0 4px #c9a15a,0 4px 14px rgba(0,0,0,.6),inset 0 0 18px rgba(60,35,10,.7);overflow:hidden;background:#cdb88a}#mm canvas{position:absolute;inset:0;width:100%;height:100%}#mm.top{top:12px;bottom:auto}body.mm-top #wx-chip{right:168px!important;top:16px!important}body.mm-top #nf-fate{top:204px}#mm .lab{margin-top:4px;display:inline-block;max-width:150px;padding:2px 9px;border-radius:9px;background:rgba(46,30,12,.82);border:1px solid #c9a15a;color:#f3e2b8;font:800 10px Nunito,Inter,system-ui,sans-serif;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media (pointer:coarse){#mm{width:104px;right:10px}#mm .ring{width:104px;height:104px}}@media (max-height:520px){#mm{width:100px}#mm .ring{width:100px;height:100px}}';
                 document.head.appendChild(st); const d = document.createElement('div'); d.id = 'mm'; d.innerHTML = '<div class="ring"><canvas width="272" height="272"></canvas></div><span class="lab"></span>'; document.body.appendChild(d); MM.el = d; MM.cv = d.querySelector('canvas'); MM.cx = MM.cv.getContext('2d'); MM.lab = d.querySelector('.lab');
             }
-            { const tp = show && activeMap === 'nuu'; if (MM.top !== tp) { MM.top = tp; MM.el.classList.toggle('top', tp); document.body.classList.toggle('mm-top', tp); } }
+            { const tp = false;   // the map stays in the bottom right, Adventia included
+             if (MM.top !== tp) { MM.top = tp; MM.el.classList.toggle('top', tp); document.body.classList.toggle('mm-top', tp); } }
             if (!show) { if (MM.el.style.display !== 'none') MM.el.style.display = 'none'; return; } if (MM.el.style.display === 'none') MM.el.style.display = 'block';
             MM.t += dt; if (MM.t < 0.05) return; MM.t = 0;
             const x = MM.cx, S = MM.cv.width, C = S / 2, P = localActor.group.position; const fxv = controls.target.x - camera.position.x, fzv = controls.target.z - camera.position.z, fl = Math.hypot(fxv, fzv) || 1, fx = fxv / fl, fz = fzv / fl;
