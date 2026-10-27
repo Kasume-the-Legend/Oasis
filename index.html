@@ -15692,18 +15692,14 @@ function kbModel(THREE, mk) {
             playerHit() { nsxBurst(0, 0.1, 1200, 300, 1, 0.09, 'lowpass'); nsxTone(0, 110, 55, 0.18, 0.1, 'sine'); }
         };
         // ---- ADVENTIA (Forest of Nuu) sound: the old synth + class-weapon sounds are replaced by the Pixel Combat SFX (base + extra) and the voice pack
-        // (your Pitch / Variety sliders). Only NSX.shatter (a foe is defeated) stays stock. Set AD_STOCK_SFX to true to bring the old sounds back.
+        // (your Pitch / Variety sliders). Enemies are stock: their swing, growl and hurt sounds are the old ones, with no voices. NSX.shatter (a foe is defeated) stays stock too. Set AD_STOCK_SFX to true to bring the old sounds back.
         const AD_STOCK_SFX = false;
         if (!AD_STOCK_SFX) {
-            const adMob = (m) => ({ id: 'ad' + (m && m.id !== undefined ? m.id : 'x'), isFoe: true, big: !!(m && (m.boss || m.big)) });
             const adPc = (k) => { try { gnSndInit(); } catch (e) { /* audio not ready */ } try { pcLayer(k); pcExtra(k); } catch (e) { /* sfx optional */ } };
             const adV = (cat, who, ch, force) => { try { btVoicePre(); btVoice(cat, who, ch, force); } catch (e) { /* voice optional */ } };
             let adImp = 0;
-            NSX.swing = (m) => { const k = nsxNear(m); if (k < 0.05) return; adPc('claw'); if (k > 0.3) adV('grunt', adMob(m), 0.35); };
-            NSX.growl = (m) => { const k = nsxNear(m); if (k < 0.05) return; adPc('claw'); if (k > 0.25) adV(m && m.boss ? 'shout' : 'grunt', adMob(m), 0.8); };
-            NSX.hurt = (m) => { const k = nsxNear(m); if (k < 0.05) return; adPc('foehit'); if (k > 0.3) adV('damage', adMob(m), 0.5); };
             NSX.playerHit = () => { adPc('foehit'); adV('damage', undefined, 0.7); };
-            NSX.impact = (m, mag, crit) => { const t = performance.now(); if (t - adImp < 45) return; adImp = t; const k = nsxNear(m); if (k < 0.08) return; adPc(crit ? 'crit' : mag ? 'bolt' : 'hit'); if (k > 0.3) adV('damage', adMob(m), crit ? 0.6 : 0.3); };
+            NSX.impact = (m, mag, crit) => { const t = performance.now(); if (t - adImp < 45) return; adImp = t; const k = nsxNear(m); if (k < 0.08) return; adPc(crit ? 'crit' : mag ? 'bolt' : 'hit'); };
             NSX.slice = () => { /* impact() covers it */ };
             NSX.whoosh = () => { adPc('swing'); adV('grunt', undefined, 0.45); };
             NSX.aura = () => { adPc('cast'); adV('shout', undefined, 0.5); };
@@ -18574,7 +18570,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 else {
                     t.hp = Math.max(0, t.hp - q.d); btNum(p[0], hy + 0.6, p[1], String(q.d), (q.crit ? 'crit ' : '') + (t.isFoe ? '' : 'hurt')); if (q.weak) btNum(p[0], hy + 1.2, p[1], 'Weak!', 'weak'); t.hitT = BT.t; if (t.isFoe) t.hit = 0.35; else { t.limit = Math.min(1, t.limit + q.d / t.hpMax * 1.1); const a = btActorOf(t.id); if (a && !t.def) { a.btK = 'hurt'; a.btT = 0; } }
                     btFxBurst(p[0], hy, p[1], t.isFoe ? 0xffffff : 0xff6a6a, 8, 3, 0.5, 0.06);
-                    try { if (!t.isFoe) { if (t.hp <= 0) btVoice('death', t, 1, true); else btVoice('damage', t, 0.55); } else if (t.hp <= 0) btVoice('death', t, 1, true); else btVoice('damage', t, 0.35); } catch (e) { /* voice */ }
+                    try { if (!t.isFoe) { if (t.hp <= 0) btVoice('death', t, 1, true); else btVoice('damage', t, 0.55); } } catch (e) { /* voice */ }
                     if (t.hp <= 0) { t.dead = true; t.dieT = 0; if (!t.isFoe) { t.hp = 0; t.atb = 0; } }
                 }
                 btStFx(t, q);
@@ -18971,7 +18967,7 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
         function btSfxPack(k) {
             try { gnSndInit(); } catch (e) { /* audio not ready */ }
             const S = btSmp, R = btRnd, O = btOne;
-            try { if (pcLayer(k)) return true; } catch (e) { /* pixel combat sfx optional */ }
+            try { if (!BT_NOPC && pcLayer(k)) return true; } catch (e) { /* pixel combat sfx optional */ }
             if (k === 'swing') { S(O(['knife_swing1', 'knife_swing2', 'knife_swing3']), 0.7, R(0.85, 1.1)); return true; }
             if (k === 'punch') { S(O(['knife_swing1', 'knife_swing2']), 0.45, R(1.3, 1.6)); setTimeout(() => S(O(['hit_body1', 'hit_body2']), 0.85, R(0.7, 0.9)), 90); return true; }
             if (k === 'hit') { S(O(['knife_hit1', 'knife_hit2']), 0.75, R(0.9, 1.15)); S(O(['hit_body1', 'hit_body2']), 0.6, R(0.9, 1.2)); return true; }
@@ -18990,10 +18986,10 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
             return false;
         }
         /* ---- BATTLE VOICES: Super Dialogue Audio Pack v1 by Dillon Becker (CC BY 4.0), mono mp3s in voice/. Lines: damage, death, grunt (attacks), shout (spells + limit breaks), ok (your turn), no (can't), win (victory) ---- */
-        const BTV = { on: true, vol: 0.8, man: null, manP: null, buf: {}, pend: {}, last: {}, spk: {}, any: 0, pre: false, pitch: 1, spread: 0.25, seed: 0 };   // pitch = your own voice (0.6 to 1.6), spread = how far the other fighters' pitches differ, seed = reshuffles who gets which pitch
+        const BTV = { on: true, vol: 0.8, man: null, manP: null, buf: {}, pend: {}, last: {}, spk: {}, any: 0, pre: false, pitch: 1, spread: 0.25, seed: 0, am: null, ch: {}, cbuf: {}, clast: {} };   // pitch = your own voice (0.6 to 1.6), spread = how far the other fighters' pitches differ, seed = reshuffles who gets which pitch
         try { BTV.on = localStorage.getItem('oasisBtlVoice') !== '0'; const v0 = parseFloat(localStorage.getItem('oasisBtlVoiceVol')); if (Number.isFinite(v0)) BTV.vol = Math.min(1, Math.max(0, v0)); const p0 = parseFloat(localStorage.getItem('oasisBtlVoicePitch')), s0 = parseFloat(localStorage.getItem('oasisBtlVoiceSpread')), d0 = parseInt(localStorage.getItem('oasisBtlVoiceSeed'), 10); if (Number.isFinite(p0)) BTV.pitch = Math.min(1.6, Math.max(0.6, p0)); if (Number.isFinite(s0)) BTV.spread = Math.min(1, Math.max(0, s0)); if (Number.isFinite(d0)) BTV.seed = d0; } catch (e) { /* storage */ }
         function btvSave() { try { localStorage.setItem('oasisBtlVoice', BTV.on ? '1' : '0'); localStorage.setItem('oasisBtlVoiceVol', String(BTV.vol)); localStorage.setItem('oasisBtlVoicePitch', String(BTV.pitch)); localStorage.setItem('oasisBtlVoiceSpread', String(BTV.spread)); localStorage.setItem('oasisBtlVoiceSeed', String(BTV.seed)); } catch (e) { /* storage */ } }
-        function btvMan() { if (!BTV.manP) BTV.manP = fetch('voice/manifest.json').then((r) => (r.ok ? r.json() : null)).then((j) => { BTV.man = j; return j; }).catch(() => null); return BTV.manP; }
+        function btvMan() { if (!BTV.manP) { fetch('voice/actors.json').then((r) => (r.ok ? r.json() : null)).then((j) => { BTV.am = j; }).catch(() => null); BTV.manP = fetch('voice/manifest.json').then((r) => (r.ok ? r.json() : null)).then((j) => { BTV.man = j; return j; }).catch(() => null); } return BTV.manP; }
         function btvLoad(name) {
             if (BTV.buf[name]) return Promise.resolve(BTV.buf[name]); if (BTV.pend[name]) return BTV.pend[name];
             try { dnBeep(1, 0.001, 'sine', 0.0001); } catch (e) { /* audio not ready */ } const ac = dnAC; if (!ac) return Promise.resolve(null);
@@ -19011,8 +19007,13 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 const now = performance.now(), id = String(u && u.id !== undefined ? u.id : 'me');
                 if (!force && (now < (BTV.spk[id] || 0) || now - BTV.any < 120)) return;
                 if (!BTV.man) { btvMan(); return; }
-                const a = u ? btActorOf(u.id) : localActor, g = a && a.gender === 'female' ? 'f' : 'm', names = BTV.man[cat + '_' + g]; if (!names || !names.length) return;
-                const have = names.filter((n) => BTV.buf[n]), lk = cat + g; let pick;
+                const a = u ? btActorOf(u.id) : localActor, sk = btvSlot(u), cfg = sk ? BTV.ch[sk] : null; let g = a && a.gender === 'female' ? 'f' : 'm';
+                if (cfg && cfg.off && cfg.off.includes(cat)) return;   // this voice type is switched off for this character
+                if (cfg && cfg.actor === 'custom') { if (cfg.custom && cfg.custom[cat] > 0) { BTV.spk[id] = now + (cat === 'death' ? 1500 : 900); BTV.any = now; btvCustomPlay(sk, cat, cfg.custom[cat]); } return; }   // your own clips (a type with no clip stays silent)
+                let names = BTV.man[cat + '_' + g];
+                if (cfg && cfg.actor && cfg.actor !== 'auto' && cfg.actor !== 'custom' && BTV.am) for (const gg of ['m', 'f']) { const l = BTV.am[cat + '_' + gg] && BTV.am[cat + '_' + gg][cfg.actor]; if (l && l.length) { names = l; g = gg; break; } }   // a chosen voice actor
+                if (!names || !names.length) return;
+                const have = names.filter((n) => BTV.buf[n]), lk = cat + g + ((cfg && cfg.actor) || ''); let pick;
                 if (have.length >= 3) { do { pick = have[Math.floor(Math.random() * have.length)]; } while (pick === BTV.last[lk] && have.length > 1); } else pick = names[Math.floor(Math.random() * names.length)];
                 BTV.last[lk] = pick; BTV.spk[id] = now + (cat === 'death' ? 1500 : 900); BTV.any = now;
                 if (have.length < names.length) btvLoad(names[Math.floor(Math.random() * names.length)]);   // keep growing the pool in the background
@@ -19020,6 +19021,57 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
                 btvLoad(pick).then((b) => { if (!b || !BTV.on) return; const ac = dnAC; if (!ac) return; if (ac.state === 'suspended') ac.resume(); const s = ac.createBufferSource(); s.buffer = b; s.playbackRate.value = rate; const gn = ac.createGain(); gn.gain.value = Math.min(1.5, BTV.vol * (cat === 'shout' ? 1.05 : 0.9)); s.connect(gn); gn.connect(ac.destination); s.start(); });
             } catch (e) { /* voices are optional */ }
         }
+        // ---- PER-CHARACTER VOICES: for You and your four CPU allies, set which voice types are on, which actor they use, or your own clips (Custom slot) ----
+        const BTV_CATS = [['grunt', 'Attack'], ['shout', 'Spell'], ['damage', 'Hurt'], ['death', 'Down'], ['ok', 'Ready'], ['no', "Can't"], ['win', 'Win']];
+        const BTV_ACTORS = [['Alex Brodie', 'M'], ['Ian Lampert', 'M'], ['Sean Lenhart', 'M'], ['Karen Cenon', 'F'], ['Meghan Christian', 'F']];
+        try { const c0 = JSON.parse(localStorage.getItem('oasisBtlVoiceChars') || '{}'); if (c0 && typeof c0 === 'object') BTV.ch = c0; } catch (e) { /* storage */ }
+        function btvChSave() { try { localStorage.setItem('oasisBtlVoiceChars', JSON.stringify(BTV.ch)); } catch (e) { /* storage */ } }
+        function btvSlot(u) { if (!u || String(u.id) === String(me.id)) return 'me'; if (u.bot) { const i = BT.party.filter((q) => q.bot).indexOf(u); return i >= 0 && i < 4 ? 'b' + i : null; } return null; }
+        function btvCfg(sk) { return BTV.ch[sk] || (BTV.ch[sk] = { actor: 'auto', off: [], custom: {} }); }
+        function btvDb() { return new Promise((res, rej) => { const r = indexedDB.open('oasisBtlVoice', 1); r.onupgradeneeded = () => { r.result.createObjectStore('clips'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+        function btvIdb(mode, fn) { return btvDb().then((db) => new Promise((res, rej) => { const tx = db.transaction('clips', mode), rq = fn(tx.objectStore('clips')); tx.oncomplete = () => res(rq && rq.result); tx.onerror = () => rej(tx.error); })); }
+        function btvCustomPlay(sk, cat, n) {
+            try {
+                let i = Math.floor(Math.random() * n); if (n > 1 && i === BTV.clast[sk + cat]) i = (i + 1) % n; BTV.clast[sk + cat] = i; const key = sk + ':' + cat + ':' + i;
+                const go = (b) => { const ac = dnAC; if (!b || !ac || !BTV.on) return; if (ac.state === 'suspended') ac.resume(); const src = ac.createBufferSource(); src.buffer = b; src.playbackRate.value = 0.98 + Math.random() * 0.04; const gn = ac.createGain(); gn.gain.value = Math.min(1.5, BTV.vol); src.connect(gn); gn.connect(ac.destination); src.start(); };
+                if (BTV.cbuf[key]) { go(BTV.cbuf[key]); return; }
+                try { dnBeep(1, 0.001, 'sine', 0.0001); } catch (e) { /* audio not ready */ }
+                btvIdb('readonly', (st) => st.get(key)).then((ab) => { if (!ab || !dnAC) return; dnAC.decodeAudioData(ab.slice(0), (b) => { BTV.cbuf[key] = b; go(b); }, () => { /* undecodable */ }); }).catch(() => { /* no storage */ });
+            } catch (e) { /* custom voice optional */ }
+        }
+        async function btvAddClips(sk, cat, files) {
+            const cfg = btvCfg(sk); cfg.custom = cfg.custom || {}; let n = cfg.custom[cat] | 0, added = 0;
+            try { dnBeep(1, 0.001, 'sine', 0.0001); } catch (e) { /* audio not ready */ }
+            for (const f of files) {
+                if (n >= 8) { try { btToast('Up to 8 clips per voice type'); } catch (e) { /* toast */ } break; }
+                if (f.size > 3 * 1048576) { try { btToast(f.name + ' is over 3 MB'); } catch (e) { /* toast */ } continue; }
+                try { const ab = await f.arrayBuffer(); await new Promise((res, rej) => dnAC.decodeAudioData(ab.slice(0), res, rej)); await btvIdb('readwrite', (st) => st.put(ab, sk + ':' + cat + ':' + n)); delete BTV.cbuf[sk + ':' + cat + ':' + n]; n++; added++; } catch (e) { try { btToast("Couldn't read " + f.name); } catch (x) { /* toast */ } }
+            }
+            if (added) { cfg.custom[cat] = n; cfg.actor = 'custom'; btvChSave(); try { btToast('Added ' + added + ' clip' + (added > 1 ? 's' : '')); } catch (e) { /* toast */ } }
+            BT.castRev++;
+        }
+        function btvClear(sk) {
+            const cfg = BTV.ch[sk]; if (!cfg || !cfg.custom) return;
+            for (const c in cfg.custom) for (let i = 0; i < cfg.custom[c]; i++) { delete BTV.cbuf[sk + ':' + c + ':' + i]; btvIdb('readwrite', (st) => st.delete(sk + ':' + c + ':' + i)).catch(() => { /* none */ }); }
+            cfg.custom = {}; if (cfg.actor === 'custom') cfg.actor = 'auto'; btvChSave(); BT.castRev++;
+        }
+        function btvCastHtml() {
+            const slots = [['me', 'You']].concat([0, 1, 2, 3].map((i) => ['b' + i, btNm(BT.allyNames[i] || '') || ['Pip', 'Kiwi', 'Mochi', 'Nori'][i]]));
+            return '<h4>VOICES · PER CHARACTER</h4>' + slots.map(([sk, nm]) => {
+                const c = BTV.ch[sk] || { actor: 'auto', off: [], custom: {} }, cu = c.custom || {}, nCu = Object.values(cu).reduce((a, b) => a + b, 0);
+                return `<div class="r"><b>${nm}</b><select data-vsel="${sk}" style="flex:1"><option value="auto" ${c.actor === 'auto' ? 'selected' : ''}>Auto (by gender)</option>${BTV_ACTORS.map(([a, g]) => `<option value="${a}" ${c.actor === a ? 'selected' : ''}>${a} (${g})</option>`).join('')}<option value="custom" ${c.actor === 'custom' ? 'selected' : ''}>Custom slot${nCu ? ' (' + nCu + ')' : ''}</option></select></div>`
+                    + `<div class="r">${BTV_CATS.map(([k, l]) => `<label><input type="checkbox" data-vt="${sk}:${k}" ${(c.off || []).includes(k) ? '' : 'checked'}> ${l}</label>`).join(' ')}</div>`
+                    + `<div class="r"><b style="width:auto">Custom clips</b><select data-vcat="${sk}">${BTV_CATS.map(([k, l]) => `<option value="${k}">${l}${cu[k] ? ' (' + cu[k] + ')' : ''}</option>`).join('')}</select><input type="file" accept="audio/*" multiple data-vfile="${sk}" style="max-width:150px">${nCu ? `<button data-k="vclr" data-s="${sk}">Clear</button>` : ''}</div>`;
+            }).join('') + '<em>Pick a voice actor, or Custom slot to use your own audio files (up to 8 per voice type, 3 MB each; types with no clip stay silent). Untick a type to turn it off for that character. Allies are the 1st to 4th CPU you add.</em>';
+        }
+        document.addEventListener('change', (e) => {
+            try {
+                const t = e.target; if (!t || !t.dataset) return;
+                if (t.dataset.vsel) { btvCfg(t.dataset.vsel).actor = t.value; btvChSave(); BT.castRev++; }
+                else if (t.dataset.vt) { const [sk, k] = t.dataset.vt.split(':'), cfg = btvCfg(sk); cfg.off = (cfg.off || []).filter((x) => x !== k); if (!t.checked) cfg.off.push(k); btvChSave(); }
+                else if (t.dataset.vfile && t.files && t.files.length) { const sk = t.dataset.vfile, sel = document.querySelector('[data-vcat="' + sk + '"]'); btvAddClips(sk, sel ? sel.value : 'grunt', Array.from(t.files)); t.value = ''; }
+            } catch (x) { /* voice settings optional */ }
+        });
         function btVoiceWin() { const live = BT.party.filter((q) => !q.dead && !q.isFoe).slice(0, 2); live.forEach((q, i) => setTimeout(() => btVoice('win', q, 1, true), 450 + i * 550)); }
         function btSfxStock(k) {
             if (BT.music.mute) return;
@@ -19034,11 +19086,13 @@ const btClean = (s) => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice
         // ---- battle sound is now your new Pixel Combat SFX (pcLayer) + the voice pack (Pitch / Variety sliders) + ONE old stock sound: the shatter when a foe is defeated.
         // Set BT_STOCK_SFX to true to bring the old synth + sample battle sounds back.
         const BT_STOCK_SFX = false;
+        let BT_NOPC = false;   // true while an enemy's sound plays, so it skips the Pixel Combat layer and is the old stock sound
         const BT_SFX_VOICE = { swing: ['grunt', 0.4], punch: ['grunt', 0.5], claw: ['grunt', 0.5], gun: ['grunt', 0.25], crit: ['shout', 0.5], heal: ['ok', 0.5], cast: ['shout', 0.7], quake: ['shout', 1], limit: ['shout', 1], dodge: ['grunt', 0.5], ready: ['ok', 0.4], no: ['no', 0.3] };
         function btSfx(k) {
             if (BT_STOCK_SFX) { btSfxStock(k); return; }
             if (BT.music.mute) return;
             if (k === 'ko') { try { NSX.shatter(1); } catch (e) { /* no audio */ } return; }
+            { const a0 = BT.anims && BT.anims[0]; if (a0 && a0.u && a0.u.isFoe && k !== 'ready' && k !== 'no' && k !== 'dodge') { BT_NOPC = true; try { btSfxStock(k); } catch (e) { /* sound */ } BT_NOPC = false; return; } }   // enemy attacks: stock sound, no voice
             try { gnSndInit(); } catch (e) { /* audio not ready */ } try { pcLayer(k); pcExtra(k); } catch (e) { /* the new Pixel Combat SFX (assets/pc-sfx.json + pc-sfx-extra.json) */ }
             const m = BT_SFX_VOICE[k]; if (!m) return;
             try {
@@ -19310,7 +19364,7 @@ function btMusicStop() {
                 else if (D.t !== undefined) { if (btMyTurn() && BT.menu.mode === 'tgt') { const i = BT.menu.list.indexOf(D.t); if (i >= 0) { BT.menu.tgt = i; btChoose(i); } } else { const bu = BT.party.find((q) => q.id === D.t); if (bu && bu.bot) btRenameAlly(bu); } }
                 else if (D.x === 'back') btBack();
                 else if (D.k === 'join') btJoin(); else if (D.k === 'leave') btLeave(); else if (D.k === 'job') { BT.jobOpen = !BT.jobOpen; BT.hudDirty = true; } else if (D.k === 'jobset') { btSetJob(D.s || ''); BT.jobOpen = false; } else if (D.k === 'cpu') btAddNamedBot(); else if (D.k === 'nocpu') btAddBot(false); else if (D.k === 'start') { if (!btMine()) btJoin(true); btStart(); }
-                else if (D.k === 'gear') { eqpOpen(); } else if (D.k === 'shp') { BT.shpOpen = !BT.shpOpen; BT.hudDirty = true; } else if (D.k === 'set') { BT.setOpen = !BT.setOpen; BT.hudDirty = true; } else if (D.k === 'cam') { BT.camOn = !BT.camOn; BT.hudDirty = true; } else if (D.k === 'mus') { BT.musOpen = !BT.musOpen; BT.hudDirty = true; } else if (D.k === 'shop') { BT.shopOpen = !BT.shopOpen; BT.hudDirty = true; } else if (D.k === 'buy') btBuy(D.s); else if (D.k === 'cast') btCastToggle(); else if (D.k === 'cadd') btCastAdd(); else if (D.k === 'cdel') { BT.custom = BT.custom.filter((c) => c.id !== D.s); btCastSave(); BT.castRev++; } else if (D.k === 'vtog') { BTV.on = !BTV.on; btvSave(); BT.hudDirty = true; } else if (D.k === 'vseed') { BTV.seed = (BTV.seed + 1) % 1000; btvSave(); try { const a = BT.party.filter((q) => !q.isFoe && String(q.id) !== String(me.id))[0]; btVoice('shout', a || btUnit(me.id), 1, true); } catch (x) { /* voice */ } } else if (D.k === 'vtest') { try { btVoice(Math.random() < 0.5 ? 'shout' : 'grunt', btUnit(me.id), 1, true); } catch (x) { /* voice */ } } else if (D.k === 'mute') { BT.music.mute = !BT.music.mute; try { localStorage.setItem('oasisBtlMute', BT.music.mute ? '1' : '0'); } catch (x) { /* storage */ } btMusicSync(); BT.hudDirty = true; }
+                else if (D.k === 'gear') { eqpOpen(); } else if (D.k === 'shp') { BT.shpOpen = !BT.shpOpen; BT.hudDirty = true; } else if (D.k === 'set') { BT.setOpen = !BT.setOpen; BT.hudDirty = true; } else if (D.k === 'cam') { BT.camOn = !BT.camOn; BT.hudDirty = true; } else if (D.k === 'mus') { BT.musOpen = !BT.musOpen; BT.hudDirty = true; } else if (D.k === 'shop') { BT.shopOpen = !BT.shopOpen; BT.hudDirty = true; } else if (D.k === 'buy') btBuy(D.s); else if (D.k === 'cast') btCastToggle(); else if (D.k === 'cadd') btCastAdd(); else if (D.k === 'cdel') { BT.custom = BT.custom.filter((c) => c.id !== D.s); btCastSave(); BT.castRev++; } else if (D.k === 'vclr') { btvClear(D.s); } else if (D.k === 'vtog') { BTV.on = !BTV.on; btvSave(); BT.hudDirty = true; } else if (D.k === 'vseed') { BTV.seed = (BTV.seed + 1) % 1000; btvSave(); try { const a = BT.party.filter((q) => !q.isFoe && String(q.id) !== String(me.id))[0]; btVoice('shout', a || btUnit(me.id), 1, true); } catch (x) { /* voice */ } } else if (D.k === 'vtest') { try { btVoice(Math.random() < 0.5 ? 'shout' : 'grunt', btUnit(me.id), 1, true); } catch (x) { /* voice */ } } else if (D.k === 'mute') { BT.music.mute = !BT.music.mute; try { localStorage.setItem('oasisBtlMute', BT.music.mute ? '1' : '0'); } catch (x) { /* storage */ } btMusicSync(); BT.hudDirty = true; }
                 else if (D.k === 'lib') btUseLib(D.s, D.i); else if (D.k === 'libtag') btLibTag(D.i, D.s); else if (D.k === 'shuf') btShuffleTog(); else if (D.k === 'libdel') btLibDel(D.i); else if (D.k === 'libtog') { BT.libOpen = !BT.libOpen; BT.hudDirty = true; } else if (D.k === 'myt') btMusicLink(D.s); else if (D.k === 'mclr') btMusicClear(D.s); else if (D.k === 'exit') btExit();
             });
             r.addEventListener('keydown', (e) => { if (e.target && e.target.tagName === 'INPUT') e.stopPropagation(); }, true); r.addEventListener('keyup', (e) => { if (e.target && e.target.tagName === 'INPUT') e.stopPropagation(); }, true);
@@ -19509,6 +19563,7 @@ function btMusicStop() {
             cp.innerHTML = '<h4>CAST · MODELS FROM YOUR BAG</h4>' + (bag.length ? '' : '<em>Your bag has no VRM models yet. Add some in Inventory (Add file).</em>')
                 + `<div class="r"><b>CPU ally</b><select id="bt-askin" style="flex:1"><option value="">Gecko</option>${opts(BT.allySkin)}</select></div><em>Applies to the next CPU ally you add.</em>`
                 + `<div class="r"><b>Ally names</b>${[0, 1, 2, 3].map((i) => `<input id="bt-an${i}" type="text" maxlength="14" value="${btNm(BT.allyNames[i] || '')}" placeholder="${['Pip', 'Kiwi', 'Mochi', 'Nori'][i]}" style="width:76px">`).join('')}</div><em>Name your CPU allies: 1st, 2nd, 3rd, 4th one you add. Allies already in your party are renamed straight away.</em>`
+                + btvCastHtml()
                 + `<div class="r"><b>Enemies</b><label><input type="checkbox" id="bt-usec" ${BT.useCustom ? 'checked' : ''}> use my custom enemies</label></div>`
                 + BT.custom.map((c) => `<div class="r"><span>${c.name} · ${c.hp} HP · ${c.weak ? c.weak + ' weak' : 'no weakness'} · x${c.sz}${c.boss ? ' · boss' : ''}${btHasBag(c.skin) ? '' : ' · model missing'}</span><button data-k="cdel" data-s="${c.id}">Remove</button></div>`).join('')
                 + `<h4>NEW ENEMY</h4><div class="r"><b>Model</b><select id="bt-fm" style="flex:1">${opts('')}</select></div><div class="r"><b>Name</b><input id="bt-fn" type="text" maxlength="16" placeholder="Name" style="flex:1"></div><div class="r"><b>HP</b><input id="bt-fh" type="number" min="50" max="3000" value="200" style="width:70px"><b>Size</b><input id="bt-fz" type="number" min="0.6" max="3.5" step="0.1" value="1" style="width:56px"></div><div class="r"><b>Weak to</b><select id="bt-fw"><option value="">nothing</option><option value="fire">Fire</option><option value="ice">Blizzard</option><option value="bolt">Thunder</option></select><label><input type="checkbox" id="bt-fb"> boss</label></div><div class="r"><button data-k="cadd" class="g">Add enemy</button></div><em>Enemies come from the host's list, and the models are sent to the other players automatically. A boss replaces the Golem on boss waves.</em>`;
