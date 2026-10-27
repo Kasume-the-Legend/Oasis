@@ -1,0 +1,4 @@
+Battle voices: Super Dialogue Audio Pack v1 by Dillon Becker (dillonbecker.com)
+Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Changes made: trimmed leading silence, loudness-normalised, converted to mono 32 kHz MP3.
+Voice actors: Alex Brodie, Ian Lampert, Sean Lenhart, Karen Cenon, Meghan Christian (see the pack's contact sheet).
