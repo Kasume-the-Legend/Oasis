@@ -13530,7 +13530,7 @@ function kbModel(THREE, mk) {
         const nfPos = () => localActor.group.position;
         const nfDist = (m) => Math.hypot(m.x - nfPos().x, m.z - nfPos().z);
         function nfMobs() { const out = []; for (const g of NU.groups) if (!g.dead) for (const m of g.mobs) if (!m.dead) out.push(m); for (const f of NU.fates) for (const m of f.mobs) if (!m.dead) out.push(m); for (const m of NU.extra) if (!m.dead) out.push(m); return out; }
-        function nfTarget(m) { if (NF.tgt === m) return; NF.tgt = m; if (m) { nfBar(m); if (nfIsBoss(m)) { NF.lockOn = true; try { padToast('Locked on: ' + m.name); } catch (e) { /* toast */ } } } }
+        function nfTarget(m) { if (NF.tgt === m) return; NF.tgt = m; if (!m) NF.lockOn = false; if (m) { nfBar(m); if (nfIsBoss(m)) { NF.lockOn = true; try { padToast('Locked on: ' + m.name); } catch (e) { /* toast */ } } } }
         const nfIsBoss = (m) => !!(m && (m.boss || m.rank || m.dgBoss));
         function nfCycle(dir, foesOnly) {      // foesOnly (the D-pad left / right): enemies only, and your party target is left alone
             dir = dir || 1; const p = nfPos(), list = nfMobs().filter((m) => nfDist(m) < (nfIsBoss(m) ? 80 : 30)).sort((a, b) => nfDist(a) - nfDist(b)).map((m) => ({ m }));      // bosses are lockable from much further away and come first
@@ -22910,8 +22910,9 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         }
         function padLockToggle() {       // L3: lock the camera on your target (or the nearest player)
             if (PAD.lockId) { PAD.lockId = null; padToast('Lock-on released'); return; }
-            let p = localActor.lookId && peers.get(localActor.lookId); if (!p) p = padNearestPeer(25);
-            if (!p) { padToast('Nobody to lock on to'); return; }
+            if (activeMap === 'nuu' && NF.tgt && !NF.tgt.dead) { NF.lockOn = !NF.lockOn; padToast(NF.lockOn ? 'Locked on: ' + NF.tgt.name : 'Lock-on released'); return; }   // Adventia: you can only lock on to what you are targeting
+            let p = localActor.lookId && peers.get(localActor.lookId);      // nothing is picked for you: target first, then lock on
+            if (!p) { padToast('Target something first'); return; }
             if (fpOn) fpToggle();
             PAD.lockId = p.id; setLookTarget(p.id, false); padToast('Locked on to ' + p.name);
         }
