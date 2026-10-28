@@ -13599,6 +13599,7 @@ function kbModel(THREE, mk) {
         function nfFace(m) { localActor.group.rotation.y = Math.atan2(m.x - nfPos().x, m.z - nfPos().z); }
         function nfFxAdd(mesh, dur, upd) { NU.group.add(mesh); mesh.userData.noOutline = true; NF.fx.push({ mesh, t: 0, dur, upd }); }
         function nfFx(kind, from, to) {
+            try { if (!NF_FXR && from) nsSend({ k: 'fx', fk: String(kind).slice(0, 12), f: nsV3(from), t: nsV3(to || from) }); } catch (e) { /* offline */ }
             try {
                 const add = additive;
                 if (kind === 'slash') { const m = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.9, 20, 1, 0, 2.2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.copy(to); m.position.y += 0.9; m.lookAt(camera.position); m.rotation.z += Math.random() * 3; nfFxAdd(m, 0.22, (k) => { m.material.opacity = 0.9 * (1 - k); m.scale.setScalar(1 + k * 0.8); }); }
@@ -13738,6 +13739,7 @@ function kbModel(THREE, mk) {
             if (s.cast) { NF.cast = { n: s.n, t0: performance.now() / 1000, dur: s.cast * (NF.simSpd || 1), s, x: nfPos().x, z: nfPos().z, go }; if (s.gcd) NF.gcd = 2.2 * (NF.simSpd || 1); try { nfMageAnim(s, 'start'); nfCastFx(s); } catch (e) { /* cosmetic */ } } else go();
         }
         function nfShapeFx(kind, x, z, ang, o) {
+            try { if (!NF_FXR) nsSend({ k: 'fx', sh: 1, fk: String(kind).slice(0, 8), x: nsR2(x), z: nsR2(z), ang: nsR2(ang || 0), r: o.r, w: o.w, len: o.len, a: o.a, col: o.col }); } catch (e) { /* offline */ }
             try {
                 const mat = new THREE.MeshBasicMaterial({ color: o.col || 0x9fe6ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), G = new THREE.Group(); let m;
                 if (kind === 'cone') { m = new THREE.Mesh(new THREE.CircleGeometry(o.len, 28, Math.PI / 2 - o.a / 2, o.a), mat); m.rotation.x = Math.PI / 2; } else if (kind === 'line') { const g = new THREE.PlaneGeometry(o.w, o.len); g.translate(0, o.len / 2, 0); m = new THREE.Mesh(g, mat); m.rotation.x = Math.PI / 2; } else { m = new THREE.Mesh(new THREE.CircleGeometry(o.r, 36), mat); m.rotation.x = -Math.PI / 2; }
@@ -14350,6 +14352,26 @@ function kbModel(THREE, mk) {
             return { k: 'full', fates, gs, hs, fd: [...NS.fdone].filter((k) => String(k).split(':')[1] === String(NU.fSlot)).slice(0, 12), mobs: mobs.slice(0, 40) };
         }
         const nsNum = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 0));
+        /* ---- other players' skill effects: slashes, limit breaks, heals, bolts, rings and ground shapes are sent to everyone nearby ---- */
+        let NF_FXR = false;
+        const nsR2 = (v) => Math.round((+v || 0) * 100) / 100;
+        const nsV3 = (v) => [nsR2(v.x), nsR2(v.y), nsR2(v.z)];
+        function nfFxRemote(from, m) {
+            const P = peers.get(from); if (!P || typeof m.fk !== 'string' || !/^[a-z]{2,12}$/.test(m.fk)) return;
+            const now = performance.now(); if (now - (P._fxT || 0) < 40) return; P._fxT = now;
+            const ok = (a) => Array.isArray(a) && a.length === 3 && a.every((v) => Number.isFinite(+v) && Math.abs(+v) < 6000), me3 = nfPos();
+            NF_FXR = true;
+            try {
+                if (m.sh) {
+                    if (![m.x, m.z].every((v) => Number.isFinite(+v) && Math.abs(+v) < 6000) || Math.hypot(+m.x - me3.x, +m.z - me3.z) > 90) return;
+                    const n = (v, lo, hi, d) => Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : d;
+                    nfShapeFx(/^(cone|line)$/.test(m.fk) ? m.fk : 'circle', +m.x, +m.z, n(m.ang, -7, 7, 0), { r: n(m.r, 0.5, 40, 5), w: n(m.w, 0.2, 40, 3), len: n(m.len, 0.5, 60, 8), a: n(m.a, 0.1, 6.3, 1.2), col: Number.isFinite(+m.col) ? (+m.col & 0xffffff) : 0x9fe6ff });
+                } else {
+                    if (!ok(m.f) || !ok(m.t) || Math.hypot(+m.f[0] - me3.x, +m.f[2] - me3.z) > 90) return;
+                    nfFx(m.fk, new THREE.Vector3(+m.f[0], +m.f[1], +m.f[2]), new THREE.Vector3(+m.t[0], +m.t[1], +m.t[2]));
+                }
+            } finally { NF_FXR = false; }
+        }
         function nsOnMsg(from, m) {
             if (m.to && m.to !== me.id) return; if (activeMap !== 'nuu' || !NU.ready) return; const k = m.k;
             if (k === 'tn') { tnOnMsg(from, m); return; }
@@ -14363,6 +14385,8 @@ function kbModel(THREE, mk) {
                     for (const r of u[1].slice(0, 40)) { const mm = Array.isArray(r) && NS.mobs.get(r[0]); if (!mm || mm.dead) continue; const fl = r[5] | 0;
                         if (!mm.net) { mm.x = +r[1]; mm.z = +r[2]; } mm.net = { x: +r[1], z: +r[2], ang: +r[3] || 0 }; mm.hp = Math.min(mm.hpMax, +r[4]); mm.aggro = !!(fl & 1); mm.reset = !!(fl & 2); if (typeof r[6] === 'string') mm.tid = r[6].slice(0, 40); else if (!(fl & 1)) mm.tid = null; if (fl & 4) nfMobDie(mm, true); }
                 }
+            } else if (k === 'fx') {
+                try { nfFxRemote(from, m); } catch (e) { /* cosmetic */ }
             } else if (k === 'sf') {
                 try { nfSpellRemote(from, m); } catch (e) { /* cosmetic */ }
             } else if (k === 'cf') {
