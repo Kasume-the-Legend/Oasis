@@ -13425,13 +13425,13 @@ function kbModel(THREE, mk) {
                 if (!LK.el) { if (!document.body) return; lkBuild(); }
                 const el = LK.el, t = (activeMap === 'nuu' && NU.ready && NF.tgt && !NF.tgt.dead && !NF.dead && NF.tgt.node && NF.tgt.node.visible !== false) ? NF.tgt : null;
                 if (!t) { if (LK.vis) { LK.vis = false; LK.tgt = null; el.classList.remove('on', 'snap', 'lock'); el.style.display = 'none'; } return; }
-                const big = t.big || 1, v = LK.v.set(t.x, (t.node.position.y || 0) + 1.0 * big, t.z), d = Math.max(2, camera.position.distanceTo(v)); v.project(camera);
+                const hh = Math.max(0.6, (t.node.userData && t.node.userData.h) || 1.6), wy = t.node.getWorldPosition(LK.w || (LK.w = new THREE.Vector3())).y, v = LK.v.set(t.x, wy + hh * 0.5, t.z), d = Math.max(2, camera.position.distanceTo(v)), rc = renderer.domElement.getBoundingClientRect(); v.project(camera);   // centred on the monster's body, sized to its silhouette
                 if (v.z > 1 || Math.abs(v.x) > 1.15 || Math.abs(v.y) > 1.15) { el.style.display = 'none'; LK.vis = false; return; }
                 const lock = !!NF.lockOn, fresh = LK.tgt !== t || lock !== LK.lock || !LK.vis;
                 if (!LK.vis) { el.style.display = 'block'; LK.vis = true; }
                 if (fresh) { LK.tgt = t; LK.lock = lock; el.classList.toggle('lock', lock); el.classList.add('on'); el.classList.remove('snap'); void el.offsetWidth; el.classList.add('snap'); }
-                const px = Math.max(54, Math.min(300, (2.7 * big / (2 * d * Math.tan(camera.fov * Math.PI / 360))) * innerHeight * (lock ? 1 : 0.82)));
-                el.style.width = el.style.height = px + 'px'; el.style.transform = `translate(${((v.x * 0.5 + 0.5) * innerWidth - px / 2).toFixed(1)}px,${((-v.y * 0.5 + 0.5) * innerHeight - px / 2).toFixed(1)}px)`;
+                const px = Math.max(34, Math.min(240, (hh * 1.05 / (2 * d * Math.tan(camera.fov * Math.PI / 360))) * rc.height * (lock ? 1 : 0.85)));
+                el.style.width = el.style.height = px + 'px'; el.style.transform = `translate(${(rc.left + (v.x * 0.5 + 0.5) * rc.width - px / 2).toFixed(1)}px,${(rc.top + (-v.y * 0.5 + 0.5) * rc.height - px / 2).toFixed(1)}px)`;
             } catch (e) { /* cosmetic */ }
         }
         requestAnimationFrame(lkLoop);
