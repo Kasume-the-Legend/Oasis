@@ -13152,7 +13152,7 @@ function kbModel(THREE, mk) {
                 if (!terrain) throw new Error('no terrain in forest.glb');
                 if (ZVv.rot || ZVv.mir) { terrain.updateWorldMatrix(true, false); const Mw = terrain.matrixWorld.clone(); terrain.geometry.applyMatrix4(Mw); if (Mw.determinant() < 0) { const ix = terrain.geometry.index.array; for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; } terrain.geometry.index.needsUpdate = true; } terrain.removeFromParent(); terrain.position.set(0, 0, 0); terrain.quaternion.identity(); terrain.scale.set(1, 1, 1); terrain.updateMatrix(); terrain.updateMatrixWorld(true); if (ZVv.mir) for (const m of mats) m.side = THREE.DoubleSide; }   // a sister zone: the whole layout is turned / mirrored
                 nuBakeTerrain(terrain); nuPickHub(); const hub = NU.hub; NU.seeds = nuSeeds(); try { nuTintTerrain(terrain.geometry, terrain); nuMoss(terrain.geometry); nuGroundTex(terrain); NU.terrainMesh = terrain; } catch (e) { console.warn('tint', e); }
-                const root = new THREE.Group(); root.visible = false; scene.add(root); NU.group = root; terrain.matrixAutoUpdate = false; terrain.frustumCulled = false; root.add(terrain);
+                const root = new THREE.Group(); root.visible = false; scene.add(root); NU.group = root; if (NU.keepGroups) { for (const kg of NU.keepGroups) root.add(kg); NU.keepGroups = null; } terrain.matrixAutoUpdate = false; terrain.frustumCulled = false; root.add(terrain);
                 // props: one instanced mesh per shape; nothing grows inside the plaza
                 const V = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(); let nInst = 0;
                 let pine = null; try {
@@ -13452,7 +13452,7 @@ function kbModel(THREE, mk) {
                     let who = onMe ? 'YOU' : ((peers.get(t.tid) || {}).name || (t.tid ? 'ALLY' : '--')); et.textContent = 'ENMITY ' + Math.round(pc) + '%   ▶ ' + String(who).toUpperCase().slice(0, 14) + (role !== 'tank' && onMe ? '  - PULLING AGGRO' : role === 'tank' && !onMe && pc < 100 ? '  - TAUNT!' : '');
                 }
             } else u.tf.classList.remove('on');
-            const now = performance.now() / 1000; nfXbTick(now); try { saoSelfTick(); } catch (e) { /* hp bar */ } try { nfPartyTick(u, now); } catch (e) { /* party list */ } try { tnSync(); tnBroadcast(false); } catch (e) { /* tents */ } if (u.fate && (ZN.on || DG.on)) u.fate.classList.remove('on'); try { if (NU.lbl) { const t = DG.on ? String(DG.th.name).toUpperCase() + ' · DUNGEON' : ZN.on ? (ZN.key === 'tent' ? 'CAMP · ' : 'FLOOR 2 · ') + String(ZN.zones[ZN.key].name).toUpperCase() : 'FLOOR 1 · FOREST OF NUU'; if (NU.lbl.textContent !== t) NU.lbl.textContent = t; } } catch (e) { /* label */ } { const dt = Math.min(0.5, Math.max(0, now - (NU.mtT || now))); NU.mtT = now; nuMusicTick(dt); }
+            const now = performance.now() / 1000; nfXbTick(now); try { saoSelfTick(); } catch (e) { /* hp bar */ } try { nfPartyTick(u, now); } catch (e) { /* party list */ } try { tnSync(); tnBroadcast(false); } catch (e) { /* tents */ } if (u.fate && (ZN.on || DG.on)) u.fate.classList.remove('on'); try { if (NU.lbl) { const t = DG.on ? String(DG.th.name).toUpperCase() + ' · DUNGEON' : ZN.on ? (ZN.key === 'tent' ? 'CAMP · ' : 'FLOOR 2 · ') + String(ZN.zones[ZN.key].name).toUpperCase() : 'FLOOR 1 · ' + String(ZV.cfg().n).toUpperCase(); if (NU.lbl.textContent !== t) NU.lbl.textContent = t; } } catch (e) { /* label */ } { const dt = Math.min(0.5, Math.max(0, now - (NU.mtT || now))); NU.mtT = now; nuMusicTick(dt); }
             if (NF.cast) { u.cast.classList.add('on'); u.cast.querySelector('span').textContent = NF.cast.n; u.cast.querySelector('i').style.width = Math.min(100, (now - NF.cast.t0) / NF.cast.dur * 100) + '%'; } else u.cast.classList.remove('on');
         }
         /* ---- skills (FFXIV style: global cooldown, casts that break when you move, auto-attack when a hostile is in reach) ---- */
@@ -14521,7 +14521,7 @@ function kbModel(THREE, mk) {
                 else if (H.hud) H.hud.style.display = 'none';
                 const tr = H.act && H.act.m.hbTint || null; if (tr && tr.c === 'rainbow') { const col = tcol(tr, H.rt); H.act.m.node.traverse((o) => { if (o.userData.hbT && o.material && o.material.color) o.material.color.copy(col); }); }
             }
-            return { tick, hit, skill, dodge, kill, tint, mulStats, tier, open, close, threat, TIER, near, pos: () => H.prop && [H.prop.x, H.prop.z] };
+            return { tick, hit, skill, dodge, kill, tint, mulStats, tier, open, close, threat, TIER, near, pos: () => H.prop && [H.prop.x, H.prop.z], reset: () => { H.prop = null; H.act = null; try { if (H.hud) H.hud.style.display = 'none'; } catch (e) { /* hud */ } } };
         })();
         { const _mb = nuMobBuild; nuMobBuild = function (o) { const m = _mb(o); try { const tr = HB.tier(); if (tr.c && !o.hm) { HB.tint(m, tr); HB.mulStats(m, tr); } } catch (e) { /* tier colour */ } return m; }; }
         /* ================= BLACKSMITH FORGE: SAO smithing x FFXIV crafting =================
@@ -14646,7 +14646,7 @@ function kbModel(THREE, mk) {
                 for (let i = F.spk.length - 1; i >= 0; i--) { const s = F.spk[i]; s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 260 * dt; if (s.t > 0.7) { F.spk.splice(i, 1); continue; } c.fillStyle = 'rgba(255,' + Math.round(200 - s.t * 200) + ',80,' + (1 - s.t / 0.7) + ')'; c.fillRect(s.x, s.y, 3, 3); }
             }
             window.addEventListener('keydown', (e) => { if (!F.el || !F.el.classList.contains('on')) return; if (F.st && F.st.strike && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); e.stopImmediatePropagation(); strike(); return; } if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (F.st && !F.st.over && !confirm('Leave now? The materials are lost.')) return; if (F.st && !F.st.over) { F.st = null; } if (F.st || F.pick) { F.st = null; F.pick = null; view(); } else close(); } }, true);
-            return { tick, drop, hbBonus, open, close, F };
+            return { tick, drop, hbBonus, open, close, F, reset: () => { F.built = false; F.node = []; F.stn = null; } };
         })();
         /* ================= ZONES OF NUU: the Forest has four sister zones ================= (like the Black Shroud's Central / North / East / South)
            Each is the same forest (same trees, same ground) laid out differently: the terrain is turned or mirrored, and the light is graded. Edge gates link them to the
@@ -14661,7 +14661,7 @@ function kbModel(THREE, mk) {
             const D = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] }, TO = { N: 'north', S: 'south', E: 'east', W: 'west' }, OPP = { N: 'S', S: 'N', E: 'W', W: 'E' }, ARW = { N: '▲', S: '▼', E: '▶', W: '◀' };
             const S = { gates: {}, built: false, busy: false };
             const cur = () => { try { const k = localStorage.getItem(K) || 'central'; return Z[k] ? k : 'central'; } catch (e) { return 'central'; } };
-            const key = cur();
+            let key = cur();
             const cfg = () => Z[key];
             function grade(sun, hemi, amb, terrain) { return;   /* every zone keeps Central's exact light and colours: only the layout differs */ const c = Z[key]; if (key === 'central') return; sun.color.set(c.sun); hemi.color.set(c.hemi); hemi.groundColor.set(c.gnd); amb.color.set(c.amb); try { if (terrain && terrain.material && terrain.material.color && c.tint) terrain.material.color.lerp(new THREE.Color(c.tint), 0.22); } catch (e) { /* material */ } }
             function build() {
@@ -14677,12 +14677,21 @@ function kbModel(THREE, mk) {
                 }
                 let arr = ''; try { arr = localStorage.getItem('oasis.nuzone.arrive') || ''; localStorage.removeItem('oasis.nuzone.arrive'); } catch (e) { /* storage */ }
                 if (arr && S.gates[arr]) { const gt = S.gates[arr], v = D[arr], x = gt.x - v[0] * 7, z = gt.z - v[1] * 7; try { nuPlace({ x, y: nuH(x, z), z, ry: gt.ry + Math.PI }); NU.last.set(x, 1, z); } catch (e) { /* place */ } }
+                try { if (NU.lbl) NU.lbl.textContent = 'FLOOR 1 · ' + Z[key].n.toUpperCase(); } catch (e) { /* label */ }
                 if (key !== 'central') { try { nuShowBanner(Z[key].n.toUpperCase(), 'ZONE OF ADVENTIA'); } catch (e) { /* banner */ } }
             }
-            async function go(dest, dir) {
-                if (S.busy) return; S.busy = true; try { await nuFade(true, 600); } catch (e) { /* fade */ }
-                try { localStorage.setItem(K, dest); localStorage.setItem('oasis.nuzone.arrive', key === 'central' ? OPP[dir] : dir); sessionStorage.setItem('oasis.nuzone.go', '1'); NF.px = null; NF.pz = null; nfSave(); } catch (e) { /* storage */ }
-                nuOverlay('Travelling to ' + Z[dest].n + '...'); setTimeout(() => location.reload(), 250);
+            async function go(dest, dir) {      // in place: fade out, tear the field down, build the next layout, put you at its gate, fade in. The page is never reloaded, so nothing else resets
+                if (S.busy || !Z[dest]) return; S.busy = true; const from = key;
+                try { await nuFade(true, 600); } catch (e) { /* fade */ }
+                try { localStorage.setItem(K, dest); localStorage.setItem('oasis.nuzone.arrive', from === 'central' ? OPP[dir] : dir); NF.px = null; NF.pz = null; nfSave(); } catch (e) { /* storage */ }
+                try {
+                    nuOverlay('Travelling to ' + Z[dest].n + '...'); await new Promise((r) => setTimeout(r, 50));
+                    nuWorldReset(); key = dest; S.gates = {}; S.built = false;
+                    try { SMF.reset(); } catch (e) { /* forge */ } try { HB.reset(); } catch (e) { /* hunt board */ }
+                    ensureNuu();
+                    for (let i = 0; i < 1200 && !(NU.ready && S.built); i++) await new Promise((r) => setTimeout(r, 100));       // up to two minutes; the world loads, then the next tick places you at the gate
+                } catch (e) { console.error('zone travel', e); }
+                S.busy = false; try { await nuFade(false, 700); } catch (e) { /* fade */ }
             }
             function tick(dt) { try { build(); } catch (e) { console.warn('zones', e); } for (const d in S.gates) { const gt = S.gates[d]; if (gt.veil) gt.veil.material.opacity = 0.6 + 0.25 * Math.sin(performance.now() / 400); } }
             /* back into Adventia after a trip: press the lobby's own Adventia button once the world is ready for it */
@@ -14694,8 +14703,21 @@ function kbModel(THREE, mk) {
                     } catch (e) { /* not ready */ }
                 }, 500);
             }
-            return { cfg, key, grade, tick, go, Z, S };
+            return { cfg, get key() { return key; }, grade, tick, go, Z, S };
         })();
+        /* ---- leave the field entirely (zone travel): every mob, chest, gate and prop is removed, the next layout is loaded in its place. Dungeon and Carvernia groups are kept. ---- */
+        function nuWorldReset() {
+            try { for (const f of NU.fates) nuFateEnd(f, 'gone'); } catch (e) { /* fates */ } NU.fates = []; NU.fSlot = -1;
+            try { for (const g of NU.groups) nuDisposeGroup(g); } catch (e) { /* mobs */ } NU.groups = []; NU.spw = [];
+            for (const m of (NU.extra || []).slice()) { try { m.dead = true; nuDisposeMob(m); } catch (e) { /* gone */ } } NU.extra = []; NU.hunts = null;
+            for (const e of NU.chests) { try { e.c.group.removeFromParent(); } catch (er) { /* gone */ } } NU.chests = []; NU.cpts = [];
+            try { nfFallClear(); } catch (e) { /* fall */ } try { for (const F of NU_SH.fx) { F.im.removeFromParent(); } NU_SH.fx.length = 0; } catch (e) { /* shards */ }
+            NI.list = NI.list.filter((o) => { const id = String(o.id); return !(id.startsWith('fg-') || id.startsWith('zv-') || id.startsWith('ga-') || id === 'dg-door'); });
+            NU.gaN = []; NU.pines = null; NU.ug = null; NU.tgrid = null; NU.cry = []; NU.crystal = null; NU.cNear = null; NU.lamps = []; NU.skyCtx = null; NU.hintOn = false; NU.pineSrc = null;
+            const keep = []; for (const g of [DG.group, ZN.group]) if (g && g.parent === NU.group) { g.removeFromParent(); keep.push(g); } NU.keepGroups = keep;
+            if (NU.group) { const old = NU.group; scene.remove(old); old.traverse((o) => { try { if (o.geometry) o.geometry.dispose(); } catch (e) { /* shared */ } }); }
+            NU.group = null; NU.terrainMesh = null; NU.nav = null; NU.ready = false; NU.loading = false; NU.err = null; NU.retryAt = 0; NU.last = new THREE.Vector3();
+        }
         function nuMakeGroup(sp, g0) { const i = g0.i | 0, cyc = (NS.gs[i] || { cyc: 0 }).cyc; g0.bc = cyc; return nsSeeded(nuHash(i + 3, cyc * 131 + 7), () => nuMakeGroup0(sp, g0)); }
         function nuMakeGroup0(sp, g0) {
             const n = 2 + (Math.random() < 0.4 ? 1 : 0), g = g0 || { sp, lv: sp.lv, reg: sp.reg, mobs: [], dead: false, respawn: 0, pop: 0.001 }, cls = sp.cls[Math.random() < 0.7 ? 0 : 1];
