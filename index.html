@@ -13426,6 +13426,26 @@ function kbModel(THREE, mk) {
                 const el = LK.el, tA = (activeMap === 'nuu' && NU.ready && NF.tgt && !NF.tgt.dead && !NF.dead && NF.tgt.node && NF.tgt.node.visible !== false) ? NF.tgt : null, t = tA && NF.lockOn ? tA : null;
                 if (!!t !== !!LK.snd) { LK.snd = !!t; try { if (t) { if (!btCursorSnd(true)) dnBeep(1320, 0.06, 'square', 0.035); } else { dnBeep(660, 0.07, 'triangle', 0.028); setTimeout(() => dnBeep(440, 0.09, 'triangle', 0.022), 60); } } catch (e) { /* audio */ } }   // menu-cursor sound when you lock on, a soft cancel when you let go
                 if (!t) { if (LK.vis) { LK.vis = false; LK.tgt = null; el.classList.remove('on', 'snap', 'lock'); el.style.display = 'none'; } return; }
+                // find the monster on screen from its real model: the box around its meshes (not the health bar or name sprites), projected to the screen
+                const rc = renderer.domElement.getBoundingClientRect(), V = LK.v, bx = LK.bx || (LK.bx = new THREE.Box3()), b1 = LK.b1 || (LK.b1 = new THREE.Box3());
+                bx.makeEmpty(); for (const c of t.node.children) { if (c.isSprite || c.visible === false) continue; b1.setFromObject(c); if (!b1.isEmpty()) bx.union(b1); }
+                if (bx.isEmpty()) { const w3 = t.node.getWorldPosition(LK.w || (LK.w = new THREE.Vector3())), hh = Math.max(0.6, ((t.node.userData && t.node.userData.h) || 1.6) * (t.size || 1)); bx.set(new THREE.Vector3(w3.x - hh * 0.3, w3.y, w3.z - hh * 0.3), new THREE.Vector3(w3.x + hh * 0.3, w3.y + hh, w3.z + hh * 0.3)); }
+                let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, behind = false;
+                for (let i = 0; i < 8; i++) { V.set(i & 1 ? bx.max.x : bx.min.x, i & 2 ? bx.max.y : bx.min.y, i & 4 ? bx.max.z : bx.min.z).project(camera); if (V.z > 1) behind = true; const sx = rc.left + (V.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-V.y * 0.5 + 0.5) * rc.height; x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy); }
+                if (behind || x1 < rc.left || x0 > rc.right || y1 < rc.top || y0 > rc.bottom) { el.style.display = 'none'; LK.vis = false; return; }
+                const lock = !!NF.lockOn, fresh = LK.tgt !== t || lock !== LK.lock || !LK.vis;
+                if (!LK.vis) { el.style.display = 'block'; LK.vis = true; }
+                if (fresh) { LK.tgt = t; LK.lock = lock; el.classList.toggle('lock', lock); el.classList.add('on'); el.classList.remove('snap'); void el.offsetWidth; el.classList.add('snap'); }
+                const px = Math.max(30, Math.min(140, Math.max(x1 - x0, y1 - y0) * 0.45)), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;      // half the monster's size, centred on its body
+                el.style.width = el.style.height = px + 'px'; el.style.transform = `translate(${(cx - px / 2).toFixed(1)}px,${(cy - px / 2).toFixed(1)}px)`;
+            } catch (e) { /* cosmetic */ }
+        }
+        requestAnimationFrame(lkLoop);
+            try {
+                if (!LK.el) { if (!document.body) return; lkBuild(); }
+                const el = LK.el, tA = (activeMap === 'nuu' && NU.ready && NF.tgt && !NF.tgt.dead && !NF.dead && NF.tgt.node && NF.tgt.node.visible !== false) ? NF.tgt : null, t = tA && NF.lockOn ? tA : null;
+                if (!!t !== !!LK.snd) { LK.snd = !!t; try { if (t) { if (!btCursorSnd(true)) dnBeep(1320, 0.06, 'square', 0.035); } else { dnBeep(660, 0.07, 'triangle', 0.028); setTimeout(() => dnBeep(440, 0.09, 'triangle', 0.022), 60); } } catch (e) { /* audio */ } }   // menu-cursor sound when you lock on, a soft cancel when you let go
+                if (!t) { if (LK.vis) { LK.vis = false; LK.tgt = null; el.classList.remove('on', 'snap', 'lock'); el.style.display = 'none'; } return; }
                 const hh = Math.max(0.6, ((t.node.userData && t.node.userData.h) || 1.6) * (t.size || 1)), w3 = LK.w || (LK.w = new THREE.Vector3()); t.node.getWorldPosition(w3); const cy = w3.y + hh * 0.5;      // body centre = its feet + half its real height (model height x the monster's size)
                 const v = LK.v.set(w3.x, cy, w3.z), d = Math.max(2, camera.position.distanceTo(v)), rc = renderer.domElement.getBoundingClientRect(); v.project(camera);   // centred on the monster's body, sized to its silhouette
                 if (v.z > 1 || Math.abs(v.x) > 1.15 || Math.abs(v.y) > 1.15) { el.style.display = 'none'; LK.vis = false; return; }
