@@ -13302,7 +13302,7 @@ function kbModel(THREE, mk) {
         function nfApplyClass(id, quiet) {
             const C = NF_CLASSES[id]; if (!C) return false; NF.cls = id; NF_SK = C.moves; NF.heat = 0; NF.oh = 0; NF.wf = null; NF.reasm = 0; NF.mc = null; NF.heatRdy = 0; const keepHp = NF.hpMax ? NF.hp / NF.hpMax : 1, keepMp = NF.mpMax ? NF.mp / NF.mpMax : 1; nfStats(); NF.hp = Math.max(1, NF.hpMax * keepHp); NF.mp = NF.mpMax * keepMp; NF.cds = {}; NF.gcd = 0; NF.cast = null;
             try { for (let i = 0; i < 12; i++) { const a = PAD_ACTS['nfm_' + i]; if (a) { a[0] = NF_SK[i].ic; a[1] = NF_SK[i].n; } } PAD.drawKey = ''; } catch (e) { /* pad not ready */ }
-            nfXbDraw(); if (!quiet) { try { clsEquip(C.w, true); } catch (e) { /* weapon system */ } nuShowBanner('CLASS: ' + C.n.toUpperCase(), C.d.toUpperCase()); try { sysChat('◆ You are now a ' + C.n + '. ' + C.d); } catch (e) { /* chat */ } nfSave(); }
+            nfXbDraw(); if (quiet && C.w === 'fighter' && CLS.wpn !== 'fighter') { try { clsEquip('fighter', true); } catch (e) { /* weapon system */ } } if (!quiet) { try { clsEquip(C.w, true); } catch (e) { /* weapon system */ } nuShowBanner('CLASS: ' + C.n.toUpperCase(), C.d.toUpperCase()); try { sysChat('◆ You are now a ' + C.n + '. ' + C.d); } catch (e) { /* chat */ } nfSave(); }
             return true;
         }
         function nfXbRun(side, k) {
@@ -13749,12 +13749,20 @@ function kbModel(THREE, mk) {
             nfFx(CA.auto > 6 ? 'bolt' : 'slash', p, new THREE.Vector3(NF.tgt.x, NF.tgt.node.position.y, NF.tgt.z)); nfDealDmg(NF.tgt, pot, CA.mag > 1);
             if (i > 1) { try { nfRumble(last ? 0.5 : 0.2, last ? 0.7 : 0.3, last ? 160 : 70); } catch (e) { /* pad */ } if (last) { try { nfPop(new THREE.Vector3(p.x, p.y + 2.8, p.z), 'COMBO ×' + i, '#ffd98a', true); } catch (e) { /* ui */ } } }
         }
+        // ---- FIGHTER class in Adventia: every move plays a clip from the Fighter set (punches, kicks, launcher, special burst, parry), not the sword ones ----
+        const NF_FANIM = { f1: 'f_hatk1', f2: 'f_hatk2', f3: 'f_hcA3', f4: 'f_hcB1', f5: 'f_hcB2', f6: 'f_hsk1', f8: 'f_hpary', f9: 'f_hcC3', f10: 'f_hsk1', f11: 'f_hcC3', f12: 'f_hsk1' };
+        const NF_FAUTO = ['f_hatk1', 'f_hatk2', 'f_hcB1', 'f_hatk3', 'f_hcB2', 'f_hcB3'];   // auto-attack chain: punch, punch, kick, punch, kick, kick
+        function nfFighterReact(kind) {   // flinch when hit (60% of hits, always a block when guarding), fall when downed
+            if (NF.cls !== 'fighter') return; const A = localActor; if (!A || !A.playEmote) return;
+            let nm = null; if (kind === 'down') nm = 'f_hdie1'; else if (NF.guard > 0) nm = 'f_hblock'; else if (Math.random() < 0.6) nm = Math.random() < 0.5 ? 'f_hhit1' : 'f_hhit2';
+            if (!nm || !HERO_ACTS[nm]) return; A.playEmote(nm); A.emoteRate = 1.2; nfEmoteNet(nm, 1.2, false);
+        }
         function nfAutoAnim() {
             const A = localActor; if (!A || !A.playEmote) return; const C = nfCls(); let nm = null, rate = 1.45;
             if (C.w === 'sword') { try { nfTrailStart(false, 0xdff4ff); } catch (e) { /* trail is cosmetic */ } }
             if (NF.cls === 'keyblade') { kbAnim({ id: 'x1' }); return; }
             if (C.w === 'sword') { NF.aaC = ((NF.aaC | 0) % 3) + 1; nm = 'hatk' + NF.aaC; }
-            else if (C.w === 'fighter') { NF.aaC = ((NF.aaC | 0) % 3) + 1; nm = HERO_ACTS['f_hatk' + NF.aaC] ? 'f_hatk' + NF.aaC : null; }
+            else if (C.w === 'fighter') { NF.aaC = ((NF.aaC | 0) % NF_FAUTO.length) + 1; nm = HERO_ACTS[NF_FAUTO[NF.aaC - 1]] ? NF_FAUTO[NF.aaC - 1] : (HERO_ACTS['f_hatk' + (((NF.aaC - 1) % 3) + 1)] ? 'f_hatk' + (((NF.aaC - 1) % 3) + 1) : null); }
             else if (C.w !== 'pistol') { nm = 'hsk1'; }
             if (!nm || !ANIM_EMOTES[nm]) return;
             const moving = Math.hypot(playerVelocity.x, playerVelocity.z) > 0.6 || !!hcInput();
@@ -13801,7 +13809,7 @@ function kbModel(THREE, mk) {
                 for (const q of h.shards) { const dd = q.sp * h.t; q.m.position.set(q.d.x * dd, q.d.y * dd - 4 * h.t * h.t, q.d.z * dd); q.m.rotation.set(q.rot.x * h.t, q.rot.y * h.t, q.rot.z * h.t); q.m.material.opacity = 0.85 * f; }
             }
         }
-        function nfAnim(s) { try { nfMageAnim(s, 'go'); } catch (e) { /* cosmetic */ } try { nfRumble(s && (s.k === 'lb') ? 0.9 : s && (s.k === 'aoe' || s.k === 'ground') ? 0.45 : 0.16, s && s.k === 'lb' ? 0.7 : 0.22, s && s.k === 'lb' ? 400 : 60); } catch (e) { /* rumble */ } try { if (s && nfCls().w === 'sword' && /^(hit|cone|aoe|line|dash|lb)$/.test(s.k)) nfTrailStart(s.fx === 'limit' || s.fx === 'ring' || s.k === 'lb' || s.k === 'aoe', NF_GLOW[s.id] || (s.fx === 'limit' ? 0xffd24a : s.fx === 'ring' ? 0x8cffd9 : 0x8fe8ff)); } catch (e) { /* trail is cosmetic */ } try { if (s && (nfCls().w === 'sword') && /^(hit|cone|aoe|line|dash|lb)$/.test(s.k)) nfBladeGlow(s); } catch (e) { /* glow is cosmetic */ } try { if (nfCls().w === 'sword' && NF.cls === 'keyblade') { kbAnim(s); return; } if (!/^(hit|cone|aoe|line|dash|lb|steal)$/.test(s.k)) return; const C = nfCls(); if (C.w !== 'sword' && C.w !== 'fighter') return; const n = 1 + ((Math.random() * 3) | 0), nm = C.w === 'fighter' && HERO_ACTS['f_hatk' + n] ? 'f_hatk' + n : 'hatk' + n; if (HERO_ACTS[nm] && localActor && localActor.playEmote) { localActor.playEmote(nm); localActor.emoteRate = 1.4; nfEmoteNet(nm, 1.4, false); } } catch (e) { /* no clip */ } }      // Adventia swings run about 40% quicker so the combat feels snappy
+        function nfAnim(s) { try { nfMageAnim(s, 'go'); } catch (e) { /* cosmetic */ } try { nfRumble(s && (s.k === 'lb') ? 0.9 : s && (s.k === 'aoe' || s.k === 'ground') ? 0.45 : 0.16, s && s.k === 'lb' ? 0.7 : 0.22, s && s.k === 'lb' ? 400 : 60); } catch (e) { /* rumble */ } try { if (s && nfCls().w === 'sword' && /^(hit|cone|aoe|line|dash|lb)$/.test(s.k)) nfTrailStart(s.fx === 'limit' || s.fx === 'ring' || s.k === 'lb' || s.k === 'aoe', NF_GLOW[s.id] || (s.fx === 'limit' ? 0xffd24a : s.fx === 'ring' ? 0x8cffd9 : 0x8fe8ff)); } catch (e) { /* trail is cosmetic */ } try { if (s && (nfCls().w === 'sword') && /^(hit|cone|aoe|line|dash|lb)$/.test(s.k)) nfBladeGlow(s); } catch (e) { /* glow is cosmetic */ } try { if (nfCls().w === 'sword' && NF.cls === 'keyblade') { kbAnim(s); return; } if (NF.cls === 'fighter') { const fnm = s && NF_FANIM[s.id]; if (fnm && HERO_ACTS[fnm] && localActor && localActor.playEmote) { localActor.playEmote(fnm); localActor.emoteRate = 1.4; nfEmoteNet(fnm, 1.4, false); } return; } if (!/^(hit|cone|aoe|line|dash|lb|steal)$/.test(s.k)) return; const C = nfCls(); if (C.w !== 'sword' && C.w !== 'fighter') return; const n = 1 + ((Math.random() * 3) | 0), nm = C.w === 'fighter' && HERO_ACTS['f_hatk' + n] ? 'f_hatk' + n : 'hatk' + n; if (HERO_ACTS[nm] && localActor && localActor.playEmote) { localActor.playEmote(nm); localActor.emoteRate = 1.4; nfEmoteNet(nm, 1.4, false); } } catch (e) { /* no clip */ } }      // Adventia swings run about 40% quicker so the combat feels snappy
         function nfDot(m, d, mag) { m.dots = (m.dots || []).filter((q) => q.id !== d.id); m.dots.push({ id: d.id, pot: d.pot, left: d.sec, tick: 1.5, mag: !!mag }); nfPop(new THREE.Vector3(m.x, m.node.position.y + 2.4, m.z), 'DoT', '#c78bff'); }
         function nfPetStart(kind, sec, pot) {
             nfPetClear(); const col = { ifrit: 0xff6a2a, shiva: 0x7fe0ff, ramuh: 0xffe44a, bahamut: 0xb06aff, rook: 0xc8d4de }[kind] || 0xffffff, orb = new THREE.Mesh(new THREE.IcosahedronGeometry(kind === 'bahamut' ? 0.9 : 0.55, 1), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); orb.userData.noOutline = true; NU.group.add(orb); NF.pet = { kind, left: sec, t: 0, pot, orb, tick: 1.2 };
@@ -13945,7 +13953,7 @@ function kbModel(THREE, mk) {
         }
         function nfRumble(strong, weak, ms) { try { if (activeMap === 'nuu' && typeof padRumble === 'function') padRumble(strong, weak, ms); } catch (e) { /* no rumble */ } }      // controller rumble for Adventia (Budokai > Rumble sets Normal / Low / Off)
         function nfPlayerHurt(d, from) {
-            try { if (!NF.dead && !(NF.inv > 0)) { NSX.playerHit(); nfRumble(Math.min(1, 0.4 + d / Math.max(1, NF.hpMax) * 3), 0.65, 130 + Math.min(260, d * 3)); } } catch (e) { /* audio */ }
+            try { if (!NF.dead && !(NF.inv > 0)) { NSX.playerHit(); try { nfFighterReact('hit'); } catch (e) { /* cosmetic */ } nfRumble(Math.min(1, 0.4 + d / Math.max(1, NF.hpMax) * 3), 0.65, 130 + Math.min(260, d * 3)); } } catch (e) { /* audio */ }
             if (NF.dead) return; try { if (NF.inv > 0 && NF.blinkAt && performance.now() - NF.blinkAt < 700) { nfPerfectDodge(); return; } } catch (e) { /* cosmetic */ } if (NF.inv > 0 || Math.random() * 100 < (NF.gEva || 0) || (function () { try { return mgEvade(); } catch (e) { return false; } })()) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); try { d = d * mgHurtMul(from); } catch (e) { /* magic */ } if (nfMyRole() === 'tank') d = Math.round(d * 0.8); if (NF.def > 0) d = Math.round(d * (1 - Math.min(0.6, NF.def / (NF.def + 260)))); if (nfBf() && nfBf().def) d = Math.round(d * (1 - nfBf().def)); d = Math.max(1, Math.round(d)); NF.hp -= d; try { if (from && from.cls && d > 0) nfStHit(from); } catch (e) { /* status */ } NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
             if (NF.tele) nfTeleCancel('Teleport interrupted'); try { nfLogAdd('hurt', 'You took ' + Math.round(d) + ' damage from ' + String((from && (from.name || from.cls)) || 'an enemy') + ' (' + Math.max(0, Math.round(NF.hp)) + '/' + Math.round(NF.hpMax) + ' HP)', { d, aoe: !!NFLOG.aoe, frac: Math.max(0, NF.hp) / Math.max(1, NF.hpMax) }); } catch (e) { /* log */ } if (NF.hp <= 0 && nfG('autolife') && (NF.alT || 0) < performance.now()) { NF.alT = performance.now() + 300000; NF.hp = Math.round(NF.hpMax * 0.5); nfPop(nfPos().clone().setY(nfPos().y + 2.6), '✨ Auto-Life', '#ffe08a', true); try { nfFx('heal', nfPos(), nfPos()); } catch (e) { /* fx */ } } else if (NF.hp <= 0) nfDie();
         }
@@ -14027,7 +14035,7 @@ function kbModel(THREE, mk) {
             const f = nfFallNear(); h.style.display = f ? 'block' : 'none'; if (f) h.textContent = (btBagLoad().phoenix | 0) > 0 ? '🪶 Use a Phoenix Down on ' + f.name + '  (F / ✋)' : f.name + ' has fallen · you need a Phoenix Down';
         }
         async function nfDie() {
-            if (NF.dead) return; NF.dead = true; try { nfLogAdd('down', 'You were knocked down', {}); } catch (e) { /* log */ } nfRumble(1, 1, 600); NF.cast = null; NF.tgt = null; NF.roll = null; NF.hot = null; nuShowBanner('YOU HAVE FALLEN', 'USE A PHOENIX DOWN OR RETURN TO A CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
+            if (NF.dead) return; NF.dead = true; try { nfFighterReact('down'); } catch (e) { /* cosmetic */ } try { nfLogAdd('down', 'You were knocked down', {}); } catch (e) { /* log */ } nfRumble(1, 1, 600); NF.cast = null; NF.tgt = null; NF.roll = null; NF.hot = null; nuShowBanner('YOU HAVE FALLEN', 'USE A PHOENIX DOWN OR RETURN TO A CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
             const P = nfPos(), fx = Math.round(P.x * 100) / 100, fy = Math.round(P.y * 100) / 100, fz = Math.round(P.z * 100) / 100;
             try { nsSend({ k: 'pd', x: fx, y: fy, z: fz }); } catch (e) { /* offline */ } let hid = null; try { hid = localActor.holder || localActor.group; if (hid.visible) { nuShatter(hid, 1.3); hid.visible = false; if (localActor.label) localActor.label.visible = false; } else hid = null; } catch (e) { hid = null; }   // the same polygon shatter the monsters get
             NF.hid = hid; await new Promise((r) => setTimeout(r, 700)); if (!NF.dead) return; nfFallBuild(me.id, me.name || 'You', fx, fy, fz, true); nfDownUi(true);
@@ -16501,7 +16509,79 @@ function kbModel(THREE, mk) {
                 for (const sgn of [1, -1]) { const px = x + rx * 5.4 * sgn, pz = z + rz * 5.4 * sgn; let bad = false; for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 1.5], [0, -1.5]]) if (blk(px + dx, pz + dz)) bad = true; if (!bad) { side = sgn; break; } }
                 if (side) { const a = tnArmoury(), px = x + rx * 5.4 * side, pz = z + rz * 5.4 * side; a.position.set(px, nuH(px, pz), pz); a.rotation.y = ry; par.add(a); TN.stalls[want + '-eq'] = a; NI.list.push({ id: 'eq-shop-' + want, x: px + Math.sin(ry) * 1.6, z: pz + Math.cos(ry) * 1.6, r: 3.4, label: 'Equipment Shop · gear for your class', act: () => nfOpenShop('eq'), cond: () => !AR.busy && !DG.on && ((want === 'forest' && !ZN.on) || (want === 'town' && ZN.on && ZN.key === 'town')) }); }
             } catch (e) { console.warn('armoury', e); }
+            try {   // PLATE EXPRESS: the food delivery truck, on the free side of the camp tent
+                const ry = m.rotation.y, rx = Math.cos(ry), rz = -Math.sin(ry), sx = Math.sin(ry), sz = Math.cos(ry), blk = (px, pz) => (want === 'forest' ? nuBlkR(px, pz) : znBlk(px, pz));
+                const eq = TN.stalls[want + '-eq'], es = eq ? Math.sign((eq.position.x - x) * rx + (eq.position.z - z) * rz) || 1 : 0, cand = es ? [-es * 8.2, es * 13.6, -es * 13.6] : [8.2, -8.2];
+                for (const d of cand) {
+                    const px = x + rx * d, pz = z + rz * d; let bad = false;
+                    for (const lx of [-3, -1.5, 0, 1.5, 3]) for (const lz of [-1.4, 0, 1.4, 2.6]) if (blk(px + rx * lx + sx * lz, pz + rz * lx + sz * lz)) bad = true;
+                    if (bad) continue; const tk = tnTruck(); tk.position.set(px, nuH(px, pz), pz); tk.rotation.y = ry; par.add(tk); TN.stalls[want + '-pl'] = tk;
+                    NI.list.push({ id: 'plx-' + want, x: px + sx * 2.9 + rx * 0.9, z: pz + sz * 2.9 + rz * 0.9, r: 3.6, label: 'Plate Express · turn in plates (Lv 1–100)', act: () => plxOpen(), cond: () => !AR.busy && !DG.on && ((want === 'forest' && !ZN.on) || (want === 'town' && ZN.on && ZN.key === 'town')) });
+                    break;
+                }
+            } catch (e) { console.warn('plate express', e); }
             NI.list.push({ id: 'tn-shop-' + want, x: x + Math.sin(m.rotation.y) * 2.2, z: z + Math.cos(m.rotation.y) * 2.2, r: 3.6, label: 'Camp Supplies · buy a tent', act: () => tnShopOpen(), cond: () => !AR.busy && !DG.on && ((want === 'forest' && !ZN.on) || (want === 'town' && ZN.on && ZN.key === 'town')) });
+        }
+        // ---- PLATE EXPRESS: a food delivery truck beside the camp tent. 100 plate orders (Lv 1 to 100), FFXIV hand-in style: bring cooked dishes, get Gil + Adventia XP ----
+        const PLX_KEY = 'oasis.plates.v1', PLX = { done: {}, list: null, page: 0 };
+        try { const o = JSON.parse(localStorage.getItem(PLX_KEY) || '{}'); if (o && o.done && typeof o.done === 'object') PLX.done = o.done; } catch (e) { /* fresh */ }
+        function plxSave() { try { localStorage.setItem(PLX_KEY, JSON.stringify({ done: PLX.done })); } catch (e) { /* storage */ } }
+        function plxDishes() {   // every dish in the game, weakest to strongest: more ingredients, a bigger heal and stronger buffs rank higher
+            if (PLX.list) return PLX.list;
+            const sc = (id) => { const m = FOOD_MEAL[id], b = m.bf ? Object.values(m.bf).reduce((a, v) => a + (typeof v === 'number' ? Math.abs(v) : 1), 0) : 0; return m.set.length * 10 + (m.heal || 0) * 10 + (m.hp || 0) * (m.len || 0) / 3 * 10 + (m.mp || 0) * (m.len || 0) / 3 * 5 + b * 10 + (m.cure ? 3 : 0); };
+            return (PLX.list = Object.keys(FOOD_MEAL).sort((a, b) => sc(a) - sc(b)));
+        }
+        function plxOrder(L) {   // order number L (1 to 100): the dish climbs with the level, the amount steps up at 35 and 69, every 10th is a big one
+            const D = plxDishes(), id = D[Math.min(D.length - 1, Math.floor((L - 1) * D.length / 100))], big = L % 10 === 0, qty = 1 + Math.floor((L - 1) / 34) + (big ? 1 : 0);
+            return { L, id, qty, need: Math.max(1, Math.ceil(L * NF_MAX / 100)), gil: Math.round((40 + L * 18 + L * L * 0.9) * (big ? 2 : 1)), xp: Math.round((10 + L * 3) * (big ? 2 : 1)), big };
+        }
+        function plxStatus(o) { if (PLX.done[o.L]) return 'done'; if (NF.lv < o.need) return 'locked'; return (FOOD.meal[o.id] | 0) >= o.qty ? 'ready' : 'short'; }
+        function plxDeliver(L, quiet) {
+            const o = plxOrder(L); if (plxStatus(o) !== 'ready') return false;
+            foodAdd('meal', o.id, -o.qty); PLX.done[L] = 1; plxSave();
+            try { if (window.oasisGil) window.oasisGil.add(o.gil, true); } catch (e) { /* gil */ } try { nfXp(o.xp); } catch (e) { /* xp */ }
+            if (!quiet) { try { nuShowBanner('PLATE DELIVERED', 'LV ' + L + ' ORDER · +' + o.gil.toLocaleString('en-US') + ' GIL · +' + o.xp + ' XP'); } catch (e) { /* banner */ } try { nsbBell(0, 1046, 0.03, 0.5, 0); nsbBell(0.1, 1568, 0.03, 0.6, 0); } catch (e) { /* audio */ } }
+            return true;
+        }
+        function plxOpen() {
+            const u = nfUi(), PER = 10, doneN = () => Object.keys(PLX.done).length;
+            if (!PLX.opened) { PLX.opened = true; let f = 1; for (let L = 1; L <= 100; L++) if (!PLX.done[L]) { f = L; break; } PLX.page = Math.floor((f - 1) / PER); }
+            const draw = () => {
+                const rows = []; for (let i = 0; i < PER; i++) { const L = PLX.page * PER + i + 1; if (L > 100) break; const o = plxOrder(L), m = FOOD_MEAL[o.id], st = plxStatus(o), have = FOOD.meal[o.id] | 0;
+                    const right = st === 'done' ? '✓ Delivered' : st === 'locked' ? 'Adventia Lv ' + o.need : st === 'ready' ? 'Deliver' : have + ' / ' + o.qty;
+                    rows.push(`<button data-l="${L}" ${st === 'done' ? 'style="opacity:.5"' : st === 'locked' ? 'style="opacity:.6"' : st === 'ready' ? 'style="border-color:#9ef0a8"' : ''}><span>${o.big ? '⭐ ' : ''}Lv ${L} · ${m.ico} ${m.n} ×${o.qty} <small>· ${o.gil.toLocaleString('en-US')} Gil · ${o.xp} XP</small></span><span>${right}</span></button>`); }
+                const ready = (() => { let n = 0; for (let L = 1; L <= 100; L++) if (plxStatus(plxOrder(L)) === 'ready') n++; return n; })();
+                u.tele.innerHTML = `<div class="bx" style="max-height:78vh;overflow:auto"><h3>🚚 PLATE EXPRESS</h3><small>Hand in cooked dishes for orders Lv 1 to 100. Cook at a camp kitchen, then bring the plates here. Orders open as your Adventia level rises. · ${doneN()} / 100 delivered · Orders ${PLX.page * PER + 1}–${Math.min(100, PLX.page * PER + PER)}</small>${rows.join('')}`
+                    + `<button data-a="all" ${ready ? '' : 'style="opacity:.5"'}><span>📦 Deliver every ready order</span><span>${ready}</span></button><div style="display:flex;gap:6px;margin-top:8px"><button data-a="prev" style="flex:1;justify-content:center">◀ Lv ${Math.max(1, PLX.page * PER - PER + 1)}–${PLX.page * PER}</button><button data-a="next" style="flex:1;justify-content:center">Lv ${PLX.page * PER + PER + 1}–${Math.min(100, PLX.page * PER + PER * 2)} ▶</button></div><button data-a="x" style="justify-content:center;margin-top:8px">Close</button></div>`;
+                u.tele.classList.add('on');
+                u.tele.querySelectorAll('button').forEach((b) => b.addEventListener('pointerdown', (e) => {
+                    e.preventDefault(); e.stopPropagation(); const a = b.dataset.a;
+                    if (a === 'x') { nfTeleClose(); return; } if (a === 'prev') { PLX.page = Math.max(0, PLX.page - 1); draw(); return; } if (a === 'next') { PLX.page = Math.min(9, PLX.page + 1); draw(); return; }
+                    if (a === 'all') { let n = 0, g = 0, x = 0; for (let L = 1; L <= 100; L++) { const o = plxOrder(L); if (plxDeliver(L, true)) { n++; g += o.gil; x += o.xp; } } if (n) { try { nuShowBanner('PLATES DELIVERED', n + ' ORDERS · +' + g.toLocaleString('en-US') + ' GIL · +' + x + ' XP'); nsbBell(0, 1046, 0.03, 0.5, 0); nsbBell(0.1, 1568, 0.03, 0.6, 0); } catch (er) { /* ui */ } } else { try { nuShowBanner('NOTHING TO DELIVER', 'COOK THE DISHES FIRST'); } catch (er) { /* ui */ } } draw(); return; }
+                    const L = +b.dataset.l; if (!L) return; const o = plxOrder(L), st = plxStatus(o);
+                    if (st === 'ready') plxDeliver(L, false); else if (st === 'locked') { try { nuShowBanner('ORDER LOCKED', 'NEEDS ADVENTIA LV ' + o.need); } catch (er) { /* ui */ } } else if (st === 'short') { try { nuShowBanner('NOT ENOUGH PLATES', 'NEED ' + o.qty + ' × ' + FOOD_MEAL[o.id].n.toUpperCase()); } catch (er) { /* ui */ } }
+                    draw();
+                }));
+            };
+            draw();
+        }
+        function tnTruck() {   // the delivery truck: cab on the left, a cream cargo box with a serving hatch and a striped awning on the front side
+            const g = new THREE.Group(), M = (c, r, m) => new THREE.MeshStandardMaterial({ color: c, roughness: r === undefined ? 0.7 : r, metalness: m || 0 }), add = (geo, mat, x, y, z, rx, ry, rz) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); if (rx) o.rotation.x = rx; if (ry) o.rotation.y = ry; if (rz) o.rotation.z = rz; g.add(o); return o; };
+            const cream = M(0xf3e8cf), red = M(0xc8352f), dark = M(0x2b2f38, 0.6, 0.3), glass = M(0x9fd8ee, 0.2, 0.5), tyre = M(0x16181c, 0.9), chrome = M(0xd5dbe2, 0.3, 0.8), wood = M(0x7a5532), white = M(0xffffff, 0.5), gold = M(0xe6b94a, 0.4, 0.5);
+            add(new THREE.BoxGeometry(5.6, 0.4, 2.2), dark, 0, 0.7, 0);                               // chassis
+            add(new THREE.BoxGeometry(1.7, 1.5, 2.1), red, -2.0, 1.65, 0); add(new THREE.BoxGeometry(0.12, 0.7, 1.7), glass, -2.9, 1.95, 0); add(new THREE.BoxGeometry(1.0, 0.6, 0.06), glass, -1.9, 1.95, 1.06); add(new THREE.BoxGeometry(1.0, 0.6, 0.06), glass, -1.9, 1.95, -1.06);   // cab + windows
+            add(new THREE.BoxGeometry(0.2, 0.5, 2.2), chrome, -3.0, 0.95, 0); add(new THREE.BoxGeometry(0.1, 0.18, 0.18), M(0xfff1a8, 0.2), -2.95, 1.2, 0.7); add(new THREE.BoxGeometry(0.1, 0.18, 0.18), M(0xfff1a8, 0.2), -2.95, 1.2, -0.7);
+            add(new THREE.BoxGeometry(3.7, 2.3, 2.25), cream, 0.95, 2.05, 0); add(new THREE.BoxGeometry(3.74, 0.35, 2.29), red, 0.95, 1.15, 0); add(new THREE.BoxGeometry(3.74, 0.12, 2.29), red, 0.95, 3.25, 0);   // cargo box, red stripes
+            add(new THREE.BoxGeometry(2.3, 1.0, 0.1), dark, 0.9, 2.25, 1.1);                            // serving hatch
+            add(new THREE.BoxGeometry(2.6, 0.12, 0.7), wood, 0.9, 1.72, 1.4);                           // counter
+            for (let i = 0; i < 6; i++) { add(new THREE.BoxGeometry(0.4, 0.5, 0.06), i % 2 ? white : red, -0.1 + i * 0.4, 3.0 + 0.0, 1.55 - 0.0).rotation.x = 0.55; }   // striped awning
+            for (let i = 0; i < 4; i++) add(new THREE.CylinderGeometry(0.28, 0.28, 0.04 + 0.0, 16), white, 0.2 + (i % 2) * 0.7, 1.82 + Math.floor(i / 2) * 0.05, 1.4 + (i % 2) * 0.05);   // plates on the counter
+            add(new THREE.CylinderGeometry(0.05, 0.05, 0.9, 8), chrome, 2.55, 3.6, 0.0); add(new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8), M(0x8a8f98, 0.4, 0.7), -0.5, 3.5, -0.4);   // roof vent + pipe
+            for (const [wx, wz] of [[-2.0, 1.1], [-2.0, -1.1], [1.9, 1.1], [1.9, -1.1], [0.6, 1.1], [0.6, -1.1]]) { const w = add(new THREE.CylinderGeometry(0.5, 0.5, 0.32, 18), tyre, wx, 0.5, wz, Math.PI / 2); add(new THREE.CylinderGeometry(0.22, 0.22, 0.34, 12), chrome, wx, 0.5, wz, Math.PI / 2); }
+            add(new THREE.SphereGeometry(0.16, 10, 8), gold, 0.0, 3.45, 0.0);
+            const c = document.createElement('canvas'); c.width = 320; c.height = 64; const x = c.getContext('2d'); x.fillStyle = 'rgba(40,24,12,.88)'; x.fillRect(0, 0, 320, 64); x.strokeStyle = '#d9b26a'; x.lineWidth = 4; x.strokeRect(3, 3, 314, 58); x.fillStyle = '#f3e2b8'; x.font = '800 26px Nunito,sans-serif'; x.textAlign = 'center'; x.fillText('PLATE EXPRESS', 160, 42);
+            const t = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); sp.scale.set(3.6, 0.72, 1); sp.position.set(0.9, 4.2, 0); g.add(sp);
+            g.traverse((o) => { if (o.isMesh) o.userData.noOutline = true; }); return g;
         }
         function tnShopOpen() {
             const u = nfUi(), gil = () => (window.oasisGil ? window.oasisGil.get() : 0);
@@ -32351,6 +32431,21 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             if (!toastEl) { toastEl = document.createElement('div'); toastEl.id = 'lk-toast'; document.body.appendChild(toastEl); }
             toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 1600);
           }
+          /* ------------------------------------------------------------------ settings file: export / import every Look Studio setting */
+          function lkExport() {
+            let cap = 0; try { cap = GFX.cap | 0; } catch (e) { /* none */ }
+            return { format: 'oasis-look-v1', mode: S.mode, scale: S.scale, dynFps: S.dynFps, minScale: S.minScale, pill: S.pill, frameCap: cap, preset: { anime: S.preset.anime, hd: S.preset.hd }, common: Object.assign({}, S.common), anime: Object.assign({}, S.anime), hd: Object.assign({}, S.hd) };
+          }
+          function lkImport(j) {
+            if (!j || typeof j !== 'object' || j.format !== 'oasis-look-v1') throw new Error('this is not a Look Studio settings file');
+            const lim = (g, k, v) => { const sp = (PRM.SL[g] || []).find((x) => x[0] === k); return sp && typeof sp[2] === 'number' && typeof sp[3] === 'number' ? clampN(v, sp[2], sp[3]) : v; };
+            for (const g of ['common', 'anime', 'hd']) if (j[g] && typeof j[g] === 'object') for (const k in S[g]) if (typeof j[g][k] === 'number' && isFinite(j[g][k])) S[g][k] = lim(g, k, j[g][k]);
+            S.scale = clampN(num(j.scale, S.scale), 0.5, 1); S.minScale = clampN(num(j.minScale, S.minScale), 0.4, 1);
+            if ([0, 30, 45, 60, 90].includes(j.dynFps)) S.dynFps = j.dynFps; if (typeof j.pill === 'boolean') S.pill = j.pill;
+            if (j.preset && typeof j.preset === 'object') for (const m of ['anime', 'hd']) S.preset[m] = PRM.PRESETS[m] && PRM.PRESETS[m][j.preset[m]] ? String(j.preset[m]) : '';
+            if ([0, 30, 45, 60, 90].includes(j.frameCap)) { try { GFX.cap = j.frameCap; GFX.preset = 'custom'; gfxApply(); } catch (e) { /* settings not ready */ } }
+            eff = S.scale; dyn.good = 0; syncPill(); setMode(MODES.includes(j.mode) ? j.mode : S.mode, true); save(); ui();
+          }
           function build() {
             if (panel) return;
             const css = document.createElement('style');
@@ -32389,6 +32484,9 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
               else if (a === 'dyn') { S.dynFps = +v; eff = S.scale; dyn.good = 0; save(); ui(); }
               else if (a === 'cap') { try { GFX.cap = +v; GFX.preset = 'custom'; gfxApply(); } catch (x) { /* settings not ready */ } ui(); }
               else if (a === 'pill') { S.pill = !S.pill; syncPill(); save(); ui(); }
+              else if (a === 'lexp') { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(lkExport(), null, 2)], { type: 'application/json' })); l.download = 'oasis-look-settings.json'; l.click(); setTimeout(() => URL.revokeObjectURL(l.href), 1000); toast('Look settings exported'); }
+              else if (a === 'lcopy') { try { navigator.clipboard.writeText(JSON.stringify(lkExport())).then(() => toast('Look settings copied'), () => toast('Could not copy: use Export')); } catch (x) { toast('Could not copy: use Export'); } }
+              else if (a === 'limp') panel.querySelector('#lk-sf').click();
               else if (a === 'mload') panel.querySelector('#lk-mf').click();
               else if (a === 'msave') {
                 const j = { name: 'exported', format: 'neural-enhancer-v1', l1w: [...weights.slice(0, 216)], l1b: [...weights.slice(216, 224)], l2w: [...weights.slice(224, 248)], l2b: [...weights.slice(248, 251)] };
@@ -32397,7 +32495,8 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
               else if (a === 'mreset') { weights = PRM.defaultWeights(); modelName = 'built-in hand-designed filters (not trained)'; st.err = ''; ui(); }
             });
             panel.addEventListener('change', async (e) => {
-              const el = e.target; if (!el || el.id !== 'lk-mf') return; const f = el.files && el.files[0]; el.value = ''; if (!f) return;
+              const el = e.target; if (el && el.id === 'lk-sf') { const f0 = el.files && el.files[0]; el.value = ''; if (!f0) return; try { lkImport(JSON.parse(await f0.text())); toast('Look settings imported'); } catch (err) { st.err = 'Settings file rejected: ' + err.message; ui(); } return; }
+              if (!el || el.id !== 'lk-mf') return; const f = el.files && el.files[0]; el.value = ''; if (!f) return;
               try {
                 const j = JSON.parse(await f.text());
                 const chk = (a, n, nm) => { if (!Array.isArray(a) || a.length !== n || a.some((x) => typeof x !== 'number' || !isFinite(x))) throw new Error(nm + ' must be ' + n + ' numbers'); };
@@ -32447,6 +32546,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
                 + `<p>Auto resolution lowers the render scale when frames run slow and raises it again when there is room, so the frame rate holds.</p>`
                 + `<div class="lk-r"><label>Frame limit</label><div class="chips" style="margin:0">${btns('cap', cap, [[0, 'Max'], [30, '30'], [45, '45'], [60, '60'], [90, '90']])}</div></div>`;
             }
+            h += `<h4>Settings file</h4><div class="chips"><button data-a="lexp">Export settings</button><button data-a="limp">Import settings</button><button data-a="lcopy">Copy</button></div><input id="lk-sf" type="file" accept="application/json" hidden>`;
             h += `<div class="chips" style="margin-top:10px"><button data-a="pill" class="${S.pill ? 'on' : ''}">Round button: ${S.pill ? 'shown' : 'hidden'}</button></div><div class="lk-st" id="lk-st"></div>`;
             panel.innerHTML = h; panel.scrollTop = keep; stats();
           }
