@@ -13532,8 +13532,13 @@ function kbModel(THREE, mk) {
         function nfMobs() { const out = []; for (const g of NU.groups) if (!g.dead) for (const m of g.mobs) if (!m.dead) out.push(m); for (const f of NU.fates) for (const m of f.mobs) if (!m.dead) out.push(m); for (const m of NU.extra) if (!m.dead) out.push(m); return out; }
         function nfTarget(m) { if (NF.tgt === m) return; NF.tgt = m; if (!m) NF.lockOn = false; if (m) { nfBar(m); if (nfIsBoss(m)) { NF.lockOn = true; try { padToast('Locked on: ' + m.name); } catch (e) { /* toast */ } } } }
         const nfIsBoss = (m) => !!(m && (m.boss || m.rank || m.dgBoss));
+        const nfRanged = () => { const w = (nfCls() || {}).w; return w === 'pistol' || w === 'gun' || w === 'bow' || w === 'archer'; };      // guns and (upcoming) archers reach far; every other class targets at a fair, close range
+        const nfTgtR = (m) => nfRanged() ? (nfIsBoss(m) ? 80 : 30) : (nfIsBoss(m) ? 26 : 16);
+        const nfDuelFoe = () => (DUEL.s && DUEL.s.mode === 'nf' && DUEL.s.phase === 'live' && DUEL.foe && !DUEL.foe.dead) ? DUEL.foe : null;      // the player you are duelling, while the fight is live
+        const nfFoes = () => { const a = nfMobs(); const f = nfDuelFoe(); if (f) a.push(f); return a; };      // everything your skills can aim at: monsters, plus your duel opponent
+        const nfDuelOk = () => activeMap === 'nuu' && NU.ready && !DG.on && !ZN.on && !NF.dead && !NF.tele;
         function nfCycle(dir, foesOnly) {      // foesOnly (the D-pad left / right): enemies only, and your party target is left alone
-            dir = dir || 1; const p = nfPos(), list = nfMobs().filter((m) => nfDist(m) < (nfIsBoss(m) ? 80 : 30)).sort((a, b) => nfDist(a) - nfDist(b)).map((m) => ({ m }));      // bosses are lockable from much further away and come first
+            dir = dir || 1; const p = nfPos(), list = nfFoes().filter((m) => nfDist(m) < nfTgtR(m)).sort((a, b) => nfDist(a) - nfDist(b)).map((m) => ({ m }));      // bosses are lockable from much further away and come first
             if (!foesOnly) try { [...peers.values()].filter((q) => q.actor.group.parent && q.actor.group.position.distanceTo(p) < 25).sort((a, b) => a.actor.group.position.distanceTo(p) - b.actor.group.position.distanceTo(p)).forEach((q) => list.push({ id: q.id })); } catch (e) { /* no peers */ }
             if (!list.length) { nfTarget(null); NF.lockOn = false; if (!foesOnly) try { setLookTarget(null, false); } catch (e) { /* none */ } return; }
             let i = list.findIndex((o) => (o.m ? o.m === NF.tgt : o.id === localActor.lookId)); i = i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length;
@@ -13543,7 +13548,7 @@ function kbModel(THREE, mk) {
         function nfTargetFront() {
             if (activeMap !== 'nuu' || !NU.ready || NF.dead) return false;
             const p = nfPos(), ry = localActor.group.rotation.y || 0, fx = Math.sin(ry), fz = Math.cos(ry);
-            const all = nfMobs().filter((m) => nfDist(m) < (nfIsBoss(m) ? 80 : 30)).sort((a, b) => nfDist(a) - nfDist(b)); if (!all.length) return false;
+            const all = nfFoes().filter((m) => nfDist(m) < nfTgtR(m)).sort((a, b) => nfDist(a) - nfDist(b)); if (!all.length) return false;
             const fr = all.filter((m) => { const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz); return d < 0.5 || (dx * fx + dz * fz) / d > 0.42; }), list = fr.length ? fr : all;
             const i = list.indexOf(NF.tgt), m = list[i < 0 ? 0 : (i + 1) % list.length]; if (!m) return false;
             try { if (localActor.lookId) setLookTarget(null, false); } catch (e) { /* none */ }
@@ -13590,7 +13595,7 @@ function kbModel(THREE, mk) {
             if (!R.landed && R.t >= R.gap) { R.landed = true; g.position.set(R.tx, nuH(R.tx, R.tz), R.tz); NU.last.set(R.tx, 1, R.tz); const hh = localActor.holder || g; hh.visible = true; NF.blinkHid = false; nfBlinkIn(g.position); }
             if (R.t >= R.dur) NF.roll = null;
         }
-        function nfPick(cx, cy) { const rc = renderer.domElement.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = 1e9; for (const m of nfMobs()) { v.set(m.x, m.node.position.y + (m.node.userData.h || 1.5) * 0.5 * (m.big || 1), m.z).project(camera); if (v.z > 1) continue; const sx = rc.left + (v.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-v.y * 0.5 + 0.5) * rc.height, d = Math.hypot(sx - cx, sy - cy), lim = 54 * (m.big || 1); if (d < lim && d < bd) { bd = d; best = m; } } return best; }
+        function nfPick(cx, cy) { const rc = renderer.domElement.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = 1e9; for (const m of nfFoes()) { v.set(m.x, m.node.position.y + (m.node.userData.h || 1.5) * 0.5 * (m.big || 1), m.z).project(camera); if (v.z > 1) continue; const sx = rc.left + (v.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-v.y * 0.5 + 0.5) * rc.height, d = Math.hypot(sx - cx, sy - cy), lim = 54 * (m.big || 1); if (d < lim && d < bd) { bd = d; best = m; } } return best; }
         function nfFace(m) { localActor.group.rotation.y = Math.atan2(m.x - nfPos().x, m.z - nfPos().z); }
         function nfFxAdd(mesh, dur, upd) { NU.group.add(mesh); mesh.userData.noOutline = true; NF.fx.push({ mesh, t: 0, dur, upd }); }
         function nfFx(kind, from, to) {
@@ -13668,14 +13673,57 @@ function kbModel(THREE, mk) {
         }
         function nfFxTick(dt) { for (const f of NF.fx.slice()) { f.t += dt; const k = Math.min(1, f.t / f.dur); try { f.upd(k); } catch (e) { /* gone */ } if (k >= 1) { f.mesh.removeFromParent(); f.mesh.geometry && f.mesh.geometry.dispose(); f.mesh.material && f.mesh.material.dispose(); NF.fx.splice(NF.fx.indexOf(f), 1); } } }
         function nfDealDmg(m, mul, mag) {
+            if (m.duel) return nfDuelDeal(m, mul, mag);
             if (m.dead) return 0; try { mul *= mgDmgMul(m, mag); } catch (e) { /* magic */ } const crit = Math.random() < 0.1 + (function () { try { return mgLuck(); } catch (e) { return 0; } })() + Math.min(0.5, (nfBf() && nfBf().crit) || 0) + Math.min(0.4, (NF.gCrit || 0) / 100), lvf = Math.max(0.5, Math.min(1.5, 1 + (NF.lv - m.lv) * 0.05)), base = (mag ? NF.mag : NF.atk) * (NF.buffT > 0 ? 1.3 : 1) * nfFoodAtk() * mul * (0.9 + Math.random() * 0.2) * lvf * (1 - Math.min(0.35, (NU_CLS[m.cls] ? NU_CLS[m.cls].def : 1) * 0.08)), d = Math.max(1, Math.round(base * (crit ? 1.6 : 1)));
             try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } try { nfRumble(crit ? 0.55 : 0.28, crit ? 0.45 : 0.22, crit ? 130 : 70); } catch (e) { /* rumble */ } try { nfHitBurst(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) * 0.6, m.z), NF.glow ? NF.hitCol : (mag ? 0xc9a8ff : 0xcfeaff), crit || mul >= 1.5); } catch (e) { /* cosmetic */ } m.hp -= d; try { nfLogAdd('dealt', 'You hit ' + String(m.name || m.cls || 'a monster') + (m.boss ? ' (boss)' : '') + ' for ' + d + (crit ? ' (critical)' : ''), { d }); } catch (e) { /* log */ } try { const L = nfBf() && nfBf().leech; if (L && !NF.dead && NF.hp < NF.hpMax) { const hh = Math.max(1, Math.round(d * L)); NF.hp = Math.min(NF.hpMax, NF.hp + hh); const tn = performance.now(); if (tn - (NF.lchT || 0) > 900) { NF.lchT = tn; nfPop(nfPos().clone().setY(nfPos().y + 2.0), '+' + hh, '#9affb0'); } } } catch (e) { /* leech */ } m.mine = true; const thr = Math.round(d * NF_THR[nfMyRole()]); nfThreatAdd(m, me.id, thr); if (m.sid) nsSend({ k: 'h', id: m.sid, d, f: me.id, th: thr }); m.hurt = performance.now(); NF.comb = 6; nfPop(new THREE.Vector3(m.x, m.node.position.y + (m.node.userData.h || 1.5) * (m.big || 1) + 0.4, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit);
             NF.lb = Math.min(100, NF.lb + (m.boss ? 2 : 3)); if (m.fate) m.fate.hit = true; if (!m.aggro) nfAggro(m); try { mgOnHit(m, d); } catch (e) { /* magic */ } if (m.hp <= 0) nfMobDie(m); return d;
         }
-        function nfCan(s) { if (NF.dead) return false; if (s.k === 'none') { try { padToast('Empty Blue Magic slot: Devour a weakened monster to learn its attack'); nfPop(nfPos().clone().setY(nfPos().y + 2), 'Empty slot', '#9fd0ff'); } catch (e) { /* toast */ } return false; } if (s.mp > 0 && nfStHas('silence')) { try { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Silenced', '#a9bde0'); padToast('Silenced: eat Echo Honey Tonic or Grandma’s Remedy'); } catch (e) { /* toast */ } return false; } const now = performance.now() / 1000; if (s.gcd && NF.gcd > 0) return false; if (s.cd && (NF.cds[s.id] || 0) > now) return false; if (s.mp && NF.mp < s.mp * (NF.simCost || 1)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb8ff'); return false; } if (s.heatCost && ((NF.heat || 0) < s.heatCost || NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), NF.oh > 0 ? 'Already Overheated' : 'Need ' + s.heatCost + ' Heat', '#ffb347'); return false; } if (s.needOH && !(NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Hypercharge first', '#ffb347'); return false; } if (NF.lbSeq) return false; if (s.lb && NF.lb < 100) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Limit gauge not full', '#ffd24a'); return false; } if (NF.cast) return false; return true; }
+        /* ---- DUELS in Adventia: your own Adventia stats, gear and hotbars decide the fight. Hits are sent to the opponent, whose game applies their defence, guard and dodge and reports their HP back. ---- */
+        function nfDuelDeal(m, mul, mag) {
+            const D = DUEL.s; if (!D || D.mode !== 'nf' || D.phase !== 'live' || m.dead) return 0;
+            try { mul *= mgDmgMul(m, mag); } catch (e) { /* magic */ }
+            const crit = Math.random() < 0.1 + (function () { try { return mgLuck(); } catch (e) { return 0; } })() + Math.min(0.5, (nfBf() && nfBf().crit) || 0) + Math.min(0.4, (NF.gCrit || 0) / 100), lvf = Math.max(0.5, Math.min(1.5, 1 + (NF.lv - (m.lv || NF.lv)) * 0.05));
+            const base = (mag ? NF.mag : NF.atk) * (NF.buffT > 0 ? 1.3 : 1) * nfFoodAtk() * mul * (0.9 + Math.random() * 0.2) * lvf, d = Math.max(1, Math.round(base * (crit ? 1.6 : 1)));
+            const y = m.node.position.y + 1.2;
+            try { NSX.impact(m, mag, crit); } catch (e) { /* audio */ } try { nfRumble(crit ? 0.55 : 0.28, crit ? 0.45 : 0.22, crit ? 130 : 70); } catch (e) { /* rumble */ } try { nfHitBurst(new THREE.Vector3(m.x, y, m.z), NF.glow ? NF.hitCol : (mag ? 0xc9a8ff : 0xcfeaff), crit || mul >= 1.5); } catch (e) { /* cosmetic */ }
+            dsend({ op: 'hit', dmg: d, crit: crit ? 1 : 0 }); m.hp = Math.max(0, m.hp - d);
+            try { const L = nfBf() && nfBf().leech; if (L && !NF.dead && NF.hp < NF.hpMax) NF.hp = Math.min(NF.hpMax, NF.hp + Math.max(1, Math.round(d * L))); } catch (e) { /* leech */ }
+            NF.comb = 6; NF.lb = Math.min(100, NF.lb + 3); try { nfLogAdd('dealt', 'You hit ' + m.name + ' for ' + d + (crit ? ' (critical)' : ''), { d }); } catch (e) { /* log */ }
+            nfPop(new THREE.Vector3(m.x, y + 0.6, m.z), String(d) + (crit ? '!' : ''), crit ? '#ffd24a' : '#ffffff', crit); return d;
+        }
+        function nfDuelCountdown(foeMax) {
+            const s = DUEL.s, p = peers.get(s.peer); if (!p || !p.actor) { duelClear(); return; }
+            s.phase = 'count'; const g = p.actor.group;
+            DUEL.foe = { duel: true, g, node: g, peerId: s.peer, x: g.position.x, z: g.position.z, hp: foeMax || 100, hpMax: foeMax || 100, max: foeMax || 100, lv: s.foeLv, name: p.name, cls: 'duelist', big: 1, dead: false, aggro: true, th: {} };
+            NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.cds = {}; NF.gcd = 0; NF.lb = 0; NF.cast = null; NF.tgt = null; NF.lockOn = false; NF.dead = false; NF.cmb = null; DUEL.lastHp = NF.hp; DUEL.nfT = 0;
+            try { closeStart(); } catch (e) { /* ignore */ }
+            let n = 5; const cd = $('duel-cd'), tick = () => {
+                if (!DUEL.s || DUEL.s.phase !== 'count') { cd.classList.remove('on'); return; }
+                cd.classList.add('on'); cd.innerHTML = '<b>' + (n > 0 ? n : 'BEGIN!') + '</b>'; try { hcSfx(n > 0 ? 'ring' : 'rank'); } catch (e) { /* audio */ }
+                if (n === 0) { DUEL.s.phase = 'live'; NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.comb = 6; try { nfTarget(DUEL.foe); NF.lockOn = true; } catch (e) { /* ui */ } setTimeout(() => cd.classList.remove('on'), 900); return; }
+                n--; DUEL.cdT = setTimeout(tick, 1000);
+            }; clearTimeout(DUEL.cdT); tick();
+        }
+        function nfDuelTick(dt) {
+            const s = DUEL.s; if (!s || s.mode !== 'nf') return;
+            if (activeMap !== 'nuu' || DG.on || ZN.on) { duelAbort('The duel ended: you left the open field.', true); return; }
+            const f = DUEL.foe; if (f && f.g) { f.x = f.g.position.x; f.z = f.g.position.z; }
+            duelTick(dt); try { duelHud(); } catch (e) { /* hud */ }
+            if (s.phase === 'live') { NF.comb = 6; DUEL.nfT = (DUEL.nfT || 0) - dt; if (DUEL.nfT <= 0) { DUEL.nfT = 0.4; DUEL.lastHp = NF.hp; dsend({ op: 'hp', hp: Math.round(Math.max(0, NF.hp)), max: Math.round(NF.hpMax) }); } }
+        }
+        function nfDuelXp(win) {
+            const s = DUEL.s, L = NF.lv, ratio = clamp(1 + 0.05 * ((s ? s.foeLv : L) - L), 0.5, 2);
+            try { nfXp(Math.round(nfNeed(L) * (win ? 0.12 : 0.04) * ratio)); } catch (e) { /* xp */ }
+            try { lvAward('win', win ? 100 : 12, 20); if (win) lootWin('duel', 1.5); } catch (e) { /* not ready */ }
+        }
+        function nfDuelReset() {      // the duel is over: full HP and MP, nothing lost, nothing dropped
+            const s = DUEL.s; if (!s || s.mode !== 'nf' || !(s.phase === 'count' || s.phase === 'live' || s.phase === 'over')) return;
+            if (NF.tgt && NF.tgt.duel) { NF.tgt = null; NF.lockOn = false; } NF.cast = null; NF.cmb = null; NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.dead = false; NF.inv = 0; NF.lb = 0;
+        }
+        function nfCan(s) { if (NF.dead) return false; if (DUEL.s && DUEL.s.mode === 'nf' && (DUEL.s.phase === 'count' || DUEL.s.phase === 'over')) return false; if (s.k === 'none') { try { padToast('Empty Blue Magic slot: Devour a weakened monster to learn its attack'); nfPop(nfPos().clone().setY(nfPos().y + 2), 'Empty slot', '#9fd0ff'); } catch (e) { /* toast */ } return false; } if (s.mp > 0 && nfStHas('silence')) { try { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Silenced', '#a9bde0'); padToast('Silenced: eat Echo Honey Tonic or Grandma’s Remedy'); } catch (e) { /* toast */ } return false; } const now = performance.now() / 1000; if (s.gcd && NF.gcd > 0) return false; if (s.cd && (NF.cds[s.id] || 0) > now) return false; if (s.mp && NF.mp < s.mp * (NF.simCost || 1)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb8ff'); return false; } if (s.heatCost && ((NF.heat || 0) < s.heatCost || NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), NF.oh > 0 ? 'Already Overheated' : 'Need ' + s.heatCost + ' Heat', '#ffb347'); return false; } if (s.needOH && !(NF.oh > 0)) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Hypercharge first', '#ffb347'); return false; } if (NF.lbSeq) return false; if (s.lb && NF.lb < 100) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Limit gauge not full', '#ffd24a'); return false; } if (NF.cast) return false; return true; }
         // nearest enemy to the player; with front=true, prefer the nearest one inside a ~65° cone in front of where you are facing (falls back to the nearest overall)
         function nfNear(r, front) {
-            const l = nfMobs().filter((m) => nfDist(m) < r).sort((a, b) => nfDist(a) - nfDist(b)); if (!l.length || !front) return l[0];
+            const l = nfFoes().filter((m) => nfDist(m) < r).sort((a, b) => nfDist(a) - nfDist(b)); if (!l.length || !front) return l[0];
             const p = nfPos(), ry = localActor.group.rotation.y || 0, fx = Math.sin(ry), fz = Math.cos(ry);
             return l.find((m) => { const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz); return d < 0.5 || (dx * fx + dz * fz) / d > 0.42; }) || l[0];
         }
@@ -13683,7 +13731,7 @@ function kbModel(THREE, mk) {
         function nfUse(i) {
             NU.man = undefined; const s = NF_SK[i]; if (!s || !NU.ready || activeMap !== 'nuu' || NF.tele) return; if (!nfCan(s)) return;
             if (NF_NEEDT[s.k] && !s.back) {
-                if (!NF.tgt || NF.tgt.dead) { const near = nfNear(Math.min(18, s.range || 14), true); if (near) { nfTarget(near); if (PAD.active) NF.lockOn = true; } else { nfPop(nfPos().clone().setY(nfPos().y + 2), 'No target', '#cfd8e0'); return; } }
+                if (!NF.tgt || NF.tgt.dead) { const near = nfNear(Math.min(nfRanged() ? 18 : 14, s.range || 14), true); if (near) { nfTarget(near); if (PAD.active) NF.lockOn = true; } else { nfPop(nfPos().clone().setY(nfPos().y + 2), 'No target', '#cfd8e0'); return; } }
                 if (nfDist(NF.tgt) > s.range + (NF.tgt.big || 1) * 0.6) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Out of range', '#ffb347'); return; } if (PAD.active) NF.lockOn = true; if (s.k !== 'dash') nfFace(NF.tgt);
             } else if ((s.k === 'cone' || s.k === 'line') && NF.tgt && !NF.tgt.dead) nfFace(NF.tgt);
             const go = () => nfResolve(s);
@@ -13826,14 +13874,14 @@ function kbModel(THREE, mk) {
         }
         function nfResolve(s) {
             const now = performance.now() / 1000, p = nfPos(); if (s.mp) NF.mp -= s.mp * (NF.simCost || 1); if (s.gcd) NF.gcd = (NF.oh > 0 && s.ws ? 1.0 : 2.2) * (NF.simSpd || 1); if (s.cd) NF.cds[s.id] = now + s.cd; NF.comb = 6;
-            const t = NF.tgt && !NF.tgt.dead ? NF.tgt : null, ang = t ? Math.atan2(t.x - p.x, t.z - p.z) : localActor.group.rotation.y, mobs = nfMobs(), up = p.clone().setY(p.y + 2.2);
+            const t = NF.tgt && !NF.tgt.dead ? NF.tgt : null, ang = t ? Math.atan2(t.x - p.x, t.z - p.z) : localActor.group.rotation.y, mobs = nfFoes(), up = p.clone().setY(p.y + 2.2);
             nfAnim(s); if (t && s.range && Math.hypot(t.x - p.x, t.z - p.z) > s.range + (t.big || 1) * 0.9 && NF_NEEDT[s.k] && !s.back) { nfPop(up, 'Out of range', '#ffb347'); return; }
             try { s = nfGunMod(s); } catch (e) { /* gunner */ }
             try { NSX.skill(s); } catch (e) { /* audio */ }
             const tpos = t ? new THREE.Vector3(t.x, t.node.position.y, t.z) : p, big = (m) => (m.big || 1) * 0.55, hitAll = (f, mul) => { for (const m of mobs) if (!m.dead && f(m)) nfDealDmg(m, mul, s.mag); };
             switch (s.k) {
                 case 'devour': {
-                    if (!t) return; if (nfIsBoss(t) || t.boss) { nfPop(up, 'Too big to eat', '#ffb347'); NF.cds[s.id] = now + 2; return; } if (t.hp > t.hpMax * 0.35) { nfPop(up, 'Too lively to eat: weaken it first', '#ffb347'); NF.cds[s.id] = now + 1; return; }
+                    if (!t) return; if (t.duel) { nfPop(up, 'Cannot eat a duelist', '#ffb347'); NF.cds[s.id] = now + 2; return; } if (nfIsBoss(t) || t.boss) { nfPop(up, 'Too big to eat', '#ffb347'); NF.cds[s.id] = now + 2; return; } if (t.hp > t.hpMax * 0.35) { nfPop(up, 'Too lively to eat: weaken it first', '#ffb347'); NF.cds[s.id] = now + 1; return; }
                     const key = BL_BY_TYPE[t.type] || BL_BY_CLS[t.cls] || 'chomp'; try { nfFx('heal', p, p); } catch (e) { /* fx */ } nfMobDie(t); NF.hp = Math.min(NF.hpMax, NF.hp + NF.hpMax * 0.12); nfPop(up, '😋 Devoured!', '#ffd0a0', true); blLearn(key, t); break;
                 }
                 case 'hit': if (!t) return; if (s.fx && !nfSpellFx(s, p, Object.assign(tpos.clone(), { userData: { h: (t.node.userData.h || 1.5) * (t.big || 1) } }))) nfFx(s.fx, p, tpos); nfDealDmg(t, s.pot, s.mag); if (s.dot && !t.dead) nfDot(t, { id: s.id, pot: s.dot.pot, sec: s.dot.sec }, s.mag); break;
@@ -13863,7 +13911,7 @@ function kbModel(THREE, mk) {
                 case 'reasm': NF.reasm = 1; nfPop(up, 'REASSEMBLE', '#ffd24a', true); nfFx('guard', p, p); break;
                 case 'hyper': NF.heat = Math.max(0, (NF.heat || 0) - s.heatCost); NF.oh = 8; nuShowBanner('HYPERCHARGE', 'OVERHEATED'); nfFx('limit-ring', p, p); try { nfRumble(0.5, 0.6, 250); } catch (e) { /* pad */ } break;
                 case 'wildfire': if (!t) return; NF.wf = { tgt: t, t: 6, hits: 0 }; nfPop(new THREE.Vector3(t.x, t.node.position.y + 2.2, t.z), 'WILDFIRE', '#ff7a2a', true); nfFx('ring', tpos, tpos); break;
-                case 'steal': { if (!t) return; nfDealDmg(t, 0.4, false); if (Math.random() < 0.45) { const g = Math.round(8 + t.lv * 5 * (0.6 + Math.random())); try { window.oasisGil.add(g, true); } catch (e) { /* gil */ } let it = ''; if (Math.random() < 0.3) { try { btBagAdd('potion', 1); it = ' + Potion'; } catch (e) { /* bag */ } } nfPop(up, 'STOLE ' + g + ' Gil' + it, '#ffe27a', true); } else nfPop(up, 'Steal failed', '#cfd8e0'); break; }
+                case 'steal': { if (!t) return; nfDealDmg(t, 0.4, false); if (!t.duel && Math.random() < 0.45) { const g = Math.round(8 + t.lv * 5 * (0.6 + Math.random())); try { window.oasisGil.add(g, true); } catch (e) { /* gil */ } let it = ''; if (Math.random() < 0.3) { try { btBagAdd('potion', 1); it = ' + Potion'; } catch (e) { /* bag */ } } nfPop(up, 'STOLE ' + g + ' Gil' + it, '#ffe27a', true); } else nfPop(up, 'Steal failed', '#cfd8e0'); break; }
                 case 'lb': { if (!t) return; NF.lb = 0; nuShowBanner('LIMIT BREAK', s.n.toUpperCase()); nfFx('limit-ring', p, p); nfFx('limit', p, tpos); nfLbStart(s, t); break; }
             }
         }
@@ -13939,6 +13987,7 @@ function kbModel(THREE, mk) {
         function nfAggro(m) { if (!m.aggro) { try { NSX.growl(m); } catch (e) { /* audio */ } } m.aggro = true; if (m.group) for (const o of m.group.mobs) if (!o.dead) o.aggro = true; NF.comb = 6; }
         function nfShareN() { try { if (!PARTY.code || !NS.pl) return 1; let n = 1; for (const q of NS.pl) if (!q.me && PARTY.members.has(q.id)) n++; return n; } catch (e) { return 1; } }
         function nfMobDie(m, remote) {
+            if (m && m.duel) return;      // a duel opponent is never a monster: their own game decides if they fall
             if (m.dead) return; m.dead = true; try { nfLogAdd('kill', String(m.name || m.cls || 'A monster') + (m.boss ? ' (boss)' : '') + ' was defeated', { boss: !!m.boss }); } catch (e) { /* log */ } if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); try { if (m.node.visible) nuShatter(m.node, m.big || 1); } catch (e) { /* cosmetic */ } m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.stBar) { try { disposeSprite(m.stBar); } catch (e) { /* gone */ } m.stBar = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
             try { if (!remote || m.mine) nfFoodDrop(m); } catch (e) { /* food */ }
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
@@ -14035,7 +14084,7 @@ function kbModel(THREE, mk) {
             const f = nfFallNear(); h.style.display = f ? 'block' : 'none'; if (f) h.textContent = (btBagLoad().phoenix | 0) > 0 ? '🪶 Use a Phoenix Down on ' + f.name + '  (F / ✋)' : f.name + ' has fallen · you need a Phoenix Down';
         }
         async function nfDie() {
-            if (NF.dead) return; NF.dead = true; try { nfFighterReact('down'); } catch (e) { /* cosmetic */ } try { nfLogAdd('down', 'You were knocked down', {}); } catch (e) { /* log */ } nfRumble(1, 1, 600); NF.cast = null; NF.tgt = null; NF.roll = null; NF.hot = null; nuShowBanner('YOU HAVE FALLEN', 'USE A PHOENIX DOWN OR RETURN TO A CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
+            if (NF.dead) return; if (DUEL.s && DUEL.s.mode === 'nf' && DUEL.s.phase === 'live') { duelLost(); return; } NF.dead = true; try { nfFighterReact('down'); } catch (e) { /* cosmetic */ } try { nfLogAdd('down', 'You were knocked down', {}); } catch (e) { /* log */ } nfRumble(1, 1, 600); NF.cast = null; NF.tgt = null; NF.roll = null; NF.hot = null; nuShowBanner('YOU HAVE FALLEN', 'USE A PHOENIX DOWN OR RETURN TO A CRYSTAL'); for (const m of nfMobs()) { m.aggro = false; }
             const P = nfPos(), fx = Math.round(P.x * 100) / 100, fy = Math.round(P.y * 100) / 100, fz = Math.round(P.z * 100) / 100;
             try { nsSend({ k: 'pd', x: fx, y: fy, z: fz }); } catch (e) { /* offline */ } let hid = null; try { hid = localActor.holder || localActor.group; if (hid.visible) { nuShatter(hid, 1.3); hid.visible = false; if (localActor.label) localActor.label.visible = false; } else hid = null; } catch (e) { hid = null; }   // the same polygon shatter the monsters get
             NF.hid = hid; await new Promise((r) => setTimeout(r, 700)); if (!NF.dead) return; nfFallBuild(me.id, me.name || 'You', fx, fy, fz, true); nfDownUi(true);
@@ -14122,7 +14171,7 @@ function kbModel(THREE, mk) {
         }
         function saoFade(m) { const b = m.bar; if (!b) return; const d = camera.position.distanceTo(m.node.position), o = Math.max(0, Math.min(1, (42 - d) / 10)); if (Math.abs(b.material.opacity - o) > 0.02) b.material.opacity = o; b.visible = o > 0.02; }
         function nfBar(m) {
-            if (m.bar || m.dead) return; const lay = m.boss ? 4 : m.rank === 'S' ? 3 : m.rank === 'A' ? 2 : 1, sp = saoMake('foe', () => m.hp / m.hpMax, lay); { const z = 1 / (m.size || 1), bw = (m.boss ? 1.7 : 1.3) * (lay > 1 ? 1.2 : 1); sp.scale.set(bw * z, bw * 0.2 * z, 1); } sp.position.set(0, ((m.node.userData.h || 1.6) + 0.6) / (m.size || 1), 0); m.node.add(sp); m.bar = sp; m._bhp = m.hp;
+            if (m.bar || m.dead || m.duel) return; const lay = m.boss ? 4 : m.rank === 'S' ? 3 : m.rank === 'A' ? 2 : 1, sp = saoMake('foe', () => m.hp / m.hpMax, lay); { const z = 1 / (m.size || 1), bw = (m.boss ? 1.7 : 1.3) * (lay > 1 ? 1.2 : 1); sp.scale.set(bw * z, bw * 0.2 * z, 1); } sp.position.set(0, ((m.node.userData.h || 1.6) + 0.6) / (m.size || 1), 0); m.node.add(sp); m.bar = sp; m._bhp = m.hp;
         }
         /* ---- monsters: spawners hold Shuffle Strike class monsters, named with the area's prefixes, real-time, FFXIV-style aggro and leash ---- */
         function nuMakeSpawners() {
@@ -15993,7 +16042,7 @@ function kbModel(THREE, mk) {
             if (activeMap !== 'nuu') return;
             if (NF.pend && !AR.busy && !DG.on && !ZN.on) { const id = NF.pend; NF.pend = ''; const z = NU_ZCRY.find((q) => q.id === id), c = NU.cry.find((q) => q.id === id); try { if (z) arGo({ mode: 'zone', key: z.zone, banner: [z.name.toUpperCase(), 'WELCOME BACK'] }); else if (c) { nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.4, 1, c.z); NU.grace = 4; nuShowBanner(c.name.toUpperCase(), 'LAST CRYSTAL'); } } catch (e) { /* stay at the plaza */ } }
             for (const c of NU.cry) if (c.mesh) { c.mesh.rotation.y += dt * 0.9; c.mesh.position.y = 2.2 + Math.sin(NU.t * 1.5 + c.x) * 0.15; }
-            dt = Math.min(dt, 0.1); try { nuSword(); } catch (e) { /* weapon model not ready */ } nfCastTick(dt); nuMobsTick(dt); if (!DG.on && !ZN.on) { nuFateTick(dt); nuHuntTick(dt); nuGrassTick(dt); nuChestsTick(dt); } else if (DG.on) { try { dgTick(dt); } catch (e) { if (!window.__dgErr) { window.__dgErr = e; console.error('dungeon', e); } } } else { try { znTick(dt); } catch (e) { if (!window.__znErr) { window.__znErr = e; console.error('zone', e); } } } nfFxTick(dt); try { nuSeparate(dt); } catch (e) { /* cosmetic */ } nfTelTick(dt); nfUiTick(); try { niTick(dt); } catch (e) { if (!window.__niErr) { window.__niErr = e; console.error('interact', e); } }
+            dt = Math.min(dt, 0.1); try { nuSword(); } catch (e) { /* weapon model not ready */ } nfCastTick(dt); try { nfDuelTick(dt); } catch (e) { console.warn('duel', e); } nuMobsTick(dt); if (!DG.on && !ZN.on) { nuFateTick(dt); nuHuntTick(dt); nuGrassTick(dt); nuChestsTick(dt); } else if (DG.on) { try { dgTick(dt); } catch (e) { if (!window.__dgErr) { window.__dgErr = e; console.error('dungeon', e); } } } else { try { znTick(dt); } catch (e) { if (!window.__znErr) { window.__znErr = e; console.error('zone', e); } } } nfFxTick(dt); try { nuSeparate(dt); } catch (e) { /* cosmetic */ } nfTelTick(dt); nfUiTick(); try { niTick(dt); } catch (e) { if (!window.__niErr) { window.__niErr = e; console.error('interact', e); } }
             const cn = nuCrystalNear(); if (cn !== NU.cNear) { NU.cNear = cn; if (cn) { try { sysChat(!cn.hub && !NF.att[cn.id] ? 'Press F to attune to the ' + cn.name + ' aether crystal.' : 'Press F or T to open the aether network.'); } catch (e) { /* chat */ } } }
         }
         /* ================= ADVENTIA DUNGEONS: every floor is a town, a field and a linear dungeon. You explore the field, find the dungeon door (a "?" bubble pops over your head near anything you can use),
@@ -22873,8 +22922,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         /* ------------------------------------------------------------------ *
          *  Game controller support (wired USB or Bluetooth: Xbox, PlayStation, Switch Pro and most others via the browser Gamepad API)
          *  In the world:  left stick move | right stick camera | LT/RT hold for the left/right hotbar (D-pad + A/B/X/Y = 8 slots each) | RB change hotbar set | LB auto-run
-         *                 D-pad left/right target next/previous player, up/down cycle you + party members | A select target / profile | B cancel | X map | Y jump
-         *                 L3 lock on | R3 camera (near, far, first person) | Back: select the bottom bar | Start: main menu (emotes, bubble colour, lobby)
+         *                 D-pad left/right target next/previous player, up/down cycle you + party members | A sprint / interact / select | B cancel | X map | Y jump
+         *                 R3 tap lock on, hold 3 s first person | L3 draw / put away weapon | Back: select the bottom bar | Start: main menu (emotes, bubble colour, lobby)
          *  In menus:      D-pad or left stick move the highlight | A press | B back | LB/RB change tab
          * ------------------------------------------------------------------ */
         window.__emote = (n) => performEmote(n);
@@ -23030,7 +23079,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (n >= PAD_CAMS.length) { PAD.camI = null; fpToggle(); padToast('Camera: first person'); return; }
             PAD.camI = n; padCamDist(PAD_CAMS[n]); padToast(n === 0 ? 'Camera: near' : 'Camera: far');
         }
-        function padLockToggle() {       // L3: lock the camera on your target (or the nearest player)
+        function padLockToggle() {       // R3 tap: lock the camera on your target (or the nearest player)
             if (PAD.lockId) { PAD.lockId = null; padToast('Lock-on released'); return; }
             if (activeMap === 'nuu' && NF.tgt && !NF.tgt.dead) { NF.lockOn = !NF.lockOn; padToast(NF.lockOn ? 'Locked on: ' + NF.tgt.name : 'Lock-on released'); return; }   // Adventia: you can only lock on to what you are targeting
             let p = localActor.lookId && peers.get(localActor.lookId);      // nothing is picked for you: target first, then lock on
@@ -23108,7 +23157,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             const [lx, ly] = padStick(ax(0), ax(1)), [rx, ry] = padStick(ax(2), ax(3));
             const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) && document.activeElement.type !== 'range' && document.activeElement.type !== 'checkbox';
             const over = padOverlay();
-            if (!PAD.active) { PAD.active = true; PAD.name = (gp.id || 'controller').replace(/\(.*?\)/g, '').trim().slice(0, 40); try { sysChat('Controller connected: ' + PAD.name + '. Hold LT or RT for the hotbars, RB changes set, hold LB + R3 auto-runs (LB + right stick zooms), Back selects the bottom bar, Start opens the menu, A selects a target, X opens the map, R3 changes camera.'); } catch (e) { /* chat not ready */ } }
+            if (!PAD.active) { PAD.active = true; PAD.name = (gp.id || 'controller').replace(/\(.*?\)/g, '').trim().slice(0, 40); try { sysChat('Controller connected: ' + PAD.name + '. Hold LT or RT for the hotbars, RB changes set, hold LB + R3 auto-runs (LB + right stick zooms), Back selects the bottom bar, Start opens the menu, A / X tap to sprint, X opens the map, R3 locks on (hold 3 s for first person), D-pad left / right cycles targets.'); } catch (e) { /* chat not ready */ } }
             padMove.x = padMove.z = 0; padMove.run = false;
             if (OB.open) { PAD.rx = PAD.ry = PAD.zoom = 0; PAD.prev = b; padBarDraw(false, ''); return; }       // the O-Boy's own emulator reads the pad
             if ((typeof SVX !== 'undefined' && SVX.ov) || (typeof RXX !== 'undefined' && RXX.ov) || (typeof EQP !== 'undefined' && EQP.ov)) { PAD.rx = PAD.ry = PAD.zoom = 0; PAD.prev = b; padBarDraw(false, ''); return; }       // Harbor Inn / Ryder X / the Equipment shop run in a window over the world: the pad belongs to them, the avatar underneath must not walk (and make its own footsteps)
@@ -23202,9 +23251,9 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 if (hit(15) && !grace) { if (activeMap === 'nuu') nfCycle(1, true); else cycleLookTarget(1); }
                 }
                 const nfDn = activeMap === 'nuu' && NF.dead; if (nfDn && !grace) { if (hit(0)) nfDownAct('phoenix'); if (hit(2)) nfDownAct('return'); }
-                if (hit(0) && !grace && !nfDn) { if (activeMap === 'btl') { /* the battle reads the pad itself */ } else if (activeMap === 'bowl') bwPadAct(); else if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (activeMap === 'nuu' && nfPadUse()) { /* chest / crystal */ } else if (activeMap === 'nuu' && NU.ready && (mag <= 0.12 || !NF.tgt || NF.tgt.dead) && nfTargetFront()) { /* A: target the enemy in front */ } else if (SV.near && svUse()) { /* stove */ } else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
+                if (hit(0) && !grace && !nfDn) { if (activeMap === 'btl') { /* the battle reads the pad itself */ } else if (activeMap === 'bowl') bwPadAct(); else if (activeMap === 'diner') kcPadAct('use'); else if (activeMap === 'tag' && TG.phase === 'result') tgRematch(); else if (activeMap === 'tag' && tgNear()) tgAct(); else if (activeMap === 'nuu' && nfPadUse()) { /* chest / crystal */ } else if (SV.near && svUse()) { /* stove */ } else if (loftLtNear()) loftLtToggle(); else if (mag > 0.12) tapSprint(); else padConfirm(); }                 // A: while moving = sprint; standing still = confirm / select target (Kitchen Clash: use / grab)
                 if (hit(1) && !grace) { if (activeMap === 'diner' && KC.hold) kcPadAct('drop'); else if (activeMap === 'tag' && TG.phase === 'result') tgBack(); else if (activeMap === 'nuu' && NU.ready && (NF.tgt || localActor.lookId || SELF.on || PAD.lockId)) { NF.tgt = null; NF.lockOn = false; padCancelAll(); try { setLookTarget(null, false); setSelfTarget(false); padToast('Target cleared'); } catch (e) { /* toast */ } } else if (!padCancelAll()) PAD.auto = false; }     // B: cancel / untarget (Adventia: R1 is the dash) (Kitchen Clash: drop the plate)
-                if (hit(2) && !grace && !nfDn) { if (activeMap === 'nuu' && nfPadUse()) { /* X: open chest */ } else if (activeMap === 'nuu' && NU.ready && (mag <= 0.12 || !NF.tgt || NF.tgt.dead) && nfTargetFront()) { /* X: target the enemy in front */ } else if (mag > 0.12) tapSprint(); else if (activeMap === 'diner') { /* no map button while cooking */ } else if (localActor.lookId && peers.has(localActor.lookId)) exmMenuOpen(localActor.lookId); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
+                if (hit(2) && !grace && !nfDn) { if (activeMap === 'nuu' && nfPadUse()) { /* X: open chest */ } else if (mag > 0.12) tapSprint(); else if (activeMap === 'diner') { /* no map button while cooking */ } else if (localActor.lookId && peers.has(localActor.lookId)) exmMenuOpen(localActor.lookId); else openLobby(); }                           // X: sprint while moving, map / rooms when standing still
                 if (hit(3) && isGrounded) { playerVelocity.y = JUMP_FORCE; isGrounded = false; }     // Y: jump
             }
             if ((PAD.prev[6] || PAD.prev[7]) && !(b[6] || b[7])) PAD.trigUp = nowS();
@@ -23215,8 +23264,10 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             }
             if (hit(8)) { PAD.hudT = nowS(); PAD.hudHid = false; if (dockHidden) toggleDock(false); press('Tab'); }              // Back: select HUD
             if (hit(9)) toggleDock();                                              // Start: show / hide the menu bar
-            if (hit(10) && !hcPadOn() && !ngHb) { if (hcMine() && b[4]) hcDraw(); else padLockToggle(); }                                                 // L3: lock on
-            if (hcPadOn()) { /* R3 cycles the lock-on target (hcPadAct) */ } else if (hit(11) && b[4] && !(activeMap === 'tag' && tgMine())) { /* L1 + R3 = auto-run (handled above) */ } else if (hit(11) && activeMap === 'tag' && tgMine()) { TG.adsT = !TG.adsT; padToast(TG.adsT ? 'Aim: on' : 'Aim: off'); } else if (hit(11)) { if (!$('screen-panel').classList.contains('hidden')) closeScreenPanel(); else padCamCycle(); }   // R3: camera
+            if (hit(10) && !hcPadOn() && !ngHb) { if (hcMine() && b[4]) hcDraw(); }                                                 // L3: lock on
+            if (hcPadOn()) { /* R3 cycles the lock-on target (hcPadAct) */ } else if (hit(11) && b[4] && !(activeMap === 'tag' && tgMine())) { /* L1 + R3 = auto-run (handled above) */ } else if (hit(11) && activeMap === 'tag' && tgMine()) { TG.adsT = !TG.adsT; padToast(TG.adsT ? 'Aim: on' : 'Aim: off'); } else if (hit(11)) { if (!$('screen-panel').classList.contains('hidden')) closeScreenPanel(); else { PAD.r3T = nowS(); PAD.r3Ok = true; PAD.r3Fp = false; } }   // R3: tap = lock on, hold 3 s = first person
+            if (PAD.r3Ok && b[11]) { if (!PAD.r3Fp && nowS() - PAD.r3T >= 3) { PAD.r3Fp = true; try { fpToggle(); padToast(fpOn ? 'Camera: first person' : 'Camera: third person'); } catch (e) { console.warn('first person', e); } } }
+            else if (PAD.r3Ok && !b[11]) { PAD.r3Ok = false; if (!PAD.r3Fp) { try { padLockToggle(); } catch (e) { console.warn('lock-on', e); } } }
             if (PAD.lockId && (!peers.has(PAD.lockId) || !peers.get(PAD.lockId).actor.group.parent)) { PAD.lockId = null; padToast('Lock-on lost'); }
             padBarDraw(!(OB.open || EMU.playing) && (!hcPadOn() || gunHb) && (activeMap !== 'nuu' || !!held), held);      // Adventia: the controller hotbar only appears while a trigger is held
             PAD.prev = b;
@@ -29395,11 +29446,12 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             const p = peers.get(peerId);
             if (!p || !net) { sysChat('That player is not here.'); return; }
             if (DUEL.s) { sysChat('You are already in a duel.'); return; }
-            if (!hcCombatMap()) { sysChat('You cannot duel in here.'); return; }
-            if (CLS.wpn === 'fists') { sysChat('Equip a weapon first: Character Setup → Class & weapon.'); return; }
+            const nf = activeMap === 'nuu';
+            if (nf ? !nfDuelOk() : !hcCombatMap()) { sysChat(nf ? 'Duels in Adventia are fought on the open field: not in dungeons or camps, and not while down.' : 'You cannot duel in here.'); return; }
+            if (!nf && CLS.wpn === 'fists') { sysChat('Equip a weapon first: Character Setup → Class & weapon.'); return; }
             if (p.actor && p.actor.group && localActor.group.position.distanceTo(p.actor.group.position) > 25) { sysChat('Move closer to ' + p.name + ' to duel.'); return; }
-            DUEL.s = { tid: uid() + uid(), peer: peerId, phase: 'asking', t0: Date.now(), foeLv: p.cl || 1 };
-            net.send({ t: 'duel', op: 'req', to: peerId, tid: DUEL.s.tid, lv: clsLv(), max: HC.hpMax || clsHpMax() });
+            DUEL.s = { tid: uid() + uid(), peer: peerId, phase: 'asking', t0: Date.now(), foeLv: p.cl || 1, mode: nf ? 'nf' : 'hc' };
+            net.send({ t: 'duel', op: 'req', to: peerId, tid: DUEL.s.tid, lv: nf ? NF.lv : clsLv(), max: nf ? Math.round(NF.hpMax) : (HC.hpMax || clsHpMax()), mode: DUEL.s.mode });
             sysChat('Duel request sent to ' + p.name + '.');
             clearTimeout(DUEL.askT); DUEL.askT = setTimeout(() => { if (DUEL.s && DUEL.s.phase === 'asking') { sysChat('No answer to your duel request.'); duelClear(); } }, 30000);
         }
@@ -29409,15 +29461,17 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 const p = peers.get(from), no = (why) => net.send({ t: 'duel', op: 'ans', to: from, tid, ok: false, why });
                 if (!p) return;
                 if (DUEL.s || !$('duel-ask').classList.contains('hidden')) { no('busy'); return; }
-                if (CLS.wpn === 'fists') { no('noweapon'); return; }
-                if (!hcCombatMap()) { no('place'); return; }
+                const nfm = activeMap === 'nuu';
+                if (nfm !== (m.mode === 'nf') || (nfm && !nfDuelOk())) { no('place'); return; }
+                if (!nfm && CLS.wpn === 'fists') { no('noweapon'); return; }
+                if (!nfm && !hcCombatMap()) { no('place'); return; }
                 const ask = $('duel-ask'); $('da-txt').textContent = p.name + (typeof m.lv === 'number' ? ' (Lv ' + clamp(Math.floor(m.lv), 1, 99) + ')' : '') + ' challenges you to a duel. Fight to the death.'; ask.classList.remove('hidden');
                 const done = (ok) => {
                     clearTimeout(DUEL.askT); ask.classList.add('hidden'); $('da-yes').onclick = $('da-no').onclick = null;
                     if (!ok) { net.send({ t: 'duel', op: 'ans', to: from, tid, ok: false }); return; }
-                    if (DUEL.s || CLS.wpn === 'fists' || !peers.has(from)) { no('busy'); return; }
-                    DUEL.s = { tid, peer: from, phase: 'asking', t0: Date.now(), foeLv: clamp(Math.floor(m.lv || 1), 1, 99) };
-                    net.send({ t: 'duel', op: 'ans', to: from, tid, ok: true, lv: clsLv(), max: HC.hpMax || clsHpMax() }); duelCountdown(m.max);
+                    if (DUEL.s || (!nfm && CLS.wpn === 'fists') || (nfm && !nfDuelOk()) || !peers.has(from)) { no('busy'); return; }
+                    DUEL.s = { tid, peer: from, phase: 'asking', t0: Date.now(), foeLv: clamp(Math.floor(m.lv || 1), 1, 99), mode: nfm ? 'nf' : 'hc' };
+                    net.send({ t: 'duel', op: 'ans', to: from, tid, ok: true, lv: nfm ? NF.lv : clsLv(), max: nfm ? Math.round(NF.hpMax) : (HC.hpMax || clsHpMax()) }); duelCountdown(m.max);
                 };
                 $('da-yes').onclick = () => done(true); $('da-no').onclick = () => done(false);
                 clearTimeout(DUEL.askT); DUEL.askT = setTimeout(() => done(false), 28000);
@@ -29429,12 +29483,13 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 if (m.ok === true) { s.foeLv = clamp(Math.floor(m.lv || 1), 1, 99); duelCountdown(m.max); }
                 else { const why = { busy: 'is busy', noweapon: 'has no weapon equipped', place: 'cannot duel here' }[m.why]; sysChat((peers.get(from) ? peers.get(from).name : 'They') + (why ? ' ' + why + '.' : ' declined the duel.')); duelClear(); }
             } else if (op === 'hit') duelRecvHit(m);
-            else if (op === 'hp') { if (DUEL.foe) { DUEL.foe.hp = clamp(+m.hp || 0, 0, 9999); DUEL.foe.max = clamp(+m.max || DUEL.foe.max, 1, 9999); } }
+            else if (op === 'hp') { if (DUEL.foe) { DUEL.foe.hp = clamp(+m.hp || 0, 0, 99999); DUEL.foe.max = DUEL.foe.hpMax = clamp(+m.max || DUEL.foe.max, 1, 99999); } }
             else if (op === 'end') { if (s.phase === 'live' || s.phase === 'count') duelWon(); }
             else if (op === 'cancel') { sysChat('The duel was called off.'); duelClear(); }
         }
         function duelCountdown(foeMax) {
             const s = DUEL.s, p = peers.get(s.peer); if (!p || !p.actor) { duelClear(); return; }
+            if (s.mode === 'nf') { nfDuelCountdown(foeMax); return; }
             s.phase = 'count'; DUEL.foe = { g: p.actor.group, peerId: s.peer, hp: foeMax || 100, max: foeMax || 100, st: 'idle', y: 0, kv: new THREE.Vector3(), name: p.name };
             if (!HC.ready) ensureConstruct(); HC.hp = HC.hpMax = clsHpMax(); HC.act = null; HC.hurtCd = 0; HC.inv = 0; HC.lock = DUEL.foe;
             if (HC.sheathed) hcDraw(); try { closeStart(); } catch (e) { /* ignore */ }
@@ -29453,7 +29508,8 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             hcSpark(e.g.position.x, 1.2, e.g.position.z, o.big ? 1.8 : 1); fxPlay('hit', { x: e.g.position.x, y: 1.2, z: e.g.position.z }, { big: !!(o.big || o.launch), color: o.light ? 0xffb070 : undefined }); return true;
         }
         function duelRecvHit(m) {
-            const s = DUEL.s; if (!s || s.phase !== 'live' || HC.hp <= 0 || !DUEL.foe) return;
+            const s = DUEL.s; if (s && s.mode === 'nf') { if (s.phase === 'live' && !NF.dead && DUEL.foe) nfPlayerHurt(clamp(Math.round(+m.dmg || 10), 1, 9999), DUEL.foe); return; }
+            if (!s || s.phase !== 'live' || HC.hp <= 0 || !DUEL.foe) return;
             const P = localActor.group.position, F = DUEL.foe.g.position, dx = P.x - F.x, dz = P.z - F.z, d = Math.hypot(dx, dz) || 1, nx = dx / d, nz = dz / d;
             if (HC.inv > 0) { if (nowS() - DUEL.evT > 0.7) { DUEL.evT = nowS(); hcJustEvade(); } return; }
             if (HC.hurtCd > 0) return;
@@ -29461,18 +29517,18 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             if (m.gun === 1) { try { gnBlood({ x: P.x, y: P.y + 1.2, z: P.z }, { x: nx, y: 0.1, z: nz }, m.big === 1 ? 3 : 1, P.y); } catch (er) { /* effect only */ } }
             hcHurt(DUEL.foe, nx, nz, { dmg: clamp(+m.dmg || 10, 1, 400), launch: m.launch === 1, cd: 0.4 });
         }
-        function duelXp(win) { const L = clsLv(), ratio = clamp(1 + 0.05 * ((DUEL.s ? DUEL.s.foeLv : L) - L), 0.5, 2); clsAdd(clsCur(), Math.max(win ? 400 : 120, clsNeed(L) * (win ? 0.18 : 0.06)) * ratio); try { lvAward('win', win ? 100 : 12, 20); if (win) lootWin('duel', 1.5); } catch (e) { /* not ready */ } }
+        function duelXp(win) { if (DUEL.s && DUEL.s.mode === 'nf') { nfDuelXp(win); return; } const L = clsLv(), ratio = clamp(1 + 0.05 * ((DUEL.s ? DUEL.s.foeLv : L) - L), 0.5, 2); clsAdd(clsCur(), Math.max(win ? 400 : 120, clsNeed(L) * (win ? 0.18 : 0.06)) * ratio); try { lvAward('win', win ? 100 : 12, 20); if (win) lootWin('duel', 1.5); } catch (e) { /* not ready */ } }
         function duelLost() {
-            const s = DUEL.s; if (!s || s.phase === 'over') return; s.phase = 'over'; dsend({ op: 'end' }); duelXp(false);
+            const s = DUEL.s; if (!s || s.phase === 'over') return; s.phase = 'over'; dsend({ op: 'end' }); duelXp(false); if (s.mode === 'nf') { NF.hp = Math.max(1, NF.hp); NF.inv = 4; NF.cast = null; try { nuShowBanner('DEFEATED', 'DUEL LOST'); } catch (e) { /* banner */ } }
             sysChat('You were defeated' + (DUEL.foe ? ' by ' + DUEL.foe.name : '') + '.'); HC.lock = null; setTimeout(duelClear, 3500);
         }
         function duelWon() {
             const s = DUEL.s; if (!s || s.phase === 'over') return; s.phase = 'over'; duelXp(true);
-            hcPop('VICTORY', '#ffd24a'); hcSfx('rank'); sysChat('You won the duel' + (DUEL.foe ? ' against ' + DUEL.foe.name : '') + '!');
-            HC.lock = null; HC.hp = HC.hpMax; HC.act = null; try { localActor.playEmote('cheer'); } catch (e) { /* ignore */ } setTimeout(duelClear, 3000);
+            if (s.mode === 'nf') { try { nuShowBanner('VICTORY', 'DUEL WON'); } catch (e) { /* banner */ } } else { hcPop('VICTORY', '#ffd24a'); hcSfx('rank'); } sysChat('You won the duel' + (DUEL.foe ? ' against ' + DUEL.foe.name : '') + '!');
+            if (s.mode !== 'nf') { HC.lock = null; HC.hp = HC.hpMax; HC.act = null; } try { localActor.playEmote('cheer'); } catch (e) { /* ignore */ } setTimeout(duelClear, 3000);
         }
         function duelAbort(msg, tell) { if (!DUEL.s) return; const s = DUEL.s; if (tell && s.phase !== 'asking' && s.phase !== 'over') { try { dsend({ op: 'end' }); } catch (e) { /* offline */ } } else if (tell) { try { dsend({ op: 'cancel' }); } catch (e) { /* offline */ } } if (msg) sysChat(msg); duelClear(); }
-        function duelClear() { clearTimeout(DUEL.askT); clearTimeout(DUEL.cdT); DUEL.s = null; if (HC.lock && HC.lock.peerId) HC.lock = null; DUEL.foe = null; const cd = document.getElementById('duel-cd'); if (cd) cd.classList.remove('on'); if (HC.ready) HC.hp = HC.hpMax; }
+        function duelClear() { try { nfDuelReset(); } catch (e) { /* adventia */ } clearTimeout(DUEL.askT); clearTimeout(DUEL.cdT); DUEL.s = null; if (HC.lock && HC.lock.peerId) HC.lock = null; DUEL.foe = null; const cd = document.getElementById('duel-cd'); if (cd) cd.classList.remove('on'); if (HC.ready) HC.hp = HC.hpMax; }
         function duelTick(dt) {
             const s = DUEL.s; if (!s) return;
             if ((s.phase === 'count' || s.phase === 'live') && !peers.has(s.peer)) { if (s.phase === 'live') duelWon(); else duelClear(); sysChat('Your opponent left.'); }
