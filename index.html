@@ -13634,7 +13634,7 @@ function kbModel(THREE, mk) {
             if (Math.hypot(tx - sx, tz - sz) < 1) { NF.rollCd = now + 0.15; return; }
             NF.roll = { t: 0, dur: 0.4, gap: 0.13, blink: true, landed: false, tx, tz }; NF.inv = 0.6; NF.blinkAt = performance.now(); NF.comb = 6; nfRumble(0.22, 0.12, 100);
             const a = new THREE.Vector3(sx, nuH(sx, sz), sz), b = new THREE.Vector3(tx, nuH(tx, tz), tz), hh = localActor.holder || g;
-            try { nuShatter(hh, 1); } catch (e) { /* cosmetic */ } hh.visible = false; NF.blinkHid = true; nfBlinkOut(a, b);
+            try { nuShatter(hh, 1); } catch (e) { /* cosmetic */ } hh.visible = false; NF.blinkHid = true; nfBlinkOut(a, b); nfBlinkNet(a, b);
         }
         function nfRollTick(dt) {
             const R = NF.roll; if (NF.inv > 0) NF.inv -= dt;
@@ -13645,7 +13645,47 @@ function kbModel(THREE, mk) {
         }
         function nfPick(cx, cy) { const rc = renderer.domElement.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = 1e9; for (const m of nfFoes()) { v.set(m.x, m.node.position.y + (m.node.userData.h || 1.5) * 0.5 * (m.big || 1), m.z).project(camera); if (v.z > 1) continue; const sx = rc.left + (v.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-v.y * 0.5 + 0.5) * rc.height, d = Math.hypot(sx - cx, sy - cy), lim = 54 * (m.big || 1); if (d < lim && d < bd) { bd = d; best = m; } } return best; }
         function nfFace(m) { localActor.group.rotation.y = Math.atan2(m.x - nfPos().x, m.z - nfPos().z); }
-        function nfFxAdd(mesh, dur, upd) { NU.group.add(mesh); mesh.userData.noOutline = true; NF.fx.push({ mesh, t: 0, dur, upd }); }
+        /* ---- VFX VISIBILITY (Settings > Skill effects). Every effect is drawn on behalf of someone: "self" (you), "party" (your party) or "npc" (your companions and players outside your party).
+              Remote handlers switch VX.ctx to the sender's group while they draw; effects from a group you switched off are simply not drawn. Enemy danger zones are not touched. ---- */
+        const VX = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('oasis.vfx') || '{}') || {}; } catch (e) { /* storage */ } return { self: s.self !== false, party: s.party !== false, npc: s.npc !== false, ctx: 'self' }; })();
+        function vxSave() { try { localStorage.setItem('oasis.vfx', JSON.stringify({ self: VX.self, party: VX.party, npc: VX.npc })); } catch (e) { /* storage */ } }
+        const vxClassOf = (id) => { try { return PARTY && PARTY.code && PARTY.members && PARTY.members.has(id) ? 'party' : 'npc'; } catch (e) { return 'npc'; } };
+        function vxAs(src, fn) { const was = VX.ctx; VX.ctx = src; try { return fn(); } finally { VX.ctx = was; } }
+        const vxOn = () => VX[VX.ctx] !== false;
+        const vxOk3 = (a) => Array.isArray(a) && a.length === 3 && a.every((v) => Number.isFinite(+v) && Math.abs(+v) < 6000);
+        const vxNear = (a) => { try { const p = nfPos(); return Math.hypot(+a[0] - p.x, +a[2] - p.z) < 90; } catch (e) { return true; } };
+        /* a small token bucket per sender instead of "one effect per 40 ms": a skill that fires two or three effects in the same frame (ring + bolt, limit break, combos) used to lose all but the first */
+        function vxBucket(P, key, burst, perMs) { const now = performance.now(), b = Math.min(burst, (P[key] == null ? burst : P[key]) + (now - (P[key + 'T'] || now)) / perMs); P[key + 'T'] = now; if (b < 1) { P[key] = b; return false; } P[key] = b - 1; return true; }
+        function nfFxAdd(mesh, dur, upd) { if (!vxOn()) { try { NF_DISP(mesh); } catch (e) { /* gone */ } return; } NU.group.add(mesh); mesh.userData.noOutline = true; NF.fx.push({ mesh, t: 0, dur, upd }); }
+        /* blink / teleport go out to everyone nearby: where you vanished, where you landed */
+        function nfBlinkNet(a, b) { try { nsSend({ k: 'bl', a: nsV3(a), b: nsV3(b) }); } catch (e) { /* offline */ } }
+        function nfTeleBurst(ph, p) {
+            try {
+                if (ph === 'out') { nfBlinkRing(p.x, p.y, p.z, NF_BL.B, 4.2, 0.8, 0.18); nfBlinkRing(p.x, p.y, p.z, NF_BL.A, 2.6, 0.6, 0.1); nfBlinkPillar(p.x, p.y, p.z, NF_BL.B, false, 0.8); nfBlinkSparks(p.x, p.y + 1, p.z, 0xdff6ff, 34, 2.4, 5.5, 0.9); }
+                else { nfBlinkFlash(p.x, p.y + 1.1, p.z, NF_BL.B, 1.4, 0.35); nfBlinkRing(p.x, p.y, p.z, NF_BL.B, 4.0, 0.6, 0.16); nfBlinkRing(p.x, p.y, p.z, 0xffffff, 2.0, 0.4, 0.07); nfBlinkPillar(p.x, p.y, p.z, NF_BL.A, true, 0.7); nfBlinkSparks(p.x, p.y + 0.6, p.z, 0xdff6ff, 30, 2.6, 4.6, 0.8); }
+            } catch (e) { /* cosmetic */ }
+        }
+        function nfTeleVfx(ph, p) { try { nsSend({ k: 'tv', ph: ph === 'in' ? 'in' : 'out', p: nsV3(p) }); } catch (e) { /* offline */ } nfTeleBurst(ph, p); }
+        function nfCastRemote(from, m) {      // another player's casting circle: it follows their avatar for the length of the cast
+            const P = peers.get(from); if (!P || !P.actor || !P.actor.group.parent || !vxBucket(P, '_cfB', 3, 400)) return;
+            const d = Math.max(0.3, Math.min(6, +m.d || 1)), col = Number.isFinite(+m.c) ? (+m.c & 0xffffff) : NF_SPCOL[m.id], pp = P.actor.group.position; if (!vxNear([pp.x, 0, pp.z])) return;
+            vxAs(vxClassOf(from), () => nfCastFx({ id: String(m.id || '').slice(0, 12), cast: d, col, k: m.hl ? 'heal' : 'hit' }, P.actor));
+        }
+        function nfTeleRemote(from, m) {      // another player's aether teleport: a beam where they left and where they arrive
+            const P = peers.get(from); if (!P || !vxOk3(m.p) || !vxNear(m.p) || !vxBucket(P, '_tvB', 3, 500)) return;
+            const ph = m.ph === 'in' ? 'in' : 'out', hh = P.actor && (P.actor.holder || P.actor.group), p = new THREE.Vector3(+m.p[0], +m.p[1], +m.p[2]);
+            vxAs(vxClassOf(from), () => {
+                if (ph === 'out') { if (hh && hh.visible && vxOn()) { try { nuShatter(hh, 1.2); } catch (e) { /* cosmetic */ } hh.visible = false; clearTimeout(P._tvT); P._tvT = setTimeout(() => { try { hh.visible = true; } catch (e) { /* gone */ } }, 2200); } }
+                else if (hh) { clearTimeout(P._tvT); hh.visible = true; }
+                nfTeleBurst(ph, p);
+            });
+        }
+        function nfBlinkRemote(from, m) {     // another player's blink: they burst into shards, streak across the gap and reappear
+            const P = peers.get(from); if (!P || !P.actor || !vxOk3(m.a) || !vxOk3(m.b) || !vxNear(m.a) || !vxBucket(P, '_blB', 3, 350)) return;
+            const a = new THREE.Vector3(+m.a[0], +m.a[1], +m.a[2]), b = new THREE.Vector3(+m.b[0], +m.b[1], +m.b[2]), cls = vxClassOf(from), hh = P.actor.holder || P.actor.group; let hid = false;
+            vxAs(cls, () => { if (!vxOn()) return; nfBlinkOut(a, b); if (hh && hh.visible) { try { nuShatter(hh, 1); } catch (e) { /* cosmetic */ } hh.visible = false; hid = true; } });
+            setTimeout(() => { try { if (hid) hh.visible = true; } catch (e) { /* gone */ } vxAs(cls, () => { if (vxOn()) nfBlinkIn(b); }); }, 130);
+        }
         function nfFx(kind, from, to) {
             try { if (!NF_FXR && from) nsSend({ k: 'fx', fk: String(kind).slice(0, 12), f: nsV3(from), t: nsV3(to || from) }); } catch (e) { /* offline */ }
             try {
@@ -13653,7 +13693,7 @@ function kbModel(THREE, mk) {
                 if (kind === 'slash') { const m = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.9, 20, 1, 0, 2.2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.copy(to); m.position.y += 0.9; m.lookAt(camera.position); m.rotation.z += Math.random() * 3; nfFxAdd(m, 0.22, (k) => { m.material.opacity = 0.9 * (1 - k); m.scale.setScalar(1 + k * 0.8); }); }
                 else if (kind === 'bolt' || kind === 'limit') { const m = new THREE.Mesh(new THREE.SphereGeometry(kind === 'limit' ? 0.7 : 0.28, 12, 10), new THREE.MeshBasicMaterial({ color: kind === 'limit' ? 0xffe27a : 0xff7a30, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })); const a = from.clone(); a.y += 1.3; nfFxAdd(m, 0.34, (k) => { m.position.lerpVectors(a, new THREE.Vector3(to.x, to.y + 1.0, to.z), k); m.material.opacity = k > 0.9 ? 0.4 : 0.95; }); }
                 else if (kind === 'ring' || kind === 'limit-ring') { const r = kind === 'ring' ? 5 : 6, m = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.7, 40), new THREE.MeshBasicMaterial({ color: kind === 'ring' ? 0x9fe6ff : 0xffe27a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(from.x, from.y + 0.25, from.z); nfFxAdd(m, 0.5, (k) => { m.scale.setScalar(1 + k * r * 1.4); m.material.opacity = 0.85 * (1 - k); }); }
-                else if (kind === 'heal' || kind === 'guard') { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 2.4, 20, 1, true), new THREE.MeshBasicMaterial({ color: kind === 'heal' ? 0x70ff9a : 0x8fb8ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.set(from.x, from.y + 1.2, from.z); nfFxAdd(m, 0.7, (k) => { m.position.set(nfPos().x, nfPos().y + 1.2 + k * 0.5, nfPos().z); m.material.opacity = 0.55 * (1 - k); m.scale.set(1 - k * 0.3, 1, 1 - k * 0.3); }); }
+                else if (kind === 'heal' || kind === 'guard') { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 2.4, 20, 1, true), new THREE.MeshBasicMaterial({ color: kind === 'heal' ? 0x70ff9a : 0x8fb8ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.set(from.x, from.y + 1.2, from.z); const fp = from.clone(), own = !NF_FXR && fp.distanceTo(nfPos()) < 1.5; nfFxAdd(m, 0.7, (k) => { const q = own ? nfPos() : fp; m.position.set(q.x, q.y + 1.2 + k * 0.5, q.z); m.material.opacity = 0.55 * (1 - k); m.scale.set(1 - k * 0.3, 1, 1 - k * 0.3); }); }
             } catch (e) { /* cosmetic */ }
         }
         const additive = THREE.AdditiveBlending;
@@ -13703,13 +13743,13 @@ function kbModel(THREE, mk) {
         }
         function nfSpellRemote(from, m) {   // another player's spell: drawn from their position to where they aimed it
             const P = peers.get(from); if (!P || !NF_SPVIS[m.id] || !Array.isArray(m.f) || !Array.isArray(m.t)) return; const ok = (a) => a.length === 3 && a.every((v) => Number.isFinite(+v) && Math.abs(+v) < 6000); if (!ok(m.f) || !ok(m.t)) return;
-            const now = performance.now(); if (now - (P._sfT || 0) < 120) return; P._sfT = now; const to = new THREE.Vector3(+m.t[0], +m.t[1], +m.t[2]); to.userData = { h: Math.max(0, Math.min(8, +m.h || 0)) }; nfSpellFx({ id: m.id, r: Math.max(0, Math.min(12, +m.r || 5)) }, new THREE.Vector3(+m.f[0], +m.f[1], +m.f[2]), to, true);
+            if (!vxBucket(P, '_sfB', 4, 120)) return; const to = new THREE.Vector3(+m.t[0], +m.t[1], +m.t[2]); to.userData = { h: Math.max(0, Math.min(8, +m.h || 0)) }; vxAs(vxClassOf(from), () => nfSpellFx({ id: m.id, r: Math.max(0, Math.min(12, +m.r || 5)) }, new THREE.Vector3(+m.f[0], +m.f[1], +m.f[2]), to, true));
         }
         function nfCastFx(s, A) {   // a rune circle and a gathering orb grow under the caster for the length of the cast
-            if (!s || !s.cast || (!A && !NF_MAGES[NF.cls])) return; if (!A) { try { nsSend({ k: 'cf', id: s.id, d: s.cast }); } catch (e) { /* offline */ } } const col = NF_SPCOL[s.id] || (s.k === 'heal' ? 0x70ff9a : 0xc9a8ff), g = new THREE.Group();
+            if (!s || !s.cast) return; const col = s.col || NF_SPCOL[s.id] || (s.k === 'heal' ? 0x70ff9a : 0xc9a8ff), g = new THREE.Group(); if (!A) { try { nsSend({ k: 'cf', id: String(s.id || '').slice(0, 12), d: s.cast, c: col, hl: s.k === 'heal' ? 1 : 0 }); } catch (e) { /* offline */ } }
             const ring = new THREE.Mesh(new THREE.RingGeometry(0.95, 1.1, 40), nfAdd(col, 0.75)), star = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.62, 6), nfAdd(col, 0.7)), orb = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10), nfAdd(col, 0.9)), halo = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 10), nfAdd(col, 0.3)); ring.rotation.x = star.rotation.x = -Math.PI / 2; g.add(ring, star, orb, halo);
-            const bits = nfBits(g, 14, col, 0.06, 1.2, 1); NF_NOOUT(g); let done = false;
-            nfFxAdd(g, s.cast, (k) => { const p = A ? A.group.position : nfPos(), live = A ? true : (NF.cast && NF.cast.s === s); if (!live) { if (!done) { done = true; g.visible = false; } if (k >= 1) NF_DISP(g); return; } const t = k * s.cast, pu = 0.6 + 0.4 * k; ring.position.set(p.x, p.y + 0.12, p.z); ring.rotation.z += 0.04; ring.scale.setScalar(pu + 0.1 * Math.sin(t * 8)); star.position.set(p.x, p.y + 0.14, p.z); star.rotation.z -= 0.06; star.scale.setScalar(0.8 + 0.4 * k); const f = (A || localActor).group.rotation.y; orb.position.set(p.x + Math.sin(f) * 0.7, p.y + 1.35, p.z + Math.cos(f) * 0.7); orb.scale.setScalar(0.2 + 0.9 * k); halo.position.copy(orb.position); halo.scale.setScalar(0.4 + 1.3 * k); halo.material.opacity = 0.18 + 0.2 * Math.sin(t * 12); for (const b of bits) { const a = Math.atan2(b.vz, b.vx) + t * 2.4, r = 1.3 * (1 - ((t * 0.9 + b.vy) % 1)); b.m.visible = true; b.m.position.set(p.x + Math.cos(a) * r, p.y + 0.3 + (1 - r / 1.3) * 1.2, p.z + Math.sin(a) * r); b.m.material.opacity = 0.9; } if (k >= 1) NF_DISP(g); });
+            const bits = nfBits(g, 14, col, 0.06, 1.2, 1); NF_NOOUT(g); let done = false; const cid = A ? (A._cid = (A._cid || 0) + 1) : 0; if (!A) NF._cfOn = true;
+            nfFxAdd(g, s.cast, (k) => { const p = A ? A.group.position : nfPos(), live = A ? A._cid === cid : (NF.cast && NF.cast.s === s); if (!live) { if (!done) { done = true; g.visible = false; } if (k >= 1) NF_DISP(g); return; } const t = k * s.cast, pu = 0.6 + 0.4 * k; ring.position.set(p.x, p.y + 0.12, p.z); ring.rotation.z += 0.04; ring.scale.setScalar(pu + 0.1 * Math.sin(t * 8)); star.position.set(p.x, p.y + 0.14, p.z); star.rotation.z -= 0.06; star.scale.setScalar(0.8 + 0.4 * k); const f = (A || localActor).group.rotation.y; orb.position.set(p.x + Math.sin(f) * 0.7, p.y + 1.35, p.z + Math.cos(f) * 0.7); orb.scale.setScalar(0.2 + 0.9 * k); halo.position.copy(orb.position); halo.scale.setScalar(0.4 + 1.3 * k); halo.material.opacity = 0.18 + 0.2 * Math.sin(t * 12); for (const b of bits) { const a = Math.atan2(b.vz, b.vx) + t * 2.4, r = 1.3 * (1 - ((t * 0.9 + b.vy) % 1)); b.m.visible = true; b.m.position.set(p.x + Math.cos(a) * r, p.y + 0.3 + (1 - r / 1.3) * 1.2, p.z + Math.sin(a) * r); b.m.material.opacity = 0.9; } if (k >= 1) NF_DISP(g); });
         }
         const NF_MAGES = { blackmage: 1, whitemage: 1, summoner: 1 };
         function nfMageAnim(s, ph) {   // Black / White Mage and Summoner cast with their hands: a thrust for bolts, hands to the sky for big spells, hands raised for heals
@@ -13886,6 +13926,7 @@ function kbModel(THREE, mk) {
         }
         /* ---- hit effects (SAO style): a white-hot flash, a fan of thin gold / blue streaks and glassy shards thrown out from the impact ---- */
         function nfHitBurst(pos, colHex, big) {
+            if (!vxOn()) return;
             const H = NF.hits || (NF.hits = { list: [] }); if (H.list.length > 6) return; const col = new THREE.Color(colHex || NF.hitCol || 0xbfe8ff), gold = new THREE.Color(0xffd98a), white = new THREE.Color(0xffffff), R = (a, b) => a + Math.random() * (b - a), n = big ? 40 : 26, ns = big ? 14 : 9;
             const dirs = [], pos0 = new Float32Array(n * 6), cols = new Float32Array(n * 6), geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos0, 3)); geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
             for (let i = 0; i < n; i++) { const th = Math.random() * 6.283, ph = Math.acos(R(-1, 1)), d = new THREE.Vector3(Math.sin(ph) * Math.cos(th), Math.cos(ph) * 0.8, Math.sin(ph) * Math.sin(th)).normalize(); dirs.push({ d, sp: R(3.5, 9) * (big ? 1.3 : 1), ln: R(0.5, 1.6) * (big ? 1.3 : 1), c: i % 3 === 0 ? white : i % 3 === 1 ? gold : col }); }
@@ -13943,7 +13984,7 @@ function kbModel(THREE, mk) {
                     const g = localActor.group, fx0 = p.clone(); let dx, dz, tx = p.x, tz = p.z;
                     if (s.back) { const a = g.rotation.y + Math.PI; dx = Math.sin(a); dz = Math.cos(a); const dist = s.dist || 6; for (let st = 1; st <= 8; st++) { const nx = p.x + dx * dist * st / 8, nz = p.z + dz * dist * st / 8; if (nuBlk(nx, nz)) break; tx = nx; tz = nz; } }
                     else if (t) { const dl = Math.hypot(t.x - p.x, t.z - p.z) || 1, stop = 2.2 + (t.big || 1) * 0.6; const k = Math.max(0, dl - stop); dx = (t.x - p.x) / dl; dz = (t.z - p.z) / dl; for (let st = 1; st <= 10; st++) { const nx = p.x + dx * k * st / 10, nz = p.z + dz * k * st / 10; if (nuBlk(nx, nz)) break; tx = nx; tz = nz; } g.rotation.y = Math.atan2(dx, dz); }
-                    g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz); if (s.back && (s.id === 'x5' || s.id === 'b8')) { nfBlinkOut(fx0, g.position); nfBlinkIn(g.position); } else nfFx('ring', fx0, fx0); if (s.back) break;
+                    g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz); if (s.back && (s.id === 'x5' || s.id === 'b8')) { nfBlinkOut(fx0, g.position); nfBlinkIn(g.position); nfBlinkNet(fx0, g.position); } else nfFx('ring', fx0, fx0); if (s.back) break;
                     if (t && s.r) { nfShapeFx('circle', t.x, t.z, 0, { r: s.r }); hitAll((m) => Math.hypot(m.x - t.x, m.z - t.z) < s.r + big(m), s.pot); } else if (t) nfDealDmg(t, s.pot, s.mag); if (s.fx) nfFx(s.fx, g.position, tpos); break;
                 }
                 case 'heal': {
@@ -14406,9 +14447,9 @@ function kbModel(THREE, mk) {
         const nsV3 = (v) => [nsR2(v.x), nsR2(v.y), nsR2(v.z)];
         function nfFxRemote(from, m) {
             const P = peers.get(from); if (!P || typeof m.fk !== 'string' || !/^[a-z]{2,12}$/.test(m.fk)) return;
-            const now = performance.now(); if (now - (P._fxT || 0) < 40) return; P._fxT = now;
+            if (!vxBucket(P, '_fxB', 8, 60)) return;
             const ok = (a) => Array.isArray(a) && a.length === 3 && a.every((v) => Number.isFinite(+v) && Math.abs(+v) < 6000), me3 = nfPos();
-            NF_FXR = true;
+            NF_FXR = true; const vxW = VX.ctx; VX.ctx = vxClassOf(from);
             try {
                 if (m.sh) {
                     if (![m.x, m.z].every((v) => Number.isFinite(+v) && Math.abs(+v) < 6000) || Math.hypot(+m.x - me3.x, +m.z - me3.z) > 90) return;
@@ -14418,7 +14459,7 @@ function kbModel(THREE, mk) {
                     if (!ok(m.f) || !ok(m.t) || Math.hypot(+m.f[0] - me3.x, +m.f[2] - me3.z) > 90) return;
                     nfFx(m.fk, new THREE.Vector3(+m.f[0], +m.f[1], +m.f[2]), new THREE.Vector3(+m.t[0], +m.t[1], +m.t[2]));
                 }
-            } finally { NF_FXR = false; }
+            } finally { NF_FXR = false; VX.ctx = vxW; }
         }
         function nsOnMsg(from, m) {
             if (m.to && m.to !== me.id) return; if (activeMap !== 'nuu' || !NU.ready) return; const k = m.k;
@@ -14438,7 +14479,13 @@ function kbModel(THREE, mk) {
             } else if (k === 'sf') {
                 try { nfSpellRemote(from, m); } catch (e) { /* cosmetic */ }
             } else if (k === 'cf') {
-                try { const P = peers.get(from); const d = Math.max(0.3, Math.min(5, +m.d || 1)); if (P && P.actor && NF_SPVIS[m.id] !== undefined || (P && P.actor && NF_SPCOL[m.id])) nfCastFx({ id: String(m.id).slice(0, 4), cast: d, k: 'hit' }, P.actor); } catch (e) { /* cosmetic */ }
+                try { nfCastRemote(from, m); } catch (e) { /* cosmetic */ }
+            } else if (k === 'cx') {
+                try { const P = peers.get(from); if (P && P.actor) P.actor._cid = (P.actor._cid || 0) + 1; } catch (e) { /* cosmetic */ }
+            } else if (k === 'tv') {
+                try { nfTeleRemote(from, m); } catch (e) { /* cosmetic */ }
+            } else if (k === 'bl') {
+                try { nfBlinkRemote(from, m); } catch (e) { /* cosmetic */ }
             } else if (k === 'pd') {
                 try { const pe = peers.get(from); if (pe) pe._pdT = Date.now(); const hh = pe && pe.actor && (pe.actor.holder || pe.actor.group); const at = Number.isFinite(+m.x) && Number.isFinite(+m.z) && m.x !== undefined; if (hh && hh.visible && pe.actor.group.parent) { nuShatter(hh, 1.3); hh.visible = false; if (!at) setTimeout(() => { hh.visible = true; }, 2200); } if (at && pe) nfFallBuild(from, pe.name || 'Ally', +m.x, Number.isFinite(+m.y) ? +m.y : 0, +m.z, false); } catch (e) { /* cosmetic */ }
             } else if (k === 'pu') {
@@ -14446,7 +14493,7 @@ function kbModel(THREE, mk) {
             } else if (k === 'rv') {
                 if (m.to === me.id && NF.dead) { nfRevive(0.25); try { sysChat((peers.get(from) ? peers.get(from).name : 'An ally') + ' revived you with a Phoenix Down.'); } catch (e) { /* chat */ } }
             } else if (k === 'h') {
-                const mm = NS.mobs.get(m.id); if (!mm || mm.dead) return; const d = nsNum(m.d, 0, 99999); mm.hp -= d; mm.hurt = performance.now(); if (mm.fate) mm.fate.hit = mm.fate.hit || false; nfPop(new THREE.Vector3(mm.x, mm.node.position.y + (mm.node.userData.h || 1.5) * (mm.big || 1) + 0.4, mm.z), String(d | 0), '#cfd8e0');
+                const mm = NS.mobs.get(m.id); if (!mm || mm.dead) return; const d = nsNum(m.d, 0, 99999); mm.hp -= d; mm.hurt = performance.now(); if (mm.fate) mm.fate.hit = mm.fate.hit || false; nfPop(new THREE.Vector3(mm.x, mm.node.position.y + (mm.node.userData.h || 1.5) * (mm.big || 1) + 0.4, mm.z), String(d | 0), '#cfd8e0'); try { vxAs(vxClassOf(from), () => nfHitBurst(new THREE.Vector3(mm.x, mm.node.position.y + (mm.node.userData.h || 1.5) * (mm.big || 1) * 0.6, mm.z), 0xcfeaff, false)); } catch (e) { /* cosmetic */ }
                 nfThreatAdd(mm, from, nsNum(m.th, 0, 999999)); if (nsIsOwner(mm)) { nfAggro(mm); if (typeof m.f === 'string' && !mm.th) mm.tid = m.f; } else mm.aggro = true; if (mm.hp <= 0) nfMobDie(mm, true);
             } else if (k === 'tk') { for (const id of (Array.isArray(m.ids) ? m.ids : []).slice(0, 40)) { const mm = NS.mobs.get(id); if (mm && !mm.dead) { nfThreatFix(mm, from); if (nsIsOwner(mm)) nfAggro(mm); } } }
             else if (k === 'tg') { const q = NS.pl.find((o) => o.id === from); if (q) nfThreatHeal(from, q.x, q.z, nsNum(m.a, 0, 99999)); }
@@ -14738,7 +14785,7 @@ function kbModel(THREE, mk) {
             const sp = MG_SP[id]; if (!sp || !mgOk() || NF.cast) return false; const now = performance.now() / 1000; if ((NF.mgCd || 0) > now) return false;
             if (!(MG.stock[id] > 0)) { nfPop(mgPos(), 'No ' + sp.n + ' in stock', '#ffb347'); return false; }
             const need = ['hit', 'ground', 'drain', 'pct', 'slow', 'stop', 'death', 'scan'].includes(sp.k); let t = null; if (need) { t = mgNeedTarget(sp.range); if (!t) return false; }
-            const s = mgSkill(sp), dur = sp.cast * mgSpdMul(); NF.mgCd = now + dur + 0.35;
+            const s = mgSkill(sp), dur = sp.cast * mgSpdMul(); s.cast = dur; s.col = sp.col; NF.mgCd = now + dur + 0.35;
             NF.cast = { n: sp.n, t0: now, dur, s, x: nfPos().x, z: nfPos().z, go: () => { if (NF.dead) return; if (mgResolve(sp, t, false)) { MG.stock[id] = Math.max(0, (MG.stock[id] | 0) - 1); mgSave(); try { nfStats(); } catch (e) { /* stats */ } mgHudRefresh(); if (MG.open) mgRender(); } } };
             try { nfMageAnim(s, 'start'); nfCastFx(s); } catch (e) { /* cosmetic */ } return true;
         }
@@ -14905,9 +14952,11 @@ function kbModel(THREE, mk) {
         function nfTeleCancel(msg) { if (!NF.tele) return; NF.tele = null; NF.cast = null; nuShowBanner('CANCELLED', (msg || 'TELEPORT CANCELLED').toUpperCase()); }
         function nfTeleGo(id) {
             const c = NU.cry.concat(NU_ZCRY).find((q) => q.id === id); if (!c || (!c.hub && !NF.att[id])) return; const cost = c.hub ? 0 : NF_TELE_COST; if (cost && (!window.oasisGil || window.oasisGil.get() < cost)) { nuShowBanner('NOT ENOUGH GIL', ''); return; }
-            NF.tele = { c, t0: performance.now() / 1000 }; NF.cast = { n: 'Teleport: ' + c.name, t0: performance.now() / 1000, dur: 3, s: { cast: 3 }, x: nfPos().x, z: nfPos().z, go: async () => { NF.tele = null; if (cost) { try { window.oasisGil.add(-cost, true); } catch (e) { /* gil */ } } NF.last = c.id; nfSave(); if (c.zone) { await arGo({ mode: 'zone', key: c.zone, banner: [c.name.toUpperCase(), 'AETHER TELEPORT'] }); return; } await nuFade(true, 500); nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.4, 1, c.z); NU.grace = 4; await nuFade(false, 500); nuShowBanner(c.name.toUpperCase(), 'AETHER TELEPORT'); } };
+            const TS = { id: 'tele', cast: 3, col: 0x7fe6ff, k: 'hit' }; NF.tele = { c, t0: performance.now() / 1000 }; NF.cast = { n: 'Teleport: ' + c.name, t0: performance.now() / 1000, dur: 3, s: TS, x: nfPos().x, z: nfPos().z, go: async () => { NF.tele = null; try { nfTeleVfx('out', nfPos()); } catch (e) { /* cosmetic */ } if (cost) { try { window.oasisGil.add(-cost, true); } catch (e) { /* gil */ } } NF.last = c.id; nfSave(); if (c.zone) { await arGo({ mode: 'zone', key: c.zone, banner: [c.name.toUpperCase(), 'AETHER TELEPORT'] }); return; } await nuFade(true, 500); nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); NU.last.set(c.x + 2.4, 1, c.z); NU.grace = 4; try { nfTeleVfx('in', nfPos()); } catch (e) { /* cosmetic */ } await nuFade(false, 500); nuShowBanner(c.name.toUpperCase(), 'AETHER TELEPORT'); } };
+            try { nfCastFx(TS); } catch (e) { /* cosmetic */ }
         }
         function nfCastTick(dt) {
+            try { if (NF._cfOn && !NF.cast) { NF._cfOn = false; nsSend({ k: 'cx' }); } } catch (e) { /* offline */ }
             try { mgTick(dt); } catch (e) { /* magic */ }
             nfRollTick(dt); try { nfLbTick(dt); } catch (e) { /* limit chain */ } try { nfMachTick(dt); } catch (e) { /* gunner */ } try { foodTick(dt); } catch (e) { /* food */ } try { nfStTick(dt); } catch (e) { /* status */ } try { dgRestTick(dt); } catch (e) { /* camp */ } try { simTick(dt); } catch (e) { /* sim */ } try { nfFallTick(dt); nfGlowTick(dt); nfTrailTick(dt); nfHitTick(dt); } catch (e) { /* crystals */ } if (NF.gcd > 0) NF.gcd = Math.max(0, NF.gcd - dt); if (NF.guard > 0) NF.guard -= dt; if (NF.buffT > 0) NF.buffT -= dt; if (NF.comb > 0) NF.comb -= dt; const p = nfPos();
             if (NF.hot) { NF.hot.left -= dt; NF.hot.tick -= dt; if (NF.hot.tick <= 0) { NF.hot.tick = 3; const h = Math.round(NF.hpMax * NF.hot.pot + NF.mag * 0.3); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(p.clone().setY(p.y + 2.2), '+' + h, '#7dffa0'); } if (NF.hot.left <= 0) NF.hot = null; }
@@ -20127,6 +20176,7 @@ function btMusicStop() {
                 if (GFX.bench && k !== 'fps') return;
                 if (k === 'fps') GFX.fps = !GFX.fps;
                 else if (k === 'mg') { GFX.mg = !GFX.mg; window.__mgHud = GFX.mg; }
+                else if (k && k.startsWith('vx-') && ['self', 'party', 'npc'].includes(k.slice(3))) { VX[k.slice(3)] = v === '1'; vxSave(); }
                 else if (k === 'preset') { gfxSetPreset(v); }
                 else if (k === 'auto') { gfxBench(); return; }
                 else if (k === 'res') { GFX.res = v; GFX.preset = 'custom'; gfxApply(); }
@@ -20155,6 +20205,9 @@ function btMusicStop() {
 <div class="row"><b>Aspect ratio</b><div class="opts">${o('ar', Math.round(ar * 1000), [[1778, '16:9'], [1600, '16:10'], [1500, '3:2'], [1333, '4:3'], [2370, '21:9']])}</div><p>Used by Framed and Wide.</p></div>
 <hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>
 <div class="row"><b>Draw magic buttons</b><div class="opts">${o('mg', GFX.mg ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>The Draw / Magic on-screen buttons in Adventia. Hidden by default. The V key and the controller buttons still work.</p></div>
+<hr><div class="row"><b>Skill effects: yours</b><div class="opts">${o('vx-self', VX.self ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Spell, casting, teleport and blink effects from your own skills.</p></div>
+<div class="row"><b>Skill effects: party</b><div class="opts">${o('vx-party', VX.party ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Effects from the members of your party.</p></div>
+<div class="row"><b>Skill effects: NPCs and others</b><div class="opts">${o('vx-npc', VX.npc ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Effects from your companions and from players who are not in your party. Enemy danger zones always stay visible.</p></div>
 <hr><div class="row"><b>Look Studio</b><div class="opts"><button data-k="lk-open">Open Look Studio</button></div><p>Anime and HD Remaster looks with sliders. F9 opens it from anywhere, F8 switches between Off, Anime and HD Remaster.</p></div>` + csHtml() + acHtml();
         }
         function gfxToggle(on) { gfxBuild(); const open = on === undefined ? GFX.panel.classList.contains('hidden') : !!on; GFX.panel.classList.toggle('hidden', !open); if (open) { try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (e) { /* none */ } gfxRender(); } }
@@ -33150,7 +33203,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             const d = Math.hypot(fo.x - ag.position.x, fo.z - ag.position.z); if (d > K.rng + (fo.big || 1) * 0.9 + 0.6 || r.nf.t > 0) return;
             r.nf.t = K.cd * (0.85 + Math.random() * 0.3) * cmpSimSpd(r.c); const a = r.actor, tp = new THREE.Vector3(fo.x, fo.node.position.y, fo.z);
             try { if (K.e) { const nm = K.e + (1 + ((Math.random() * 3) | 0)); if (EMOTES[nm] || (typeof HERO_ACTS !== 'undefined' && HERO_ACTS[nm])) a.playEmote(nm); } } catch (e) { /* no clip */ }
-            nfFx(cl === 'gunner' ? 'bolt' : 'slash', ag.position, tp); nfDealDmg(fo, K.pot * (1 + NF.lv * 0.02), false);
+            vxAs('npc', () => nfFx(cl === 'gunner' ? 'bolt' : 'slash', ag.position, tp)); nfDealDmg(fo, K.pot * (1 + NF.lv * 0.02), false);
         }
         /* ---- companions in a fight: they read the hidden battle log, step out of red zones, and speak where you can see them ---- */
         const NFLOG = { ev: [] };
