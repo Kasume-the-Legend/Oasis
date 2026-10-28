@@ -13550,19 +13550,45 @@ function kbModel(THREE, mk) {
             nfTarget(m); NF.lockOn = !!PAD.active || nfIsBoss(m); try { padToast('Target: ' + m.name); } catch (e) { /* toast */ } return true;
         }
         function nfPadUse() { if (activeMap !== 'nuu') return false; if (niNear()) { niGo(); return true; } { const fr = nfFallNear(); if (fr) { nfPhoenixOther(fr); return true; } } const c = nuChestNear(); if (c) { nuChestOpenNear(); return true; } const k = nuCrystalNear(); if (k) { nfInteractCrystal(k); return true; } return false; }
+        /* ---- MAGIC BLINK: the dodge is a short-range teleport. You burst into shards and arcane light, streak across the gap, and reappear; an attack that lands in the window is a PERFECT DODGE ---- */
+        const NF_BL = { A: 0x8f7bff, B: 0x7fe6ff };
+        function nfBlinkRing(x, y, z, col, r, dur, w) { const m = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.55 + (w || 0.16), 48), nfAdd(col, 0.9)); m.material.side = THREE.DoubleSide; m.rotation.x = -Math.PI / 2; m.position.set(x, y + 0.08, z); nfFxAdd(m, dur, (k) => { const e = 1 - (1 - k) * (1 - k); m.scale.setScalar(0.4 + e * r); m.material.opacity = 0.9 * (1 - k); }); }
+        function nfBlinkPillar(x, y, z, col, up, dur) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 3, 20, 1, true), nfAdd(col, 0.7)); m.material.side = THREE.DoubleSide; m.position.set(x, y + 1.5, z); nfFxAdd(m, dur, (k) => { const h = up ? 0.25 + 0.75 * (1 - (1 - k) * (1 - k)) : 1 - k; m.scale.set(1 - 0.6 * k, Math.max(0.02, h), 1 - 0.6 * k); m.position.y = y + 1.5 * m.scale.y; m.material.opacity = 0.7 * (1 - k * k); }); }
+        function nfBlinkSparks(x, y, z, col, n, spd, up, dur) { const g = new THREE.Group(), bits = nfBits(g, n, col, 0.07, spd, up); NF_NOOUT(g); nfFxAdd(g, dur, (k) => { nfBitsUpd(bits, x, y, z, k * dur, dur, 3); if (k >= 1) NF_DISP(g); }); }
+        function nfBlinkFlash(x, y, z, col, size, dur) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), nfAdd(0xffffff, 0.9)); m.position.set(x, y, z); nfFxAdd(m, dur, (k) => { m.scale.setScalar(size * (0.5 + k)); m.material.opacity = 0.9 * (1 - k) * (1 - k); m.material.color.setHex(k < 0.35 ? 0xffffff : col); }); }
+        function nfBlinkAfter(a, dur) { const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 1.0, 4, 10), nfAdd(NF_BL.A, 0.55)); m.position.set(a.x, a.y + 0.95, a.z); nfFxAdd(m, dur, (k) => { m.material.opacity = 0.55 * (1 - k); m.scale.set(1 + k * 0.5, 1 + k * 0.25, 1 + k * 0.5); }); }   // the afterimage left behind
+        function nfBlinkStreak(a, b, dur) {
+            const d = new THREE.Vector3(b.x - a.x, 0, b.z - a.z), L = d.length(); if (L < 0.2) return; d.divideScalar(L);
+            const m = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 8, 1, true), nfAdd(0xdff6ff, 0.9)); m.material.side = THREE.DoubleSide; m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(d.x, 0, d.z)); m.position.set((a.x + b.x) / 2, a.y + 1.0, (a.z + b.z) / 2); m.scale.set(1, L, 1); nfFxAdd(m, dur, (k) => { m.scale.set(1 - k, L, 1 - k); m.material.opacity = 0.9 * (1 - k); });
+            const gp = new THREE.Group(), orbs = []; for (let i = 0; i < 14; i++) { const o = new THREE.Mesh(new THREE.SphereGeometry(0.1 + Math.random() * 0.07, 6, 5), nfAdd(i % 2 ? NF_BL.A : NF_BL.B, 0.9)), u = i / 13; o.position.set(a.x + (b.x - a.x) * u, a.y + 0.4 + Math.random() * 1.4, a.z + (b.z - a.z) * u); o.userData.y0 = o.position.y; gp.add(o); orbs.push(o); }
+            NF_NOOUT(gp); nfFxAdd(gp, 0.6, (k) => { for (const o of orbs) { o.position.y = o.userData.y0 + k * 0.9; o.material.opacity = 0.9 * (1 - k); o.scale.setScalar(1 - 0.6 * k); } if (k >= 1) NF_DISP(gp); });
+        }
+        function nfBlinkOut(a, b) { try { nfBlinkRing(a.x, a.y, a.z, NF_BL.A, 3.4, 0.45, 0.15); nfBlinkRing(a.x, a.y, a.z, NF_BL.B, 2.1, 0.35, 0.08); nfBlinkPillar(a.x, a.y, a.z, NF_BL.B, false, 0.32); nfBlinkSparks(a.x, a.y + 1, a.z, NF_BL.B, 26, 3.4, 3.2, 0.6); nfBlinkAfter(a, 0.42); nfBlinkStreak(a, b, 0.32); } catch (e) { /* cosmetic */ } }
+        function nfBlinkIn(b) { try { nfBlinkFlash(b.x, b.y + 1.1, b.z, NF_BL.B, 1.1, 0.28); nfBlinkRing(b.x, b.y, b.z, NF_BL.B, 3.0, 0.4, 0.14); nfBlinkRing(b.x, b.y, b.z, 0xffffff, 1.6, 0.3, 0.06); nfBlinkPillar(b.x, b.y, b.z, NF_BL.A, true, 0.4); nfBlinkSparks(b.x, b.y + 0.6, b.z, 0xdff6ff, 22, 2.6, 4.2, 0.6); } catch (e) { /* cosmetic */ } }
+        function nfPerfectDodge() {
+            const now = performance.now(); if (now - (NF.pdT || 0) < 400) return; NF.pdT = now; NF.rollCd = 0;      // a perfect dodge gives the dodge back
+            const p = nfPos(); nfPop(p.clone().setY(p.y + 2.3), 'PERFECT DODGE', '#9fe6ff', true);
+            nfBlinkRing(p.x, p.y, p.z, 0xffffff, 6.5, 0.6, 0.2); nfBlinkRing(p.x, p.y, p.z, NF_BL.A, 4.2, 0.5, 0.1); nfBlinkSparks(p.x, p.y + 1.1, p.z, 0xffffff, 30, 4.2, 3.6, 0.7);
+            try { nfRumble(0.35, 0.2, 140); } catch (e) { /* pad */ }
+            try { const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;z-index:55;pointer-events:none;background:radial-gradient(ellipse at center,rgba(160,200,255,0) 35%,rgba(143,123,255,.4) 100%);opacity:1;transition:opacity .45s'; document.body.appendChild(f); requestAnimationFrame(() => { f.style.opacity = '0'; }); setTimeout(() => f.remove(), 560); } catch (e) { /* dom */ }
+        }
         function nfRoll() {
             if (activeMap !== 'nuu' || !NU.ready || NF.dead || NF.tele || NF.cast || NF.roll) return; const now = performance.now() / 1000; if ((NF.rollCd || 0) > now) return; NF.rollCd = now + 0.9;
             const g = localActor.group; let ix = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + (padMove.x || 0), iz = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + (padMove.z || 0), dx, dz;
             if (Math.hypot(ix, iz) > 0.3) { let fx = controls.target.x - camera.position.x, fz = controls.target.z - camera.position.z; const fl = Math.hypot(fx, fz) || 1; fx /= fl; fz /= fl; dx = fx * -iz + -fz * ix; dz = fz * -iz + fx * ix; } else { const a = g.rotation.y + Math.PI; dx = Math.sin(a); dz = Math.cos(a); }
             const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; g.rotation.y = Math.atan2(dx, dz);
-            NF.roll = { t: 0, dur: 0.55, dx, dz, sx: g.position.x, sz: g.position.z }; NF.inv = 0.5; NF.comb = 6; nfRumble(0.22, 0.12, 100);
-            try { localActor.playEmote('groll'); localActor.emoteDur = 0.55; localActor.emoteRate = 0.8 / 0.55; net && net.send({ t: 'emote', name: 'groll', r: 1 }); } catch (e) { /* no clip */ }
+            const sx = g.position.x, sz = g.position.z; let tx = sx, tz = sz; for (let st = 1; st <= 10; st++) { const nx = sx + dx * 6.2 * st / 10, nz = sz + dz * 6.2 * st / 10; if (nuBlk(nx, nz)) break; tx = nx; tz = nz; }     // farthest free spot, up to 6.2 m
+            if (Math.hypot(tx - sx, tz - sz) < 1) { NF.rollCd = now + 0.15; return; }
+            NF.roll = { t: 0, dur: 0.4, gap: 0.13, blink: true, landed: false, tx, tz }; NF.inv = 0.6; NF.blinkAt = performance.now(); NF.comb = 6; nfRumble(0.22, 0.12, 100);
+            const a = new THREE.Vector3(sx, nuH(sx, sz), sz), b = new THREE.Vector3(tx, nuH(tx, tz), tz), hh = localActor.holder || g;
+            try { nuShatter(hh, 1); } catch (e) { /* cosmetic */ } hh.visible = false; NF.blinkHid = true; nfBlinkOut(a, b);
         }
         function nfRollTick(dt) {
-            const R = NF.roll; if (NF.inv > 0) NF.inv -= dt; if (!R) return; R.t += dt; const k = Math.min(1, R.t / R.dur), e = 1 - (1 - k) * (1 - k), g = localActor.group, dist = 6.2 * e;
-            let tx = g.position.x, tz = g.position.z; const nx = R.sx + R.dx * dist, nz = R.sz + R.dz * dist; if (!nuBlk(nx, nz)) { tx = nx; tz = nz; } else R.t = R.dur;
-            g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz);
-            if (k >= 1) { NF.roll = null; if (localActor.emote === 'groll') localActor.emote = null; }
+            const R = NF.roll; if (NF.inv > 0) NF.inv -= dt;
+            if (!R) { if (NF.blinkHid) { NF.blinkHid = false; try { (localActor.holder || localActor.group).visible = true; } catch (e) { /* gone */ } } return; }     // (never leave the avatar hidden if the blink was cut short)
+            R.t += dt; const g = localActor.group;
+            if (!R.landed && R.t >= R.gap) { R.landed = true; g.position.set(R.tx, nuH(R.tx, R.tz), R.tz); NU.last.set(R.tx, 1, R.tz); const hh = localActor.holder || g; hh.visible = true; NF.blinkHid = false; nfBlinkIn(g.position); }
+            if (R.t >= R.dur) NF.roll = null;
         }
         function nfPick(cx, cy) { const rc = renderer.domElement.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = 1e9; for (const m of nfMobs()) { v.set(m.x, m.node.position.y + (m.node.userData.h || 1.5) * 0.5 * (m.big || 1), m.z).project(camera); if (v.z > 1) continue; const sx = rc.left + (v.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-v.y * 0.5 + 0.5) * rc.height, d = Math.hypot(sx - cx, sy - cy), lim = 54 * (m.big || 1); if (d < lim && d < bd) { bd = d; best = m; } } return best; }
         function nfFace(m) { localActor.group.rotation.y = Math.atan2(m.x - nfPos().x, m.z - nfPos().z); }
@@ -13811,7 +13837,7 @@ function kbModel(THREE, mk) {
                     const g = localActor.group, fx0 = p.clone(); let dx, dz, tx = p.x, tz = p.z;
                     if (s.back) { const a = g.rotation.y + Math.PI; dx = Math.sin(a); dz = Math.cos(a); const dist = s.dist || 6; for (let st = 1; st <= 8; st++) { const nx = p.x + dx * dist * st / 8, nz = p.z + dz * dist * st / 8; if (nuBlk(nx, nz)) break; tx = nx; tz = nz; } }
                     else if (t) { const dl = Math.hypot(t.x - p.x, t.z - p.z) || 1, stop = 2.2 + (t.big || 1) * 0.6; const k = Math.max(0, dl - stop); dx = (t.x - p.x) / dl; dz = (t.z - p.z) / dl; for (let st = 1; st <= 10; st++) { const nx = p.x + dx * k * st / 10, nz = p.z + dz * k * st / 10; if (nuBlk(nx, nz)) break; tx = nx; tz = nz; } g.rotation.y = Math.atan2(dx, dz); }
-                    g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz); nfFx('ring', fx0, fx0); if (s.back) break;
+                    g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz); if (s.back && (s.id === 'x5' || s.id === 'b8')) { nfBlinkOut(fx0, g.position); nfBlinkIn(g.position); } else nfFx('ring', fx0, fx0); if (s.back) break;
                     if (t && s.r) { nfShapeFx('circle', t.x, t.z, 0, { r: s.r }); hitAll((m) => Math.hypot(m.x - t.x, m.z - t.z) < s.r + big(m), s.pot); } else if (t) nfDealDmg(t, s.pot, s.mag); if (s.fx) nfFx(s.fx, g.position, tpos); break;
                 }
                 case 'heal': {
@@ -13920,7 +13946,7 @@ function kbModel(THREE, mk) {
         function nfRumble(strong, weak, ms) { try { if (activeMap === 'nuu' && typeof padRumble === 'function') padRumble(strong, weak, ms); } catch (e) { /* no rumble */ } }      // controller rumble for Adventia (Budokai > Rumble sets Normal / Low / Off)
         function nfPlayerHurt(d, from) {
             try { if (!NF.dead && !(NF.inv > 0)) { NSX.playerHit(); nfRumble(Math.min(1, 0.4 + d / Math.max(1, NF.hpMax) * 3), 0.65, 130 + Math.min(260, d * 3)); } } catch (e) { /* audio */ }
-            if (NF.dead) return; if (NF.inv > 0 || Math.random() * 100 < (NF.gEva || 0) || (function () { try { return mgEvade(); } catch (e) { return false; } })()) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); try { d = d * mgHurtMul(from); } catch (e) { /* magic */ } if (nfMyRole() === 'tank') d = Math.round(d * 0.8); if (NF.def > 0) d = Math.round(d * (1 - Math.min(0.6, NF.def / (NF.def + 260)))); if (nfBf() && nfBf().def) d = Math.round(d * (1 - nfBf().def)); d = Math.max(1, Math.round(d)); NF.hp -= d; try { if (from && from.cls && d > 0) nfStHit(from); } catch (e) { /* status */ } NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
+            if (NF.dead) return; try { if (NF.inv > 0 && NF.blinkAt && performance.now() - NF.blinkAt < 700) { nfPerfectDodge(); return; } } catch (e) { /* cosmetic */ } if (NF.inv > 0 || Math.random() * 100 < (NF.gEva || 0) || (function () { try { return mgEvade(); } catch (e) { return false; } })()) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); try { d = d * mgHurtMul(from); } catch (e) { /* magic */ } if (nfMyRole() === 'tank') d = Math.round(d * 0.8); if (NF.def > 0) d = Math.round(d * (1 - Math.min(0.6, NF.def / (NF.def + 260)))); if (nfBf() && nfBf().def) d = Math.round(d * (1 - nfBf().def)); d = Math.max(1, Math.round(d)); NF.hp -= d; try { if (from && from.cls && d > 0) nfStHit(from); } catch (e) { /* status */ } NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
             if (NF.tele) nfTeleCancel('Teleport interrupted'); try { nfLogAdd('hurt', 'You took ' + Math.round(d) + ' damage from ' + String((from && (from.name || from.cls)) || 'an enemy') + ' (' + Math.max(0, Math.round(NF.hp)) + '/' + Math.round(NF.hpMax) + ' HP)', { d, aoe: !!NFLOG.aoe, frac: Math.max(0, NF.hp) / Math.max(1, NF.hpMax) }); } catch (e) { /* log */ } if (NF.hp <= 0 && nfG('autolife') && (NF.alT || 0) < performance.now()) { NF.alT = performance.now() + 300000; NF.hp = Math.round(NF.hpMax * 0.5); nfPop(nfPos().clone().setY(nfPos().y + 2.6), '✨ Auto-Life', '#ffe08a', true); try { nfFx('heal', nfPos(), nfPos()); } catch (e) { /* fx */ } } else if (NF.hp <= 0) nfDie();
         }
         /* ---- DOWN: you fall where you stand and a pale crystal with floating shards marks the spot. A Phoenix Down (yours, or a friend's) stands you back up at 25% HP; or you can return to an aether crystal. ---- */
@@ -14328,10 +14354,24 @@ function kbModel(THREE, mk) {
             } else { m.wait -= dt; if (dh > 11) { tx = leashC.x; tz = leashC.z; sp = 2.4; } else { if (m.wait <= 0) { m.wait = 2.5 + Math.random() * 4; const a = Math.random() * 6.28, r = Math.random() * 7; m.tx = leashC.x + Math.cos(a) * r; m.tz = leashC.z + Math.sin(a) * r; } tx = m.tx; tz = m.tz; } }
             if (m.wind) sp = 0;
             {   // keep pack-mates from stacking on one spot
-                const sibs = m.group ? m.group.mobs : m.fate ? m.fate.mobs : null; if (sibs) for (const o of sibs) { if (o === m || o.dead) continue; const ox = m.x - o.x, oz = m.z - o.z, od = Math.hypot(ox, oz), mn = 1.3 * Math.max(m.size || 1, o.size || 1); if (od < mn && od > 0.001) { const ps = (mn - od) * Math.min(1, dt * 4) * 0.5; m.x += ox / od * ps; m.z += oz / od * ps; } }
+                const sibs = m.group ? m.group.mobs : m.fate ? m.fate.mobs : null; if (sibs) for (const o of sibs) { if (o === m || o.dead) continue; const ox = m.x - o.x, oz = m.z - o.z, od = Math.hypot(ox, oz), mn = 1.3 * Math.max(m.size || 1, o.size || 1); if (od < mn && od > 0.001) { const ps = (mn - od) * Math.min(1, dt * 4) * 0.5; { const sx = m.x + ox / od * ps, sz = m.z + oz / od * ps; if (!nuBlk(sx, sz) || nuBlk(m.x, m.z)) { m.x = sx; m.z = sz; } } } }
             }
             const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz); const wv = sp > 0 && d > 0.4 ? sp : 0; m.v = (m.v || 0) + (wv - (m.v || 0)) * Math.min(1, dt * (wv > (m.v || 0) ? 5 : 10));   // ease in and out of a walk instead of snapping to full speed
-            if (sp > 0 && d > 0.4) { const st = Math.min(d, m.v * dt + 1e-4), nx = m.x + dx / d * st, nz = m.z + dz / d * st; if (!nuBlk(nx, nz) || m.aggro || m.reset) { m.x = nx; m.z = nz; } m.ang = Math.atan2(dx, dz); } else if (m.aggro) m.ang = Math.atan2(p.x - m.x, p.z - m.z);
+            if (sp > 0 && d > 0.4) {
+              const st = Math.min(d, m.v * dt + 1e-4), base = Math.atan2(dx, dz), inside = nuBlk(m.x, m.z) || ((m.aggro || m.reset) && m._slA > 14), sliding = m._slT > 0; let side0 = m._slide || 1, mx = 0, mz = 0, moved = false, straight = false;
+              const free = (a, r) => !nuBlk(m.x + Math.sin(a) * r, m.z + Math.cos(a) * r);
+              const tryA = (a, f, ahead) => { if (!inside && (!free(a, st * f) || (ahead && (!free(a, 1.3) || !free(a, 2.6))))) return false; mx = Math.sin(a) * st * f; mz = Math.cos(a) * st * f; return true; };
+              if (tryA(base, 1, sliding || d > 3)) { moved = true; straight = true; }   // (while sliding, only turn back towards the target once a couple of metres ahead are clear, so corners are cleared)
+              else {
+                if (m._slT > 6) { side0 = m._slide = -side0; m._slT = 0; }   // slid one way for 6 s without clearing the obstacle: try the other way round
+                sides: for (const sd of [side0, -side0]) for (const [off, f] of [[1.57, 1], [2.1, 0.85], [1.1, 0.85], [2.6, 0.55], [0.6, 0.55]]) { if (tryA(base + off * sd, f, false)) { moved = true; m._slide = sd; break sides; } }
+              }
+              if (straight) { m._slT = 0; m._slA = 0; } else if (moved) { m._slT = (m._slT || 0) + dt; m._slA = (m._slA || 0) + dt; }
+              if (moved) { m._stuck = 0; m.x += mx; m.z += mz; }
+              else { m._stuck = (m._stuck || 0) + dt; m.v *= 0.8; if ((m.aggro || m.reset) && m._stuck > 1.2) { m.x += Math.sin(base) * st; m.z += Math.cos(base) * st; } }
+              m.ang = (m.aggro || !moved) ? base : Math.atan2(mx, mz);
+            } else { m._stuck = 0; m._slT = 0; m._slA = 0; }
+            
             let tilt = 0; if (m.swing) {   // normal attack: rear back, then strike (melee lunge + slash, or a bolt for casters)
                 const w = m.swing; w.t += dt; const k = w.t / w.dur;
                 if (k < 0.62) { tilt = -0.32 * Math.sin(k / 0.62 * Math.PI / 2); } else { tilt = 0.28 * Math.sin((k - 0.62) / 0.38 * Math.PI); if (!w.hit) { w.hit = true; const pp = new THREE.Vector3(m.x, m.node.position.y, m.z); if (m.ranged) nfFx('bolt', pp, p.clone().setY(p.y)); else { m.lunge = 0.18; nfFx('slash', pp, p.clone().setY(p.y)); } if (!ded && (m.ranged ? dp < 11 : dp < (m.boss ? 5.6 : 3.4))) { const dmg = m.atk * (0.85 + Math.random() * 0.3); if (!tg || tg.me) nfPlayerHurt(dmg, m); else nsSend({ k: 'u', to: tg.id, d: Math.round(dmg), id: m.sid }); } } }
@@ -19880,6 +19920,7 @@ function btMusicStop() {
                 const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k, v = b.dataset.v;
                 if (k === 'close') { GFX.bench = null; gfxToggle(false); return; }
                 if (k && k.startsWith('cs-')) { csClick(k); return; }
+                if (k === 'lk-open') { gfxToggle(false); LOOK.open(true); return; }
                 if (k && k.startsWith('ac-')) { acClick(k); return; }
                 if (GFX.bench && k !== 'fps') return;
                 if (k === 'fps') GFX.fps = !GFX.fps;
@@ -19911,7 +19952,8 @@ function btMusicStop() {
 <hr><div class="row"><b>Screen shape</b><div class="opts">${o('fit', fit, [['fill', 'Fill screen'], ['wide', 'Wide picture'], ['169', 'Framed']])}</div><p>Fill uses the whole screen. Framed keeps the chosen shape with black bars. Wide keeps the menus in the shape and lets the picture fill the screen.</p></div>
 <div class="row"><b>Aspect ratio</b><div class="opts">${o('ar', Math.round(ar * 1000), [[1778, '16:9'], [1600, '16:10'], [1500, '3:2'], [1333, '4:3'], [2370, '21:9']])}</div><p>Used by Framed and Wide.</p></div>
 <hr><div class="row"><b>Frame counter</b><div class="opts">${o('fps', GFX.fps ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>Shows the frames per second and the drawing size in the bottom right corner.</p></div>
-<div class="row"><b>Draw magic buttons</b><div class="opts">${o('mg', GFX.mg ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>The Draw / Magic on-screen buttons in Adventia. Hidden by default. The V key and the controller buttons still work.</p></div>` + csHtml() + acHtml();
+<div class="row"><b>Draw magic buttons</b><div class="opts">${o('mg', GFX.mg ? 1 : 0, [[1, 'Show'], [0, 'Hide']])}</div><p>The Draw / Magic on-screen buttons in Adventia. Hidden by default. The V key and the controller buttons still work.</p></div>
+<hr><div class="row"><b>Look Studio</b><div class="opts"><button data-k="lk-open">Open Look Studio</button></div><p>Anime and HD Remaster looks with sliders. F9 opens it from anywhere, F8 switches between Off, Anime and HD Remaster.</p></div>` + csHtml() + acHtml();
         }
         function gfxToggle(on) { gfxBuild(); const open = on === undefined ? GFX.panel.classList.contains('hidden') : !!on; GFX.panel.classList.toggle('hidden', !open); if (open) { try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (e) { /* none */ } gfxRender(); } }
         setTimeout(() => { const b = document.getElementById('btn-settings'); if (b) b.addEventListener('click', () => gfxToggle(true)); }, 0);
@@ -31692,10 +31734,755 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         /* ------------------------------------------------------------------ *
          *  Main loop
          * ------------------------------------------------------------------ */
+                /* ======== LOOK STUDIO (Anime / HD Remaster post-processing) ======== */
+        /* Look Studio GLSL. Written for three.js ShaderMaterial (GLSL ES 3.00 via three's prefix) and for the raw-WebGL2 test harness.
+           Every helper is prefixed lk_ so it can never collide with three's injected chunks. The marker LOOKFX lets the game find its own shader errors. */
+        const LOOK_GLSL = {};
+
+        LOOK_GLSL.vert = `// LOOKFX
+        varying vec2 vUv;
+        void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+
+        /* ---------------------------------------------------------------- bloom: soft-knee threshold + 3x3 tent downsample */
+        LOOK_GLSL.bloom = `// LOOKFX
+        uniform sampler2D tSrc;
+        uniform vec2 texel;
+        uniform float thr;
+        uniform float knee;
+        uniform float first;
+        varying vec2 vUv;
+        vec3 lk_pre(vec3 c){
+          if (!(c.r == c.r) || !(c.g == c.g) || !(c.b == c.b)) c = vec3(0.0);
+          c = clamp(c, 0.0, 24.0);
+          if (first < 0.5) return c;
+          float br = max(c.r, max(c.g, c.b));
+          float sf = clamp(br - thr + knee, 0.0, 2.0 * knee);
+          sf = sf * sf / (4.0 * knee + 1e-4);
+          float k = max(sf, br - thr) / max(br, 1e-4);
+          return c * k;
+        }
+        void main(){
+          vec3 s = lk_pre(texture2D(tSrc, vUv).rgb) * 4.0;
+          s += lk_pre(texture2D(tSrc, vUv + vec2(-1.0, 0.0) * texel).rgb) * 2.0;
+          s += lk_pre(texture2D(tSrc, vUv + vec2( 1.0, 0.0) * texel).rgb) * 2.0;
+          s += lk_pre(texture2D(tSrc, vUv + vec2( 0.0,-1.0) * texel).rgb) * 2.0;
+          s += lk_pre(texture2D(tSrc, vUv + vec2( 0.0, 1.0) * texel).rgb) * 2.0;
+          s += lk_pre(texture2D(tSrc, vUv + vec2(-1.0,-1.0) * texel).rgb);
+          s += lk_pre(texture2D(tSrc, vUv + vec2( 1.0,-1.0) * texel).rgb);
+          s += lk_pre(texture2D(tSrc, vUv + vec2(-1.0, 1.0) * texel).rgb);
+          s += lk_pre(texture2D(tSrc, vUv + vec2( 1.0, 1.0) * texel).rgb);
+          gl_FragColor = vec4(s / 16.0, 1.0);
+        }`;
+
+        /* ---------------------------------------------------------------- compose: HDR scene + bloom -> exposure -> tone map -> sRGB */
+        LOOK_GLSL.compose = `// LOOKFX
+        uniform sampler2D tScene;
+        uniform sampler2D tB0;
+        uniform sampler2D tB1;
+        uniform sampler2D tB2;
+        uniform sampler2D tB3;
+        uniform sampler2D tB4;
+        uniform float exposure;
+        uniform float bloomAmt;
+        uniform float bloomSpread;
+        uniform float tmix;
+        varying vec2 vUv;
+        vec3 lk_aces(vec3 x){
+          return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+        }
+        vec3 lk_oetf(vec3 c){
+          c = clamp(c, 0.0, 1.0);
+          return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+        }
+        void main(){
+          vec4 s = texture2D(tScene, vUv);
+          vec3 c = s.rgb;
+          if (!(c.r == c.r) || !(c.g == c.g) || !(c.b == c.b)) c = vec3(0.0);
+          c = clamp(c, 0.0, 24.0);
+          float sp = bloomSpread;
+          float w0 = 1.0, w1 = 1.0 + 0.4 * sp, w2 = 1.0 + 1.0 * sp, w3 = 1.0 + 1.8 * sp, w4 = 0.5 + 2.6 * sp;
+          vec3 b = texture2D(tB0, vUv).rgb * w0 + texture2D(tB1, vUv).rgb * w1 + texture2D(tB2, vUv).rgb * w2
+                 + texture2D(tB3, vUv).rgb * w3 + texture2D(tB4, vUv).rgb * w4;
+          b /= (w0 + w1 + w2 + w3 + w4);
+          c += b * bloomAmt * 2.4;
+          c *= exposure;
+          c = mix(clamp(c, 0.0, 1.0), lk_aces(c), tmix);
+          gl_FragColor = vec4(lk_oetf(c), s.a);
+        }`;
+
+        /* ---------------------------------------------------------------- shared depth helpers */
+        const LK_DEPTH = `
+        uniform sampler2D tDepth;
+        uniform vec2 camNF;
+        uniform float ortho;
+        float lk_linZ(vec2 uv){
+          float d = texture2D(tDepth, uv).x;
+          if (ortho > 0.5) return camNF.x + d * (camNF.y - camNF.x);
+          return camNF.x * camNF.y / (camNF.y - d * (camNF.y - camNF.x));
+        }
+        float lk_iz(vec2 uv){ return 1.0 / max(lk_linZ(uv), 1e-3); }
+        float lk_luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+        const vec2 LK_P[12] = vec2[12](
+          vec2(-0.326,-0.406), vec2(-0.840,-0.074), vec2(-0.696, 0.457), vec2(-0.203, 0.621),
+          vec2( 0.962,-0.195), vec2( 0.473,-0.480), vec2( 0.519, 0.767), vec2( 0.185,-0.893),
+          vec2( 0.507, 0.064), vec2( 0.896, 0.412), vec2(-0.322,-0.933), vec2(-0.792,-0.598));
+        `;
+
+        /* ---------------------------------------------------------------- ANIME: flatten -> cel bands -> colour pop -> screentone -> ink lines */
+        LOOK_GLSL.anime = `// LOOKFX
+        uniform sampler2D tComp;
+        uniform vec2 texel;
+        uniform float kScale;
+        uniform float amount, bands, soft, cel, shadowAmt, ink, inkW, inkSens, inkDetail, inkTint, inkFade, flatAmt, flatR, pop, tone;
+        uniform vec3 shadowTint;
+        varying vec2 vUv;
+        ${LK_DEPTH}
+        void main(){
+          vec4 src = texture2D(tComp, vUv);
+          vec3 base = src.rgb;
+          if (src.a < 0.5) { gl_FragColor = src; return; }
+          vec3 c = base;
+          float zc = lk_linZ(vUv);
+          float skyK = 1.0 - smoothstep(camNF.y * 0.45, camNF.y * 0.75, zc);   // far scenery and sky keep their smooth gradients
+
+          // 1. paint flatten: edge-preserving smoothing, so textures read as flat colour fills
+          if (flatAmt > 0.001) {
+            vec2 r = texel * max(1.0, flatR * kScale);
+            vec3 acc = c; float ws = 1.0;
+            float inv = 22.2 / (0.35 + 2.2 * flatAmt);
+            for (int i = 0; i < 12; i++) {
+              vec3 s = texture2D(tComp, vUv + LK_P[i] * r).rgb;
+              vec3 d = s - base;
+              float w = exp(-dot(d, d) * inv) * (1.0 - 0.3 * length(LK_P[i]));
+              acc += s * w; ws += w;
+            }
+            c = mix(c, acc / ws, flatAmt);
+          }
+
+          // 2. cel bands: snap brightness to a few flat levels (soft or hard), keep the hue
+          float l = lk_luma(c);
+          float q = clamp(l, 0.0, 1.0) * bands;
+          float u = max(q - 0.5, 0.0);
+          float fu = floor(u);
+          float w = mix(0.02, 0.5, soft);
+          float ql = (fu + 0.5 + smoothstep(0.5 - w, 0.5 + w, u - fu)) / bands;
+          ql = min(ql, 1.0);
+          float ratio = clamp(ql / max(l, 1e-3), 0.0, 1.6);
+          ratio = mix(1.0, ratio, smoothstep(0.02, 0.18, l));
+          c = mix(c, c * ratio, cel * skyK);
+          float shade = 1.0 - smoothstep(0.2, 0.8, ql);
+          c *= mix(vec3(1.0), shadowTint, shade * shadowAmt * skyK);
+
+          // 3. colour pop (negative = towards black-and-white manga)
+          float lc = lk_luma(c);
+          float sk = pop >= 0.0 ? 1.0 + pop * 1.2 : 1.0 + pop;
+          c = mix(vec3(lc), c, sk);
+          c = (c - 0.5) * (1.0 + 0.1 * max(pop, 0.0)) + 0.5;
+
+          // 4. screentone: halftone dots in the shadow bands
+          if (tone > 0.001) {
+            vec2 sz = 1.0 / texel;
+            vec2 p = vUv * sz;
+            p = mat2(0.7071, -0.7071, 0.7071, 0.7071) * p;
+            float cell = max(3.0, 5.0 * kScale);
+            float dd = length(fract(p / cell) - 0.5);
+            float rad = clamp((1.0 - ql - 0.32) * 1.1, 0.0, 0.7);
+            float m = smoothstep(rad + 0.08, rad - 0.08, dd) * step(0.001, rad);
+            c *= 1.0 - tone * 0.5 * m * skyK;
+          }
+
+          // 5. ink lines: depth (silhouettes / creases, near side) + colour edges (inner detail)
+          if (ink > 0.001) {
+            float z0 = lk_linZ(vUv);
+            vec2 t = texel * max(1.0, inkW * kScale);
+            float c0 = 1.0 / max(z0, 1e-3);
+            float dx = lk_iz(vUv - vec2(t.x, 0.0)) + lk_iz(vUv + vec2(t.x, 0.0)) - 2.0 * c0;
+            float dy = lk_iz(vUv - vec2(0.0, t.y)) + lk_iz(vUv + vec2(0.0, t.y)) - 2.0 * c0;
+            float rel = (max(-dx, 0.0) + max(-dy, 0.0)) / max(c0, 1e-4);
+            float thr = mix(0.14, 0.012, inkSens);
+            float eD = smoothstep(thr, thr * 2.5, rel);
+            float eC = 0.0;
+            if (inkDetail > 0.001) {
+              vec2 t2 = texel * max(1.0, inkW * kScale * 0.75);
+              float a = lk_luma(texture2D(tComp, vUv + vec2(-t2.x,-t2.y)).rgb);
+              float b = lk_luma(texture2D(tComp, vUv + vec2( 0.0 ,-t2.y)).rgb);
+              float cc = lk_luma(texture2D(tComp, vUv + vec2( t2.x,-t2.y)).rgb);
+              float d = lk_luma(texture2D(tComp, vUv + vec2(-t2.x, 0.0 )).rgb);
+              float f = lk_luma(texture2D(tComp, vUv + vec2( t2.x, 0.0 )).rgb);
+              float g = lk_luma(texture2D(tComp, vUv + vec2(-t2.x, t2.y)).rgb);
+              float h = lk_luma(texture2D(tComp, vUv + vec2( 0.0 , t2.y)).rgb);
+              float i2 = lk_luma(texture2D(tComp, vUv + vec2( t2.x, t2.y)).rgb);
+              float gx = (cc + 2.0 * f + i2) - (a + 2.0 * d + g);
+              float gy = (g + 2.0 * h + i2) - (a + 2.0 * b + cc);
+              float e = length(vec2(gx, gy));
+              eC = smoothstep(mix(0.5, 0.16, inkSens), mix(1.0, 0.45, inkSens), e) * inkDetail;
+            }
+            float fs = mix(300.0, 25.0, inkFade);
+            float fade = 1.0 - smoothstep(fs, fs * 2.5, z0);
+            float line = clamp(max(eD, eC), 0.0, 1.0) * ink * fade;
+            vec3 inkCol = mix(vec3(0.045, 0.03, 0.04), c * 0.3, inkTint);
+            c = mix(c, inkCol, line);
+          }
+
+          gl_FragColor = vec4(clamp(mix(base, c, amount), 0.0, 1.0), src.a);
+        }`;
+
+        /* ---------------------------------------------------------------- HD REMASTER: neural conv net -> clarity -> depth AO -> grade */
+        LOOK_GLSL.hd = `// LOOKFX
+        uniform sampler2D tComp;
+        uniform vec2 texel;
+        uniform float kScale;
+        uniform float tanHalf;
+        uniform vec4 W4[64];
+        uniform float amount, detail, clarity, ao, aoR, contrast, sat, warm, lift, vig;
+        varying vec2 vUv;
+        ${LK_DEPTH}
+        vec3 lk_pos(vec2 uv, float z, float asp){
+          vec2 ndc = uv * 2.0 - 1.0;
+          return vec3(ndc.x * tanHalf * asp * z, ndc.y * tanHalf * z, -z);
+        }
+        float lk_W(int i){
+          vec4 v = W4[i >> 2];
+          int m = i & 3;
+          return m == 0 ? v.x : (m == 1 ? v.y : (m == 2 ? v.z : v.w));
+        }
+        void main(){
+          vec4 src = texture2D(tComp, vUv);
+          vec3 base = src.rgb;
+          if (src.a < 0.5) { gl_FragColor = src; return; }
+          vec3 c = base;
+
+          // 1. the neural pass: 3x3 conv 3->8 (ReLU) -> 1x1 conv 8->3, added back as a residual (same net and weight layout as the Neural Frame Enhancer)
+          if (detail > 0.001) {
+            vec3 nb[9];
+            for (int k = 0; k < 9; k++) {
+              nb[k] = texture2D(tComp, vUv + vec2(float(k % 3 - 1), float(k / 3 - 1)) * texel).rgb;
+            }
+            float feat[8];
+            for (int oc = 0; oc < 8; oc++) {
+              float acc = lk_W(216 + oc);
+              for (int k = 0; k < 9; k++) {
+                vec3 v = nb[k];
+                acc += lk_W(oc * 27 + k) * v.r + lk_W(oc * 27 + 9 + k) * v.g + lk_W(oc * 27 + 18 + k) * v.b;
+              }
+              feat[oc] = max(acc, 0.0);
+            }
+            vec3 d = vec3(0.0);
+            for (int ch = 0; ch < 3; ch++) {
+              float s = lk_W(248 + ch);
+              for (int j = 0; j < 8; j++) s += lk_W(224 + ch * 8 + j) * feat[j];
+              d[ch] = s;
+            }
+            c = clamp(nb[4] + d * detail, 0.0, 1.0);
+          }
+
+          // 2. clarity: local contrast from a wide blur, halo-limited
+          if (clarity > 0.001) {
+            vec2 r = texel * 4.0 * max(kScale, 0.6);
+            vec3 acc = c;
+            for (int i = 0; i < 12; i++) acc += texture2D(tComp, vUv + LK_P[i] * r).rgb;
+            vec3 blur = acc / 13.0;
+            c += clamp(c - blur, vec3(-0.12), vec3(0.12)) * clarity * 1.3;
+          }
+
+          // 3. ambient occlusion from the depth buffer: normal-oriented, so flat floors and walls never self-shadow (soft contact shadows in creases, under props, at wall bases)
+          if (ao > 0.001) {
+            float z0 = lk_linZ(vUv);
+            if (z0 < camNF.y * 0.7) {
+              float asp = texel.y / texel.x;
+              vec3 p0 = lk_pos(vUv, z0, asp);
+              vec3 n = normalize(cross(dFdx(p0), dFdy(p0)));
+              if (dot(n, p0) > 0.0) n = -n;
+              float rw = aoR;
+              float rpx = clamp(rw * 0.5 / (max(tanHalf, 0.05) * max(z0, 0.2) * texel.y), 2.0, 30.0 * max(kScale, 0.6));
+              float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+              float ang = ign * 6.2831853;
+              float occ = 0.0;
+              for (int i = 0; i < 12; i++) {
+                float fi = float(i);
+                float rr = sqrt((fi + 0.5) / 12.0);
+                float a2 = ang + fi * 2.39996323;
+                vec2 suv = vUv + vec2(cos(a2), sin(a2)) * rr * rpx * texel;
+                vec3 v = lk_pos(suv, lk_linZ(suv), asp) - p0;
+                float dist = length(v);
+                float nd = dot(n, v) / max(dist, 1e-4);
+                occ += max(nd - 0.12, 0.0) * (1.0 - smoothstep(0.5 * rw, 1.3 * rw, dist)) * step(0.02 * rw, dist);
+              }
+              float f = 1.0 - clamp(occ / 12.0 * 2.4, 0.0, 1.0) * ao * 0.85;
+              c *= mix(1.0, f, 1.0 - 0.4 * lk_luma(c));
+            }
+          }
+
+          // 4. grade: warm highlights / cool lifted shadows, S-contrast, saturation, vignette
+          float l = lk_luma(c);
+          c += vec3(-0.006, 0.0, 0.016) * (1.0 - l) * lift * 8.0;
+          c *= vec3(1.0 + 0.10 * warm, 1.0 + 0.02 * warm, 1.0 - 0.12 * warm);
+          c = c * (1.0 - lift) + lift * vec3(0.55, 0.57, 0.64);
+          c = (c - 0.5) * contrast + 0.5;
+          c = mix(vec3(lk_luma(c)), c, sat);
+          float vd = distance(vUv, vec2(0.5));
+          c *= 1.0 - vig * smoothstep(0.35, 0.95, vd);
+
+          gl_FragColor = vec4(clamp(mix(base, c, amount), 0.0, 1.0), src.a);
+        }`;
+
+        /* ---------------------------------------------------------------- final: FXAA + contrast-adaptive sharpen + grain + compare split, at screen resolution */
+        LOOK_GLSL.final = `// LOOKFX
+        uniform sampler2D tStyle;
+        uniform sampler2D tScene;
+        uniform vec2 texel;
+        uniform vec2 outSize;
+        uniform float aa, sharp, grain, time, splitOn, split;
+        varying vec2 vUv;
+        float lk_h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + time) * 43758.5453); }
+        vec3 lk_oetf(vec3 c){
+          c = clamp(c, 0.0, 1.0);
+          return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+        }
+        vec3 lk_fxaa(vec2 uv, vec2 px){
+          vec3 nw = texture2D(tStyle, uv + vec2(-1.0,-1.0) * px).rgb;
+          vec3 ne = texture2D(tStyle, uv + vec2( 1.0,-1.0) * px).rgb;
+          vec3 sw = texture2D(tStyle, uv + vec2(-1.0, 1.0) * px).rgb;
+          vec3 se = texture2D(tStyle, uv + vec2( 1.0, 1.0) * px).rgb;
+          vec3 m  = texture2D(tStyle, uv).rgb;
+          vec3 L = vec3(0.299, 0.587, 0.114);
+          float lnw = dot(nw, L), lne = dot(ne, L), lsw = dot(sw, L), lse = dot(se, L), lm = dot(m, L);
+          float lmin = min(lm, min(min(lnw, lne), min(lsw, lse)));
+          float lmax = max(lm, max(max(lnw, lne), max(lsw, lse)));
+          vec2 dir;
+          dir.x = -((lnw + lne) - (lsw + lse));
+          dir.y =  ((lnw + lsw) - (lne + lse));
+          float dr = max((lnw + lne + lsw + lse) * (0.25 * 0.125), 1.0 / 128.0);
+          float rcp = 1.0 / (min(abs(dir.x), abs(dir.y)) + dr);
+          dir = min(vec2(8.0), max(vec2(-8.0), dir * rcp)) * px;
+          vec3 a = 0.5 * (texture2D(tStyle, uv + dir * (1.0 / 3.0 - 0.5)).rgb + texture2D(tStyle, uv + dir * (2.0 / 3.0 - 0.5)).rgb);
+          vec3 b = a * 0.5 + 0.25 * (texture2D(tStyle, uv + dir * -0.5).rgb + texture2D(tStyle, uv + dir * 0.5).rgb);
+          float lb = dot(b, L);
+          return (lb < lmin || lb > lmax) ? a : b;
+        }
+        void main(){
+          vec4 s0 = texture2D(tStyle, vUv);
+          vec3 c = s0.rgb;
+          if (aa > 0.001) c = mix(c, lk_fxaa(vUv, texel), aa);
+          if (sharp > 0.001) {
+            vec3 b = texture2D(tStyle, vUv + vec2(0.0, -1.0) * texel).rgb;
+            vec3 d = texture2D(tStyle, vUv + vec2(-1.0, 0.0) * texel).rgb;
+            vec3 f = texture2D(tStyle, vUv + vec2( 1.0, 0.0) * texel).rgb;
+            vec3 h = texture2D(tStyle, vUv + vec2(0.0,  1.0) * texel).rgb;
+            vec3 mn = min(min(min(d, c), min(f, b)), h);
+            vec3 mx = max(max(max(d, c), max(f, b)), h);
+            vec3 amp = sqrt(clamp(min(mn, 1.0 - mx) / max(mx, vec3(1e-3)), 0.0, 1.0));
+            vec3 w = amp * (-1.0 / mix(8.0, 4.5, sharp));
+            c = clamp((w * (b + d + f + h) + c) / (1.0 + 4.0 * w), 0.0, 1.0);
+          }
+          if (grain > 0.001) c += (lk_h(gl_FragCoord.xy) - 0.5) * grain * 0.07;
+          c += (lk_h(gl_FragCoord.xy + 7.0) - 0.5) / 255.0;
+          if (splitOn > 0.5) {
+            if (vUv.x < split) c = lk_oetf(clamp(texture2D(tScene, vUv).rgb, 0.0, 1.0));
+            if (abs(vUv.x - split) * outSize.x < 1.5) c = vec3(1.0);
+          }
+          gl_FragColor = vec4(clamp(c, 0.0, 1.0), s0.a);
+        }`;
+
+
+        /* Look Studio parameters: defaults, presets, slider specs, and the mapping from settings to shader uniforms.
+           Shared by the game controller and the WebGL test harness so both always agree. */
+        const LOOK_PARAMS = {
+          DEF: {
+            anime: { amount: 1, cel: 0.7, bands: 5, soft: 0.4, shadow: 0.5, ink: 0.9, inkW: 2.6, inkSens: 0.5, inkDetail: 0.3, inkTint: 0.4, inkFade: 0.5, flat: 0.5, flatR: 1.8, pop: 0.3, tone: 0, glow: 0.4, glowR: 0.5, exp: 1.0 },
+            hd:    { amount: 1, detail: 1.0, clarity: 0.3, ao: 0.55, aoR: 0.7, glow: 0.4, glowR: 0.6, exp: 1.0, tm: 0.5, contrast: 1.06, sat: 1.12, warm: 0.18, lift: 0.04, vig: 0.22, grain: 0 },
+            common: { aa: 0.8, sharp: 0.4 }
+          },
+          PRESETS: {
+            anime: {
+              'Soft Anime':  { amount: 1, cel: 0.5, bands: 6, soft: 0.65, shadow: 0.45, ink: 0.6, inkW: 1.5, inkSens: 0.45, inkDetail: 0.15, inkTint: 0.6, inkFade: 0.5, flat: 0.55, flatR: 2.0, pop: 0.35, tone: 0, glow: 0.5, glowR: 0.7, exp: 1.04 },
+              'Cel Shaded':  { amount: 1, cel: 0.85, bands: 4, soft: 0.2, shadow: 0.6, ink: 0.95, inkW: 2.4, inkSens: 0.55, inkDetail: 0.4, inkTint: 0.25, inkFade: 0.4, flat: 0.45, flatR: 1.6, pop: 0.4, tone: 0, glow: 0.25, glowR: 0.4, exp: 1.0 },
+              'Manga Ink':   { amount: 1, cel: 0.9, bands: 3, soft: 0.12, shadow: 0.2, ink: 1.0, inkW: 2.8, inkSens: 0.6, inkDetail: 0.65, inkTint: 0, inkFade: 0.3, flat: 0.5, flatR: 1.6, pop: -0.7, tone: 0.7, glow: 0, glowR: 0.3, exp: 1.08 }
+            },
+            hd: {
+              'Subtle':      { amount: 1, detail: 0.6, clarity: 0.15, ao: 0.25, aoR: 0.6, glow: 0.2, glowR: 0.5, exp: 1.0, tm: 0.3, contrast: 1.03, sat: 1.05, warm: 0.05, lift: 0.02, vig: 0.1, grain: 0 },
+              'FFXIV':       { amount: 1, detail: 1.0, clarity: 0.3, ao: 0.55, aoR: 0.7, glow: 0.4, glowR: 0.6, exp: 1.0, tm: 0.5, contrast: 1.06, sat: 1.12, warm: 0.18, lift: 0.04, vig: 0.22, grain: 0 },
+              'Cinematic':   { amount: 1, detail: 0.8, clarity: 0.35, ao: 0.7, aoR: 0.8, glow: 0.5, glowR: 0.7, exp: 0.98, tm: 0.8, contrast: 1.15, sat: 0.97, warm: 0.1, lift: 0.03, vig: 0.38, grain: 0.15 }
+            }
+          },
+          /* [key, label, min, max, step, hint] */
+          SL: {
+            anime: [
+              ['h', 'Look'],
+              ['amount', 'Effect strength', 0, 1, 0.01],
+              ['cel', 'Cel shading', 0, 1, 0.01],
+              ['bands', 'Shade bands', 2, 8, 1],
+              ['soft', 'Band softness', 0, 1, 0.01],
+              ['shadow', 'Cool shadows', 0, 1, 0.01],
+              ['flat', 'Paint flatten', 0, 1, 0.01],
+              ['flatR', 'Flatten size', 1, 4, 0.1],
+              ['pop', 'Colour pop', -1, 1, 0.01],
+              ['tone', 'Screentone', 0, 1, 0.01],
+              ['h', 'Ink lines'],
+              ['ink', 'Line strength', 0, 1, 0.01],
+              ['inkW', 'Line thickness', 0.6, 3, 0.05],
+              ['inkSens', 'Line sensitivity', 0, 1, 0.01],
+              ['inkDetail', 'Detail lines', 0, 1, 0.01],
+              ['inkTint', 'Coloured lines', 0, 1, 0.01],
+              ['inkFade', 'Fade with distance', 0, 1, 0.01],
+              ['h', 'Light'],
+              ['glow', 'Soft glow', 0, 1, 0.01],
+              ['glowR', 'Glow spread', 0, 1, 0.01],
+              ['exp', 'Brightness', 0.6, 1.6, 0.01]
+            ],
+            hd: [
+              ['h', 'Remaster'],
+              ['amount', 'Effect strength', 0, 1, 0.01],
+              ['detail', 'Neural detail', 0, 3, 0.05],
+              ['clarity', 'Clarity', 0, 1, 0.01],
+              ['ao', 'Ambient occlusion', 0, 1, 0.01],
+              ['aoR', 'AO size', 0.2, 2, 0.05],
+              ['h', 'Light'],
+              ['glow', 'Soft bloom', 0, 1, 0.01],
+              ['glowR', 'Bloom spread', 0, 1, 0.01],
+              ['exp', 'Exposure', 0.6, 1.6, 0.01],
+              ['tm', 'Filmic tone-map', 0, 1, 0.01],
+              ['h', 'Colour'],
+              ['contrast', 'Contrast', 0.7, 1.5, 0.01],
+              ['sat', 'Saturation', 0.5, 1.8, 0.01],
+              ['warm', 'Warmth', -1, 1, 0.01],
+              ['lift', 'Soft shadows', 0, 0.15, 0.005],
+              ['vig', 'Vignette', 0, 0.6, 0.01],
+              ['grain', 'Film grain', 0, 1, 0.01]
+            ],
+            common: [
+              ['aa', 'Anti-aliasing', 0, 1, 0.01],
+              ['sharp', 'Sharpness', 0, 1, 0.01]
+            ]
+          },
+          /* settings -> uniform values for each pass */
+          values(mode, P, C) {
+            if (mode === 'anime') {
+              return {
+                bloom: { thr: 0.8, knee: 0.4 },
+                compose: { exposure: P.exp, bloomAmt: P.glow * 0.8, bloomSpread: P.glowR, tmix: 0 },
+                style: { amount: P.amount, bands: Math.round(P.bands), soft: P.soft, cel: P.cel, shadowAmt: P.shadow, ink: P.ink, inkW: P.inkW, inkSens: P.inkSens, inkDetail: P.inkDetail, inkTint: P.inkTint, inkFade: P.inkFade, flatAmt: P.flat, flatR: P.flatR, pop: P.pop, tone: P.tone, shadowTint: [0.80, 0.82, 1.06] },
+                final: { aa: C.aa, sharp: C.sharp, grain: 0 }
+              };
+            }
+            return {
+              bloom: { thr: 0.72, knee: 0.45 },
+              compose: { exposure: P.exp, bloomAmt: P.glow * 0.9, bloomSpread: P.glowR, tmix: P.tm },
+              style: { amount: P.amount, detail: P.detail, clarity: P.clarity, ao: P.ao, aoR: P.aoR, contrast: P.contrast, sat: P.sat, warm: P.warm, lift: P.lift, vig: P.vig },
+              final: { aa: C.aa, sharp: C.sharp, grain: P.grain }
+            };
+          },
+          /* the built-in hand-designed 3x3->8->3 filter net from the Neural Frame Enhancer (256 floats: L1w[8][3][9] @0, L1b[8] @216, L2w[3][8] @224, L2b[3] @248) */
+          defaultWeights() {
+            const W = new Float32Array(256);
+            const L = [0.2126, 0.7152, 0.0722];
+            const lap = [0, -1, 0, -1, 4, -1, 0, -1, 0];
+            const blur = [1, 2, 1, 2, 4, 2, 1, 2, 1].map((v) => v / 16);
+            const id = [0, 0, 0, 0, 1, 0, 0, 0, 0];
+            const sx = [-1, 0, 1, -2, 0, 2, -1, 0, 1].map((v) => v / 4);
+            const sy = [-1, -2, -1, 0, 0, 0, 1, 2, 1].map((v) => v / 4);
+            const ch = [[lap, 1], [lap, -1], [blur, 1], [id, 1], [sx, 1], [sx, -1], [sy, 1], [sy, -1]];
+            ch.forEach(([k, s], oc) => { for (let c = 0; c < 3; c++) for (let i = 0; i < 9; i++) W[oc * 27 + c * 9 + i] = L[c] * k[i] * s; });
+            const m = [0.18, -0.18, -0.20, 0.20, -0.06, -0.06, -0.06, -0.06];
+            for (let c = 0; c < 3; c++) for (let j = 0; j < 8; j++) W[224 + c * 8 + j] = m[j];
+            return W;
+          }
+        };
+
+        /* =====================================================================================================================
+         *  LOOK STUDIO: an Anime look and an HD Remaster look (FFXI -> FFXIV style), with sliders, for the whole 3D world.
+         *  Pipeline (all passes after the first run at the render scale, so a lower scale is a real speed-up):
+         *    scene -> colour + depth target   ->  bloom pyramid  ->  compose (exposure / tone-map / sRGB)
+         *          ->  stylise (Anime: flatten, cel bands, screentone, ink lines  |  HD: neural conv net, clarity, AO, grade)
+         *          ->  final at screen size (FXAA + contrast-adaptive sharpen + grain) with optional compare split.
+         *  Hooks: aaaRender() calls LOOK.render() first. F8 cycles Off / Anime / HD, F9 opens the panel (also the round button and Settings).
+         * ===================================================================================================================== */
+        const LOOK = (() => {
+          const G = LOOK_GLSL, PRM = LOOK_PARAMS, KEY = 'oasis.look', MODES = ['off', 'anime', 'hd'];
+          const NAMES = { off: 'Off', anime: 'Anime', hd: 'HD Remaster' };
+          const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
+          const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+
+          /* ------------------------------------------------------------------ settings */
+          const S = (() => {
+            const d = { mode: 'off', scale: 1, dynFps: 0, minScale: 0.6, split: false, splitPos: 0.5, pill: true, preset: { anime: '', hd: 'FFXIV' }, common: Object.assign({}, PRM.DEF.common), anime: Object.assign({}, PRM.DEF.anime), hd: Object.assign({}, PRM.DEF.hd) };
+            try {
+              const j = JSON.parse(localStorage.getItem(KEY) || 'null');
+              if (j && typeof j === 'object') {
+                if (MODES.includes(j.mode)) d.mode = j.mode;
+                d.scale = clampN(num(j.scale, 1), 0.5, 1); d.dynFps = [0, 30, 45, 60, 90].includes(j.dynFps) ? j.dynFps : 0; d.pill = j.pill !== false;
+                for (const g of ['common', 'anime', 'hd']) if (j[g] && typeof j[g] === 'object') for (const k in d[g]) d[g][k] = num(j[g][k], d[g][k]);
+                if (j.preset && typeof j.preset === 'object') { d.preset.anime = String(j.preset.anime || ''); d.preset.hd = String(j.preset.hd || ''); }
+              }
+            } catch (e) { /* storage blocked or bad JSON: defaults */ }
+            try { const q = new URLSearchParams(location.search).get('look'); if (MODES.includes(q)) d.mode = q; } catch (e) { /* no URL */ }
+            return d;
+          })();
+          let saveT = 0;
+          const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ mode: S.mode, scale: S.scale, dynFps: S.dynFps, pill: S.pill, preset: S.preset, common: S.common, anime: S.anime, hd: S.hd })); } catch (e) { /* storage */ } }, 250); };
+
+          /* ------------------------------------------------------------------ GPU objects (made on first use) */
+          let mats = null, quad = null, qScene = null, qCam = null, T = null, tKey = '', eff = 1, weights = PRM.defaultWeights(), modelName = 'built-in hand-designed filters (not trained)';
+          const V2 = new THREE.Vector2();
+          const st = { fps: 60, last: 0, rw: 0, rh: 0, ow: 0, oh: 0, err: '' };
+          const dyn = { acc: 0, n: 0, last: 0, good: 0, hold: 0 };
+
+          function mk(frag, vals) {
+            const uniforms = {}; for (const k in vals) uniforms[k] = { value: vals[k] };
+            return new THREE.ShaderMaterial({ vertexShader: G.vert, fragmentShader: frag, uniforms, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.NoBlending, side: THREE.DoubleSide });
+          }
+          function init() {
+            if (mats) return;
+            const v2 = () => new THREE.Vector2();
+            mats = {
+              bloom: mk(G.bloom, { tSrc: null, texel: v2(), thr: 0.8, knee: 0.4, first: 1 }),
+              compose: mk(G.compose, { tScene: null, tB0: null, tB1: null, tB2: null, tB3: null, tB4: null, exposure: 1, bloomAmt: 0, bloomSpread: 0.5, tmix: 0 }),
+              anime: mk(G.anime, { tComp: null, tDepth: null, texel: v2(), kScale: 1, camNF: new THREE.Vector2(0.05, 400), ortho: 0, amount: 1, bands: 5, soft: 0.4, cel: 0.7, shadowAmt: 0.5, ink: 0.9, inkW: 2, inkSens: 0.5, inkDetail: 0.3, inkTint: 0.4, inkFade: 0.5, flatAmt: 0.5, flatR: 1.8, pop: 0.3, tone: 0, shadowTint: new THREE.Vector3(0.8, 0.82, 1.06) }),
+              hd: mk(G.hd, { tComp: null, tDepth: null, texel: v2(), kScale: 1, camNF: new THREE.Vector2(0.05, 400), ortho: 0, tanHalf: 0.58, W4: weights, amount: 1, detail: 1, clarity: 0.3, ao: 0.5, aoR: 0.7, contrast: 1.05, sat: 1.1, warm: 0.15, lift: 0.04, vig: 0.2 }),
+              final: mk(G.final, { tStyle: null, tScene: null, texel: v2(), outSize: v2(), aa: 0.8, sharp: 0.4, grain: 0, time: 0, splitOn: 0, split: 0.5 })
+            };
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
+            geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 2, 0, 0, 2]), 2));
+            quad = new THREE.Mesh(geo, mats.final); quad.frustumCulled = false;
+            qScene = new THREE.Scene(); qScene.add(quad); qCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            hookShaderErrors();
+          }
+          function setU(mat, o) {
+            for (const k in o) {
+              const u = mat.uniforms[k]; if (!u) continue; const v = o[k];
+              if (Array.isArray(v) && u.value && u.value.isVector3) u.value.set(v[0], v[1], v[2]); else u.value = v;
+            }
+          }
+          function makeRT(w, h, depth, type) {
+            const rt = new THREE.WebGLRenderTarget(w, h, { type, format: THREE.RGBAFormat, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: !!depth, stencilBuffer: false, generateMipmaps: false });
+            if (depth) { const dt = new THREE.DepthTexture(w, h, THREE.UnsignedIntType); dt.minFilter = THREE.NearestFilter; dt.magFilter = THREE.NearestFilter; rt.depthTexture = dt; }
+            return rt;
+          }
+          function freeTargets() { if (!T) return; for (const rt of T.all) { try { if (rt.depthTexture) rt.depthTexture.dispose(); rt.dispose(); } catch (e) { /* gone */ } } T = null; tKey = ''; }
+          function ensure(rw, rh) {
+            const key = rw + 'x' + rh; if (key === tKey) return; freeTargets(); tKey = key;
+            const scene = makeRT(rw, rh, true, THREE.HalfFloatType), comp = makeRT(rw, rh, false, THREE.UnsignedByteType), style = makeRT(rw, rh, false, THREE.UnsignedByteType), bloom = [];
+            for (let i = 0; i < 5; i++) bloom.push(makeRT(Math.max(2, rw >> (i + 1)), Math.max(2, rh >> (i + 1)), false, THREE.HalfFloatType));
+            T = { scene, comp, style, bloom, all: [scene, comp, style, ...bloom] };
+          }
+          function pass(mat, target) { quad.material = mat; renderer.setRenderTarget(target); renderer.render(qScene, qCam); }
+
+          /* if one of our shaders fails to compile on this device, switch the effect off instead of showing a black screen */
+          function hookShaderErrors() {
+            try {
+              const dbg = renderer.debug; if (!dbg || dbg.__lk) return; dbg.__lk = true; const prev = dbg.onShaderError;
+              dbg.onShaderError = function (gl, program, vs, fs) {
+                let src = '', log = ''; try { src = (gl.getShaderSource(fs) || '') + (gl.getShaderSource(vs) || ''); } catch (e) { /* none */ }
+                if (src.indexOf('LOOKFX') >= 0) { try { log = (gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(program) || '').slice(0, 220); } catch (e) { /* none */ } fail('a shader would not compile on this device: ' + log); }
+                if (typeof prev === 'function') return prev.apply(this, arguments);
+              };
+            } catch (e) { /* older three */ }
+          }
+          function fail(msg) {
+            st.err = msg; S.mode = 'off'; freeTargets(); save();
+            try { sysChat('Look Studio switched itself off: ' + msg); } catch (e) { /* chat */ } try { ui(); } catch (e) { /* ui */ }
+          }
+
+          /* ------------------------------------------------------------------ dynamic resolution */
+          function dynTick(now) {
+            if (!S.dynFps) { eff = S.scale; dyn.last = now; dyn.acc = 0; dyn.n = 0; return; }
+            if (eff > S.scale) eff = S.scale;
+            if (dyn.last) { const d = now - dyn.last; if (d < 400) { dyn.acc += d; dyn.n++; } } dyn.last = now;
+            if (dyn.n < 20) return;
+            const avg = dyn.acc / dyn.n, tgt = 1000 / S.dynFps; dyn.acc = 0; dyn.n = 0;
+            if (avg > tgt * 1.2 && eff > S.minScale + 0.001) { eff = Math.max(S.minScale, +(eff - (avg > tgt * 1.5 ? 0.1 : 0.05)).toFixed(2)); dyn.good = 0; dyn.hold = now + 5000; }
+            else if (avg < tgt * 1.08 && now > dyn.hold && eff < S.scale - 0.001) { if (++dyn.good >= 3) { eff = Math.min(S.scale, +(eff + 0.05).toFixed(2)); dyn.good = 0; } }
+            else dyn.good = 0;
+          }
+
+          /* ------------------------------------------------------------------ the frame */
+          function on() { return S.mode !== 'off'; }
+          function render() {
+            if (S.mode === 'off') return false;
+            if (window.__noLook) return false;
+            try { if (PERF.emu) return false; } catch (e) { /* PERF not ready */ }
+            try { if (cssScreen && cssScreen.visible) return false; } catch (e) { /* no tv */ }     // the TV / emulator layer sits behind the canvas and needs the untouched picture
+            const prevTarget = renderer.getRenderTarget(), prevAC = renderer.autoClear;
+            try {
+              init();
+              const now = performance.now();
+              if (st.last) st.fps += (1000 / Math.max(now - st.last, 1) - st.fps) * 0.05; st.last = now;
+              dynTick(now);
+              renderer.getDrawingBufferSize(V2);
+              const ow = Math.round(V2.x), oh = Math.round(V2.y); if (ow < 8 || oh < 8) return false;
+              const k = clampN(S.dynFps ? eff : S.scale, 0.4, 1), rw = Math.max(8, Math.round(ow * k)), rh = Math.max(8, Math.round(oh * k));
+              ensure(rw, rh); st.rw = rw; st.rh = rh; st.ow = ow; st.oh = oh;
+              const mode = S.mode, P = S[mode], Vv = PRM.values(mode, P, S.common);
+              const cam = camera, ortho = cam.isOrthographicCamera ? 1 : 0, tanHalf = ortho ? 0.5 : Math.tan(THREE.MathUtils.degToRad(cam.fov * 0.5)) / (cam.zoom || 1), kScale = clampN(rh / 1080, 0.5, 2);
+              renderer.toneMapping = THREE.NoToneMapping;
+
+              renderer.setRenderTarget(T.scene); renderer.autoClear = true; renderer.render(scene, camera); renderer.autoClear = false;
+
+              if (Vv.compose.bloomAmt > 0.002) {
+                for (let i = 0; i < 5; i++) {
+                  const src = i === 0 ? T.scene : T.bloom[i - 1];
+                  setU(mats.bloom, { tSrc: src.texture, thr: Vv.bloom.thr, knee: Vv.bloom.knee, first: i === 0 ? 1 : 0 }); mats.bloom.uniforms.texel.value.set(1 / src.width, 1 / src.height);
+                  pass(mats.bloom, T.bloom[i]);
+                }
+              }
+              setU(mats.compose, Object.assign({ tScene: T.scene.texture, tB0: T.bloom[0].texture, tB1: T.bloom[1].texture, tB2: T.bloom[2].texture, tB3: T.bloom[3].texture, tB4: T.bloom[4].texture }, Vv.compose));
+              pass(mats.compose, T.comp);
+
+              const sm = mode === 'anime' ? mats.anime : mats.hd;
+              setU(sm, Object.assign({ tComp: T.comp.texture, tDepth: T.scene.depthTexture, kScale, ortho, tanHalf }, Vv.style));
+              sm.uniforms.texel.value.set(1 / rw, 1 / rh); sm.uniforms.camNF.value.set(cam.near, cam.far);
+              if (mode === 'hd') mats.hd.uniforms.W4.value = weights;
+              pass(sm, T.style);
+
+              setU(mats.final, Object.assign({ tStyle: T.style.texture, tScene: T.scene.texture, time: (now * 0.001) % 100, splitOn: S.split ? 1 : 0, split: S.splitPos }, Vv.final));
+              mats.final.uniforms.texel.value.set(1 / rw, 1 / rh); mats.final.uniforms.outSize.value.set(ow, oh);
+              pass(mats.final, null);
+              return true;
+            } catch (e) {
+              console.warn('Look Studio:', e); fail('it hit an error (' + String((e && e.message) || e).slice(0, 120) + ')'); return false;
+            } finally { try { renderer.setRenderTarget(prevTarget); renderer.autoClear = prevAC; } catch (e) { /* renderer gone */ } }
+          }
+
+          /* ------------------------------------------------------------------ UI */
+          let panel = null, pill = null, splitEl = null, toastEl = null, statT = 0, toastT = 0;
+          const fmt = (v, step) => (step < 1 ? v.toFixed(step < 0.01 ? 3 : 2) : String(Math.round(v)));
+          function toast(msg) {
+            if (!toastEl) { toastEl = document.createElement('div'); toastEl.id = 'lk-toast'; document.body.appendChild(toastEl); }
+            toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 1600);
+          }
+          function build() {
+            if (panel) return;
+            const css = document.createElement('style');
+            css.textContent = `#lk-panel{position:fixed;z-index:63;right:10px;top:10px;width:min(330px,92vw);max-height:calc(100vh - 20px);overflow:auto;color:#e5e7eb;background:rgba(14,22,40,.95);border:1px solid rgba(255,255,255,.18);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.55);font:12.5px/1.4 Nunito,Inter,system-ui,sans-serif;padding:10px 14px 14px;transition:opacity .15s}
+        #lk-panel.hidden{display:none}#lk-panel.drag{opacity:.22}
+        #lk-panel h3{margin:0 0 8px;font:800 13px Orbitron,Nunito,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;display:flex;align-items:center}#lk-panel h3 span{flex:1}
+        #lk-panel h4{margin:12px 0 4px;font:800 11px Nunito,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#93c5fd;border-top:1px solid rgba(255,255,255,.1);padding-top:8px}
+        #lk-panel button{padding:5px 11px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font:800 11.5px Nunito,sans-serif;cursor:pointer;touch-action:manipulation}
+        #lk-panel button.on{background:#0ea5e9;border-color:#7dd3fc}#lk-panel button.warn{background:#be185d;border-color:#f9a8d4}
+        #lk-panel .seg{display:flex;gap:6px;margin:4px 0 6px}#lk-panel .seg button{flex:1;padding:8px 4px;font-size:13px}
+        #lk-panel .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+        #lk-panel p{margin:4px 0;color:#9ca3af;font-size:11.5px}
+        #lk-panel .lk-r{display:flex;align-items:center;gap:8px;margin:3px 0}#lk-panel .lk-r label{flex:0 0 112px;color:#cbd5e1}#lk-panel .lk-r input{flex:1;min-width:0;accent-color:#38bdf8}#lk-panel .lk-r .lk-v{flex:0 0 38px;text-align:right;color:#fff;font-variant-numeric:tabular-nums}
+        #lk-panel .lk-st{color:#9fe3b0;font:600 11px ui-monospace,Menlo,monospace;white-space:pre-wrap;margin-top:6px}#lk-panel .lk-err{color:#fca5a5;font-weight:700}
+        #lk-pill{position:fixed;z-index:61;right:10px;bottom:30px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(14,22,40,.72);color:#fff;font:700 16px/1 system-ui;cursor:pointer;opacity:.55;touch-action:manipulation;padding:0}#lk-pill:hover{opacity:1}#lk-pill.on{opacity:.95;border-color:#38bdf8;box-shadow:0 0 10px rgba(56,189,248,.6)}
+        #lk-split{position:fixed;z-index:62;top:0;bottom:0;width:30px;margin-left:-15px;cursor:ew-resize;touch-action:none;display:none}#lk-split i{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:rgba(14,22,40,.85);border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.6)}#lk-split i:after{content:'\\2194';position:absolute;inset:0;text-align:center;line-height:22px;color:#fff;font-size:14px}
+        #lk-toast{position:fixed;z-index:64;left:50%;bottom:14%;transform:translateX(-50%) translateY(8px);background:rgba(14,22,40,.88);color:#fff;border:1px solid rgba(125,211,252,.5);border-radius:999px;padding:7px 18px;font:800 13px Nunito,sans-serif;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}#lk-toast.show{opacity:1;transform:translateX(-50%)}`;
+            document.head.appendChild(css);
+            panel = document.createElement('div'); panel.id = 'lk-panel'; panel.className = 'hidden';
+            for (const ev of ['pointerdown', 'touchstart', 'wheel', 'keydown', 'keyup', 'contextmenu']) panel.addEventListener(ev, (e) => { if (ev === 'keydown' && e.key === 'Escape') open(false); if (ev !== 'contextmenu' || true) e.stopPropagation(); });
+            panel.addEventListener('input', (e) => {
+              const el = e.target; if (!el || el.type !== 'range') return; const g = el.dataset.g, k = el.dataset.k, v = parseFloat(el.value);
+              if (g === 'misc') { if (k === 'scale') { S.scale = v; eff = Math.min(eff, v); if (!S.dynFps) eff = v; } else if (k === 'minScale') S.minScale = v; }
+              else { S[g][k] = v; if (g !== 'common' && S.preset[g]) { S.preset[g] = ''; panel.querySelectorAll('.chips button').forEach((b) => b.classList.remove('on')); } }
+              const out = el.parentNode.querySelector('.lk-v'); if (out) out.textContent = fmt(v, parseFloat(el.step)); save();
+            });
+            const dragOn = (e) => { if (e.target && e.target.type === 'range') panel.classList.add('drag'); }, dragOff = () => panel.classList.remove('drag');
+            panel.addEventListener('pointerdown', dragOn); window.addEventListener('pointerup', dragOff); window.addEventListener('pointercancel', dragOff);
+            panel.addEventListener('click', (e) => {
+              const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a, v = b.dataset.v;
+              if (a === 'close') open(false);
+              else if (a === 'mode') setMode(v);
+              else if (a === 'preset') { const p = PRM.PRESETS[S.mode][v]; if (p) { Object.assign(S[S.mode], p); S.preset[S.mode] = v; save(); ui(); } }
+              else if (a === 'reset') { Object.assign(S[S.mode], PRM.DEF[S.mode]); Object.assign(S.common, PRM.DEF.common); S.preset[S.mode] = ''; save(); ui(); }
+              else if (a === 'compare') { S.split = !S.split; syncSplit(); ui(); }
+              else if (a === 'dyn') { S.dynFps = +v; eff = S.scale; dyn.good = 0; save(); ui(); }
+              else if (a === 'cap') { try { GFX.cap = +v; GFX.preset = 'custom'; gfxApply(); } catch (x) { /* settings not ready */ } ui(); }
+              else if (a === 'pill') { S.pill = !S.pill; syncPill(); save(); ui(); }
+              else if (a === 'mload') panel.querySelector('#lk-mf').click();
+              else if (a === 'msave') {
+                const j = { name: 'exported', format: 'neural-enhancer-v1', l1w: [...weights.slice(0, 216)], l1b: [...weights.slice(216, 224)], l2w: [...weights.slice(224, 248)], l2b: [...weights.slice(248, 251)] };
+                const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(j)], { type: 'application/json' })); l.download = 'enhancer-model.json'; l.click(); setTimeout(() => URL.revokeObjectURL(l.href), 1000);
+              }
+              else if (a === 'mreset') { weights = PRM.defaultWeights(); modelName = 'built-in hand-designed filters (not trained)'; st.err = ''; ui(); }
+            });
+            panel.addEventListener('change', async (e) => {
+              const el = e.target; if (!el || el.id !== 'lk-mf') return; const f = el.files && el.files[0]; el.value = ''; if (!f) return;
+              try {
+                const j = JSON.parse(await f.text());
+                const chk = (a, n, nm) => { if (!Array.isArray(a) || a.length !== n || a.some((x) => typeof x !== 'number' || !isFinite(x))) throw new Error(nm + ' must be ' + n + ' numbers'); };
+                chk(j.l1w, 216, 'l1w'); chk(j.l1b, 8, 'l1b'); chk(j.l2w, 24, 'l2w'); chk(j.l2b, 3, 'l2b');
+                const W = new Float32Array(256); W.set(j.l1w, 0); W.set(j.l1b, 216); W.set(j.l2w, 224); W.set(j.l2b, 248);
+                weights = W; modelName = String(j.name || f.name).slice(0, 40); st.err = '';
+              } catch (err) { st.err = 'Model JSON rejected: ' + err.message + ' (expected {l1w:[216], l1b:[8], l2w:[24], l2b:[3]})'; }
+              ui();
+            });
+            document.body.appendChild(panel);
+
+            pill = document.createElement('button'); pill.id = 'lk-pill'; pill.type = 'button'; pill.textContent = '\u{1F3A8}'; pill.title = 'Look Studio (F9). F8 switches Off / Anime / HD';
+            pill.addEventListener('pointerdown', (e) => e.stopPropagation()); pill.addEventListener('click', () => open());
+            document.body.appendChild(pill);
+
+            splitEl = document.createElement('div'); splitEl.id = 'lk-split'; splitEl.innerHTML = '<i></i>';
+            let sd = false;
+            splitEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); sd = true; splitEl.setPointerCapture(e.pointerId); });
+            splitEl.addEventListener('pointermove', (e) => { if (!sd) return; const r = renderer.domElement.getBoundingClientRect(); S.splitPos = clampN((e.clientX - r.left) / Math.max(r.width, 1), 0.03, 0.97); syncSplit(); });
+            const sEnd = () => { sd = false; }; splitEl.addEventListener('pointerup', sEnd); splitEl.addEventListener('pointercancel', sEnd);
+            document.body.appendChild(splitEl);
+            window.addEventListener('resize', syncSplit);
+            syncPill(); syncSplit();
+          }
+          function syncPill() { if (!pill) return; pill.style.display = S.pill ? '' : 'none'; pill.classList.toggle('on', S.mode !== 'off'); }
+          function syncSplit() {
+            if (!splitEl) return; const show = S.mode !== 'off' && S.split; splitEl.style.display = show ? 'block' : 'none'; if (!show) return;
+            try { const r = renderer.domElement.getBoundingClientRect(); splitEl.style.left = (r.left + S.splitPos * r.width) + 'px'; } catch (e) { /* no canvas yet */ }
+          }
+          function row(g, s) { const [k, label, mn, mx, step] = s, v = g === 'misc' ? (k === 'scale' ? S.scale : S.minScale) : S[g][k]; return `<div class="lk-r"><label>${label}</label><input type="range" min="${mn}" max="${mx}" step="${step}" value="${v}" data-g="${g}" data-k="${k}"><span class="lk-v">${fmt(v, step)}</span></div>`; }
+          const btns = (a, cur, list) => list.map(([v, l]) => `<button data-a="${a}" data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${l}</button>`).join('');
+          function ui() {
+            if (!panel) return; const keep = panel.scrollTop, m = S.mode; let h = `<h3><span>Look Studio</span><button data-a="close">Close</button></h3>
+        <div class="seg">${btns('mode', m, MODES.map((x) => [x, NAMES[x]]))}</div>`;
+            if (st.err) h += `<p class="lk-err">${st.err.replace(/[<>&]/g, '')}</p>`;
+            if (m === 'off') h += `<p>Pick a look. <b>Anime</b> gives flat cel shading and ink outlines. <b>HD Remaster</b> adds neural detail, ambient occlusion, soft bloom and a warm filmic grade, the way FFXI could be lifted towards FFXIV. F8 flips between them and Off.</p>`;
+            else {
+              h += `<p>${m === 'anime' ? 'Cel-shaded, ink-outlined, flat-colour look. Lines come from the depth buffer, so they follow real silhouettes.' : 'Neural detail pass, depth-based ambient occlusion, soft bloom and a warm grade: an FFXIV-style lift for the world.'}</p>`;
+              h += `<div class="chips">${btns('preset', S.preset[m], Object.keys(PRM.PRESETS[m]).map((n) => [n, n]))}<button data-a="compare" class="${S.split ? 'on' : ''}">Compare</button><button data-a="reset">Reset</button></div>`;
+              for (const s of PRM.SL[m]) h += s[0] === 'h' ? `<h4>${s[1]}</h4>` : row(m, s);
+              h += `<h4>Output</h4>` + PRM.SL.common.map((s) => row('common', s)).join('');
+              if (m === 'hd') h += `<h4>Neural model</h4><p>${modelName.replace(/[<>&]/g, '')}</p><div class="chips"><button data-a="mload">Load model JSON</button><button data-a="msave">Export</button><button data-a="mreset">Reset</button></div><input id="lk-mf" type="file" accept="application/json" hidden>`;
+              let cap = 0; try { cap = GFX.cap; } catch (e) { /* none */ }
+              h += `<h4>Smoothness</h4>` + row('misc', ['scale', 'Render scale', 0.5, 1, 0.05]) + `<p>Draws the world at this fraction of the screen, then upscales with sharpening. Lower is faster.</p>`
+                + `<div class="lk-r"><label>Auto resolution</label><div class="chips" style="margin:0">${btns('dyn', S.dynFps, [[0, 'Off'], [30, '30'], [45, '45'], [60, '60'], [90, '90']])}</div></div>`
+                + (S.dynFps ? row('misc', ['minScale', 'Lowest scale', 0.4, 1, 0.05]) : '')
+                + `<p>Auto resolution lowers the render scale when frames run slow and raises it again when there is room, so the frame rate holds.</p>`
+                + `<div class="lk-r"><label>Frame limit</label><div class="chips" style="margin:0">${btns('cap', cap, [[0, 'Max'], [30, '30'], [45, '45'], [60, '60'], [90, '90']])}</div></div>`;
+            }
+            h += `<div class="chips" style="margin-top:10px"><button data-a="pill" class="${S.pill ? 'on' : ''}">Round button: ${S.pill ? 'shown' : 'hidden'}</button></div><div class="lk-st" id="lk-st"></div>`;
+            panel.innerHTML = h; panel.scrollTop = keep; stats();
+          }
+          function stats() {
+            const el = panel && panel.querySelector('#lk-st'); if (!el) return;
+            el.textContent = S.mode === 'off' ? 'F8: switch look   F9: this panel' : `${Math.round(st.fps)} fps\ndrawing ${st.rw}×${st.rh} → screen ${st.ow}×${st.oh} (${Math.round(100 * st.rw / Math.max(st.ow, 1))}%)`;
+          }
+          function open(v) {
+            build(); const show = v === undefined ? panel.classList.contains('hidden') : !!v;
+            panel.classList.toggle('hidden', !show);
+            if (show) { try { Object.keys(keys).forEach((k) => (keys[k] = false)); } catch (e) { /* none */ } ui(); clearInterval(statT); statT = setInterval(stats, 500); } else clearInterval(statT);
+          }
+          function setMode(m, quiet) {
+            if (!MODES.includes(m)) return; S.mode = m; st.err = ''; if (m !== 'off') { eff = S.scale; dyn.good = 0; st.last = 0; } save(); syncPill(); syncSplit();
+            if (panel && !panel.classList.contains('hidden')) ui(); if (!quiet) toast('Look: ' + NAMES[m]);
+          }
+          function cycle() { setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]); }
+
+          window.addEventListener('keydown', (e) => {
+            if (e.key !== 'F8' && e.key !== 'F9') return;
+            const t = e.target; if (t && (t.tagName === 'INPUT' && t.type !== 'range' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+            e.preventDefault(); if (e.key === 'F8') cycle(); else open();
+          });
+          const boot = () => { try { build(); } catch (e) { console.warn('Look Studio UI:', e); } };
+          if (document.body) boot(); else window.addEventListener('DOMContentLoaded', boot);
+
+          return { S, on, render, open, cycle, setMode, ui, get weights() { return weights; } };
+        })();
+        window.__lookStudio = LOOK;
+
+
         /* ---- AAA pass: filmic tone mapping + bloom + colour grade + vignette + grain, on Destiny City and Key's Kitchen (Balanced graphics and up) ---- */
         const AAA = { maps: { city: { bloom: 0.38, thr: 0.82, rad: 0.55, exp: 1.02, sat: 1.14, con: 1.08, vig: 0.32 }, diner: { bloom: 0.42, thr: 0.8, rad: 0.5, exp: 0.98, sat: 1.12, con: 1.08, vig: 0.4, tint: [1.07, 1.0, 0.9] } }, c: null, w: 0, h: 0, pr: 0, on: false, t: 0 };
         function aaaRender() {
             try {
+                if (LOOK.on() && LOOK.render()) { AAA.on = false; return true; }          // Look Studio (Anime / HD Remaster) takes over the whole picture when it is on
                 const id = (typeof activeMap !== 'undefined') ? activeMap : null, cfg = AAA.maps[id];
                 if (!cfg || PERF.emu || ['optimal', 'performance'].includes(GFX.preset) || !window.__AAA_LIB || window.__noAAA) { if (AAA.on) { AAA.on = false; renderer.toneMapping = THREE.NoToneMapping; } return false; }
                 const L = window.__AAA_LIB, pr = renderer.getPixelRatio(), w = window.__stage.vw, h = window.__stage.vh;
