@@ -19638,7 +19638,8 @@ function btMusicStop() {
         }
         function btSwapTurn() { if (!btMyTurn()) return; const n = BT.party.filter((o) => !o.dead && !o.bot && o.id !== me.id && o.atb >= 1); if (!n.length) { btToast('No other player is ready yet'); try { btSfx('no'); } catch (e) { /* sound */ } return; } btSendCmd({ kind: 'swap' }); try { btToast('Switched: ' + n.sort((a, b) => b.atb - a.atb)[0].name + ' goes first'); } catch (e) { /* toast */ } }
         function btSendCmd(c) { BT.menu.mode = 'root'; BT.menu.stack = []; BT.menu.list = null; if (btIsHost()) btHandle(me.id, c); else { btSend({ a: 'cmd', ...c }); } BT.hudDirty = true; }
-        function btEnterTgt(cmd, ids) { if (!ids.length) { btSfx('no'); return; } BT.menu.mode = 'tgt'; BT.menu.cmd = cmd; BT.menu.list = ids; BT.menu.tgt = 0; BT.menu.idx = 0; BT.hudDirty = true; }
+        function btEnterTgt(cmd, ids) { if (!ids.length) { btSfx('no'); return; } try { const mu = btUnit(me.id), mp = mu && btObjPos(mu); if (mp) { const dd = (id) => { const u = btUnit(id), q = u && btObjPos(u); return q ? (q[0] - mp[0]) ** 2 + (q[1] - mp[1]) ** 2 : 1e9; }; ids = ids.slice().sort((x, y) => dd(x) - dd(y)); } } catch (e) { /* keep the default order */ }   // nearest to you first, so X/A hits the closest
+            BT.menu.mode = 'tgt'; BT.menu.cmd = cmd; BT.menu.list = ids; BT.menu.tgt = 0; BT.menu.idx = 0; BT.hudDirty = true; }
         function btChoose(i) {
             const M = BT.menu, u = btMine(); if (!u || !btMyTurn()) return;
             if (M.mode === 'tgt') { const id = M.list && M.list[i === undefined ? M.tgt : i]; if (id) { btSfx('ok'); if (M.cmd.kind === 'limit' && !M.cmd.lm) btComboOpen({ kind: 'limit', tgt: id }); else btSendCmd({ ...M.cmd, tgt: id }); } return; }
@@ -23226,10 +23227,15 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             padMove.x = mx; padMove.z = mz;
             PAD.rx = PAD.lockId ? 0 : rx; PAD.ry = zoomHold ? 0 : ry; PAD.zoom = zoomHold ? ry : 0;
             if (PAD.sprint) padMove.run = true;
-            if (activeMap === 'nuu' && NU.sw && hit(5) && NU.ready && nfAdv().mode !== 'aim' && !NF.dead && !NF.cast) { PAD.auto = false; nfRoll(); }      // Adventia: R1 is the dash
-            if ((activeMap === 'nuu' ? (!NU.sw && hit(5) && !b[4] && !b[6] && !b[7] && nowS() - (PAD.trigUp || -9) > 0.35 && nowS() - (PAD.setAt || 0) > 0.4) : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.setAt = nowS(); PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
+            if (activeMap === 'nuu' && hit(5) && NU.ready && nfAdv().mode !== 'aim' && !NF.dead && !NF.cast) { PAD.auto = false; nfRoll(); }      // Adventia: R1 is the dash
+            if ((activeMap === 'nuu' ? false : hit(5)) && !(activeMap === 'tag' && tgMine()) && !hcPadOn() && !(activeMap === 'nuu' && nfAdv().mode === 'aim')) { PAD.setAt = nowS(); PAD.set = (PAD.set + 1) % PAD_SETS.length; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage unavailable */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }   // RB
             const tagMode = activeMap === 'tag' && tgMine();      // laser tag: the triggers are weapons, not hotbars
             const gunHb = gnMode() && b[5] && !b[4];       // Gunner: hold RB for the emote hotbar (LT aims, RT fires); L3 flips left / right bar, R3 changes set
+            if (activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim') {      // Adventia Gunner: tap R1 = dodge, hold R1 = cross hotbar
+                if (hit(5)) { PAD.r1At = nowS(); PAD.r1Used = false; }
+                if (b[5]) { for (let k = 0; k < 8; k++) if (hit(PAD_SLOT_BTN[k])) PAD.r1Used = true; if (hit(10) || hit(11)) PAD.r1Used = true; }
+                else if (PAD.r1At) { if (!PAD.r1Used && nowS() - PAD.r1At < 0.3 && !NF.dead && !NF.cast) { PAD.auto = false; nfRoll(); } PAD.r1At = 0; }
+            }
             const ngOn = activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim', ngHb = ngOn && b[5] && !b[4];      // Adventia Gunner: L2 aims, R2 fires, hold RB for the cross hotbar
             if (ngOn) { NG.adsP = !ngHb && !!b[6]; NG.fireP = !ngHb && !!b[7]; } else { NG.adsP = false; NG.fireP = false; }
             const held = gunHb ? (GN.hbR ? 'R' : 'L') : ngHb ? (NG.hbR ? 'R' : 'L') : (tagMode || hcPadOn() || ngOn || (activeMap === 'nuu' && b[4])) ? '' : b[6] && !b[7] ? 'L' : b[7] && !b[6] ? 'R' : '';
