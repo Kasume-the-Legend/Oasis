@@ -13409,12 +13409,12 @@ function kbModel(THREE, mk) {
             const rot = (n, f) => Array.from({ length: n }, (_, i) => `<g transform="rotate(${i * 360 / n} 100 100)">${f}</g>`).join('');
             const el = document.createElement('div'); el.id = 'lk-ret';
             el.innerHTML = `<div class="lk-in"><svg viewBox="0 0 200 200">`
-                + `<g class="lk-cor">${rot(4, '<path class="y" stroke-width="4" d="M8 52V16Q8 8 16 8H52"/><path class="c" stroke-width="1.8" d="M20 44V24H44"/><path class="f" d="M20 24l8 0l-8 8z" opacity=".7"/>')}</g>`
+                + `<g class="lk-cor">${rot(4, '<path class="y" stroke-width="4" d="M8 52V16Q8 8 16 8H52"/><path class="c" stroke-width="1.8" d="M20 44V24H44"/><path class="f" d="M20 24l4.5 0l-4.5 4.5z" opacity=".7"/>')}</g>`
                 + `<path class="c" stroke-width="1.5" d="M84 5H116M84 195H116M5 84V116M195 84V116"/>`
                 + `<g class="lk-r1"><circle class="y" cx="100" cy="100" r="58" stroke-width="3.2" stroke-dasharray="78 24"/></g>`
                 + `<g class="lk-r2"><circle class="c" cx="100" cy="100" r="51" stroke-width="6" stroke-dasharray="1.4 4.4" opacity=".8"/></g>`
                 + `<circle class="c" cx="100" cy="100" r="44" stroke-width="1.6"/>`
-                + `<g class="lk-arr">${rot(8, '<path class="c" stroke-width="1.5" d="M100 22V74"/><path class="f" d="M100 78l-6-13h12z"/>')}</g>`
+                + `<g class="lk-arr">${rot(8, '<path class="c" stroke-width="1.5" d="M100 22V74"/><path class="f" d="M100 76l-4 -8.5h8z"/>')}</g>`
                 + `<circle class="y lk-c0" cx="100" cy="100" r="10" stroke-width="2.4"/>`
                 + `<circle class="lk-fl" cx="100" cy="100" r="60"/></svg></div>`;
             document.body.appendChild(el); LK.el = el; LK.v = new THREE.Vector3();
@@ -13423,9 +13423,11 @@ function kbModel(THREE, mk) {
             requestAnimationFrame(lkLoop);
             try {
                 if (!LK.el) { if (!document.body) return; lkBuild(); }
-                const el = LK.el, t = (activeMap === 'nuu' && NU.ready && NF.tgt && !NF.tgt.dead && !NF.dead && NF.tgt.node && NF.tgt.node.visible !== false) ? NF.tgt : null;
+                const el = LK.el, tA = (activeMap === 'nuu' && NU.ready && NF.tgt && !NF.tgt.dead && !NF.dead && NF.tgt.node && NF.tgt.node.visible !== false) ? NF.tgt : null, t = tA && NF.lockOn ? tA : null;
+                if (!!t !== !!LK.snd) { LK.snd = !!t; try { if (t) { if (!btCursorSnd(true)) dnBeep(1320, 0.06, 'square', 0.035); } else { dnBeep(660, 0.07, 'triangle', 0.028); setTimeout(() => dnBeep(440, 0.09, 'triangle', 0.022), 60); } } catch (e) { /* audio */ } }   // menu-cursor sound when you lock on, a soft cancel when you let go
                 if (!t) { if (LK.vis) { LK.vis = false; LK.tgt = null; el.classList.remove('on', 'snap', 'lock'); el.style.display = 'none'; } return; }
-                const hh = Math.max(0.6, (t.node.userData && t.node.userData.h) || 1.6), wy = t.node.getWorldPosition(LK.w || (LK.w = new THREE.Vector3())).y, v = LK.v.set(t.x, wy + hh * 0.5, t.z), d = Math.max(2, camera.position.distanceTo(v)), rc = renderer.domElement.getBoundingClientRect(); v.project(camera);   // centred on the monster's body, sized to its silhouette
+                const hh = Math.max(0.6, ((t.node.userData && t.node.userData.h) || 1.6) * (t.size || 1)), w3 = LK.w || (LK.w = new THREE.Vector3()); t.node.getWorldPosition(w3); const cy = w3.y + hh * 0.5;      // body centre = its feet + half its real height (model height x the monster's size)
+                const v = LK.v.set(w3.x, cy, w3.z), d = Math.max(2, camera.position.distanceTo(v)), rc = renderer.domElement.getBoundingClientRect(); v.project(camera);   // centred on the monster's body, sized to its silhouette
                 if (v.z > 1 || Math.abs(v.x) > 1.15 || Math.abs(v.y) > 1.15) { el.style.display = 'none'; LK.vis = false; return; }
                 const lock = !!NF.lockOn, fresh = LK.tgt !== t || lock !== LK.lock || !LK.vis;
                 if (!LK.vis) { el.style.display = 'block'; LK.vis = true; }
