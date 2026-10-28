@@ -25952,7 +25952,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         };
         function partyTick() {
             const now = Date.now();
-            for (const [id, m] of [...PARTY.members]) if (id !== me.id && now - m.ts > 15000) { PARTY.members.delete(id); sysParty(`${m.name} left the party.`); }
+            // members who log off stay in the party (shown as offline) until they leave, the leader removes them, or the party is disbanded
             const lid = partyLeaderId();
             if (PARTY.myLead && lid && lid !== me.id) PARTY.myLead = false;          // someone holds a newer claim
             if (!lid && !PARTY.myLead && now - PARTY.joinedAt > 6000) {                // nobody leads: the longest-standing member does
@@ -25962,8 +25962,11 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const now2 = partyLeaderId();
             if (now2 !== PARTY.lastLead) { PARTY.lastLead = now2; const m = PARTY.members.get(now2); if (m && PARTY.members.size > 1) sysParty(now2 === me.id ? 'You are now the party leader.' : `${m.name} is now the party leader.`); }
         }
+        function partyRosterSave() { if (!PARTY.code) return; try { localStorage.setItem('psPartyRoster', JSON.stringify({ c: PARTY.code, m: [...PARTY.members.values()].filter((q) => q.id !== me.id).map((q) => ({ id: q.id, n: q.name, lv: q.lv, jt: q.jt })) })); } catch (e) { /* storage blocked */ } }
+        function partyRosterRead(code) { try { const j = JSON.parse(localStorage.getItem('psPartyRoster') || 'null'); return j && j.c === code && Array.isArray(j.m) ? j.m.slice(0, PARTY_MAX) : []; } catch (e) { return []; } }
         function partyAnnounce() {
             if (!PARTY.net) return;
+            partyRosterSave();
             const s0 = partySelf(); partyTick(); const s = partySelf();
             PARTY.net.send({ t: 'pm', name: s.name, lv: s.lv, jt: s.jt, lead: s.lead ? 1 : 0, era: s.era, rm: s.rm, rd: s.rd });
             partyReadyWatch(); partyRender();
@@ -25976,9 +25979,10 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function partyJoin(code, creator) {
             code = normCode(code);
             if (!validParty(code)) { sysChat('That is not a party code. Party codes start with Q and have 12 letters and numbers.'); return false; }
-            partyLeave(true);
+            const saved = partyRosterRead(code); partyLeave(true);
             Object.assign(PARTY, { code, myLead: !!creator, era: creator ? 1 : 0, jt: Date.now(), joinedAt: Date.now(), rd: 0, rcN: 0, rcSaid: 0, lastLead: null });
             PARTY.members = new Map();
+            for (const r of saved) { const id = String(r.id); if (id !== me.id) PARTY.members.set(id, { id, name: nmClean(r.n, 16) || 'Guest', lv: clamp(Math.floor(+r.lv) || 1, 1, 999), jt: +r.jt || 0, lead: false, era: 0, rm: null, rd: 0, ts: 0 }); }      // friends who are offline stay on the roster
             PARTY.net = new Net('party-' + code, partyOnMsg, { password: code, quiet: true, maxPeers: PARTY_MAX, onPeer: () => partyAnnounce() });
             partySelf(); clearInterval(PARTY.timer); PARTY.timer = setInterval(partyAnnounce, 3000); partyAnnounce();
             try { localStorage.setItem('psParty', code); } catch (e) { /* storage blocked */ }
@@ -25990,7 +25994,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             try { PARTY.net.send({ t: 'pbye' }); } catch (e) { /* closing anyway */ }
             try { PARTY.net.close(); } catch (e) { /* ok */ }
             clearInterval(PARTY.timer); PARTY.net = null; PARTY.code = null; PARTY.members = new Map(); PARTY.myLead = false; PARTY.rd = 0;
-            try { localStorage.removeItem('psParty'); } catch (e) { /* storage blocked */ }
+            try { localStorage.removeItem('psParty'); localStorage.removeItem('psPartyRoster'); } catch (e) { /* storage blocked */ }
             if (!quiet) sysParty('You left the party.');
             partyRender();
         }
@@ -26001,9 +26005,12 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 case 'pm': {
                     if (!cur && PARTY.members.size >= PARTY_MAX) return;
                     const name = nmClean(m.name, 16) || 'Guest', e = { id, name, lv: Number.isFinite(+m.lv) ? clamp(Math.floor(+m.lv), 1, 999) : 1, jt: Number.isFinite(+m.jt) ? +m.jt : 0, lead: !!m.lead, era: Number.isFinite(+m.era) ? clamp(Math.floor(+m.era), 0, 1e6) : 0, rm: partyRmOk(m.rm), rd: [0, 1, 2, 3].includes(m.rd) ? m.rd : 0, ts: Date.now() };
+                    for (const [oid, om] of [...PARTY.members]) if (oid !== id && om.name === name && !partyFresh(om)) PARTY.members.delete(oid);
                     PARTY.members.set(id, e); if (!cur) sysParty(`${name} joined the party.`); partyRender(); break;
                 }
                 case 'pbye': if (cur) { PARTY.members.delete(id); sysParty(`${cur.name} left the party.`); partyRender(); } break;
+                case 'pdis': if (id === partyLeaderId()) { partyLeave(true); sysChat('The party leader disbanded the party.'); } break;
+                case 'prm': if (id === partyLeaderId() && m.id && String(m.id) !== me.id) { PARTY.members.delete(String(m.id)); partyRosterSave(); partyRender(); } break;
                 case 'plead': if (id === partyLeaderId() && m.to === me.id) { PARTY.myLead = true; PARTY.era = partyEra() + 1; partyAnnounce(); } break;
                 case 'pkick': if (id === partyLeaderId() && m.to === me.id) { partyLeave(true); sysChat('The party leader removed you from the party.'); } break;
                 case 'pcs': { if (!cur) break; const t = String(m.text || '').slice(0, 240); if (!t || Date.now() - (cur.lastPcs || 0) < 500) break; cur.lastPcs = Date.now(); const nm = String(m.n || 'Companion').slice(0, 24), col = validHex(m.col) || '#c4b5fd'; addChat(nm + ' (' + cur.name + ')', t, col); const pe = peers.get(id), r = pe && pe.cm && pe.cm.get(String(m.i || '').slice(0, 40)); if (r) r.actor.showBubble(t, col); break; }
@@ -26081,11 +26088,11 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             // the little list on the side of the screen
             U.hud.textContent = '';
             if (PARTY.code) {
-                const list = [...PARTY.members.values()].filter(partyFresh).sort((a, b) => (a.id === partyLeaderId() ? -1 : b.id === partyLeaderId() ? 1 : a.jt - b.jt));
+                const list = [...PARTY.members.values()].sort((a, b) => (a.id === partyLeaderId() ? -1 : b.id === partyLeaderId() ? 1 : a.jt - b.jt));
                 for (const m of list) {
                     const r = document.createElement('div'); r.className = 'pt-row' + (m.id === partyLeaderId() ? ' lead' : '') + (m.id === me.id ? ' me' : '');
                     const n = document.createElement('span'); n.className = 'pt-n'; n.textContent = (m.id === partyLeaderId() ? '♛ ' : '') + m.name;
-                    const l = document.createElement('i'); l.className = 'pt-lv'; l.textContent = 'Lv ' + m.lv;
+                    const l = document.createElement('i'); l.className = 'pt-lv'; l.textContent = 'Lv ' + m.lv + (partyFresh(m) ? '' : ' 💤'); if (!partyFresh(m)) r.style.opacity = '.5';
                     const d = document.createElement('em'); d.className = 'pt-rd'; d.textContent = ['', '✔', '✘', '…'][m.rd] || '';
                     r.append(n, l, d); U.hud.appendChild(r);
                 }
@@ -26106,21 +26113,22 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 return;
             }
             const cr = el('div', 'pt-code'); cr.append(el('span', '', 'Party code'), el('b', '', fmtCode(PARTY.code)), btn('Copy code', () => partyCopy(fmtCode(PARTY.code), 'Party code')), btn('Copy link', () => partyCopy(partyLinkOf(PARTY.code), 'Invite link'))); b.append(cr);
-            const lid = partyLeaderId(), lead = lid === me.id, list = [...PARTY.members.values()].filter(partyFresh).sort((a, c) => (a.id === lid ? -1 : c.id === lid ? 1 : a.jt - c.jt));
+            const lid = partyLeaderId(), lead = lid === me.id, list = [...PARTY.members.values()].sort((a, c) => (a.id === lid ? -1 : c.id === lid ? 1 : a.jt - c.jt));
             const ml = el('div', 'pt-list');
             for (const m of list) {
                 const r = el('div', 'pt-mrow' + (m.id === lid ? ' lead' : ''));
-                const top = el('div', 'pt-mtop'); top.append(el('b', '', (m.id === lid ? '♛ ' : '') + m.name + (m.id === me.id ? ' (you)' : '')), el('i', '', 'Lv ' + m.lv), el('em', '', ['', '✔ ready', '✘ not ready', '… waiting'][m.rd] || ''));
+                const top = el('div', 'pt-mtop'); top.append(el('b', '', (m.id === lid ? '♛ ' : '') + m.name + (m.id === me.id ? ' (you)' : '')), el('i', '', 'Lv ' + m.lv), el('em', '', partyFresh(m) ? (['', '✔ ready', '✘ not ready', '… waiting'][m.rd] || '') : '💤 offline'));
                 const loc = el('div', 'pt-loc', m.rm ? (m.rm.l || 'In a room') : 'Not in a room'); r.append(top, loc);
                 const acts = el('div', 'pt-acts');
-                if (m.id !== me.id && m.rm) acts.append(btn('Go to', () => partyGoTo(m.rm)));
-                if (lead && m.id !== me.id) { acts.append(btn('Make leader', () => { PARTY.net.send({ t: 'plead', to: m.id }); PARTY.myLead = false; }), btn('Remove', () => { PARTY.net.send({ t: 'pkick', to: m.id }); PARTY.members.delete(m.id); partyRender(); }, 'red')); }
+                if (m.id !== me.id && m.rm && partyFresh(m)) acts.append(btn('Go to', () => partyGoTo(m.rm)));
+                if (lead && m.id !== me.id) { acts.append(btn('Make leader', () => { PARTY.net.send({ t: 'plead', to: m.id }); PARTY.myLead = false; }), btn('Remove', () => { PARTY.net.send({ t: 'pkick', to: m.id }); PARTY.net.send({ t: 'prm', id: m.id }); PARTY.members.delete(m.id); partyRosterSave(); partyRender(); }, 'red')); }
                 if (acts.children.length) r.append(acts); ml.append(r);
             }
             b.append(ml);
             const row = el('div', 'pt-actions');
             row.append(btn('📣 Call party to my room', partySummon, 'go'));
             if (lead) row.append(btn('✔ Ready check', partyReadyCheck));
+            if (lead) row.append(btn('Disband party', () => { if (!confirm('Disband the party for everyone? Members who are offline are removed too.')) return; try { PARTY.net.send({ t: 'pdis' }); } catch (e) { /* closing anyway */ } setTimeout(() => { partyLeave(true); sysParty('You disbanded the party.'); }, 250); }, 'red'));
             row.append(btn('Leave party', () => partyLeave(false), 'red')); b.append(row);
             // people standing here who are not in the party yet
             const near = [...peers.entries()].filter(([pid, p]) => p && p.name && !PARTY.members.has(pid));
@@ -31741,7 +31749,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
               hb.addEventListener('click', (e) => { e.stopPropagation(); toggleFullscreen(); });
               document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync); sync(); }
             xmbInit();
-            partyInit();
+            partyInit(); try { const lastP = localStorage.getItem('psParty'); if (lastP && validParty(lastP)) setTimeout(() => { if (!PARTY.code) partyJoin(lastP, false); }, 2500); } catch (e) { /* storage blocked */ }
             wxInit();
             $('close-space-info').addEventListener('click', () => spaceModal.classList.add('hidden'));
             $('space-info-ok').addEventListener('click', () => spaceModal.classList.add('hidden'));
