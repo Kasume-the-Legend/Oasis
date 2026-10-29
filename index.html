@@ -13725,7 +13725,7 @@ function kbModel(THREE, mk) {
                     let who = onMe ? 'YOU' : ((peers.get(t.tid) || {}).name || (t.tid ? 'ALLY' : '--')); et.textContent = 'ENMITY ' + Math.round(pc) + '%   ▶ ' + String(who).toUpperCase().slice(0, 14) + (role !== 'tank' && onMe ? '  - PULLING AGGRO' : role === 'tank' && !onMe && pc < 100 ? '  - TAUNT!' : '');
                 }
             } else u.tf.classList.remove('on');
-            const now = performance.now() / 1000; nfXbTick(now); try { saoSelfTick(); } catch (e) { /* hp bar */ } try { nfPartyTick(u, now); } catch (e) { /* party list */ } try { tnSync(); tnBroadcast(false); } catch (e) { /* tents */ } if (u.fate && (ZN.on || DG.on)) u.fate.classList.remove('on'); try { if (NU.lbl) { const t = DG.on ? String(DG.th.name).toUpperCase() + ' · DUNGEON' : ZN.on ? (ZN.key === 'tent' ? 'CAMP · ' : 'FLOOR 2 · ') + String(ZN.zones[ZN.key].name).toUpperCase() : 'FLOOR 1 · FOREST OF NUU'; if (NU.lbl.textContent !== t) NU.lbl.textContent = t; } } catch (e) { /* label */ } { const dt = Math.min(0.5, Math.max(0, now - (NU.mtT || now))); NU.mtT = now; nuMusicTick(dt); }
+            const now = performance.now() / 1000; nfXbTick(now); try { abTick(now); } catch (e) { /* arts */ } try { saoSelfTick(); } catch (e) { /* hp bar */ } try { nfPartyTick(u, now); } catch (e) { /* party list */ } try { tnSync(); tnBroadcast(false); } catch (e) { /* tents */ } if (u.fate && (ZN.on || DG.on)) u.fate.classList.remove('on'); try { if (NU.lbl) { const t = DG.on ? String(DG.th.name).toUpperCase() + ' · DUNGEON' : ZN.on ? (ZN.key === 'tent' ? 'CAMP · ' : 'FLOOR 2 · ') + String(ZN.zones[ZN.key].name).toUpperCase() : 'FLOOR 1 · FOREST OF NUU'; if (NU.lbl.textContent !== t) NU.lbl.textContent = t; } } catch (e) { /* label */ } { const dt = Math.min(0.5, Math.max(0, now - (NU.mtT || now))); NU.mtT = now; nuMusicTick(dt); }
             if (NF.cast) { u.cast.classList.add('on'); u.cast.querySelector('span').textContent = NF.cast.n; u.cast.querySelector('i').style.width = Math.min(100, (now - NF.cast.t0) / NF.cast.dur * 100) + '%'; } else u.cast.classList.remove('on');
         }
         /* ---- skills (FFXIV style: global cooldown, casts that break when you move, auto-attack when a hostile is in reach) ---- */
@@ -14655,13 +14655,782 @@ function kbModel(THREE, mk) {
         }
         const NF_NEEDT = { hit: 1, dash: 1, ground: 1, lb: 1, steal: 1, wildfire: 1, devour: 1 };
         function nfUse(i) {
-            NU.man = undefined; const s = NF_SK[i]; if (!s || !NU.ready || activeMap !== 'nuu' || NF.tele) return; if (s.k === 'arrow') { arSelect(s.el); return; } if (!nfCan(s)) return;
+            NU.man = undefined; const s = (i && typeof i === 'object') ? i : NF_SK[i]; if (!s || !NU.ready || activeMap !== 'nuu' || NF.tele) return; if (s.k === 'arrow') { arSelect(s.el); return; } if (!nfCan(s)) return;
             if (NF_NEEDT[s.k] && !s.back) {
                 if (!NF.tgt || NF.tgt.dead) { const near = nfNear(Math.min(nfRanged() ? 18 : 14, s.range || 14), true); if (near) { nfTarget(near); if (PAD.active) NF.lockOn = true; } else { nfPop(nfPos().clone().setY(nfPos().y + 2), 'No target', '#cfd8e0'); return; } }
                 if (nfDist(NF.tgt) > s.range + (NF.tgt.big || 1) * 0.6) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Out of range', '#ffb347'); return; } if (PAD.active) NF.lockOn = true; if (s.k !== 'dash') nfFace(NF.tgt);
             } else if ((s.k === 'cone' || s.k === 'line') && NF.tgt && !NF.tgt.dead) nfFace(NF.tgt);
             const go = () => nfResolve(s);
             if (s.cast) { NF.cast = { n: s.n, t0: performance.now() / 1000, dur: s.cast * (NF.simSpd || 1), s, x: nfPos().x, z: nfPos().z, go }; if (s.gcd) NF.gcd = 2.2 * (NF.simSpd || 1); try { nfMageAnim(s, 'start'); nfCastFx(s); } catch (e) { /* cosmetic */ } } else go();
+        }
+        /* ================= THE ARTS BOOK: every move from FFVII, VIII, IX, XII and XIV, shared out over the classes by level, pinnable to a custom hotbar =================
+           row = level | name | icon | code | potency | MP | recast(s)
+           code: first letter = kind (h hit, c cone, l line, a self aoe, g ground, A aoe heal, H heal, R regen, G guard, B buff, M restore MP, T provoke, D dash) · m magic · o damage over time · .x element (f fire i ice t thunder y holy s water u ultima w wind q quake b bio r flare m meteor d drain g gravity c comet x melt e stone) */
+        const AB_DATA = {
+            hero: {
+                7: `5|Braver|⚔️|h|2.2|6|8
+12|Cross-Slash|✝️|h|2.6|9|10
+18|Blade Beam|🌠|l|2.3|10|9
+26|Climhazzard|🌀|h|3.2|12|14
+34|Meteorain|☄️|a|3.0|16|20
+42|Finishing Touch|💀|h|3.6|18|28
+52|Octaslash|🗡️|a|3.4|22|30
+60|Omnislash|⚡|h|5.0|30|60
+70|Heartless Angel|🪽|h|4.2|26|45
+84|Supernova|🌌|gm.m|6.0|60|120`,
+                8: `8|Rough Divide|💨|D|1.8|0|8
+16|Fated Circle|⭕|a|2.6|10|14
+24|Blasting Zone|💥|h|3.6|16|24
+32|Revolver Drive|🔫|h|2.4|8|10
+40|Gunblade Trigger|🔔|B|0|10|40
+48|Renzokuken|🌀|h|4.4|24|50
+62|Lion Heart|🦁|h|6.0|36|90`,
+                9: `10|Shock|⚡|a|2.0|10|12
+20|Thunder Slash|🌩️|lm.t|2.4|14|14
+30|Stock Break|🔨|h|3.0|14|18
+36|Charge!|📣|B|0|8|45
+44|Climhazzard Seiken|🌪️|h|3.4|16|20
+56|Shock Seiken|💫|a|3.6|22|26`,
+                12: `22|Charge|⚡|B|0|0|60
+38|Quickening: Mist Burst|🌫️|a|4.4|30|70
+58|Quickening: Mist Torrent|🌫️|a|5.4|40|100`,
+                14: `1|Hakaze|⚔️|h|1.2|0|0
+4|Jinpu|🌬️|h|1.4|2|0
+6|Third Eye|👁️|G|0.4|0|25
+18|Shifu|💨|h|1.5|2|0
+26|Fuga|🌀|c|1.3|3|0
+30|Gekko|🌙|h|2.0|4|0
+40|Kasha|🌸|h|2.0|4|0
+50|Yukikaze|❄️|h|2.2|4|0
+50|Meikyo Shisui|🧘|B|0|0|55
+52|Shinten|🏯|h|2.6|10|10
+60|Kyuten|🌪️|a|2.2|12|12
+62|Guren|🔥|l|3.6|20|30
+66|Midare Setsugekka|❄️|h|4.4|24|40
+68|Tenka Goken|🔥|c|3.8|22|30
+70|Tsubame-gaeshi|🔁|h|3.0|18|20
+76|Ogi Namikiri|🌊|c|4.6|26|45
+80|Zanshin|🎯|h|3.6|20|30
+90|Hissatsu: Senei|🩸|h|4.0|24|40`
+            },
+            fighter: {
+                7: `6|Beat Rush|👊|h|2.0|4|8
+14|Somersault|🤸|h|2.4|8|10
+22|Waterkick|💧|c|2.6|10|12
+30|Meteodrive|☄️|h|3.4|14|18
+38|Dolphin Blow|🐬|h|3.6|16|22
+46|Meteor Strike|🌠|h|4.2|20|30
+54|Final Heaven|💥|a|6.0|34|80
+64|Great Gospel|🙏|G|0.8|20|120`,
+                8: `8|Punch Rush|👊|h|1.8|0|6
+16|Booya|💫|h|2.4|6|8
+24|Heel Drop|🦶|h|2.8|8|10
+32|Mach Kick|💨|c|3.0|10|12
+48|Burning Rave|🔥|h|4.0|22|40
+58|The End|☠️|h|5.2|32|70`,
+                9: `12|Chakra|🌀|M|0.3|0|40
+20|Spare Change|🪙|h|2.2|0|14
+30|Aura|💫|B|0|8|40
+42|Revive|🕯️|H|0.4|18|60
+50|Countdown|⏳|a|3.0|22|50`,
+                12: `24|Telekinesis|✋|h|1.6|0|10
+44|Quickening: Gale Strike|🌬️|a|4.2|28|80`,
+                14: `1|Bootshine|🥾|h|1.2|0|0
+4|True Strike|🦵|h|1.3|2|0
+15|Snap Punch|👊|h|1.4|2|0
+18|Mantra|🙏|R|0.05|0|40
+20|Riddle of Earth|🪨|G|0.35|0|30
+26|Demolish|🏚️|ho|1.2|4|0
+30|Twin Snakes|🐍|h|1.8|4|0
+35|Steel Peak|⛰️|h|2.2|8|10
+40|Forbidden Chakra|🌀|h|2.4|10|14
+50|Four-point Fury|🌀|a|1.6|6|0
+52|Howling Fist|🗣️|l|2.6|14|18
+54|Perfect Balance|⚖️|B|0|0|50
+62|Dragon Kick|🐉|h|2.0|6|0
+66|Six-sided Star|⭐|h|3.2|18|30
+68|Riddle of Wind|🌬️|B|0|0|60
+70|Elixir Field|🍃|a|3.0|20|28
+74|Flint Strike|🔥|a|3.6|24|34
+78|Tornado Kick|🌪️|h|5.0|32|60
+84|Brotherhood|🤝|B|0|0|90
+86|Rising Phoenix|🔥|a|4.4|30|45
+90|Celestial Revolution|🌅|c|3.4|22|30`
+            },
+            gunner: {
+                7: `6|Big Shot|🔫|h|2.0|4|6
+14|Mindblow|🧠|h|2.2|0|10
+22|Grenade Bomb|💣|g|2.6|10|14
+30|Hammerblow|🔨|h|3.0|12|18
+40|Satellite Beam|🛰️|g|4.0|26|40
+52|Angermax|😡|a|4.2|28|45
+62|Catastrophe|☄️|g|5.0|36|70`,
+                12: `28|Poach|🎯|h|1.8|0|20
+46|Quickening: Dust to Dust|💨|a|4.6|30|80`,
+                14: `1|Split Shot|🔫|h|1.2|0|0
+2|Slug Shot|🎯|h|1.3|2|0
+4|Reassemble|🔧|B|0|0|55
+26|Clean Shot|💥|h|1.6|3|0
+30|Hot Shot|🔥|h|2.0|6|10
+40|Heat Blast|☄️|h|1.7|6|1
+45|Spread Shot|🌫️|c|1.4|5|0
+52|Rook Autoturret|🤖|a|2.6|20|60
+56|Drill|🪛|h|2.4|8|20
+58|Hypercharge|🔥|B|0|8|60
+70|Gauss Round|🔵|h|1.8|6|8
+74|Ricochet|🏀|l|2.0|8|12
+76|Air Anchor|⚓|h|3.0|10|40
+80|Chain Saw|🪚|h|3.4|14|40
+90|Full Metal Field|💥|a|5.0|30|60
+100|Excavator|⛏️|l|4.8|26|45`
+            },
+            artemis: {
+                8: `8|Normal Shot|🔫|h|1.4|2|0
+16|Fast Shot|⚡|h|1.8|4|4
+24|Fire Shot|🔥|hm.f|2.2|8|0
+32|Armor Shot|🛡️|h|2.6|8|10
+42|Silent Shot|🤫|h|2.8|8|12
+54|Hyper Shot|💫|h|3.6|18|30
+64|Pulse Shot|📡|h|4.0|20|40`,
+                12: `26|Libra|🔍|B|0|0|30
+48|Quickening: Tempest|🌀|a|4.4|30|80`,
+                14: `1|Heavy Shot|🏹|h|1.3|0|0
+2|Straight Shot|🎯|h|1.5|2|0
+6|Venomous Bite|🐍|ho|1.0|4|0
+8|Raging Strikes|💢|B|0|0|60
+20|Quick Nock|🌫️|c|1.4|4|0
+30|Wind Bite|🌬️|ho|1.0|4|0
+38|The Warden's Paean|🕊️|H|0.2|10|45
+40|Bloodletter|🩸|h|2.2|8|15
+45|Repelling Shot|↩️|D|1.2|0|30
+50|Barrage|🎇|h|2.8|10|30
+52|Battle Voice|📣|B|0|0|90
+54|Pitch Perfect|🎵|h|2.6|0|12
+56|Empyreal Arrow|✨|h|2.4|8|15
+60|Sidewinder|🐍|h|3.0|12|25
+62|Nature's Minne|🌿|R|0.05|0|60
+64|Mage's Ballad|🎶|B|0|0|80
+66|Army's Paeon|🎼|B|0|0|80
+70|Rain of Death|🌧️|g|2.8|16|20
+72|Wanderer's Minuet|🎻|B|0|0|80
+76|Apex Arrow|🏹|l|4.0|20|40
+80|Blast Arrow|💥|l|3.4|18|30
+90|Radiant Finale|🌟|B|0|0|110
+100|Resonant Arrow|🏹|h|3.2|14|20`
+            },
+            knight: {
+                7: `15|Cover|🛡️|G|0.5|0|30
+30|Big Guard|🛡️|G|0.6|12|40
+50|Barrier|🔷|G|0.35|14|25`,
+                8: `28|Fire Cross|🔥|a|3.0|16|24
+46|Sorceress's Knight|⚔️|h|4.2|24|40`,
+                9: `8|Iai Strike|⚡|h|2.2|8|10
+18|Minus Strike|➖|h|2.4|8|10
+28|Plus Strike|➕|h|2.6|10|12
+36|Power Break|🔨|h|2.6|10|16
+44|Armor Break|🛡️|h|2.6|10|16
+52|Mental Break|🧠|h|2.6|10|16
+60|Magic Break|✨|h|2.6|10|16`,
+                14: `1|Fast Blade|⚔️|h|1.1|0|0
+4|Riot Blade|⚔️|h|1.2|2|0
+6|Sentinel|🛡️|G|0.4|0|120
+6|Defiance|🔥|T|0|0|10
+8|Flash|✨|a|1.0|6|0
+10|Shield Lob|🛡️|h|1.0|4|0
+10|Grit|🛡️|G|0.2|0|10
+12|Fight or Flight|⚔️|B|0|0|60
+18|Berserk|💢|B|0|0|60
+26|Royal Authority|👑|h|1.8|4|0
+30|Spirits Within|👻|h|2.4|8|30
+30|Vengeance|🛡️|G|0.4|0|120
+35|Equilibrium|💚|H|0.25|0|60
+38|Sheltron|🛡️|G|0.4|10|5
+38|Infuriate|🔥|M|0.1|0|60
+40|Circle of Scorn|⭕|a|2.2|10|25
+40|Inner Beast|😡|h|2.4|0|10
+45|Holy Spirit|✨|hm.y|2.6|12|0
+50|Cover Oath|🛡️|G|0.5|0|120
+50|Living Dead|💀|G|0.9|0|300
+52|Nascent Flash|⚡|a|1.5|0|25
+54|Fell Cleave|🪓|h|3.0|0|10
+54|Intervention|🛡️|G|0.3|8|10
+60|Confiteor|✝️|hm.y|3.6|18|20
+60|Decimate|🌀|a|2.6|0|10
+64|Upheaval|🌋|a|2.6|8|30
+68|Onslaught|💨|D|2.0|0|12
+70|Primal Rend|💥|g|4.0|0|30
+74|The Blackest Night|🛡️|G|0.4|10|15
+80|Blade of Valor|⚔️|hm.y|3.8|18|12
+90|Hallowed Ground|🌟|G|0.9|0|420
+92|Damnation|🔥|G|0.4|0|120
+100|Primal Ruination|☄️|g|5.0|24|45`
+            },
+            dragoon: {
+                9: `10|Jump|🦅|D|2.2|0|10
+18|Dragon's Crest|🐲|h|2.4|8|14
+26|Reis's Wind|🌬️|R|0.06|10|30
+34|Lancer|🏹|hm.d|2.2|6|10
+42|White Draw|⚪|M|0.15|0|40
+58|Six Dragons|🐉|a|4.2|22|45`,
+                14: `1|True Thrust|🔱|h|1.2|0|0
+4|Vorpal Thrust|🔱|h|1.3|2|0
+6|Piercing Talon|🏹|h|1.0|2|0
+8|Lance Charge|⚡|B|0|0|60
+18|Heavens' Thrust|🔱|h|1.8|4|0
+30|Dragon Jump|🦅|D|2.4|0|20
+40|Elusive Jump|↩️|D|1.6|0|30
+45|Dragonfire Dive|🐉|g|3.4|16|60
+50|Geirskogul|🔱|l|3.2|10|30
+54|Spineshatter Dive|💫|D|2.0|0|30
+56|Battle Litany|📖|B|0|0|120
+60|Mirage Dive|🌈|h|2.6|8|0
+62|Nastrond|🐉|c|3.4|14|10
+66|Stardiver|⭐|D|4.2|20|30
+70|Wyrmwind Thrust|🌀|l|3.0|14|10
+74|Dragon Sight|👁️|B|0|0|120
+76|Rise of the Dragon|🐲|a|3.6|18|0
+80|Starcross|✨|a|4.0|20|0
+86|Life Surge|💨|B|0|0|45
+90|Winged Glide|🪽|D|1.8|0|60`
+            },
+            chef: {
+                8: `8|Laser Eye|👁️|h|2.0|6|8
+16|Ultra Waves|🌊|h|2.4|8|10
+24|Electrocute|⚡|hm.t|2.6|10|12
+32|Degenerator|☠️|h|3.0|12|18
+40|Aqua Breath|🌊|am.s|3.0|16|20
+48|Micro Missiles|🚀|a|3.4|16|24
+56|Acid|🧪|ho|2.4|14|20
+64|Gatling Gun|🔫|c|3.8|20|28
+72|Fire Breath|🔥|cm.f|3.6|18|20
+80|Bad Breath|🤢|a|3.2|20|30
+88|White Wind|🌬️|H|0.4|30|45
+96|Homing Laser|🎯|h|5.0|34|60`,
+                9: `10|Frog Drop|🐸|h|1.8|4|10
+20|Limit Glove|🧤|h|3.0|8|20
+30|Mighty Guard|🛡️|G|0.5|18|60
+40|Angel's Snack|🍪|H|0.35|10|40
+50|Matra Magic|✨|h|3.2|18|20
+60|Magic Hammer|🔨|M|0.15|0|30
+70|Roulette|🎲|a|3.4|20|30
+80|Lv5 Death|☠️|a|4.2|24|50`,
+                7: `14|Beta|💥|gm.r|3.0|20|20
+22|Big Guard|🛡️|G|0.6|20|60
+30|Frog Song|🐸|a|1.6|10|15
+46|Trine|⚡|gm.t|3.6|26|30
+54|Aqualung|🌊|am.s|3.4|22|24
+62|Flame Thrower|🔥|c|3.0|14|16
+70|Laser|🔷|l|3.8|20|24
+78|Pandora's Box|📦|a|4.6|28|50
+86|Magic Breath|🌈|am.r|4.2|30|40`,
+                14: `12|Sonic Boom|💨|hm.w|1.6|4|0
+18|Water Cannon|💧|hm.s|2.0|6|0
+24|Goblin Punch|👊|h|2.0|5|8
+32|Flying Sardine|🐟|h|1.4|3|8
+40|1000 Needles|📌|h|3.0|10|15
+44|Glass Dance|💃|c|2.4|10|12
+48|Faze|😵|h|1.2|4|10
+52|Ram's Voice|🐏|a|2.2|12|15
+56|Dragon's Voice|🐉|a|3.2|16|20
+60|Whistle|🎵|B|0|8|60
+64|Tail Screw|🪛|h|3.4|12|18
+68|Mountain Buster|⛰️|c|3.6|14|18
+72|Hydro Pull|🌊|a|2.4|10|15
+76|Sharpened Knife|🔪|h|2.8|8|10
+84|Peripheral Synthesis|🧬|h|3.6|14|20
+88|Nightbloom|🌸|a|4.2|22|30
+92|Feather Rain|🪶|g|3.8|18|20
+96|Eruption|🌋|g|4.2|22|25
+100|Shock Strike|⚡|h|4.6|24|30`
+            },
+            thief: {
+                9: `6|Dagger|🗡️|h|1.3|0|0
+16|Detect|🔍|B|0|0|40
+24|What's That!?|❓|h|1.8|0|16
+32|Soul Blade|👻|h|2.8|8|16
+40|Annoy|😈|h|1.6|0|14
+48|Sacrifice|💔|h|3.2|0|40
+56|Lucky Seven|7️⃣|h|3.6|12|30
+64|Thievery|🧤|h|3.4|10|24
+72|Dyne|🌌|a|4.8|28|50
+80|Grand Lethal|⚔️|a|5.6|34|80`,
+                7: `10|Clear Tranquil|🌿|H|0.3|12|30
+18|Landscaper|🌋|g|2.6|12|18
+26|Bloodfest|🩸|a|3.0|16|24
+34|Gauntlet|🥊|h|3.0|14|20
+42|Shuriken Throw|🥷|h|2.2|0|8
+50|All Creation|🌌|a|4.4|26|45
+58|Greased Lightning|⚡|h|3.6|20|30`,
+                14: `1|Spinning Edge|🗡️|h|1.2|0|0
+4|Gust Slash|🌬️|h|1.3|2|0
+6|Shade Shift|🌑|G|0.3|0|120
+15|Hide|🫥|B|0|0|20
+26|Aeolian Edge|🌀|h|1.8|3|0
+30|Death Blossom|🌸|a|1.2|3|0
+35|Mug|💰|h|1.6|0|90
+40|Trick Attack|🎯|h|3.0|0|60
+45|Ninjutsu: Katon|🔥|gm.f|2.4|12|20
+48|Ninjutsu: Raiton|⚡|lm.t|2.8|14|20
+52|Ninjutsu: Hyoton|❄️|hm.i|2.6|12|20
+54|Ninjutsu: Huton|🌬️|B|0|0|60
+56|Ninjutsu: Doton|🪨|gm.e|2.0|12|30
+60|Ninjutsu: Suiton|💧|hm.s|2.6|12|20
+62|Dream Within a Dream|💫|h|3.0|0|60
+70|Phantom Kamaitachi|🌪️|a|3.0|14|45
+74|Bunshin|👥|B|0|0|90
+76|Forked Raiju|⚡|D|3.2|0|20
+82|Hollow Nozuchi|🍃|a|3.4|0|0
+86|Ten Chi Jin|🔥|B|0|0|120
+90|Meisui|💧|H|0.3|0|120
+92|Bhavacakra|⭕|h|3.6|0|0`
+            }
+            ,
+            blackmage: {
+                7: `4|Fire|🔥|hm.f|1.6|4|0
+8|Ice|❄️|hm.i|1.6|4|0
+12|Lightning|⚡|hm.t|1.6|4|0
+16|Poison|☠️|hm.b|1.8|6|0
+20|Fire 2|🔥|am.f|2.2|10|6
+24|Ice 2|❄️|am.i|2.2|10|6
+28|Lightning 2|⚡|am.t|2.2|10|6
+34|Bio|🧪|hm.b|2.2|10|8
+40|Demi|🌑|hm.g|2.8|14|12
+46|Comet|☄️|gm.c|3.4|18|20
+52|Fire 3|🔥|hm.f|3.4|18|8
+56|Ice 3|❄️|hm.i|3.4|18|8
+60|Lightning 3|⚡|hm.t|3.4|18|8
+64|Quake|🌍|am.q|3.6|22|20
+70|Flare|🔆|hm.r|4.6|30|25
+76|Meteor|☄️|gm.m|5.6|42|50
+82|Ultima|✨|am.u|6.4|56|90
+90|Shiva|❄️|am.i|4.8|34|45
+96|Ifrit|🔥|am.f|5.2|38|45`,
+                8: `6|Fire|🔥|hm.f|1.5|4|0
+10|Blizzard|❄️|hm.i|1.5|4|0
+14|Thunder|⚡|hm.t|1.5|4|0
+18|Fira|🔥|am.f|2.2|10|6
+22|Blizzara|❄️|am.i|2.2|10|6
+26|Thundara|⚡|am.t|2.2|10|6
+32|Drain|🩸|hm.d|2.0|8|6
+38|Bio|🧪|hm.b|2.2|10|8
+44|Demi|🌑|hm.g|2.8|12|10
+50|Firaga|🔥|am.f|3.4|18|8
+54|Blizzaga|❄️|am.i|3.4|18|8
+58|Thundaga|⚡|am.t|3.4|18|8
+66|Quake|🌍|am.q|3.8|24|20
+72|Meteor|☄️|gm.m|5.4|40|50
+80|Ultima|✨|am.u|6.4|56|90
+94|Apocalypse|🌌|am.u|7.0|60|120`,
+                9: `5|Fire|🔥|hm.f|1.5|4|0
+9|Blizzard|❄️|hm.i|1.5|4|0
+13|Thunder|⚡|hm.t|1.5|4|0
+17|Sleep|💤|hm.g|1.2|6|0
+27|Poison|☠️|hm.b|1.8|8|0
+35|Fira|🔥|am.f|2.4|12|6
+39|Blizzara|❄️|am.i|2.4|12|6
+43|Thundara|⚡|am.t|2.4|12|6
+47|Bio|🧪|hm.b|2.6|14|8
+55|Firaga|🔥|am.f|3.4|18|8
+59|Blizzaga|❄️|am.i|3.4|18|8
+63|Thundaga|⚡|am.t|3.4|18|8
+69|Flare|🔆|hm.r|4.6|30|20
+75|Doomsday|☠️|am.g|5.0|36|60
+83|Meteor|☄️|gm.m|5.4|40|50
+89|Comet|☄️|gm.c|4.0|24|24
+92|Terra Homing|🌎|am.q|4.8|34|45
+98|Ultima|✨|am.u|6.6|60|90`,
+                12: `9|Fire|🔥|hm.f|1.5|4|0
+15|Blizzard|❄️|hm.i|1.5|4|0
+21|Thunder|⚡|hm.t|1.5|4|0
+29|Fira|🔥|am.f|2.4|12|6
+33|Blizzara|❄️|am.i|2.4|12|6
+37|Thundara|⚡|am.t|2.4|12|6
+41|Scourge|☠️|hm.b|2.6|14|10
+45|Aero|🌬️|hm.w|2.4|12|8
+49|Bleed|🩸|hm.d|2.6|12|10
+57|Firaga|🔥|am.f|3.6|20|8
+61|Blizzaga|❄️|am.i|3.6|20|8
+65|Thundaga|⚡|am.t|3.6|20|8
+73|Gravity|🌑|hm.g|3.4|20|16
+77|Flare|🔆|hm.r|4.8|32|24
+85|Scathe|💢|hm.r|4.4|28|20
+91|Ultima|✨|am.u|6.2|56|90
+97|Zodiark|🌌|am.u|7.2|70|120`,
+                14: `1|Blizzard|❄️|hm.i|1.4|0|0
+2|Fire|🔥|hm.f|1.6|3|0
+4|Thunder|⚡|hm.t|1.2|4|0
+6|Transpose|🔁|M|0.2|0|10
+12|Blizzard II|❄️|am.i|1.8|8|0
+18|Sleep|💤|hm.g|1.0|6|0
+20|Manaward|🔷|G|0.3|0|120
+22|Blizzard III|❄️|hm.i|2.6|10|0
+26|Freeze|🧊|am.i|2.2|12|0
+28|Thunder III|⚡|hm.t|2.6|10|0
+35|Fire III|🔥|hm.f|3.0|12|0
+38|Flare|🔆|am.r|4.0|24|0
+40|Ley Lines|🔵|B|0|0|120
+44|Foul|🌫️|am.b|3.2|20|0
+50|Despair|😨|am.r|4.4|28|0
+54|Between the Lines|↔️|D|0|0|30
+56|Xenoglossy|🔮|hm.u|4.4|0|60
+66|Amplifier|📡|B|0|0|120
+72|Triplecast|3️⃣|B|0|0|60
+80|Paradox|☯️|hm.m|3.2|6|0
+86|Flare Star|⭐|am.r|5.0|0|60
+90|Retrace|🌀|D|0|0|40`
+            },
+            whitemage: {
+                7: `4|Cure|💚|H|0.3|6|0
+10|Poisona|🌿|H|0.1|4|0
+16|Esuna|✨|H|0.1|8|2
+22|Cure 2|💚|H|0.45|12|0
+28|Raise|🌟|H|0.5|24|20
+34|Regen|🍃|R|0.06|10|20
+42|Cure 3|💚|A|0.4|20|8
+50|Holy|✨|hm.y|3.2|22|8
+58|Aeroga|🌬️|am.w|3.0|16|0
+64|Curaga|💚|A|0.55|28|10
+72|Full-Cure|💎|H|0.9|40|30
+80|Pulse of Life|💫|A|0.8|50|60
+90|Great Gospel|🙏|G|0.8|20|120`,
+                8: `5|Cure|💚|H|0.3|6|0
+11|Esuna|✨|H|0.1|8|2
+17|Life|🌟|H|0.5|24|20
+23|Cura|💚|H|0.45|12|0
+29|Regen|🍃|R|0.06|10|20
+35|Protect|🛡️|G|0.25|8|20
+41|Shell|🔷|G|0.25|8|20
+47|Haste|⚡|B|0|10|40
+53|Curaga|💚|A|0.5|26|10
+59|Full-Life|🌟|H|0.9|36|30
+65|Holy|✨|hm.y|3.2|22|8
+71|Aura|💫|B|0|10|40
+77|Triple|3️⃣|B|0|14|60
+87|Percent|💥|hm.g|3.4|20|18
+95|Curaja|💚|A|0.8|50|30`,
+                9: `4|Cure|💚|H|0.3|6|0
+10|Cura|💚|H|0.45|12|0
+18|Protes|🛡️|G|0.25|8|20
+24|Shell|🔷|G|0.25|8|20
+30|Panacea|🌿|H|0.1|8|2
+36|Life|🌟|H|0.5|24|20
+44|Regen|🍃|R|0.06|10|20
+52|Curaga|💚|A|0.5|26|10
+60|Reflect|🪞|G|0.3|10|20
+68|Full-Life|🌟|H|0.9|36|30
+76|Holy|✨|hm.y|3.2|22|8
+84|Boost|⚡|B|0|8|45
+92|Might|💪|B|0|14|60`,
+                12: `6|Cure|💚|H|0.3|6|0
+13|Cura|💚|H|0.45|12|0
+20|Esuna|✨|H|0.1|8|2
+27|Raise|🌟|H|0.5|24|20
+33|Protect|🛡️|G|0.25|8|20
+39|Shell|🔷|G|0.25|8|20
+45|Regen|🍃|R|0.06|10|20
+51|Curaga|💚|A|0.5|26|10
+57|Arise|🌟|H|0.9|36|30
+63|Haste|⚡|B|0|10|40
+69|Holy|✨|hm.y|3.2|22|8
+75|Reverse|🔁|H|0.2|8|2
+81|Curaja|💚|A|0.8|50|30
+87|Dispel|🚫|hm.d|2.0|12|8`,
+                14: `1|Stone|🪨|hm.e|1.2|3|0
+2|Cure|💚|H|0.3|6|0
+10|Aero|🌬️|hm.w|1.4|4|0
+14|Medica|💚|A|0.3|14|2
+16|Raise|🌟|H|0.5|24|20
+20|Repose|💤|hm.g|1.0|6|0
+22|Cure II|💚|H|0.5|14|0
+26|Stone II|🪨|hm.e|1.8|6|0
+30|Presence of Mind|🧘|B|0|0|60
+30|Aero II|🌬️|ho|0.8|6|0
+35|Cure III|💚|A|0.6|20|2
+40|Assize|⚪|a|2.0|0|40
+45|Regen|🍃|R|0.07|10|0
+50|Thin Air|🌬️|B|0|0|120
+52|Divine Benison|🔷|G|0.35|0|30
+54|Tetragrammaton|✝️|H|0.6|0|60
+58|Benediction|🌟|H|1.0|0|180
+60|Afflatus Solace|💚|A|0.5|0|1
+64|Afflatus Rapture|💚|A|0.5|0|1
+66|Plenary Indulgence|🌈|A|0.4|0|60
+70|Temperance|🛡️|G|0.3|0|120
+74|Aquaveil|💧|G|0.15|0|60
+76|Liturgy of the Bell|🔔|A|0.6|0|180
+80|Afflatus Misery|💥|a|4.0|0|0
+86|Glare III|✨|hm.y|3.0|0|0
+90|Aetherial Shift|✈️|D|0|0|60
+100|Medica III|💚|A|0.5|18|0`
+            },
+            summoner: {
+                7: `8|Chocobo|🐤|a|2.2|10|20
+16|Shiva|❄️|am.i|3.0|18|30
+24|Ifrit|🔥|am.f|3.0|18|30
+32|Ramuh|⚡|am.t|3.0|18|30
+40|Titan|🪨|am.q|3.4|20|30
+48|Odin|⚔️|a|4.4|28|50
+58|Leviathan|🌊|am.s|4.0|26|40
+68|Bahamut|🐲|am.r|5.6|40|70
+78|Kjata|🏔️|am.q|4.4|28|40
+86|Alexander|🏰|am.y|5.2|36|60
+94|Phoenix|🔥|A|0.8|50|60
+100|Knights of the Round|⚔️|a|8.0|70|180`,
+                8: `10|Shiva|❄️|am.i|3.0|18|30
+18|Ifrit|🔥|am.f|3.0|18|30
+26|Siren|🎵|am.g|2.6|16|30
+34|Brothers|👬|a|3.6|22|40
+42|Diablos|😈|am.g|3.6|24|40
+50|Carbuncle|💎|G|0.3|16|40
+58|Leviathan|🌊|am.s|4.0|26|40
+66|Quezacotl|⚡|am.t|3.8|24|40
+74|Cerberus|🐺|a|4.2|28|45
+82|Eden|🌌|am.u|6.0|50|90
+90|Tonberry|🔪|h|4.0|20|30`,
+                9: `6|Carbuncle|💎|G|0.3|14|40
+14|Ramuh|⚡|am.t|3.0|18|30
+22|Ifrit|🔥|am.f|3.0|18|30
+30|Fenrir|🐺|a|3.0|18|30
+38|Atomos|🌌|am.g|3.6|24|40
+46|Odin|⚔️|a|4.4|28|50
+54|Leviathan|🌊|am.s|4.0|26|40
+62|Bahamut|🐲|am.r|5.6|40|70
+70|Ark|🚢|am.u|5.2|36|60
+78|Madeen|🔥|a|4.4|28|45
+88|Carbuncle: Ruby Light|💎|G|0.5|20|60`,
+                12: `7|Famfrit|🌊|am.s|3.0|18|30
+19|Zalera|🌑|am.g|3.2|20|30
+31|Belias|🔥|am.f|3.4|22|35
+43|Zeromus|🌌|am.u|4.4|28|45
+55|Mateus|❄️|am.i|3.8|24|40
+67|Exodus|🌠|am.y|4.6|30|50
+79|Cuchulainn|😈|am.b|4.2|28|45
+93|Zodiark|🌌|am.u|6.6|60|90`,
+                14: `1|Ruin|🔥|hm.r|1.2|3|0
+2|Physick|💚|H|0.25|6|0
+4|Summon Carbuncle|💎|G|0.3|0|60
+6|Aethercharge|⚡|B|0|0|60
+10|Bio|🧪|ho|0.8|4|0
+14|Ruin II|🔥|hm.r|1.6|4|0
+18|Radiant Aegis|🛡️|G|0.2|0|60
+20|Resurrection|🌟|H|0.5|24|20
+26|Outburst|🌀|am.r|1.4|8|0
+30|Ruby Rite|🔴|hm.f|3.0|12|0
+35|Topaz Rite|🟡|hm.e|3.0|12|0
+40|Emerald Rite|🟢|hm.w|3.0|12|0
+45|Energy Drain|🩸|hm.d|1.6|6|1
+50|Dreadwyrm Trance|🐲|B|0|0|55
+52|Summon Bahamut|🐲|am.r|4.4|0|60
+54|Fester|☠️|hm.b|2.6|6|0
+56|Painflare|💥|am.r|2.4|8|0
+58|Searing Light|✨|B|0|0|120
+60|Enkindle Bahamut|🔥|am.r|4.6|0|60
+62|Aethercharge|⚡|B|0|0|60
+66|Summon Phoenix|🔥|A|0.5|0|60
+70|Astral Flare|💫|am.r|3.6|0|1
+74|Rekindle|🔥|H|0.4|0|20
+76|Mountain Buster|⛰️|c|3.2|10|12
+80|Summon Solar Bahamut|🌞|am.y|5.6|0|60
+86|Umbral Impulse|🌑|am.g|3.4|0|0
+90|Necrotize|☠️|hm.b|3.0|0|1
+100|Ruin IV|💥|hm.r|3.2|0|8`
+            },
+            keyblade: {
+                8: `5|Fire|🔥|hm.f|1.4|4|0
+12|Blizzard|❄️|hm.i|1.4|4|0
+18|Thunder|⚡|hm.t|1.4|4|0
+24|Cure|💚|H|0.3|6|0
+30|Aero|🌬️|am.w|2.0|10|6
+36|Water|💧|hm.s|2.0|8|0
+42|Fira|🔥|am.f|2.8|14|6
+48|Blizzara|❄️|am.i|2.8|14|6
+54|Thundara|⚡|am.t|2.8|14|6
+60|Curaga|💚|A|0.5|26|10
+68|Stop|⏱️|hm.g|2.4|14|10
+76|Firaga|🔥|am.f|4.0|24|8
+82|Blizzaga|❄️|am.i|4.0|24|8
+88|Thundaga|⚡|am.t|4.0|24|8
+94|Ultima|✨|am.u|6.0|50|90`,
+                9: `10|Dyne Slash|⚔️|h|2.4|8|10
+28|Sword Ray|✨|l|3.0|14|16
+46|Ark Blade|🌊|a|3.6|20|26
+64|Ultima Sword|🗡️|h|4.8|30|50
+82|Omega Blade|⚔️|a|5.4|40|60`,
+                12: `14|Scattershot|🔫|c|1.8|4|8
+34|Quickening: Dawn Strike|🌅|a|4.4|28|70
+54|Quickening: Seven Seas|🌊|a|4.8|34|90
+72|Quickening: Spiral Burst|🌀|a|5.2|38|100`,
+                14: `1|Hakke|⚔️|h|1.2|0|0
+6|Rampart|🛡️|G|0.2|0|90
+10|Stun|💫|hm.g|1.0|4|8
+14|Provoke|📣|T|0|0|10
+20|Reprisal|🛡️|a|1.0|0|60
+24|Lucid Dreaming|💭|M|0.15|0|60
+28|Surecast|🔰|G|0.2|0|20
+32|Addle|🌀|a|1.0|0|90
+40|Swiftcast|⚡|B|0|0|60
+48|Sprint|💨|D|0|0|60
+56|Tincture|🧪|B|0|0|120
+64|Limit Break: Shield|🛡️|G|0.6|0|90
+72|Limit Break: Tank|🛡️|G|0.7|0|120
+80|Limit Break: Healer|💚|A|0.6|0|120
+88|Limit Break: Physical|⚔️|h|6.0|0|120
+96|Limit Break: Caster|✨|am.u|6.0|0|120`
+            }
+        };
+        const AB_GAME = { 7: 'FFVII', 8: 'FFVIII', 9: 'FFIX', 12: 'FFXII', 14: 'FFXIV' };
+        const AB_VIS = { f: 'fire', i: 'ice', t: 'thunder', y: 'holy', s: 'water', u: 'ultima', w: 'vwind', q: 'vquake', b: 'vbio', r: 'vflare', m: 'vmeteor', d: 'vdrain', g: 'vgrav', c: 'vcomet', x: 'vmelt', e: 'stone' };
+        const AB_EL = { f: 'fire', i: 'ice', t: 'thunder', s: 'water', y: 'holy', e: 'earth', w: 'wind', b: 'poison' };
+        const AB_RNG = { gunner: 1, artemis: 1, blackmage: 1, whitemage: 1, summoner: 1 };
+        const AB_KIND = { h: 'Single target', c: 'Cone', l: 'Line', a: 'Around you', g: 'Ground blast', D: 'Dash', H: 'Heal', A: 'Party heal', R: 'Regen', G: 'Guard', B: 'Buff', M: 'Restore MP', T: 'Provoke' };
+        /* limit breaks you can swap between (unlocked by level); the first entry of every class is the one it already had */
+        const AB_LB = {
+            hero: [[20, 'Braver', '⚔️', 5, 5, 'FFVII · a leaping overhead cut'], [35, 'Cross-Slash', '✝️', 6, 5.5, 'FFVII · two crossing cuts'], [50, 'Blade Beam', '🌠', 7.5, 7, 'FFVII · a wave of light'], [65, 'Climhazzard', '🌀', 8.5, 6, 'FFVII · rising spin'], [80, 'Omnislash', '⚡', 10, 6.5, 'FFVII · fifteen cuts'], [95, 'Lion Heart', '🦁', 12, 7, 'FFVIII · the gunblade finisher']],
+            fighter: [[20, 'Beat Rush', '👊', 5, 5, 'FFVII · a flurry of punches'], [35, 'Meteodrive', '☄️', 6.5, 5.5, 'FFVII · suplex'], [50, 'Dolphin Blow', '🐬', 7.5, 6, 'FFVII · rising uppercut'], [65, 'Meteor Strike', '🌠', 9, 6.5, 'FFVII · German suplex from the sky'], [85, 'Final Heaven', '💥', 11, 7, 'FFVII/XIV · the ultimate strike']],
+            gunner: [[20, 'Big Shot', '🔫', 5, 5, 'FFVII · a heavy shell'], [40, 'Angermax', '😡', 7, 6, 'FFVII · enraged barrage'], [60, 'Satellite Beam', '🛰️', 9, 7, 'FFXIV · beam from orbit'], [80, 'Catastrophe', '☄️', 11, 8, 'FFVII · the end of all things']],
+            artemis: [[20, 'Normal Shot', '🏹', 5, 5, 'FFVIII · steady shot'], [40, 'Sagittarius Arrow', '♐', 7, 6, 'FFXIV · a piercing arrow'], [60, 'Hyper Shot', '💫', 9, 7, 'FFVIII · cluster shot'], [80, 'Pulse Shot', '📡', 11, 8, 'FFVIII · wave shot']],
+            knight: [[20, 'Climhazzard Seiken', '🌪️', 5, 5, 'FFIX · Beatrix'], [40, 'Stock Break', '🔨', 6.5, 5.5, 'FFIX · Beatrix'], [60, 'Shock', '⚡', 8.5, 6.5, 'FFIX · Beatrix'], [80, 'Land Waker', '🛡️', 10.5, 7.5, 'FFXIV · the paladin finish']],
+            dragoon: [[20, 'Dragon Crest', '🐲', 5, 5, 'FFIX · Freya'], [40, 'Dragonsong Dive', '🐉', 7, 6, 'FFXIV · a dive from the sky'], [60, 'Six Dragons', '🐉', 9, 7, 'FFIX · Freya'], [80, 'Dragon Breath', '🔥', 11, 8, 'FFVII · the dragon answers']],
+            chef: [[20, 'Frog Drop', '🐸', 5, 5, 'FFIX · Quina'], [40, 'Limit Glove', '🧤', 7, 6, 'FFIX · Quina'], [60, 'Pandora’s Box', '📦', 9, 7, 'FFVII · blue magic'], [80, 'Angel Whisper', '👼', 11, 8, 'FFXIV · blue magic']],
+            thief: [[20, 'Soul Blade', '👻', 5, 5, 'FFIX · Zidane'], [40, 'Shift Break', '💥', 7, 6, 'FFIX · Zidane'], [60, 'Dyne', '🌌', 9, 7, 'FFIX · Zidane'], [80, 'Chimatsuri', '🥷', 11, 8, 'FFXIV · the ninja finish']],
+            blackmage: [[20, 'Skyshard', '💠', 5, 6, 'FFXIV · a shard from the sky'], [40, 'Starstorm', '⭐', 7, 7, 'FFXIV · falling stars'], [60, 'Meteor', '☄️', 9, 8, 'FFXIV · the sky falls'], [80, 'Ultima', '✨', 11.5, 9, 'FFXIV · the ultimate spell']],
+            whitemage: [[20, 'Banishga', '✨', 5, 6, 'FFVIII · holy light'], [40, 'Holy', '🌟', 7, 7, 'FFVII · the planet’s answer'], [60, 'Terra Homing', '🌍', 9, 8, 'FFIX · a rain of light'], [80, 'Pulse of Life', '💚', 11, 9, 'FFXIV · a surge of light']],
+            summoner: [[20, 'Bahamut', '🐲', 5, 6, 'FFVII · Mega Flare'], [40, 'Megaflare', '🔥', 7, 7, 'FFXIV · Bahamut’s breath'], [60, 'Knights of the Round', '⚔️', 9.5, 8, 'FFVII · thirteen knights'], [80, 'Teraflare', '☄️', 12, 9, 'FFXIV · Teraflare']],
+            keyblade: [[20, 'Strike Raid', '🗝️', 5, 5, 'KH · thrown keyblade'], [40, 'Sonic Blade', '💨', 7, 6, 'KH · a dash of cuts'], [60, 'Ars Arcanum', '🌀', 9, 7, 'KH · a storm of strikes'], [80, 'Ragnarok', '⚔️', 11.5, 8, 'KH · the final art']]
+        };
+        const AB = { cat: {}, by: {}, pins: {}, lbSel: {}, mode: false, show: true, open: false, tab: 'arts', game: 0, sel: -1, key: '', el: null, bk: null };
+        const ABK = 'nuu_artsbook_v1';
+        function abLoad() { try { const j = JSON.parse(localStorage.getItem(ABK) || 'null'); if (j) { AB.pins = j.pins || {}; AB.lbSel = j.lb || {}; AB.show = j.show !== false; } } catch (e) { /* storage */ } }
+        function abSave() { try { localStorage.setItem(ABK, JSON.stringify({ pins: AB.pins, lb: AB.lbSel, show: AB.show })); } catch (e) { /* storage */ } }
+        function abBuild() {
+            for (const cls in AB_DATA) {
+                const out = [];
+                for (const g in AB_DATA[cls]) AB_DATA[cls][g].split('\n').forEach((ln, i) => { const q = ln.split('|'); if (q.length < 7) return; const r = { id: 'ab_' + cls + '_' + g + '_' + i, cls, g: +g, lv: +q[0], n: q[1], ic: q[2], code: q[3], pot: +q[4], mp: +q[5], cd: +q[6] }; out.push(r); AB.by[r.id] = r; });
+                out.sort((a, b) => a.lv - b.lv || a.g - b.g); AB.cat[cls] = out;
+            }
+            abLoad();
+        }
+        function abDesc(r) {
+            const m = /^([A-Za-z])(m?)(o?)(?:\.([a-z]))?$/.exec(r.code) || [0, 'h', '', '', '']; const k = AB_KIND[m[1]] || 'Skill';
+            const bits = [AB_GAME[r.g] + ' · ' + k + (m[2] ? ' · magic' : '') + (m[3] ? ' · damage over time' : '')]; if (r.pot > 0 && !/^[BGMT]$/.test(m[1])) bits.push((/^[HAR]$/.test(m[1]) ? Math.round(r.pot * 100) + '% HP' : '×' + r.pot)); if (r.mp) bits.push(r.mp + ' MP'); bits.push(r.cd > 1 ? r.cd + ' s recast' : 'quick');
+            return bits.join(' · ');
+        }
+        function abSkill(r) {
+            if (r._s) return r._s; const m = /^([A-Za-z])(m?)(o?)(?:\.([a-z]))?$/.exec(r.code) || [0, 'h', '', '', ''], kd = m[1], mag = !!m[2], dot = !!m[3], el = m[4], rng = (mag || AB_RNG[r.cls]) ? 18 : 4.2;
+            const o = { id: r.id, n: r.n, ic: r.ic, d: abDesc(r), mp: r.mp || 0, ab: 1 }; if (r.cd > 1) o.cd = r.cd; else o.gcd = 1; if (mag) o.mag = true;
+            if (el) { o.fx = 'ring'; if (AB_EL[el]) o.el = AB_EL[el]; NF_SPVIS[r.id] = AB_VIS[el]; } else o.fx = (mag || AB_RNG[r.cls]) ? 'bolt' : 'slash';
+            switch (kd) {
+                case 'h': o.k = 'hit'; o.range = rng; o.pot = dot ? r.pot * 0.55 : r.pot; if (dot) o.dot = { pot: r.pot * 0.3, sec: 12 }; break;
+                case 'c': o.k = 'cone'; o.len = 6.5; o.a = 1.7; o.pot = r.pot; break;
+                case 'l': o.k = 'line'; o.len = 13; o.w = 2.8; o.pot = r.pot; break;
+                case 'a': o.k = 'aoe'; o.r = 4.8 + Math.min(3, r.pot * 0.5); o.pot = r.pot; break;
+                case 'g': o.k = 'ground'; o.range = 18; o.r = 4.5; o.pot = r.pot; break;
+                case 'D': if (r.pot > 0) { o.k = 'dash'; o.range = 14; o.pot = r.pot; } else if (/Repelling|Retrace/.test(r.n)) { o.k = 'dash'; o.back = true; o.dist = 7; o.fx = 'ring'; } else { o.k = 'abstep'; o.dist = 9; o.fx = 'ring'; } break;
+                case 'H': o.k = 'heal'; o.heal = r.pot; o.fx = 'heal'; break;
+                case 'A': o.k = 'aoe'; o.r = 7; o.pot = 0; o.heal = r.pot; o.fx = 'heal'; break;
+                case 'R': o.k = 'hot'; o.heal = r.pot; o.sec = 15; o.fx = 'heal'; break;
+                case 'G': o.k = 'guard'; o.sec = 8; o.red = Math.max(0.1, Math.min(0.9, 1 - r.pot)); o.fx = 'guard'; break;
+                case 'B': o.k = 'buff'; o.sec = 15; o.fx = 'guard'; break;
+                case 'M': o.k = 'abmp'; o.frac = r.pot; o.fx = 'heal'; break;
+                case 'T': o.k = 'taunt'; break;
+                default: o.k = 'hit'; o.range = rng; o.pot = r.pot;
+            }
+            return (r._s = o);
+        }
+        function abLbList(cls) { const C = NF_CLASSES[cls], s = C && C.moves.find((q) => q.k === 'lb'); const base = s ? (s._o || s) : { n: 'Limit Break', ic: '💥', pot: 7, r: 6, d: '' }; return [{ lv: 1, n: base.n, ic: base.ic, pot: base.pot, r: base.r, d: 'Signature · ' + (base.d || '') }].concat((AB_LB[cls] || []).map((q) => ({ lv: q[0], n: q[1], ic: q[2], pot: q[3], r: q[4], d: q[5] }))); }
+        function abLbApply() {
+            const C = NF_CLASSES[NF.cls]; if (!C) return; const s = C.moves.find((q) => q.k === 'lb'); if (!s) return; if (!s._o) s._o = { n: s.n, ic: s.ic, pot: s.pot, r: s.r, d: s.d };
+            const L = abLbList(NF.cls); let i = AB.lbSel[NF.cls] | 0; if (!L[i] || NF.lv < L[i].lv) { i = 0; AB.lbSel[NF.cls] = 0; } const q = L[i]; s.n = q.n; s.ic = q.ic; s.pot = q.pot; s.r = q.r; s.d = i ? 'Limit Break: ' + q.d : s._o.d;
+        }
+        function abPins() { const c = NF.cls; if (!AB.pins[c]) AB.pins[c] = new Array(12).fill(null); return AB.pins[c]; }
+        function abSlotSkill(v) { if (!v) return null; if (v[0] === 'c') return NF_SK[+v.slice(1)] || null; const r = AB.by[v]; return r && r.cls === NF.cls ? abSkill(r) : null; }
+        function abLocked(v) { if (!v || v[0] === 'c') return false; const r = AB.by[v]; return !r || NF.lv < r.lv; }
+        function abToast(t) { try { padToast(t); } catch (e) { /* toast */ } }
+        function abPin(v, slot) {
+            const P = abPins(); const at = P.indexOf(v); if (at >= 0) P[at] = null; if (slot == null || slot < 0) slot = AB.sel >= 0 ? AB.sel : P.indexOf(null); if (slot < 0) { abToast('Hotbar full: pick a slot first'); return false; }
+            P[slot] = v; AB.sel = -1; abSave(); abBarDraw(); if (AB.open) abBookDraw(); return true;
+        }
+        function abUnpin(slot) { abPins()[slot] = null; abSave(); abBarDraw(); if (AB.open) abBookDraw(); }
+        function abAuto() {
+            const P = abPins(); const ok = (AB.cat[NF.cls] || []).filter((r) => NF.lv >= r.lv); const pick = []; const seen = new Set();
+            for (let i = ok.length - 1; i >= 0 && pick.length < 12; i--) { const key = ok[i].n; if (seen.has(key)) continue; if (/^[BGMT]$/.test(ok[i].code[0]) && pick.filter((q) => /^[BGMT]$/.test(q.code[0])).length >= 3) continue; seen.add(key); pick.push(ok[i]); }
+            pick.sort((a, b) => a.lv - b.lv); P.fill(null); pick.forEach((r, i) => { P[i] = r.id; }); abSave(); abBarDraw(); if (AB.open) abBookDraw();
+        }
+        function abRun(i) {
+            const P = abPins(), v = P[i]; const el = AB.bar && AB.bar.querySelector('.ab-s[data-i="' + i + '"]');
+            if (!v) { abToast('Empty slot: open the Arts Book (K) and pin an ability'); AB.sel = i; abBookOpen(); return; }
+            if (abLocked(v)) { const r = AB.by[v]; abToast((r ? r.n : 'That ability') + ' unlocks at Lv ' + (r ? r.lv : '?')); return; }
+            if (v[0] === 'c') nfUse(+v.slice(1)); else nfUse(abSlotSkill(v));
+            if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 180); }
+        }
+        function abCss() {
+            if (document.getElementById('ab-css')) return; const st = document.createElement('style'); st.id = 'ab-css';
+            st.textContent = '#ab-bar{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);width:max-content;z-index:59;display:none;gap:4px;padding:5px 7px;border-radius:12px;background:rgba(6,16,32,.55);border:1px solid rgba(160,210,255,.25);font-family:Nunito,system-ui,sans-serif;max-width:96vw;flex-wrap:wrap;justify-content:center;user-select:none}#ab-bar.on{display:flex}#ab-bar.key{border-color:#ffd24a;box-shadow:0 0 12px rgba(255,210,74,.45)}'
+                + '.ab-s{position:relative;width:38px;height:38px;border-radius:8px;background:rgba(14,30,56,.82);border:1px solid rgba(150,200,255,.3);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:#fff;font-style:normal}.ab-s.empty{opacity:.45;font-size:13px}.ab-s.sel{outline:2px solid #ffd24a}.ab-s.off{filter:grayscale(.8) brightness(.7)}.ab-s.lock{opacity:.35}.ab-s.hit{transform:scale(.88);background:rgba(120,180,255,.5)}'
+                + '.ab-s i{font-style:normal}.ab-s em{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);border-radius:8px;font-size:12px;font-style:normal}.ab-s small{position:absolute;left:2px;top:0;font-size:9px;color:#ffe08a;text-shadow:0 1px 2px #000}.ab-s u{display:none}'
+                + '#ab-book{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;background:rgba(2,8,18,.62);font-family:Nunito,system-ui,sans-serif;color:#e8f4ff}#ab-book.on{display:flex}#ab-book *{box-sizing:border-box}'
+                + '.abk{width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column;border-radius:16px;background:linear-gradient(180deg,#10223f,#0a1528);border:1px solid rgba(160,210,255,.35);box-shadow:0 12px 50px rgba(0,0,0,.6);overflow:hidden}.abk-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid rgba(160,210,255,.2)}.abk-h b{font-size:17px;letter-spacing:.08em;flex:1}.abk-h button{background:none;border:0;color:#cfe6ff;font-size:20px;cursor:pointer}'
+                + '.abk-t{display:flex;gap:6px;padding:8px 16px;flex-wrap:wrap}.abk-t button{padding:5px 12px;border-radius:999px;border:1px solid rgba(160,210,255,.35);background:rgba(20,40,70,.7);color:#cfe6ff;font-size:12px;cursor:pointer}.abk-t button.on{background:#2f6fc4;color:#fff;border-color:#8cc4ff}'
+                + '.abk-l{flex:1;overflow:auto;padding:4px 16px 8px;min-height:180px}.ab-row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:9px;cursor:pointer;border-bottom:1px solid rgba(160,210,255,.1)}.ab-row:hover{background:rgba(80,140,220,.2)}.ab-row.lock{opacity:.4}.ab-row .ic{font-size:22px;width:30px;text-align:center}.ab-row .tx{flex:1;min-width:0}.ab-row .tx b{font-size:13.5px}.ab-row .tx small{display:block;font-size:11px;color:#9fc0e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ab-row .lv{font-size:11px;color:#ffd98a;min-width:42px;text-align:right}.ab-row .pn{font-size:11px;color:#8cffb0;min-width:54px;text-align:right}.ab-row.cur{background:rgba(255,210,74,.16);outline:1px solid #ffd24a}'
+                + '.abk-f{padding:10px 16px 14px;border-top:1px solid rgba(160,210,255,.2)}.abk-f .st{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}.abk-f .st .ab-s{width:44px;height:44px}.abk-f .bt{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#9fc0e6;align-items:center}.abk-f .bt button{padding:5px 12px;border-radius:8px;border:1px solid rgba(160,210,255,.35);background:rgba(20,40,70,.7);color:#cfe6ff;font-size:12px;cursor:pointer}';
+            document.head.appendChild(st);
+        }
+        function abBarBuild() {
+            if (AB.bar) return; abCss(); const b = document.createElement('div'); b.id = 'ab-bar'; let h = ''; for (let i = 0; i < 12; i++) h += '<b class="ab-s empty" data-i="' + i + '"><i></i><em></em><small></small></b>'; b.innerHTML = h + '<b class="ab-s" id="ab-open" title="Arts Book (K) · ` switches the number keys to this bar" style="font-size:18px">📖</b>'; document.body.appendChild(b); AB.bar = b;
+            b.addEventListener('pointerdown', (e) => { const s = e.target.closest('.ab-s'); if (!s) return; e.preventDefault(); e.stopPropagation(); if (s.id === 'ab-open') { abBookOpen(); return; } if (e.button === 2 || e.shiftKey && AB.open) return; abRun(+s.dataset.i); });
+            b.addEventListener('contextmenu', (e) => { const s = e.target.closest('.ab-s[data-i]'); if (!s) return; e.preventDefault(); abUnpin(+s.dataset.i); });
+            b.addEventListener('dragover', (e) => { if (e.target.closest('.ab-s[data-i]')) e.preventDefault(); });
+            b.addEventListener('drop', (e) => { const s = e.target.closest('.ab-s[data-i]'); if (!s) return; e.preventDefault(); const v = e.dataTransfer.getData('text/plain'); if (v) abPin(v, +s.dataset.i); });
+            abBarDraw();
+        }
+        function abBarDraw() {
+            if (!AB.bar) return; const P = abPins(); AB.bar.querySelectorAll('.ab-s[data-i]').forEach((el) => {
+                const i = +el.dataset.i, v = P[i], s = abSlotSkill(v); el.classList.toggle('empty', !v); el.classList.toggle('lock', !!v && abLocked(v)); el.querySelector('i').textContent = s ? s.ic : '+'; el.title = s ? s.n + ' · ' + (s.d || '') : 'Empty: open the Arts Book (K) to pin an ability'; el.querySelector('small').textContent = AB.mode ? (i < 8 ? String(i + 1) : '⇧' + (i - 7)) : '';
+            }); AB.bar.classList.toggle('key', AB.mode);
+        }
+        function abBookOpen() { abBarBuild(); if (!AB.bk) { const d = document.createElement('div'); d.id = 'ab-book'; document.body.appendChild(d); AB.bk = d; d.addEventListener('pointerdown', (e) => { if (e.target === d) abBookClose(); }); } AB.open = true; abBookDraw(); AB.bk.classList.add('on'); }
+        function abBookClose() { AB.open = false; AB.sel = -1; if (AB.bk) AB.bk.classList.remove('on'); }
+        function abBookDraw() {
+            const d = AB.bk; if (!d) return; const C = NF_CLASSES[NF.cls], P = abPins(), cat = AB.cat[NF.cls] || [], tab = AB.tab; const unlocked = cat.filter((r) => NF.lv >= r.lv).length;
+            let rows = '';
+            if (tab === 'arts') {
+                const list = cat.filter((r) => !AB.game || r.g === AB.game);
+                rows = list.map((r) => { const lk = NF.lv < r.lv, at = P.indexOf(r.id); return '<div class="ab-row' + (lk ? ' lock' : '') + '" draggable="true" data-id="' + r.id + '"><span class="ic">' + r.ic + '</span><span class="tx"><b>' + r.n + '</b><small>' + abDesc(r) + '</small></span><span class="lv">Lv ' + r.lv + '</span><span class="pn">' + (at >= 0 ? '📌 ' + (at + 1) : '') + '</span></div>'; }).join('') || '<div style="padding:20px;opacity:.7">Nothing here for this game yet.</div>';
+            } else if (tab === 'class') {
+                rows = NF_SK.map((s, i) => { const at = P.indexOf('c' + i); return '<div class="ab-row" draggable="true" data-id="c' + i + '"><span class="ic">' + s.ic + '</span><span class="tx"><b>' + s.n + '</b><small>' + (s.d || '') + '</small></span><span class="lv">' + (s.k === 'lb' ? 'Limit' : '') + '</span><span class="pn">' + (at >= 0 ? '📌 ' + (at + 1) : '') + '</span></div>'; }).join('');
+            } else {
+                const L = abLbList(NF.cls), cur = AB.lbSel[NF.cls] | 0;
+                rows = L.map((q, i) => '<div class="ab-row lbrow' + (NF.lv < q.lv ? ' lock' : '') + (i === cur ? ' cur' : '') + '" data-lb="' + i + '"><span class="ic">' + q.ic + '</span><span class="tx"><b>' + q.n + '</b><small>' + q.d + ' · power ×' + q.pot + ' · radius ' + q.r + '</small></span><span class="lv">Lv ' + q.lv + '</span><span class="pn">' + (i === cur ? '◆ ready' : '') + '</span></div>').join('');
+            }
+            const chips = tab === 'arts' ? '<div class="abk-t" style="padding-top:0">' + [[0, 'All']].concat(Object.keys(AB_GAME).map((g) => [+g, AB_GAME[g]])).map((q) => '<button class="gm' + (AB.game === q[0] ? ' on' : '') + '" data-g="' + q[0] + '">' + q[1] + '</button>').join('') + '</div>' : '';
+            let st = ''; for (let i = 0; i < 12; i++) { const v = P[i], s = abSlotSkill(v); st += '<b class="ab-s' + (v ? '' : ' empty') + (AB.sel === i ? ' sel' : '') + (v && abLocked(v) ? ' lock' : '') + '" data-i="' + i + '" title="' + (s ? s.n : 'Empty') + '"><i>' + (s ? s.ic : '+') + '</i><small>' + (i < 8 ? i + 1 : '⇧' + (i - 7)) + '</small></b>'; }
+            d.innerHTML = '<div class="abk"><div class="abk-h"><span style="font-size:24px">📖</span><b>ARTS BOOK · ' + C.ic + ' ' + C.n.toUpperCase() + ' · Lv ' + NF.lv + '</b><span style="font-size:11px;opacity:.75">' + unlocked + ' / ' + cat.length + ' unlocked</span><button class="x" title="Close (K)">✕</button></div>'
+                + '<div class="abk-t">' + [['arts', 'Arts (' + cat.length + ')'], ['class', 'Class skills'], ['lb', 'Limit breaks']].map((q) => '<button class="tb' + (tab === q[0] ? ' on' : '') + '" data-t="' + q[0] + '">' + q[1] + '</button>').join('') + '</div>' + chips
+                + '<div class="abk-l">' + rows + '</div><div class="abk-f"><div class="st">' + st + '</div><div class="bt"><span>Click a slot, then an ability · or drag it onto a slot · click a pinned slot twice to clear</span><button class="auto">Auto-fill best</button><button class="clr">Clear bar</button></div></div></div>';
+            const bl = d.querySelector('.abk-l'), sc = AB.scroll | 0; if (sc) bl.scrollTop = sc; bl.addEventListener('scroll', () => { AB.scroll = bl.scrollTop; });
+            d.querySelector('.x').onclick = abBookClose;
+            d.querySelectorAll('.tb').forEach((b) => { b.onclick = () => { AB.tab = b.dataset.t; AB.scroll = 0; abBookDraw(); }; });
+            d.querySelectorAll('.gm').forEach((b) => { b.onclick = () => { AB.game = +b.dataset.g; AB.scroll = 0; abBookDraw(); }; });
+            d.querySelectorAll('.ab-row[data-id]').forEach((el) => { el.onclick = () => { const id = el.dataset.id; if (id[0] !== 'c' && NF.lv < (AB.by[id] || { lv: 0 }).lv) { abToast('Unlocks at Lv ' + AB.by[id].lv); return; } abPin(id); }; el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', el.dataset.id); }; });
+            d.querySelectorAll('.lbrow').forEach((el) => { el.onclick = () => { const i = +el.dataset.lb, L = abLbList(NF.cls); if (NF.lv < L[i].lv) { abToast('Unlocks at Lv ' + L[i].lv); return; } AB.lbSel[NF.cls] = i; abSave(); abLbApply(); try { nfXbDraw(); } catch (e) { /* hud */ } abBarDraw(); abBookDraw(); try { nuShowBanner('LIMIT BREAK SET', L[i].n.toUpperCase()); } catch (e) { /* banner */ } }; });
+            d.querySelectorAll('.abk-f .ab-s').forEach((el) => { const i = +el.dataset.i; el.onclick = () => { if (AB.sel === i && P[i]) { abUnpin(i); AB.sel = -1; abBookDraw(); return; } AB.sel = AB.sel === i ? -1 : i; abBookDraw(); }; el.ondragover = (e) => e.preventDefault(); el.ondrop = (e) => { e.preventDefault(); const v = e.dataTransfer.getData('text/plain'); if (v) abPin(v, i); }; });
+            d.querySelector('.auto').onclick = abAuto; d.querySelector('.clr').onclick = () => { abPins().fill(null); abSave(); abBarDraw(); abBookDraw(); };
+        }
+        function abTick(now) {
+            if (!AB.ready) { AB.ready = true; try { abBuild(); abBarBuild(); } catch (e) { console.warn('arts', e); } }
+            const key = NF.cls + ':' + NF.lv; if (key !== AB.key) {
+                const old = AB.key.split(':'); AB.key = key; try { abLbApply(); nfXbDraw(); } catch (e) { /* hud */ }
+                if (old[0] === NF.cls && old[1] && +old[1] < NF.lv) { const nu = (AB.cat[NF.cls] || []).filter((r) => r.lv > +old[1] && r.lv <= NF.lv); if (nu.length) { try { sysChat('📖 Arts Book: ' + nu.length + (nu.length > 1 ? ' new abilities' : ' new ability') + ' unlocked: ' + nu.slice(0, 5).map((r) => r.n).join(', ') + (nu.length > 5 ? '…' : '') + ' (press K)'); } catch (e) { /* chat */ } } }
+                abBarDraw(); if (AB.open) abBookDraw();
+            }
+            const root = NF.ui && NF.ui.root, vis = !!(root && root.classList.contains('on') && !root.classList.contains('nfhide') && AB.show && activeMap === 'nuu' && NU.ready); if (AB.bar) { AB.bar.classList.toggle('on', vis); if (vis) { const P = abPins(); AB.bar.querySelectorAll('.ab-s[data-i]').forEach((el) => { const v = P[+el.dataset.i], s = abSlotSkill(v), em = el.querySelector('em'); if (!s) { em.style.display = 'none'; return; } const cd = Math.max(s.gcd ? NF.gcd : 0, (NF.cds[s.id] || 0) - now); el.classList.toggle('off', !!((s.mp && NF.mp < s.mp) || (s.lb && NF.lb < 100))); if (cd > 0.05) { em.style.display = 'flex'; em.textContent = cd.toFixed(cd > 9 ? 0 : 1); } else em.style.display = 'none'; }); } }
+        }
+        function abKey(e) {
+            const k = e.code; if (k === 'Backquote') { AB.mode = !AB.mode; abBarDraw(); try { nuShowBanner(AB.mode ? 'ARTS BAR' : 'CLASS BAR', AB.mode ? 'NUMBER KEYS FIRE YOUR PINNED ARTS' : 'NUMBER KEYS FIRE YOUR CLASS SKILLS'); } catch (x) { /* banner */ } return true; }
+            if (k === 'KeyK') { if (AB.open) abBookClose(); else abBookOpen(); return true; }
+            if (AB.open) { if (k === 'Escape') abBookClose(); return k === 'Escape' || /^Digit/.test(k); }
+            if (AB.mode && /^Digit[1-8]$/.test(k)) { abRun(+k.slice(5) - 1 + (e.shiftKey && +k.slice(5) <= 4 ? 8 - 0 : 0)); return true; }
+            return false;
         }
         function nfShapeFx(kind, x, z, ang, o) {
             try { if (!NF_FXR) nsSend({ k: 'fx', sh: 1, fk: String(kind).slice(0, 8), x: nsR2(x), z: nsR2(z), ang: nsR2(ang || 0), r: o.r, w: o.w, len: o.len, a: o.a, col: o.col }); } catch (e) { /* offline */ }
@@ -14834,7 +15603,7 @@ function kbModel(THREE, mk) {
                 case 'hit': if (!t) return; if (s.fx && !nfSpellFx(s, p, Object.assign(tpos.clone(), { userData: { h: (t.node.userData.h || 1.5) * (t.big || 1) } }))) nfFx(s.fx, p, tpos); nfDealDmg(t, s.pot, s.mag); if (s.dot && !t.dead) nfDot(t, { id: s.id, pot: s.dot.pot, sec: s.dot.sec }, s.mag); break;
                 case 'cone': nfShapeFx('cone', p.x, p.z, ang, { len: s.len, a: s.a }); hitAll((m) => { const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz); if (d > s.len + big(m)) return false; let da = Math.atan2(dx, dz) - ang; da = Math.atan2(Math.sin(da), Math.cos(da)); return d < 1.2 || Math.abs(da) < s.a / 2 + 0.15; }, s.pot); if (s.fx) nfFx(s.fx, p, new THREE.Vector3(p.x + Math.sin(ang) * 2.2, p.y, p.z + Math.cos(ang) * 2.2)); break;
                 case 'line': nfShapeFx('line', p.x, p.z, ang, { len: s.len, w: s.w }); hitAll((m) => { const dx = m.x - p.x, dz = m.z - p.z, lz = dx * Math.sin(ang) + dz * Math.cos(ang), lx = dx * Math.cos(ang) - dz * Math.sin(ang); return lz > -0.5 && lz < s.len + big(m) && Math.abs(lx) < s.w / 2 + big(m); }, s.pot); if (s.fx) nfFx(s.fx, p, new THREE.Vector3(p.x + Math.sin(ang) * s.len * 0.6, p.y, p.z + Math.cos(ang) * s.len * 0.6)); break;
-                case 'aoe': nfShapeFx('circle', p.x, p.z, 0, { r: s.r }); if (s.fx && !nfSpellFx(s, p, p)) nfFx('ring', p, p); hitAll((m) => Math.hypot(m.x - p.x, m.z - p.z) < s.r + big(m), s.pot); if (s.heal) { const h = Math.round(NF.hpMax * s.heal); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); for (const al of nfAllies(s.r + 6)) nfHealAlly(al, al.v.hm * s.heal); } break;
+                case 'aoe': nfShapeFx('circle', p.x, p.z, 0, { r: s.r }); if (s.fx && !nfSpellFx(s, p, p)) nfFx('ring', p, p); if (s.pot > 0) hitAll((m) => Math.hypot(m.x - p.x, m.z - p.z) < s.r + big(m), s.pot); if (s.heal) { const h = Math.round(NF.hpMax * s.heal); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); for (const al of nfAllies(s.r + 6)) nfHealAlly(al, al.v.hm * s.heal); } break;
                 case 'ground': { if (!t) return; const cx = t.x, cz = t.z; nfShapeFx('circle', cx, cz, 0, { r: s.r, col: 0xffa55a }); if (s.fx && !nfSpellFx(s, p, tpos)) nfFx(s.fx, p, tpos); hitAll((m) => Math.hypot(m.x - cx, m.z - cz) < s.r + big(m), s.pot); break; }
                 case 'dash': {
                     const g = localActor.group, fx0 = p.clone(); let dx, dz, tx = p.x, tz = p.z;
@@ -14856,6 +15625,8 @@ function kbModel(THREE, mk) {
                 case 'mp': { const ta = nfTgtAlly(s); if (ta) { nsSend({ k: 'hl', to: ta.id, mpf: s.frac }); nfPop(new THREE.Vector3(ta.q.x, ta.q.y + 2.2, ta.q.z), 'MP UP', '#8fb8ff', true); nfFx('heal', p, new THREE.Vector3(ta.q.x, ta.q.y, ta.q.z)); break; } } NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * s.frac); nfPop(up, 'MP UP', '#8fb8ff', true); nfFx('heal', p, p); break;
                 case 'taunt': { let n = 0; const ids = []; for (const m of mobs) if (!m.dead && nfDist(m) < 14) { nfAggro(m); nfThreatFix(m, me.id); if (m.sid) ids.push(m.sid); n++; } if (ids.length) nsSend({ k: 'tk', ids }); nfShapeFx('circle', p.x, p.z, 0, { r: 14, col: 0xffd24a }); nfPop(up, n ? 'PROVOKE' : 'Nothing to provoke', '#ffd24a'); break; }
                 case 'summon': nfPetStart(s.pet, s.sec, s.pot); break;
+                case 'abmp': NF.mp = Math.min(NF.mpMax, NF.mp + NF.mpMax * s.frac); nfPop(up, '+' + Math.round(NF.mpMax * s.frac) + ' MP', '#8fb8ff', true); nfFx('heal', p, p); break;
+                case 'abstep': { const g = localActor.group, a = g.rotation.y; let tx = p.x, tz = p.z; for (let st = 1; st <= 8; st++) { const nx = p.x + Math.sin(a) * s.dist * st / 8, nz = p.z + Math.cos(a) * s.dist * st / 8; if (nuBlk(nx, nz)) break; tx = nx; tz = nz; } nfFx('ring', p, p); g.position.set(tx, nuH(tx, tz), tz); NU.last.set(tx, 1, tz); nfFx('ring', g.position, g.position); break; }
                 case 'reasm': NF.reasm = 1; nfPop(up, 'REASSEMBLE', '#ffd24a', true); nfFx('guard', p, p); break;
                 case 'hyper': NF.heat = Math.max(0, (NF.heat || 0) - s.heatCost); NF.oh = 8; nuShowBanner('HYPERCHARGE', 'OVERHEATED'); nfFx('limit-ring', p, p); try { nfRumble(0.5, 0.6, 250); } catch (e) { /* pad */ } break;
                 case 'wildfire': if (!t) return; NF.wf = { tgt: t, t: 6, hits: 0 }; nfPop(new THREE.Vector3(t.x, t.node.position.y + 2.2, t.z), 'WILDFIRE', '#ff7a2a', true); nfFx('ring', tpos, tpos); break;
@@ -14960,6 +15731,9 @@ function kbModel(THREE, mk) {
             else if (t < 3.05) { const u = (t - 1.75) / 1.3; FIN.ts = finL(0.22, 0.7, finE(u)); const th = FIN.th + 1.5 + finE(u) * 0.5, d = R * finL(2.1, 5.2, finE(u)); cp.set(C.x + Math.sin(th) * d, C.y + finL(1.1, R * 1.9, finE(u)), C.z + Math.cos(th) * d); look.set(C.x, C.y + finL(0.5, 1.6, u), C.z); fov = finL(46, 58, finE(u)); }
             else if (t < 3.8) { const u = finE((t - 3.05) / 0.75); FIN.ts = finL(0.7, 1, u); const s = FIN.sv; cp.lerpVectors(FIN.last, s.p, u); look.lerpVectors(FIN.lastT, s.t, u); fov = finL(FIN.lastF, s.f, u); for (const b of FIN.bars) b.classList.remove('on'); }
             else { finEnd(); return; }
+            if (t < 3.05 && DG.on) {   // inside a cave the orbit must stay inside the cave: pull the camera in along the line to the boss until it is over open floor, and under the ceiling
+                let k = 1; while (k > 0.14 && !dgWalk(C.x + (cp.x - C.x) * k, C.z + (cp.z - C.z) * k)) k -= 0.05; cp.x = C.x + (cp.x - C.x) * k; cp.z = C.z + (cp.z - C.z) * k; const ce = dgCeilY(cp.x, cp.z) - 1.0; if (cp.y > ce) cp.y = ce; if (look.y > ce) look.y = ce;
+            }
             if (t < 3.05) { FIN.last.copy(cp); FIN.lastT.copy(look); FIN.lastF = fov; const gh = nuH(cp.x, cp.z) + 0.6; if (cp.y < gh) cp.y = gh; }
             cam.position.copy(cp); controls.target.copy(look); cam.lookAt(look); if (Math.abs(cam.fov - fov) > 0.01) { cam.fov = fov; cam.updateProjectionMatrix(); }
             if (t > 0.45 && t < 2.8 && Math.random() < 0.9) for (let i = 0; i < 2; i++) { const an = Math.random() * 6.28, r = Math.random() * FIN.R * 0.7; fxP({ x: C.x + Math.cos(an) * r, y: C.y - 1 + Math.random() * 0.5, z: C.z + Math.sin(an) * r, vx: 0, vy: 3 + Math.random() * 5, vz: 0, life: 1.1, s0: 0.5, s1: 0.05, cell: Math.random() < 0.4 ? FXCELL.star : FXCELL.glow, c0: [0.7, 0.9, 1], a: 0.9, fo: 0.5 }); }
@@ -17313,6 +18087,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function nuFieldInput(e) {
             if (activeMap !== 'nuu' || !NU.ready) return; if (typeof isTyping === 'function' && isTyping(e)) return; const k = e.code;
             const sw = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+            if ((k === 'Backquote' || k === 'KeyK' || (AB.open && /^(Digit|Escape)/.test(k)) || (AB.mode && /^Digit[1-8]$/.test(k))) && AB.ready) { if (!e.repeat) { if (abKey(e)) sw(); } else sw(); return; }
             if (/^Digit[1-8]$/.test(k)) { sw(); if (!e.repeat) nfXbRun(e.shiftKey ? 'R' : 'L', +k.slice(5) - 1); }
             else if (k === 'KeyC') { sw(); if (!e.repeat) nfClassMenu(); }
             else if (k === 'KeyQ' || k === 'AltLeft') { sw(); if (!e.repeat) nfRoll(); }
@@ -19231,7 +20006,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
             try { renderer.domElement.addEventListener('webglcontextlost', () => add('WebGL context lost: the graphics driver dropped the page')); } catch (e) { /* no renderer yet */ }
             setInterval(() => { try { let el = document.getElementById('nu-diag'); if (activeMap !== 'nuu' || !buf.length || closed) { if (el) el.style.display = 'none'; return; } const t = buf.join('\n\n'); if (!el) { el = document.createElement('pre'); el.id = 'nu-diag'; el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:min(92vw,640px);max-height:45vh;overflow:auto;margin:0;padding:8px 10px;border-radius:8px;background:rgba(60,0,0,.92);color:#ffd8d8;font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word;cursor:pointer'; el.title = 'tap to close'; el.addEventListener('pointerdown', (e) => { e.stopPropagation(); closed = true; el.style.display = 'none'; }); document.body.appendChild(el); } el.style.display = 'block'; if (t !== shown) { shown = t; el.textContent = 'ADVENTIA DIAGNOSTIC (send me this):\n' + t; } } catch (e) { /* diag */ } }, 1500);
         })();
-        window.__nuu = { zdbg: () => ({ localActor, NU, ZN, SMF, znFateFor, znChestSpawn, nuFateTick, nuChestNear, NI, nfPos }), tpl: () => ({ tnPlate, tnPlateSpot, znBlk, TN, ZN }), ar: () => ({ arPick, ARW, AR_EL, arShoot, arTick, arRelease, nfAdv, nfGunOn, NG }), bow: (p, pot) => nfBowAuto(p, pot, false, 1), hacts: () => HERO_ACTS, cmp: () => ({ nfCmpCast, nfCmpStep, nfCmpK, nfCmpKit, CMP_CLASSES }), spl: () => ({ SPV, MG_SP, MG, nfEnemySpell, nfTelStart, nfTelTick, nfStAdd, mgResolve, nfSpellFxAt, nfFoes, nfMobAI }), mb: () => ({ nuMobBuild, SIM, nfAffCalc, nfAffOf, nfDealDmg }), stn: () => ({ nfStanceCycle, nfStMp, NF_STANCE, nfThr, nfStOn, nfUse, nfApplyClass, sk: () => NF_SK }), aui: () => AUI, fin: () => ({ FIN, finStart, finTick }), sdx: () => ({ NI, sdxOrder, sdxStatus, sdxDeliver, sdxSpare, SDX, sdxOpen }), art: () => ({ ARW, NG, nfApplyClass, nfPickClass, nfUse, nfXp, nfAdv, arSelect, arCycle, arTick, nfTop, nfClsLv, nfSave }), mage: (s, ph) => nfMageAnim(s, ph), bake: (b, k) => bakeFbxClip(b, k), SLOTS, castFx: nfCastFx, get controls() { return controls; }, get cam() { return camera; }, nfFx, nfSpellFx, MG_SP, mgResolve, nuChestSpawn, NU, nuH, SMF, HB, nfMobDie, nfDealDmg, nfMobs, SPV, MC, nfPos, camera, yt: { ytTitle, ytFetch, srcLabel, ytIsIdLabel, YT_T }, st: { add: nfStAdd, has: nfStHas, cure: nfStCure, tick: nfStTick, eat: foodEat }, gf: { tick: gfTick, apply: gfApply, at: gfAt, enc: gfEnc, dec: gfDec, GF, clean: (r) => dcCleanItem(r), wire: (it) => dcWireItem(it), place: (it) => dcPlace(it), starter: gfStarter }, gd: { THREE, tick: gdTick, make: dcMake, mods: GD_MOD, open: gdOpen, starter: gdStarter, vis: gdVis, DC }, cb: { open: cbOpen }, sim: { SIM, simTick, simMods, simAdd, simSoap, shower: tnShower, ui: simUi }, lb: { start: (t) => { const s = NF_SK.find((q) => q.lb); NF.lb = 100; nfUse(NF_SK.indexOf(s)); return !!NF.lbSeq; }, seq: () => NF.lbSeq && { i: NF.lbSeq.i, n: NF.lbSeq.n }, sep: nuSeparate, NF, spawn: nuSpawnExtra, mobs: nfMobs, tick: nfLbTick }, spell: { fx: (id, k) => { const s = NF_SK.find((q) => q.id === id) || { id, r: 5 }; const p = nfPos(); const t = new THREE.Vector3(p.x + 6, p.y, p.z); t.userData = { h: 2 }; return nfSpellFx(s, p, t); }, castfx: (id) => { const s = NF_SK.find((q) => q.id === id); NF.cast = { s, dur: s.cast, t0: performance.now() / 1000 }; nfCastFx(s); return NF.fx.length; }, anim: (id, ph) => { const s = NF_SK.find((q) => q.id === id); nfMageAnim(s, ph); return localActor.emote; }, NF }, lk: { cycle: nfCycle, spawn: nuSpawnExtra, NF }, gun: { use: (i) => nfUse(i), mod: nfGunMod, tick: nfMachTick, ui: nfGunUi, sk: () => NF_SK, NF, set: (id) => nfApplyClass(id, true) }, food: { sv: () => ({ DC, SV, svTick, ap: activeMap }), ckAct, ckKey, ckSim, ckDraw, ckTheme, FOOD, ckOpen, ckCook, ckMatch, foodEat, foodItems, gaPick, ck: CK, nodes: () => NU.gaN, add: foodAdd, fd: () => NF.fd }, dgT: () => { try { nfDangerTick(); return "ok"; } catch (e) { return String(e.stack).slice(0, 300); } }, telBuild: nfTelBuild, glow: (s) => { nfBladeGlow(s); return NF.glow; }, tick: nfGlowTick, die: () => nfDie(), revive: nfRevive, ret: nfReturn, itemUse: nfItemUse, fallNear: nfFallNear, fallBuild: nfFallBuild, down: nfDownAct, thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle, plate: tnPlate }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        window.__nuu = { zdbg: () => ({ nfApplyClass, nuSpawnExtra, nfTarget, nfMobs, AB, abRun, abPin, abBookOpen, abAuto, abSkill, abKey, nfUse, NF, NF_SK, nfMobDie, FIN, camera, dgWalk, localActor, NU, ZN, SMF, znFateFor, znChestSpawn, nuFateTick, nuChestNear, NI, nfPos }), tpl: () => ({ tnPlate, tnPlateSpot, znBlk, TN, ZN }), ar: () => ({ arPick, ARW, AR_EL, arShoot, arTick, arRelease, nfAdv, nfGunOn, NG }), bow: (p, pot) => nfBowAuto(p, pot, false, 1), hacts: () => HERO_ACTS, cmp: () => ({ nfCmpCast, nfCmpStep, nfCmpK, nfCmpKit, CMP_CLASSES }), spl: () => ({ SPV, MG_SP, MG, nfEnemySpell, nfTelStart, nfTelTick, nfStAdd, mgResolve, nfSpellFxAt, nfFoes, nfMobAI }), mb: () => ({ nuMobBuild, SIM, nfAffCalc, nfAffOf, nfDealDmg }), stn: () => ({ nfStanceCycle, nfStMp, NF_STANCE, nfThr, nfStOn, nfUse, nfApplyClass, sk: () => NF_SK }), aui: () => AUI, fin: () => ({ FIN, finStart, finTick }), sdx: () => ({ NI, sdxOrder, sdxStatus, sdxDeliver, sdxSpare, SDX, sdxOpen }), art: () => ({ ARW, NG, nfApplyClass, nfPickClass, nfUse, nfXp, nfAdv, arSelect, arCycle, arTick, nfTop, nfClsLv, nfSave }), mage: (s, ph) => nfMageAnim(s, ph), bake: (b, k) => bakeFbxClip(b, k), SLOTS, castFx: nfCastFx, get controls() { return controls; }, get cam() { return camera; }, nfFx, nfSpellFx, MG_SP, mgResolve, nuChestSpawn, NU, nuH, SMF, HB, nfMobDie, nfDealDmg, nfMobs, SPV, MC, nfPos, camera, yt: { ytTitle, ytFetch, srcLabel, ytIsIdLabel, YT_T }, st: { add: nfStAdd, has: nfStHas, cure: nfStCure, tick: nfStTick, eat: foodEat }, gf: { tick: gfTick, apply: gfApply, at: gfAt, enc: gfEnc, dec: gfDec, GF, clean: (r) => dcCleanItem(r), wire: (it) => dcWireItem(it), place: (it) => dcPlace(it), starter: gfStarter }, gd: { THREE, tick: gdTick, make: dcMake, mods: GD_MOD, open: gdOpen, starter: gdStarter, vis: gdVis, DC }, cb: { open: cbOpen }, sim: { SIM, simTick, simMods, simAdd, simSoap, shower: tnShower, ui: simUi }, lb: { start: (t) => { const s = NF_SK.find((q) => q.lb); NF.lb = 100; nfUse(NF_SK.indexOf(s)); return !!NF.lbSeq; }, seq: () => NF.lbSeq && { i: NF.lbSeq.i, n: NF.lbSeq.n }, sep: nuSeparate, NF, spawn: nuSpawnExtra, mobs: nfMobs, tick: nfLbTick }, spell: { fx: (id, k) => { const s = NF_SK.find((q) => q.id === id) || { id, r: 5 }; const p = nfPos(); const t = new THREE.Vector3(p.x + 6, p.y, p.z); t.userData = { h: 2 }; return nfSpellFx(s, p, t); }, castfx: (id) => { const s = NF_SK.find((q) => q.id === id); NF.cast = { s, dur: s.cast, t0: performance.now() / 1000 }; nfCastFx(s); return NF.fx.length; }, anim: (id, ph) => { const s = NF_SK.find((q) => q.id === id); nfMageAnim(s, ph); return localActor.emote; }, NF }, lk: { cycle: nfCycle, spawn: nuSpawnExtra, NF }, gun: { use: (i) => nfUse(i), mod: nfGunMod, tick: nfMachTick, ui: nfGunUi, sk: () => NF_SK, NF, set: (id) => nfApplyClass(id, true) }, food: { sv: () => ({ DC, SV, svTick, ap: activeMap }), ckAct, ckKey, ckSim, ckDraw, ckTheme, FOOD, ckOpen, ckCook, ckMatch, foodEat, foodItems, gaPick, ck: CK, nodes: () => NU.gaN, add: foodAdd, fd: () => NF.fd }, dgT: () => { try { nfDangerTick(); return "ok"; } catch (e) { return String(e.stack).slice(0, 300); } }, telBuild: nfTelBuild, glow: (s) => { nfBladeGlow(s); return NF.glow; }, tick: nfGlowTick, die: () => nfDie(), revive: nfRevive, ret: nfReturn, itemUse: nfItemUse, fallNear: nfFallNear, fallBuild: nfFallBuild, down: nfDownAct, thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle, plate: tnPlate }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
