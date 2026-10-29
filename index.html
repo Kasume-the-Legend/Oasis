@@ -328,6 +328,7 @@
             <button id="hud-oboy" type="button" class="hm-pill glass-panel" title="O-Boy portable screen (O)" aria-label="O-Boy" style="margin-right:8px;padding:0 13px"><i class="fa-solid fa-gamepad"></i></button>
             <button id="hud-board" type="button" class="hm-pill glass-panel" title="Hoverboard (X). Shift+X changes colour" aria-label="Hoverboard" style="margin-right:8px;padding:0 13px"><i class="fa-solid fa-wind"></i></button>
             <button id="hud-bike" type="button" class="hm-pill glass-panel" title="Motorbike (B). Garage: /garage" aria-label="Motorbike" style="margin-right:8px;padding:0 13px"><i class="fa-solid fa-motorcycle"></i></button>
+            <button id="hud-ship" type="button" class="hm-pill glass-panel" title="Airship (/airship). Shift-click: hangar" aria-label="Airship" style="margin-right:8px;padding:0 13px"><i class="fa-solid fa-rocket"></i></button>
             <button id="hud-fs" type="button" class="hm-pill glass-panel" title="Fullscreen" aria-label="Fullscreen" style="display:none;margin-right:8px;padding:0 13px"><i class="fa-solid fa-expand"></i></button>
             <div id="hud-gil" class="hm-pill glass-panel" title="Your Gil - click for your bag and the moogle shop" style="margin-right:8px;padding:0 14px;gap:7px;cursor:pointer"><span style="color:#ffd24a;font-weight:700">Gil</span><span id="hud-gil-n">0</span></div>
             <div id="hud-lv" class="hm-pill glass-panel" title="Your level" style="margin-right:8px;padding:0 14px;gap:9px;cursor:default"><span id="hud-lv-n">Lv 1</span><i class="lv-bar"><b id="hud-lv-b"></b></i></div>
@@ -503,7 +504,7 @@
             <button id="pc-close" type="button" class="pc-x" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
             <div class="pc-head"><div id="pc-av" class="pc-av"></div><div class="min-w-0"><div id="pc-name" class="pc-name"></div><div id="pc-sub" class="pc-sub">Player profile</div></div></div>
             <div class="pc-sec"><div class="pc-h"><i class="fa-solid fa-trophy"></i> RetroAchievements</div><div id="pc-ra" class="pc-body"></div></div>
-            <div class="pc-foot"><button id="pc-kick" type="button" class="pc-btn hidden"><i class="fa-solid fa-door-open"></i> Kick</button><button id="pc-ban" type="button" class="pc-btn hidden"><i class="fa-solid fa-ban"></i> Ban</button><button id="pc-look" type="button" class="pc-btn"><i class="fa-solid fa-eye"></i> Look at</button><button id="pc-friend" type="button" class="pc-btn"><i class="fa-solid fa-user-plus"></i> Add friend</button><button id="pc-trade" type="button" class="pc-btn"><i class="fa-solid fa-handshake"></i> Trade</button><button id="pc-duel" type="button" class="pc-btn"><i class="fa-solid fa-khanda"></i> Duel</button><button id="pc-done" type="button" class="pc-btn pc-pri">Close</button></div>
+            <div class="pc-foot"><button id="pc-kick" type="button" class="pc-btn hidden"><i class="fa-solid fa-door-open"></i> Kick</button><button id="pc-ban" type="button" class="pc-btn hidden"><i class="fa-solid fa-ban"></i> Ban</button><button id="pc-look" type="button" class="pc-btn"><i class="fa-solid fa-eye"></i> Look at</button><button id="pc-friend" type="button" class="pc-btn"><i class="fa-solid fa-user-plus"></i> Add friend</button><button id="pc-trade" type="button" class="pc-btn"><i class="fa-solid fa-handshake"></i> Trade</button><button id="pc-duel" type="button" class="pc-btn"><i class="fa-solid fa-khanda"></i> Duel</button><button id="pc-ship" type="button" class="pc-btn hidden"><i class="fa-solid fa-rocket"></i> Ride airship</button><button id="pc-done" type="button" class="pc-btn pc-pri">Close</button></div>
         </div>
     </div>
 
@@ -3123,7 +3124,7 @@ function kbModel(THREE, mk) {
                 if (this.emote) {
                     const dur = this.emoteDur || EMOTES[this.emote].dur;
                     et = now - this.emoteStart;
-                    if (et > dur || (speed > 1.5 && !EMOTES[this.emote].move) || (EMOTES[this.emote].hold && air) || (speed > 1.5 && EMOTES[this.emote].hero && et > Math.min(0.45, dur * 0.5) && !/dash|evade|roll|jump|dodge|slide|blink|step|leap|vault/i.test(this.emote))) { this.emote = null; }   // walking away from a sword / put-away clip ends it, so the legs take over instead of the body gliding   // walking off or jumping ends a held emote
+                    if (et > dur || (speed > 1.5 && !EMOTES[this.emote].move) || (EMOTES[this.emote].hold && air) || (speed > 1.5 && EMOTES[this.emote].hero && et > Math.min(0.45, dur * 0.5) && !/dash|evade|roll|jump|dodge|slide|blink|step|leap|vault|^ar_/i.test(this.emote))) { this.emote = null; }   // walking away from a sword / put-away clip ends it, so the legs take over instead of the body gliding   // walking off or jumping ends a held emote
                     else { const bt = this.bdOn ? 0.07 : 0.25; e = Math.min(et / bt, 1, (dur - et) / bt); }
                 }
 
@@ -4427,6 +4428,7 @@ function kbModel(THREE, mk) {
             if (room && room.dropped && room.dropped.has(from)) return;
 
             switch (m.t) {
+                case 'as': case 'wantas': case 'asdata': case 'asride': case 'asok': case 'asleave': case 'asend': { try { asOnMsg(from, m); } catch (e) { console.warn('airship message', e); } break; }
                 case 'bk': case 'wantbk': case 'bkdata': { try { bkOnMsg(from, m); } catch (e) { console.warn('bike message', e); } break; }
                 case 'kick': {
                     const q = peers.get(from); if (!(q && q.own) && !(room && room.ownerId === from)) break;
@@ -4505,7 +4507,7 @@ function kbModel(THREE, mk) {
                     }
                     if (![m.x, m.y, m.z, m.ry, m.sc].every(Number.isFinite)) return;
                     p.last = Date.now();
-                    p.hb = Number.isFinite(m.hb) ? clamp(m.hb | 0, 0, 10) : 0;
+                    p.hb = Number.isFinite(m.hb) ? clamp(m.hb | 0, 0, 12) : 0;
                     p.target = { x: m.x, y: m.y, z: m.z, ry: m.ry };
                     p.actor.tweak.scale = clamp(m.sc, 0.2, 4);
                     if (!p.placed) {
@@ -14718,7 +14720,7 @@ function kbModel(THREE, mk) {
         /* ---- ARTEMIS auto-attack: she draws the bow, looses a spirit arrow and recoils, instead of a sword swing ---- */
         function nfBowAuto(p, pot, last, i) {
             const t = NF.tgt, A = localActor; if (!t || t.dead || !A) return; const el = (typeof ARW !== 'undefined' && ARW.el) || 'n', e = (typeof AR_EL !== 'undefined' && (AR_EL[el] || AR_EL.n)) || {};
-            ARW.showT = performance.now() + 900; const drawN = 'ar_overdraw', hasD = !!ANIM_EMOTES[drawN];
+            ARW.showT = performance.now() + 900; ARW.autoUntil = performance.now() + 1000; const drawN = 'ar_overdraw', hasD = !!ANIM_EMOTES[drawN];
             if (hasD && A.playEmote) { A.emoteT0 = 0; A.playEmote(drawN); A.emoteRate = 3.4; nfEmoteNet(drawN, 3.4, false); }
             const hit = t; const tx = hit.x, tz = hit.z;
             setTimeout(() => {
@@ -14855,7 +14857,7 @@ function kbModel(THREE, mk) {
                 case 'hyper': NF.heat = Math.max(0, (NF.heat || 0) - s.heatCost); NF.oh = 8; nuShowBanner('HYPERCHARGE', 'OVERHEATED'); nfFx('limit-ring', p, p); try { nfRumble(0.5, 0.6, 250); } catch (e) { /* pad */ } break;
                 case 'wildfire': if (!t) return; NF.wf = { tgt: t, t: 6, hits: 0 }; nfPop(new THREE.Vector3(t.x, t.node.position.y + 2.2, t.z), 'WILDFIRE', '#ff7a2a', true); nfFx('ring', tpos, tpos); break;
                 case 'steal': { if (!t) return; nfDealDmg(t, 0.4, false); if (!t.duel && Math.random() < 0.45) { const g = Math.round(8 + t.lv * 5 * (0.6 + Math.random())); try { window.oasisGil.add(g, true); } catch (e) { /* gil */ } let it = ''; if (Math.random() < 0.3) { try { btBagAdd('potion', 1); it = ' + Potion'; } catch (e) { /* bag */ } } nfPop(up, 'STOLE ' + g + ' Gil' + it, '#ffe27a', true); } else nfPop(up, 'Steal failed', '#cfd8e0'); break; }
-                case 'lb': { if (!t) return; NF.lb = 0; nuShowBanner('LIMIT BREAK', s.n.toUpperCase()); nfFx('limit-ring', p, p); nfFx('limit', p, tpos); nfLbStart(s, t); break; }
+                case 'lb': { if (!t) return; NF.lb = 0; nuShowBanner('LIMIT BREAK', s.n.toUpperCase()); nfFx('limit-ring', p, p); nfFx('limit', p, tpos); if (NF.cls === 'artemis') arLbStart(s, t); else nfLbStart(s, t); break; }
             }
         }
         /* ---- Gunner (Machinist style): combo chain, Heat gauge, Hypercharge, Reassemble, Wildfire ---- */
@@ -15099,7 +15101,7 @@ function kbModel(THREE, mk) {
             const o = [];
             if (who === NF) {
                 for (const k of Object.keys(NF.st || {})) if (NF.st[k] > 0 && NF_ST[k]) o.push({ ic: NF_ST[k].ic, fd: NF_FDI[k], col: NF_ST[k].col, s: Math.ceil(NF.st[k]) });
-                if (NF.fd && NF.fd.left > 0) { const b = NF.fd.bf; o.push({ ic: b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋', fd: fdFood(b), col: '#8fe29a', s: nfFdT(NF.fd.left) }); }
+                if (false && NF.fd && NF.fd.left > 0) { const b = NF.fd.bf; o.push({ ic: b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋', fd: fdFood(b), col: '#8fe29a', s: nfFdT(NF.fd.left) }); }
                 { const q = nfStOn(); if (q && NF.stance && NF.stance !== 'off') o.push({ ic: q.ic, fd: NF_FDI.guard, col: q.col, s: '∞' }); }
                 if (NF.guard > 0) o.push({ ic: '🛡️', fd: NF_FDI.guard, col: '#8fb8ff', s: Math.ceil(NF.guard) });
                 if (NF.buffT > 0) o.push({ ic: '⚔️', fd: [1, 0], col: '#ffd24a', s: Math.ceil(NF.buffT) });
@@ -16481,7 +16483,7 @@ function kbModel(THREE, mk) {
             if (!document.getElementById('nf-fdi-css')) { const fs = document.createElement('style'); fs.id = 'nf-fdi-css'; fs.textContent = '#nf-st .fdi{display:block;width:22px;height:22px;background:url(' + FD_URI + ') 0 0/176px 154px no-repeat;image-rendering:auto;pointer-events:none}'; document.head.appendChild(fs); }
             const items = []; for (const k of Object.keys(NF.st)) items.push({ col: NF_ST[k].col, ic: NF_ST[k].ic, fd: NF_FDI[k], n: NF_ST[k].n, s: Math.ceil(NF.st[k]) });
             for (const [k, ic, fd, col] of NF_GEARST) if (nfG(k) && !(k === 'protect' && NF.mgProt > 0) && !(k === 'shell' && NF.mgShell > 0) && !(k === 'haste' && NF.mgHaste > 0)) items.push({ col, ic, fd, n: k, s: '∞' });
-            if (NF.fd) { const b = NF.fd.bf; items.push({ col: '#8fe29a', ic: (b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋'), n: NF.fd.n, fd: fdFood(NF.fd.bf), s: nfFdT(NF.fd.left) }); }
+            if (false && NF.fd) { const b = NF.fd.bf; items.push({ col: '#8fe29a', ic: (b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋'), n: NF.fd.n, fd: fdFood(NF.fd.bf), s: nfFdT(NF.fd.left) }); }
             const ov = host && items.length > 1 ? Math.max(3, Math.min(14, (25 * items.length - 72) / (items.length - 1))) : 0;   // the more icons, the more they overlap, so the stack never grows past the HP number
             const parts = items.map((it, i) => host ? '<span style="border-color:' + it.col + ';color:' + it.col + ';' + (i ? 'margin-left:-' + ov.toFixed(1) + 'px;' : '') + '">' + (it.fd ? '<i class="fdi" style="background-position:-' + it.fd[0] * 22 + 'px -' + it.fd[1] * 22 + 'px"></i>' : it.ic) + '<b>' + it.s + '</b></span>' : '<span style="border-color:' + it.col + ';color:' + it.col + '">' + it.ic + ' ' + it.n + ' ' + it.s + 's</span>');
             const h = parts.join(''); if (el.innerHTML !== h) el.innerHTML = h; const on = activeMap === 'nuu' && NU.ready; if (el.style.display !== (on ? 'flex' : 'none')) el.style.display = on ? 'flex' : 'none';
@@ -25046,8 +25048,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             }
             const ngOn = activeMap === 'nuu' && NU.ready && nfAdv().mode === 'aim', ngHb = ngOn && b[5] && !b[4];      // Adventia Gunner: L2 aims, R2 fires, hold RB for the cross hotbar
             if (ngOn) { NG.adsP = !ngHb && !!b[6]; NG.fireP = !ngHb && !!b[7]; } else { NG.adsP = false; NG.fireP = false; }
-            if (ngOn && nfAdv().bow && !b[6] && !ngHb && !b[4]) { for (const [bi, k] of [[12, 0], [15, 1], [13, 2], [14, 3]]) if (hit(bi)) arPick(k); if (hit(11)) { ARW.page = ARW.page ? 0 : 1; arPadUi(true); padToast('Arrows ' + (ARW.page + 1) + '/2'); } }      // Artemis: the D-pad picks the arrow (up / right / down / left), R3 flips to the other four
-            if (ngOn && nfAdv().bow && b[6] && !ngHb) { for (let k = 0; k < 4; k++) if (hit(k)) nfUse(k); if (hit(14)) arCycle(-1); if (hit(15)) arCycle(1); }      // Artemis: hold L2 and the face buttons pick the arrow (A plain, B fire, X ice, Y thunder), D-pad left / right cycles all eight
+            if (ngOn && nfAdv().bow && !b[6] && !ngHb && !b[4]) { for (const [bi, k] of [[12, 0], [15, 1], [13, 2], [14, 3]]) if (hit(bi)) arPick(k); if (hit(11)) { ARW.page = ((ARW.page | 0) + 1) % 5; arPadUi(true); padToast(['Arrows 1/5', 'Arrows 2/5', 'Skills 3/5', 'Bow 4/5', 'Draw magic 5/5'][ARW.page]); } }      // Artemis: the D-pad picks the arrow (up / right / down / left), R3 flips to the other four
+            if (ngOn && nfAdv().bow && b[6] && !ngHb) { for (let k = 0; k < 4; k++) if (hit(k)) nfUse(k); if (hit(14)) arCycle(-1); if (hit(15)) arCycle(1); if (hit(13)) arMgCycle(); if (hit(12)) { const q = arMgPin(); if (q) mgCast(q.id); else padToast('No pinned magic · pin spells in the Magic menu'); } }      // Artemis: hold L2 and the face buttons pick the arrow (A plain, B fire, X ice, Y thunder), D-pad left / right cycles all eight
             const held = gunHb ? (GN.hbR ? 'R' : 'L') : ngHb ? (NG.hbR ? 'R' : 'L') : (tagMode || hcPadOn() || ngOn || (activeMap === 'nuu' && b[4])) ? '' : b[6] && !b[7] ? 'L' : b[7] && !b[6] ? 'R' : '';
             if (held) {
                 if (activeMap === 'nuu' && hit(11)) { PAD.set = (PAD.set + 1) % PAD_SETS.length; PAD.drawKey = ''; try { localStorage.setItem('oasisPadSet', String(PAD.set)); } catch (e) { /* storage */ } padToast('Hotbar set ' + (PAD.set + 1) + ' · ' + PAD_SETS[PAD.set].name); }      // hold L2 / R2 and press R3 to flip the hotbar set
@@ -25078,7 +25080,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 if (b[4]) { for (let i = 0; i < 16; i++) if (i !== 4 && hit(i)) PAD.l1Used = true; if (PAD.l1Zoom || b[6] || b[7]) PAD.l1Used = true; }
                 else if (PAD.prev[4] && !PAD.l1Used && !PAD.l1Zoom && nowS() - (PAD.l1At || 0) < 0.45) { if (activeMap === 'nuu' && NU.ready) PAD.shPend = nowS() + 0.5; else padSheatheToggle(); }      // Adventia: a single tap waits half a second in case it is the first half of a double-tap
             }
-            if (hit(8)) { PAD.hudT = nowS(); PAD.hudHid = false; if (dockHidden) toggleDock(false); press('Tab'); }              // Back: select HUD
+            if (hit(8) && ngOn && nfAdv().bow && b[4]) { NG.sd = -(NG.sd || 1); padToast('Camera: ' + (NG.sd > 0 ? 'right' : 'left') + ' shoulder'); }
+            else if (hit(8)) { PAD.hudT = nowS(); PAD.hudHid = false; if (dockHidden) toggleDock(false); press('Tab'); }              // Back: select HUD
             if (hit(9)) toggleDock();                                              // Start: show / hide the menu bar
             if (hit(10) && !hcPadOn() && !ngHb) { if (hcMine() && b[4]) hcDraw(); }                                                 // L3: lock on
             if (hcPadOn()) { /* R3 cycles the lock-on target (hcPadAct) */ } else if (hit(11) && b[4] && !(activeMap === 'tag' && tgMine())) { /* L1 + R3 = auto-run (handled above) */ } else if (hit(11) && activeMap === 'tag' && tgMine()) { TG.adsT = !TG.adsT; padToast(TG.adsT ? 'Aim: on' : 'Aim: off'); } else if (hit(11)) { if (!$('screen-panel').classList.contains('hidden')) closeScreenPanel(); else { PAD.r3T = nowS(); PAD.r3Ok = true; PAD.r3Fp = false; } }   // R3: tap = lock on, hold 3 s = first person
@@ -25146,7 +25149,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         const hbName = (vi) => (hbIsCustom(vi) ? hbDesigns[vi - HB_VARIANTS.length].n : (HB_VARIANTS[vi] || HB_VARIANTS[0]).name);
         const hbKey = (vi) => (hbIsCustom(vi) ? 'c' + JSON.stringify(hbDesigns[vi - HB_VARIANTS.length]) : vi);
         const hbBuild = (vi) => (hbIsCustom(vi) ? hbMakeD(hbDesigns[vi - HB_VARIANTS.length]) : hbMake(vi));
-        const hbWire = () => (hbOn ? (BK.on ? 10 : hbIsCustom(hbVariant) ? 9 : Math.min(hbVariant, HB_VARIANTS.length - 1) + 1) : 0);
+        const hbWire = () => (AS.pilot ? 11 : AS.riding ? 12 : hbOn ? (BK.on ? 10 : hbIsCustom(hbVariant) ? 9 : Math.min(hbVariant, HB_VARIANTS.length - 1) + 1) : 0);
         const hbWireDesign = () => (hbIsCustom(hbVariant) ? hbDesigns[hbVariant - HB_VARIANTS.length] : null);
         const hbdBroadcast = () => { try { net && net.send({ t: 'hbd', d: hbWireDesign() }); } catch (e) { /* not connected */ } };
         const _hbDecalCache = new Map();
@@ -25426,8 +25429,184 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         window.__bk = { BK, BKC, set: bkSet, show: bkShow, peerBk: () => [...peers.values()].map((q) => ({ n: q.name, hb: q.hb, bk: q.bk, has: !!(q.bk && BKC.has(q.bk.id)) })), share: (i) => bkShareGet(i).then((b) => b && b.byteLength) };
         (async () => { for (let i = 0; i < BK_N; i++) if (BK.cfg[i]) { try { await bkLoad(i); } catch (e) { console.warn('bike', i, e); BK.raw[i] = null; } } bkRender(); })();
 
+        /* ------------------------------------------------------------------ *
+         *  Airships: bring any model as your ship (.fbx / .glb / .obj / .zip), fly it around like walking, and other players click you to ride along.
+         *  Everyone aboard turns invisible while the ship is up; when the owner lands, everybody appears again.
+         *  Size limits: every ship is fitted to 14 m long, the Size slider only goes 60-140 %, and nothing may pass 20 m long, 16 m wide or 10 m tall.
+         * ------------------------------------------------------------------ */
+        const AS_LS = 'oasis.airships.v1', AS_N = 3, AS_LEN = 14, AS_ALT = 11, AS_SPEED = 20, AS_SEATS = 6, AS_MAXL = 20, AS_MAXW = 16, AS_MAXH = 10, AS_TRIS = 500000, AS_BYTES = 24e6;
+        var AS = { stock: null, cfg: [], raw: [], bid: [], sel: -1, pilot: false, landing: 0, riding: null, asking: null, seats: new Set(), mine: null, mineV: '', lift: 0, yaw: 0, roll: 0, pitch: 0, open: false, upFor: null, px: 0, pz: 0, camMax: null, t: 0, lost: 0, tris: [] };
+        const AS_AX = { '+x': [1, 0, 0], '-x': [-1, 0, 0], '+y': [0, 1, 0], '-y': [0, -1, 0], '+z': [0, 0, 1], '-z': [0, 0, -1] };
+        const AS_OUT = ['city', 'plot', 'school', 'raimon', 'nuu'];
+        const ASC = new Map(), asReq = new Map(), asOutQ = new Map(), asPeerShips = new Map();
+        try { const a = JSON.parse(localStorage.getItem(AS_LS) || '[]'); if (Array.isArray(a)) AS.cfg = a.slice(0, AS_N).map((c) => (c && typeof c === 'object' ? c : null)); } catch (e) { AS.cfg = []; }
+        try { AS.stock = JSON.parse(localStorage.getItem('oasis.airshipStock') || 'null'); } catch (e) { AS.stock = null; }
+        try { AS.sel = Math.max(-1, Math.min(AS_N - 1, +(localStorage.getItem('oasis.airshipSel') || -1))); } catch (e) { AS.sel = -1; }
+        const asSave = () => { try { localStorage.setItem(AS_LS, JSON.stringify(AS.cfg)); localStorage.setItem('oasis.airshipSel', String(AS.sel)); localStorage.setItem('oasis.airshipStock', JSON.stringify(AS.stock || null)); } catch (e) { /* storage */ } };
+        function asCleanCfg(c) { c = c && typeof c === 'object' ? c : {}; return { ax: AS_AX[c.ax] ? c.ax : '+z', roll: bkClamp(c.roll, 0, 3, 0) | 0, sc: bkClamp(c.sc, 0.6, 1.4, 1), jon: c.jon === 0 || c.jon === false ? 0 : 1, jy: bkClamp(c.jy, 0, 1, 0.3), jz: bkClamp(c.jz, -0.7, 0.7, -0.5), jx: bkClamp(c.jx, 0, 0.5, 0), js: bkClamp(c.js, 0.4, 2.5, 1) }; }   // jet stream: where the exhaust comes out (height, front/back, spread) and how big   // the size limiter: nobody can ask for more than 140 %
+        function asTris(sc) { let n = 0; sc.traverse((o) => { if (o.isMesh && o.geometry) { const g = o.geometry; n += g.index ? g.index.count / 3 : (g.attributes.position ? g.attributes.position.count / 3 : 0); } }); return n; }
+        async function asLoad(i) {
+            const rec = await store.get('airship:' + i); if (!rec || !rec.buffer) { AS.raw[i] = null; return; }
+            AS.bid[i] = bkIdOf(rec.buffer); const gltf = await new Promise((res, rej) => gltfLoader.parse(rec.buffer.slice(0), '', res, rej));
+            bikeClean(gltf.scene); gltf.scene.traverse((o) => { if (o.isMesh) { o.userData.noOutline = true; o.frustumCulled = false; [].concat(o.material || []).forEach((m) => { m.side = THREE.DoubleSide; }); } }); AS.raw[i] = gltf.scene;
+        }
+        function asFit(scene, cfg) {
+            const c = asCleanCfg(cfg), inner = scene.clone(true), holder = new THREE.Group(); holder.add(inner);
+            const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(...AS_AX[c.ax]), new THREE.Vector3(0, 0, 1)), rl = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), c.roll * Math.PI / 2);
+            holder.quaternion.copy(rl.multiply(q)); holder.updateMatrixWorld(true);
+            const bb = new THREE.Box3().setFromObject(holder), sz = bb.getSize(new THREE.Vector3()); let k = AS_LEN * c.sc / Math.max(1e-4, sz.z);
+            k = Math.min(k, AS_MAXL / Math.max(1e-4, sz.z), AS_MAXW / Math.max(1e-4, sz.x), AS_MAXH / Math.max(1e-4, sz.y)); if (!(k > 0) || !Number.isFinite(k)) k = 1;
+            holder.scale.setScalar(k); holder.updateMatrixWorld(true); bb.setFromObject(holder); holder.position.set(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2);
+            const g = new THREE.Group(); g.add(holder); g.userData = { ship: true, H: Math.max(1, bb.max.y - bb.min.y), W: bb.max.x - bb.min.x, L: bb.max.z - bb.min.z, c }; return g;
+        }
+        function asGeneric(cfg) {   // the stock airship: a timber hull under a striped balloon, with a spinning propeller
+            const g = new THREE.Group(), mk = (geo, col, em) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: col, roughness: 0.6, metalness: 0.15, emissive: em || 0 })); m.userData.noOutline = true; m.frustumCulled = false; return m; };
+            const add = (m, x, y, z, rx, ry, rz) => { m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); g.add(m); return m; };
+            const hull = add(mk(new THREE.CapsuleGeometry(1.5, 8, 6, 14), 0x8a5a33), 0, 2.2, 0, Math.PI / 2); hull.scale.set(1, 1, 0.8);
+            add(mk(new THREE.BoxGeometry(2.6, 0.18, 8), 0x5b3a20), 0, 3.5, 0); add(mk(new THREE.BoxGeometry(2.4, 1.2, 2.2), 0xb88a52), 0, 4.1, -1.8);
+            const env = add(mk(new THREE.SphereGeometry(1, 28, 18), 0xe8e2d0), 0, 7.4, 0); env.scale.set(3.3, 2.6, 6.8);
+            for (let i = 0; i < 6; i++) { const b = add(mk(new THREE.SphereGeometry(1.002, 28, 18, i / 6 * Math.PI * 2, Math.PI / 6), i % 2 ? 0xd8483a : 0x2f5fb0), 0, 7.4, 0); b.scale.set(3.3, 2.6, 6.8); }
+            for (const sx of [-1, 1]) { add(mk(new THREE.BoxGeometry(0.1, 2.4, 2.4), 0xd8483a), 0, 7.4 + 0.0, -6.4, 0, 0, 0).position.x = 0; const f = add(mk(new THREE.BoxGeometry(2.4, 0.1, 2.4), 0xd8483a), sx * 1.5, 7.4, -6.2); f.rotation.z = sx * 0.1; }
+            for (const sx of [-1, 1]) { add(mk(new THREE.CylinderGeometry(0.05, 0.05, 3.6, 6), 0x3a2a18), sx * 1.3, 5.2, 1.5); add(mk(new THREE.CylinderGeometry(0.05, 0.05, 3.6, 6), 0x3a2a18), sx * 1.3, 5.2, -1.5); }
+            const prop = new THREE.Group(); prop.position.set(0, 2.6, -5.8); for (let i = 0; i < 3; i++) { const bl = mk(new THREE.BoxGeometry(0.2, 2.2, 0.06), 0xe8d9a8); bl.position.y = 0; bl.rotation.z = i * 2.094; bl.geometry.translate(0, 1.0, 0); prop.add(bl); } g.add(prop); add(mk(new THREE.SphereGeometry(0.28, 10, 8), 0xffd36a, 0x553300), 0, 3.3, 5.2);
+            g.userData = { ship: true, H: 10, W: 6.6, L: 14, prop, c: asCleanCfg(Object.assign({ jy: 0.26, jz: -0.5, jx: 0 }, cfg || {})) }; return g;
+        }
+        const asMakeMine = () => { try { return AS.sel >= 0 && AS.raw[AS.sel] && AS.cfg[AS.sel] ? asFit(AS.raw[AS.sel], AS.cfg[AS.sel]) : asGeneric(AS.stock); } catch (e) { console.warn('airship', e); return asGeneric(); } };
+        const asKey = () => 'as' + AS.sel + JSON.stringify(AS.stock || 0) + JSON.stringify(AS.cfg[AS.sel] || 0) + (AS.raw[AS.sel] ? 1 : 0);
+        function asWire() { const ok = AS.sel >= 0 && AS.raw[AS.sel] && AS.cfg[AS.sel]; return ok ? { id: AS.bid[AS.sel] || '', c: asCleanCfg(AS.cfg[AS.sel]), n: String(AS.cfg[AS.sel].name || 'airship').slice(0, 24) } : { id: '', c: asCleanCfg(AS.stock || { jy: 0.26, jz: -0.5, jx: 0 }), n: 'airship' }; }
+        function asBroadcast(to) { if (!net || !AS.pilot) return; try { net.send({ t: 'as', ...asWire(), ...(to ? { to } : {}) }); } catch (e) { /* offline */ } }
+        function asPeerWant(p) { const id = p.as && p.as.id; if (!id || ASC.has(id) || !net) return; const t = asReq.get(id) || 0; if (Date.now() - t < 30000) return; asReq.set(id, Date.now()); net.send({ t: 'wantas', to: p.id, id }); }
+        function asOnMsg(from, m) {
+            const p = peers.get(from);
+            if (m.t === 'as') { if (!p) return; const id = /^[a-f0-9]{8,24}$/.test(String(m.id || '')) ? m.id : ''; p.as = { id, c: asCleanCfg(m.c), n: String(m.n || '').slice(0, 24) }; if (id) asPeerWant(p); }
+            else if (m.t === 'wantas') {
+                const id = String(m.id || ''), i = AS.bid.indexOf(id); if (i < 0 || !AS.raw[i]) return; const k = from + '|' + id; if (asOutQ.has(k) && Date.now() - asOutQ.get(k) < 60000) return; asOutQ.set(k, Date.now());
+                store.get('airship:' + i).then((rec) => { if (rec && rec.buffer && rec.buffer.byteLength <= AS_BYTES && net) return net.send({ t: 'asdata', to: from, id, buffer: rec.buffer }); }).catch((e) => console.warn('airship share', e));
+            } else if (m.t === 'asdata') {
+                const id = String(m.id || ''); if (!asReq.has(id) || ASC.has(id) || !(m.buffer instanceof ArrayBuffer) || m.buffer.byteLength > AS_BYTES + 2e6) return;
+                gltfLoader.parse(m.buffer.slice(0), '', (gltf) => { if (asTris(gltf.scene) > AS_TRIS * 1.5) return; bikeClean(gltf.scene); gltf.scene.traverse((o) => { if (o.isMesh) { o.userData.noOutline = true; o.frustumCulled = false; [].concat(o.material || []).forEach((q) => { q.side = THREE.DoubleSide; }); } }); ASC.set(id, gltf.scene); if (ASC.size > 6) ASC.delete(ASC.keys().next().value); }, (e) => console.warn('peer airship', e));
+            } else if (m.t === 'asride') {   // somebody asks to come aboard my ship
+                if (!p || !net) return; let ok = 0, r = '';
+                if (!AS.pilot || AS.landing > 0) r = 'The airship is not flying.'; else if (AS.seats.size >= AS_SEATS) r = 'The airship is full.'; else { const q = p.actor.group.position, g = localActor.group.position; if (Math.hypot(q.x - g.x, q.z - g.z) > 30) r = 'Too far from the airship.'; else ok = 1; }
+                if (ok) { AS.seats.add(from); sysChat(p.name + ' boarded your airship (' + AS.seats.size + '/' + AS_SEATS + ').'); }
+                net.send({ t: 'asok', to: from, ok, r });
+            } else if (m.t === 'asok') {
+                if (AS.asking !== from) return; AS.asking = null; if (m.ok) asBoardAs(from); else sysChat(String(m.r || 'Could not board.').slice(0, 80));
+            } else if (m.t === 'asleave') { if (AS.seats.delete(from) && p) sysChat(p.name + ' left the airship.'); }
+            else if (m.t === 'asend') { if (AS.riding === from) asDismount('The airship has landed.'); }
+        }
+        function asCamIn() { if (AS.camMax == null) AS.camMax = controls.maxDistance; controls.maxDistance = Math.max(controls.maxDistance, 45); _po.copy(camera.position).sub(controls.target); if (_po.lengthSq() < 1e-6) _po.set(0, 0.4, 1); const d = Math.max(_po.length(), 22); _po.setLength(d); camera.position.copy(controls.target).add(_po); try { NU.camLast = null; } catch (e) { /* none */ } }
+        function asCamOut() { if (AS.camMax != null) { controls.maxDistance = AS.camMax; AS.camMax = null; } try { NU.camLast = null; } catch (e) { /* none */ } }
+        const asCamLift = () => (AS.pilot || AS.riding ? AS.lift + 3 : 0);
+        function asHideMe(on) { const a = localActor; try { a.holder.visible = !on; if (a.label && on) a.label.visible = false; } catch (e) { /* none */ } }
+        function asSet(on, quiet) {
+            const g = localActor.group;
+            if (on) {
+                if (AS.pilot) return; if (AS.riding) { if (!quiet) sysChat('Get off the airship you are riding first.'); return; }
+                if (!AS_OUT.includes(activeMap)) { if (!quiet) sysChat('Airships fly outside: Destiny City, your plots, the school grounds, College Raimon and Adventia.'); return; }
+                if (hbOn) hbSet(false, true); if (BK.on) bkSet(false, true); if (fpOn) fpToggle();
+                AS.pilot = true; AS.landing = 0; AS.lift = 0; AS.yaw = g.rotation.y; AS.roll = 0; AS.pitch = 0; AS.seats.clear(); AS.px = g.position.x; AS.pz = g.position.z; asCamIn(); asBroadcast(); const b = document.getElementById('hud-ship'); if (b) b.classList.add('hb-on');
+                if (!quiet) sysChat('Airship up. Move like normal (Shift for full speed). Players can click you to ride along. Press the airship button to land.');
+            } else { if (!AS.pilot || AS.landing > 0) return; AS.landing = 6; if (!quiet) sysChat('Landing...'); }
+        }
+        function asFinish(quiet) {
+            if (!AS.pilot) return; AS.pilot = false; AS.landing = 0; AS.lift = 0; if (AS.mine) { scene.remove(AS.mine); AS.mine = null; AS.mineV = ''; } asHideMe(false); asCamOut();
+            try { net && net.send({ t: 'asend' }); } catch (e) { /* offline */ } AS.seats.clear(); const b = document.getElementById('hud-ship'); if (b) b.classList.remove('hb-on'); if (!quiet) sysChat('Landed. Everyone is back on foot.');
+        }
+        function asRide(id) {
+            const p = peers.get(id); if (!p || (p.hb | 0) !== 11) { sysChat('That airship is not flying.'); return; } if (AS.pilot || AS.riding) return; if (!AS_OUT.includes(activeMap)) return;
+            AS.asking = id; try { net.send({ t: 'asride', to: id }); } catch (e) { AS.asking = null; return; } setTimeout(() => { if (AS.asking === id) { AS.asking = null; sysChat('No answer from the airship.'); } }, 4000);
+        }
+        function asBoardAs(id) {
+            if (hbOn) hbSet(false, true); if (BK.on) bkSet(false, true); if (fpOn) fpToggle(); AS.riding = id; AS.lost = 0; AS.lift = 0; asCamIn(); const p = peers.get(id); sysChat('You boarded ' + (p ? p.name : 'the') + "'s airship. Press the airship button to get off.");
+            const b = document.getElementById('hud-ship'); if (b) b.classList.add('hb-on');
+        }
+        function asDismount(msg) {
+            if (!AS.riding) return; const id = AS.riding; AS.riding = null; asHideMe(false); asCamOut(); const g = localActor.group, a = Math.random() * 6.283; g.position.x += Math.cos(a) * 1.8; g.position.z += Math.sin(a) * 1.8; AS.lift = 0;
+            try { net && net.send({ t: 'asleave', to: id }); } catch (e) { /* offline */ } const b = document.getElementById('hud-ship'); if (b) b.classList.remove('hb-on'); if (msg) sysChat(msg);
+        }
+        function asFrame(dt) {
+            AS.t += dt; const a = localActor, g = a.group;
+            if ((AS.pilot || AS.riding) && !AS_OUT.includes(activeMap)) { if (AS.pilot) asFinish(true); else asDismount(); }
+            if (AS.pilot) {
+                const tgt = AS.landing > 0 ? 0 : AS_ALT; AS.lift += (tgt - AS.lift) * (1 - Math.exp(-dt * (AS.landing > 0 ? 2.6 : 1.5))); if (activeMap === 'nuu') NF.inv = Math.max(NF.inv || 0, 0.3);
+                const key = asKey(); if (!AS.mine || AS.mineV !== key) { if (AS.mine) scene.remove(AS.mine); AS.mine = asMakeMine(); AS.mineV = key; scene.add(AS.mine); asBroadcast(); }
+                const sp = Math.hypot(g.position.x - AS.px, g.position.z - AS.pz) / Math.max(dt, 1e-3); AS.px = g.position.x; AS.pz = g.position.z;
+                let dy = g.rotation.y - AS.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); AS.yaw += dy * (1 - Math.exp(-dt * 2.4)); AS.roll += (clamp(-dy * 0.9, -0.35, 0.35) - AS.roll) * (1 - Math.exp(-dt * 3)); AS.pitch += (clamp(-sp * 0.006, -0.14, 0.02) - AS.pitch) * (1 - Math.exp(-dt * 3));
+                const m = AS.mine; m.position.set(g.position.x, g.position.y + AS.lift + (AS.lift > 1 ? Math.sin(AS.t * 1.3) * 0.25 : 0), g.position.z); m.rotation.order = 'YXZ'; m.rotation.set(AS.pitch, AS.yaw, AS.roll); if (m.userData.prop) m.userData.prop.rotation.z += dt * (6 + sp * 0.8); if (AS.lift > 0.6) asJets(m, sp, dt, AS.open);
+                asHideMe(true); a.boardLift = 0;
+                if (AS.landing > 0) { AS.landing -= dt; if (AS.lift < 0.35 || AS.landing <= 0) asFinish(); }
+                for (const id of [...AS.seats]) if (!peers.has(id)) AS.seats.delete(id);
+            } else if (AS.riding) {
+                const pp = peers.get(AS.riding), e = pp && asPeerShips.get(AS.riding);
+                if (!pp || (pp.hb | 0) !== 11) { AS.lost += dt; if (AS.lost > 1.5) { asDismount('The airship is gone.'); return; } } else AS.lost = 0;
+                if (pp) { const q = pp.actor.group; g.position.x = q.position.x; g.position.z = q.position.z; g.position.y = q.position.y; g.rotation.y = q.rotation.y; } AS.lift = e ? e.lift : AS.lift; asHideMe(true); a.boardLift = 0;
+            }
+        }
+        function asJetPts(m) { const u = m.userData, c = u.c; if (!c || !c.jon) return []; const y = c.jy * u.H, z = c.jz * u.L, x = c.jx * u.W; return x > 0.05 ? [[-x, y, z], [x, y, z]] : [[0, y, z]]; }
+        const _asJ = new THREE.Vector3(), _asF = new THREE.Vector3(), _asQ = new THREE.Quaternion();
+        function asJets(m, sp, dt, mk) {   // exhaust: a hot core and a long pale trail, thrown backwards out of the jet points; the harder you fly the longer it gets
+            const pts = asJetPts(m); if (!pts.length) return; m.updateMatrixWorld(true); m.getWorldQuaternion(_asQ); _asF.set(0, 0, -1).applyQuaternion(_asQ); const c = m.userData.c, k = c.js, push = Math.min(1.6, 0.35 + sp / 14), n = Math.max(1, Math.round(dt * 70 * (0.6 + push)));
+            for (const p of pts) { _asJ.set(p[0], p[1], p[2]).applyMatrix4(m.matrixWorld); if (mk) { m.userData.mk = m.userData.mk || []; }
+                for (let i = 0; i < n; i++) { const sp2 = (4 + 9 * push) * (0.8 + Math.random() * 0.5) * Math.sqrt(k); const v = [_asF.x * sp2 + (Math.random() - 0.5) * 1.2, _asF.y * sp2 + (Math.random() - 0.5) * 1.2, _asF.z * sp2 + (Math.random() - 0.5) * 1.2], hot = Math.random() < 0.45; arMote(_asJ, v, hot ? arCol(0xfff1b0) : arCol(0x7fc4ff), (hot ? 0.55 : 0.9) * k, 0.05 * k, (hot ? 0.28 : 0.55) * (0.6 + push * 0.5), hot ? FXCELL.flame : FXCELL.glow); } }
+        }
+        function asPeerMake(p) { try { return p.as && ASC.has(p.as.id) ? asFit(ASC.get(p.as.id), p.as.c) : asGeneric(p.as && !p.as.id ? p.as.c : null); } catch (e) { console.warn('peer airship', e); return asGeneric(); } }
+        function asPeerFrame(dt) {
+            peers.forEach((p, id) => {
+                const hbv = p.hb | 0, a2 = p.actor, g2 = a2.group; let e = asPeerShips.get(id);
+                if (hbv === 11) {
+                    const key = p.as && ASC.has(p.as.id) ? p.as.id + JSON.stringify(p.as.c) : 'gen';
+                    if (!e || e.v !== key) { if (e) scene.remove(e.m); e = { m: asPeerMake(p), v: key, lift: e ? e.lift : 0, yaw: g2.rotation.y, px: g2.position.x, pz: g2.position.z, sp: 0, roll: 0, pitch: 0, id }; asPeerShips.set(id, e); scene.add(e.m); }
+                    e.up = true; e.lift += (AS_ALT - e.lift) * (1 - Math.exp(-dt * 1.5)); if (p.as) asPeerWant(p); a2.holder.visible = false; p._asHid = true;
+                } else if (e) { e.up = false; e.lift += (0 - e.lift) * (1 - Math.exp(-dt * 2.6)); if (e.lift < 0.35) { scene.remove(e.m); asPeerShips.delete(id); e = null; } }
+                if (hbv === 12) { a2.holder.visible = false; p._asHid = true; } else if (hbv !== 11 && p._asHid) { a2.holder.visible = true; p._asHid = false; }
+                if (e) {
+                    const sp = Math.hypot(g2.position.x - e.px, g2.position.z - e.pz) / Math.max(dt, 1e-3); e.sp += (sp - e.sp) * (1 - Math.exp(-dt * 5)); e.px = g2.position.x; e.pz = g2.position.z;
+                    let dy = g2.rotation.y - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * (1 - Math.exp(-dt * 2.4)); e.roll += (clamp(-dy * 0.9, -0.35, 0.35) - e.roll) * (1 - Math.exp(-dt * 3)); e.pitch += (clamp(-e.sp * 0.006, -0.14, 0.02) - e.pitch) * (1 - Math.exp(-dt * 3));
+                    e.m.position.set(g2.position.x, g2.position.y + e.lift + (e.lift > 1 ? Math.sin(AS.t * 1.3 + id.length) * 0.25 : 0), g2.position.z); e.m.rotation.order = 'YXZ'; e.m.rotation.set(e.pitch, e.yaw, e.roll); if (e.m.userData.prop) e.m.userData.prop.rotation.z += dt * (6 + e.sp * 0.8); if (e.lift > 0.6) asJets(e.m, e.sp, dt);
+                }
+            });
+            for (const [id, e] of asPeerShips) if (!peers.has(id)) { scene.remove(e.m); asPeerShips.delete(id); }
+        }
+        function asClickPeer(ray) { const list = [...asPeerShips.values()].filter((e) => e.up); if (!list.length) return null; const h = ray.intersectObjects(list.map((e) => e.m), true)[0]; if (!h) return null; const e = list.find((q) => { let o = h.object; while (o) { if (o === q.m) return true; o = o.parent; } return false; }); return e ? peers.get(e.id) || null : null; }
+        /* ---- hangar ---- */
+        async function asUse(i, file) {
+            if (file.size > 80e6) throw new Error('that file is over 80 MB'); sysChat('Preparing ' + file.name + '...');
+            const glb = await gcBake(file); if (!glb || !glb.byteLength) throw new Error('the model came out empty'); if (glb.byteLength > AS_BYTES) throw new Error('the baked model is ' + Math.round(glb.byteLength / 1e6) + ' MB; airships are limited to ' + Math.round(AS_BYTES / 1e6) + ' MB so everyone can see them. Shrink its textures and try again');
+            const probe = await new Promise((res, rej) => gltfLoader.parse(glb.slice(0), '', res, rej)); const tr = asTris(probe.scene); if (tr > AS_TRIS) throw new Error('it has ' + Math.round(tr / 1000) + 'k triangles; the limit is ' + Math.round(AS_TRIS / 1000) + 'k');
+            await store.put('airship:' + i, { buffer: glb, name: file.name.slice(0, 60) }); AS.cfg[i] = { name: file.name.replace(/\.[^.]+$/, '').slice(0, 24), ax: '+z', roll: 0, sc: 1 }; await asLoad(i);
+            const bb = new THREE.Box3().setFromObject(AS.raw[i]), sz = bb.getSize(new THREE.Vector3()); AS.cfg[i].ax = sz.x >= sz.y && sz.x >= sz.z ? '+x' : sz.y >= sz.z ? '+y' : '+z'; AS.sel = i; asSave(); asRender();
+            sysChat(AS.cfg[i].name + ' is in the hangar. If it faces backwards, set Front to the opposite direction. It is fitted to ' + AS_LEN + ' m; Size goes from 60 to 140 %.');
+        }
+        async function asRemove(i) { try { await store.del('airship:' + i); } catch (e) { /* none */ } AS.cfg[i] = null; AS.raw[i] = null; if (AS.sel === i) AS.sel = -1; asSave(); asRender(); }
+        const jetUi = (i, c) => { const sl = (l, f, mn, mx, st) => '<label style="display:flex;align-items:center;gap:6px;color:#9fb0c8"><span style="width:84px">' + l + '</span><input type="range" data-as="jet" data-i="' + i + '" data-f="' + f + '" min="' + mn + '" max="' + mx + '" step="' + st + '" value="' + c[f] + '" style="flex:1"></label>'; return '<div style="border-top:1px solid rgba(255,255,255,.1);padding-top:4px"><label style="display:flex;align-items:center;gap:6px;color:#fff"><input type="checkbox" data-as="jon" data-i="' + i + '"' + (c.jon === 0 ? '' : ' checked') + '> 🔥 Jet stream</label>' + sl('Height', 'jy', 0, 1, 0.02) + sl('Back ↔ front', 'jz', -0.7, 0.7, 0.02) + sl('Spread (twin)', 'jx', 0, 0.5, 0.02) + sl('Flame size', 'js', 0.4, 2.5, 0.1) + '</div>'; };
+        function asRender() {
+            let box = document.getElementById('hangar-panel'); if (!box) {
+                box = document.createElement('div'); box.id = 'hangar-panel'; box.className = 'glass-panel'; box.style.cssText = 'position:fixed;left:12px;bottom:76px;width:min(360px,calc(100vw - 24px));max-height:70vh;overflow:auto;z-index:60;padding:12px;border-radius:14px;font:600 12px Nunito,Inter,sans-serif;color:#fff;display:none';
+                document.body.appendChild(box); box.addEventListener('keydown', (e) => e.stopPropagation()); box.addEventListener('keyup', (e) => e.stopPropagation());
+                box.addEventListener('click', (e) => { const t = e.target.closest('[data-as]'); if (!t) return; const i = +t.dataset.i, a = t.dataset.as; if (a === 'x') asShow(false); else if (a === 'up') { AS.upFor = i; document.getElementById('hangar-file').click(); } else if (a === 'use') { AS.sel = i; asSave(); asRender(); } else if (a === 'fly') { AS.sel = i; asSave(); asSet(true); asRender(); } else if (a === 'land') { asSet(false); asRender(); } else if (a === 'del') asRemove(i); });
+                box.addEventListener('change', async (e) => { const t = e.target; if (t.id === 'hangar-file') { const f = t.files[0], i = AS.upFor; t.value = ''; if (f != null && i != null) { try { await asUse(i, f); } catch (er) { sysChat('Could not use that airship: ' + (er && er.message || er)); } } } else if (t.dataset && t.dataset.as === 'jon') { const c = t.dataset.i === '-1' ? (AS.stock = AS.stock || {}) : AS.cfg[+t.dataset.i]; if (c) { c.jon = t.checked ? 1 : 0; asSave(); asBroadcast(); } } else if (t.dataset && t.dataset.as === 'sel2') { const c = AS.cfg[+t.dataset.i]; if (c) { c[t.dataset.f] = t.dataset.f === 'roll' ? +t.value : t.value; asSave(); asBroadcast(); asRender(); } } });
+                box.addEventListener('input', (e) => { const t = e.target; if (t.dataset && t.dataset.as === 'jet') { const c = t.dataset.i === '-1' ? (AS.stock = AS.stock || {}) : AS.cfg[+t.dataset.i]; if (c) { c[t.dataset.f] = +t.value; asSave(); asBroadcast(); } } else if (t.dataset && t.dataset.as === 'sl') { const c = AS.cfg[+t.dataset.i]; if (c) { c.sc = bkClamp(t.value, 0.6, 1.4, 1); asSave(); asBroadcast(); const l = box.querySelector('[data-asv]'); if (l) l.textContent = Math.round(c.sc * 100) + '%'; } } });
+            }
+            const B = 'padding:2px 9px;border-radius:7px;background:rgba(255,255,255,.12);cursor:pointer;';
+            let h = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b style="font-size:14px;flex:1">🚀 Airship hangar</b><button data-as="x" data-i="0" style="padding:2px 10px;border-radius:7px;background:rgba(255,255,255,.12)">✕</button></div>';
+            const row = (i, name, has, cur) => '<div style="border-radius:10px;padding:7px;margin-bottom:6px;background:rgba(255,255,255,' + (cur ? '.13' : '.06') + ')"><div style="display:flex;align-items:center;gap:6px"><span style="flex:1">' + (i < 0 ? '⛵ Stock airship' : '🚀 ' + name) + (cur ? ' ✓' : '') + '</span>' + (i >= 0 ? '<button data-as="up" data-i="' + i + '" style="' + B + '">' + (has ? 'Replace' : 'Add ship') + '</button>' : '') + (has ? (AS.pilot && cur ? '<button data-as="land" data-i="' + i + '" style="' + B + 'background:rgba(255,140,80,.4)">Land</button>' : '<button data-as="fly" data-i="' + i + '" style="' + B + 'background:rgba(80,160,255,.35)">Fly</button>') : '') + (has && i >= 0 ? '<button data-as="del" data-i="' + i + '" style="' + B + '">🗑</button>' : '') + '</div>';
+            h += row(-1, '', true, AS.sel < 0) + (AS.sel < 0 ? '<div style="margin-top:6px">' + jetUi(-1, asCleanCfg(Object.assign({ jy: 0.26, jz: -0.5, jx: 0 }, AS.stock || {}))) + '</div>' : '') + '</div>';
+            for (let i = 0; i < AS_N; i++) {
+                const c = AS.cfg[i], has = !!(c && AS.raw[i]), cur = AS.sel === i; h += row(i, has ? c.name : 'Empty slot', has, cur);
+                if (has && cur) { const o = (v, l, cv) => '<option value="' + v + '"' + (cv === v ? ' selected' : '') + '>' + l + '</option>'; h += '<div style="display:grid;gap:4px;margin-top:6px">' + jetUi(i, c) + '<label style="display:flex;align-items:center;gap:6px;color:#9fb0c8">Size <input type="range" data-as="sl" data-i="' + i + '" min="0.6" max="1.4" step="0.05" value="' + c.sc + '" style="flex:1"><span data-asv style="width:38px;text-align:right">' + Math.round(c.sc * 100) + '%</span></label><div style="display:flex;gap:10px;align-items:center;color:#9fb0c8">Front <select data-as="sel2" data-i="' + i + '" data-f="ax" style="background:#1b2438;color:#fff;border-radius:6px">' + ['+z', '-z', '+x', '-x', '+y', '-y'].map((v) => o(v, v.toUpperCase(), c.ax)).join('') + '</select>Turn <select data-as="sel2" data-i="' + i + '" data-f="roll" style="background:#1b2438;color:#fff;border-radius:6px">' + [0, 1, 2, 3].map((v) => o(v, v * 90 + '°', c.roll)).join('') + '</select></div></div>'; }
+                h += '</div>';
+            }
+            h += '<input type="file" id="hangar-file" accept=".glb,.fbx,.zip,.obj" style="display:none"><div style="font-size:10px;color:#7f90a8">Add a .glb, .fbx, .zip or .obj airship. Every ship is fitted to ' + AS_LEN + ' m long; Size goes 60-140 % and nothing may pass ' + AS_MAXL + ' m long, ' + AS_MAXW + ' m wide or ' + AS_MAXH + ' m tall (max ' + Math.round(AS_BYTES / 1e6) + ' MB, ' + Math.round(AS_TRIS / 1000) + 'k triangles). Players click you to ride along (up to ' + AS_SEATS + '); everyone aboard is invisible until you land.</div>';
+            if (box.dataset.h !== h) { const keep = box.scrollTop; box.innerHTML = h; box.dataset.h = h; box.scrollTop = keep; }
+            box.style.display = AS.open ? 'block' : 'none';
+        }
+        const asShow = (on) => { AS.open = on == null ? !AS.open : on; asRender(); };
+        (async () => { for (let i = 0; i < AS_N; i++) if (AS.cfg[i]) { try { await asLoad(i); } catch (e) { console.warn('airship', i, e); AS.raw[i] = null; } } asRender(); })();
+        setInterval(() => { try { if (AS.pilot) asBroadcast(); } catch (e) { /* offline */ } }, 8000);
+        window.__as = { get keys() { return keys; }, get peers() { return peers; }, AS, asSet, asRide, asDismount, asFit, asGeneric, asShow, asFrame, asPeerFrame, peerShips: asPeerShips, ASC, asCleanCfg, AS_LEN, AS_MAXL, AS_MAXW, AS_MAXH };
         function hbFrame(dt) {
-            hbT += dt;
+            hbT += dt; try { asFrame(dt); } catch (e) { if (!window.__asErr) { window.__asErr = e; console.error('airship', e); } }
             if (hbOn && activeMap === 'loft') hbSet(false, true);
             const a = localActor, g = a.group;
             if (hbOn) {
@@ -25439,7 +25618,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             hbPrevYaw = g.rotation.y;
             // everyone else's boards
             peers.forEach((p, id) => {
-                const want = p.hb | 0, a2 = p.actor, g2 = a2.group;
+                const want = (p.hb | 0) >= 11 ? 0 : p.hb | 0, a2 = p.actor, g2 = a2.group;
                 let e = hbPeerBoards.get(id);
                 const key = want === 10 ? bkPeerKey(p) : want === 9 ? 'c' + (p.hbdJ || '') : want - 1;
                 if (want && (!e || e.v !== key)) { if (e) scene.remove(e.m); e = { m: want === 10 ? bkPeerMake(p) : want === 9 ? (p.hbd ? hbMakeD(p.hbd) : hbMake(0)) : hbMake(want - 1), v: key, px: g2.position.x, pz: g2.position.z, py: g2.rotation.y, sp: 0, roll: 0 }; hbPeerBoards.set(id, e); scene.add(e.m); }
@@ -25450,6 +25629,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 if (want === 10) { a2.boardOn = false; a2.boardLift = bkPlace(e.m, g2, a2, e.sp, e.roll, hbT); bkSeat(a2); a2.bikeObj = e.m; bkPeerWant(p); } else { a2.boardOn = true; a2.boardLift = hbPlace(e.m, g2, e.sp, e.roll, dt, hbT); } a2.boardRoll = e.roll;
             });
             for (const [id, e] of hbPeerBoards) if (!peers.has(id)) { scene.remove(e.m); hbPeerBoards.delete(id); }
+            try { asPeerFrame(dt); } catch (e) { if (!window.__asErr) { window.__asErr = e; console.error('airship peers', e); } }
         }
 
         /* ------------------------------------------------------------------ *
@@ -25546,7 +25726,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (keys.left) _mv.x -= 1;
             if (keys.right) _mv.x += 1;
             if (_mv.lengthSq() === 0 && (padMove.x || padMove.z)) _mv.set(padMove.x, 0, padMove.z);   // controller left stick
-            if ((activeMap === 'nuu' && NF.dead) || TG.lockMove() || budLock() || (hcMine() && HC.act) || gnRolling() || bwLockMove() || btLockMove() || nfStHas('sleep') || nfStHas('stop') || (NF.swapT > performance.now())) _mv.set(0, 0, 0);   // laser tag: knocked out / countdown
+            if ((activeMap === 'nuu' && NF.dead) || TG.lockMove() || budLock() || (hcMine() && HC.act) || gnRolling() || bwLockMove() || btLockMove() || nfStHas('sleep') || nfStHas('stop') || (NF.swapT > performance.now()) || AS.riding || AS.landing > 0) _mv.set(0, 0, 0);   // laser tag: knocked out / countdown
             else if (nfStHas('confuse')) _mv.multiplyScalar(-1);
 
             if (_mv.lengthSq() > 0) {
@@ -25557,8 +25737,8 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 moveIdle = 0;
                 sprintTap = Math.max(0, sprintTap - dt);
                 const wantRun = keys.run || padMove.run || dblRun || (sprintTap > 0 && !hbOn);
-                const topSpeed = Math.min(hbOn ? (wantRun ? HB_RUN : HB_TOP) * (BK.on ? BK_MUL : 1) : wantRun ? RUN_SPEED : JOG_SPEED, gnCap());
-                if (moveSpeed < topSpeed) moveSpeed = Math.min(topSpeed, moveSpeed + (hbOn ? 9 : wantRun ? RUN_ACCEL : JOG_ACCEL) * dt);
+                const topSpeed = Math.min(AS.pilot ? (wantRun ? AS_SPEED : AS_SPEED * 0.6) : hbOn ? (wantRun ? HB_RUN : HB_TOP) * (BK.on ? BK_MUL : 1) : wantRun ? RUN_SPEED : JOG_SPEED, gnCap());
+                if (moveSpeed < topSpeed) moveSpeed = Math.min(topSpeed, moveSpeed + (hbOn || AS.pilot ? 9 : wantRun ? RUN_ACCEL : JOG_ACCEL) * dt);
                 else moveSpeed = Math.max(topSpeed, moveSpeed - (hbOn ? 6 : 5) * dt);
                 if (hbOn) { if (!hbLastDir) hbLastDir = new THREE.Vector3(); hbLastDir.copy(_mv); hbSpeed = moveSpeed; }
                 const spd = moveSpeed * TG.speedMul() * simMoveMul();
@@ -25587,7 +25767,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
 
             // Per-map collisions (columns, walls, furniture) and walkable area
             const M = MAP_DEFS[activeMap];
-            scnCollide(M, g.position);
+            if (!AS.pilot) scnCollide(M, g.position);
             if (!scnClamp(g.position)) M.clamp(g.position);
 
             // Gravity / jump against the real ground height (stairs and mezzanine included)
@@ -25620,7 +25800,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             const h = localActor.height * localActor.tweak.scale * (1 - 0.38 * localActor.sitSmooth);
             const t = clamp((3.5 - dist) / (3.5 - 1.0), 0, 1);
             const close = t * t * (3 - 2 * t);
-            const aimY = g.position.y + localActor.tweak.h + (fpOn ? h * 0.93 + (localActor.boardLift || 0) : h * lerp(0.667, 0.86, close));
+            const aimY = g.position.y + asCamLift() + localActor.tweak.h + (fpOn ? h * 0.93 + (localActor.boardLift || 0) : h * lerp(0.667, 0.86, close));
             if (fpOn) { localActor.holder.visible = false; localActor.label && (localActor.label.visible = false); }
             if (localActor.label) localActor.label.visible = dist > 1.8 && !gnRigOn();   // keep your own name plate out of the portrait
             _cd.set(g.position.x, aimY, g.position.z).sub(controls.target);
@@ -25729,6 +25909,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (/^\/(settings|graphics|fps|cloud)$/i.test(text)) { gfxToggle(true); return true; }
             if (/^\/(tag|lasertag)$/i.test(text)) { tgOpen(); return true; }
             if (/^\/(construct|hero|training)$/i.test(text)) { constructOpen(); return true; }
+            if (/^\/(airship|hangar)$/i.test(text)) { if (AS.riding) asDismount(); else if (AS.pilot) asSet(false); else asShow(true); return true; }
             if (/^\/garage$/i.test(text)) { bkShow(true); return true; }
             if (/^\/(bike|motorbike|motorcycle)$/i.test(text)) { if (!BK.raw.some(Boolean)) bkShow(true); bkToggle(); return true; }
             if (/^\/(industries|hoverboard)$/i.test(text)) { if (typeof industriesOpen === 'function') industriesOpen(); return true; }
@@ -26277,6 +26458,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             $('btn-inventory').addEventListener('click', () => { if (invOpen()) closeInv(); else openInv(); });
             $('tr-cancel').addEventListener('click', () => tradeEnd('Trade cancelled.', true));
             $('pc-trade').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) tradeBegin(p.id); });
+            $('pc-ship').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) asRide(p.id); });
             $('pc-duel').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) duelBegin(p.id); });
             $('wpn-fists').addEventListener('click', () => { if (BLZ.on) blzSet(false, true); clsEquip('fists'); }); $('wpn-blitz').addEventListener('click', () => blzSet(!BLZ.on)); $('wpn-sword').addEventListener('click', () => clsEquip('sword')); $('wpn-pistol').addEventListener('click', () => clsEquip('pistol')); $('wpn-fighter').addEventListener('click', () => clsEquip('fighter')); $('wpn-keyblade').addEventListener('click', () => nfPickClass('keyblade')); $('bm-default').addEventListener('click', () => baseMoveSet('default')); $('bm-starter').addEventListener('click', () => baseMoveSet('starter')); clsRender();
             window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && tradeUiOpen()) { e.preventDefault(); e.stopPropagation(); tradeEnd('Trade cancelled.', true); } else if (e.key === 'Escape' && invOpen()) { e.preventDefault(); e.stopPropagation(); closeInv(); } }, true);
@@ -26284,7 +26466,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         }
 
         function openProfile(p) {
-            pcardPeer = p; const seq = ++pcardSeq;
+            pcardPeer = p; const seq = ++pcardSeq; try { $('pc-ship').classList.toggle('hidden', !((p.hb | 0) === 11 && !AS.pilot && !AS.riding && AS_OUT.includes(activeMap))); } catch (e) { /* ui */ }
             $('pc-name').textContent = p.name;
             $('pc-sub').textContent = (p.lv ? `Level ${p.lv} · ${lvTitle(p.lv)}` : 'Player profile') + (p.actor && p.actor.heroEq ? ` · Hero Lv ${p.cl || 1}` : p.actor && p.actor.bm === 2 ? ` · Gunner Lv ${p.cl || 1}` : '');
             const av = $('pc-av'); av.textContent = (p.name || '?').slice(0, 1).toUpperCase();
@@ -32694,13 +32876,32 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
 
         /* ---- ARTEMIS arrow pad: a cross of four arrows that the D-pad (or the number keys 1-4) picks, with R3 flipping to the other four ---- */
         const AR_PAGES = [['n', 'fire', 'ice', 'bolt'], ['wind', 'earth', 'water', 'holy']], AR_EI = { n: '🏹', fire: '🔥', ice: '❄️', bolt: '⚡', wind: '🌪️', earth: '🪨', water: '💧', holy: '✨' };
-        function arPick(k) { const id = AR_PAGES[ARW.page ? 1 : 0][k]; if (id) { arSelect(id); arPadUi(true); } }
+        const AR_DRAW = [['🏹', 'Draw'], ['🎯', 'Snap Shot'], ['🌠', 'Full Draw'], ['💨', 'Loose']];
+        function arDrawAct(k) {   // page 4: the bow's draw mechanics as buttons: Draw / lower, Snap Shot, Full Draw (charges to full and looses), Loose (release what is drawn)
+            const need = () => NG.ads > 0.5 || (NG.adsM = true, false);
+            if (k === 0) { NG.adsM = !NG.adsM; if (!NG.adsM) { ARW.hold = false; if (ARW.on) arRelease(false); } return; }
+            if (k === 1) { if (ARW.on) { ARW.hold = false; arRelease(true); return; } const go = () => { if (NF.mp < 3) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb4ff'); return; } NF.mp -= 3; NG.cd = 0; arShoot(0.35, ARW.el); NG.cd = 0.3; }; if (need()) go(); else setTimeout(go, 450); return; }
+            if (k === 2) { if (!need()) { setTimeout(() => { ARW.hold = true; }, 450); } else ARW.hold = true; return; }
+            if (k === 3) { ARW.hold = false; if (ARW.on) arRelease(true); else { NG.adsM = false; } }
+        }
+        function arMgPin() { const P = MG.pin || [], n = P.length; for (let j = 0; j < n; j++) { const i = ((ARW.mgI | 0) + j) % n, id = P[i]; if (id && MG_SP[id]) return { i, id }; } return null; }
+        function arMgAct(k) {   // page 5: FF8-style magic. Draw pulls spells out of the target, Draw-Cast fires the drawn spell at once, Cast uses your next pinned spell from stock, and the Magic menu is a press away
+            try { if (k === 0) mgDraw(false); else if (k === 1) mgDraw(true); else if (k === 2) { const q = arMgPin(); if (!q) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Pin a spell in the Magic menu', '#cfd8e0'); return; } mgCast(q.id); ARW.mgI = q.i; } else if (k === 3) mgOpen(); } catch (e) { console.warn('draw magic', e); }
+        }
+        function arMgCycle() { const q = arMgPin(); if (!q) { padToast('No pinned magic · pin spells in the Magic menu'); return; } ARW.mgI = q.i + 1; const n = arMgPin(); if (n) { const sp = MG_SP[n.id]; ARW.mgI = n.i; padToast(sp.ic + ' ' + sp.n + ' ×' + (MG.stock[n.id] | 0)); } arPadUi(true); }
+        function arPick(k) { const pg = ARW.page | 0; if (pg === 4) { arMgAct(k); arPadUi(true); return; } if (pg === 3) { arDrawAct(k); arPadUi(true); return; } if (pg === 2) { nfUse(8 + k); arPadUi(true); return; } const id = AR_PAGES[pg][k]; if (id) { arSelect(id); arPadUi(true); } }
         function arPadUi(on) {
             let el = ARW.pad; const show = !!on && arActive();
             if (!el) { if (!show) return; const st = document.createElement('style'); st.textContent = '#nf-arpad{position:fixed;left:calc(50% - 230px);bottom:calc(100px + env(safe-area-inset-bottom));z-index:19;pointer-events:none;font:700 10px system-ui;color:#fff;text-shadow:0 1px 3px #000;text-align:center}#nf-arpad .g{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,42px);gap:3px}#nf-arpad b{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:11px;background:rgba(12,22,44,.82);border:1.5px solid rgba(190,220,255,.5);box-shadow:0 2px 8px #0007;transition:transform .12s,border-color .12s}#nf-arpad b i{font-style:normal;font-size:16px;line-height:17px}#nf-arpad b u{text-decoration:none;font-size:8.5px;line-height:10px}#nf-arpad b.on{transform:scale(1.14);border-color:var(--c,#6fd2ff);box-shadow:0 0 12px var(--c,#6fd2ff)}#nf-arpad .u{grid-column:2;grid-row:1}#nf-arpad .r{grid-column:3;grid-row:2}#nf-arpad .d{grid-column:2;grid-row:3}#nf-arpad .l{grid-column:1;grid-row:2}#nf-arpad .t{margin-top:4px;opacity:.85}'; document.head.appendChild(st); el = ARW.pad = document.createElement('div'); el.id = 'nf-arpad'; el.innerHTML = '<div class="g"><b class="u"></b><b class="r"></b><b class="d"></b><b class="l"></b></div><div class="t"></div>'; document.body.appendChild(el); }
-            el.style.display = show ? '' : 'none'; if (!show) return; const pg = ARW.page ? 1 : 0, ks = ['u', 'r', 'd', 'l'];
-            ks.forEach((c, k) => { const id = AR_PAGES[pg][k], e = AR_EL[id], b = el.querySelector('.' + c), key = pg + id + (ARW.el === id ? 1 : 0); if (b.dataset.k !== key) { b.dataset.k = key; b.innerHTML = '<i>' + AR_EI[id] + '</i><u>' + e.n + '</u>'; b.style.setProperty('--c', '#' + new THREE.Color(e.c).getHexString()); b.classList.toggle('on', ARW.el === id); } });
-            const t = el.querySelector('.t'), tx = '🏹 ARROWS ' + (pg + 1) + '/2 · R3'; if (t.textContent !== tx) t.textContent = tx;
+            el.style.display = show ? '' : 'none'; if (!show) return; const pg = ARW.page | 0, ks = ['u', 'r', 'd', 'l'], nw = performance.now() / 1000;
+            ks.forEach((c, k) => {
+                const b = el.querySelector('.' + c);
+                if (pg === 4) { let ic = ['🫳', '🫳', '✨', '📖'][k], nm = ['Draw', 'Draw-Cast', 'Cast', 'Magic'][k]; if (k === 2) { const q = arMgPin(); if (q) { const sp = MG_SP[q.id]; ic = sp.ic; nm = sp.n + ' ×' + (MG.stock[q.id] | 0); } else nm = 'Pin spell'; } const key = 'm' + k + ic + nm; if (b.dataset.k !== key) { b.dataset.k = key; b.innerHTML = '<i>' + ic + '</i><u>' + nm + '</u>'; b.style.setProperty('--c', '#c78bff'); b.classList.remove('on'); b.style.opacity = k === 2 && nm === 'Pin spell' ? '.55' : '1'; } return; }
+                if (pg === 3) { const d = AR_DRAW[k], lb = k === 0 && NG.adsM ? 'Lower' : d[1], key = 'd' + k + lb + (k === 0 && NG.ads > 0.5 ? 1 : 0) + (k === 2 && ARW.hold ? 1 : 0); if (b.dataset.k !== key) { b.dataset.k = key; b.innerHTML = '<i>' + d[0] + '</i><u>' + lb + '</u>'; b.style.setProperty('--c', '#6fd2ff'); b.style.opacity = '1'; b.classList.toggle('on', (k === 0 && NG.ads > 0.5) || (k === 2 && !!ARW.hold)); } return; }
+                if (pg === 2) { const sk = NF_SK[8 + k]; if (!sk) { b.innerHTML = ''; b.dataset.k = ''; return; } const cd = Math.max(sk.gcd ? NF.gcd : 0, (NF.cds[sk.id] || 0) - nw), lack = (sk.mp && NF.mp < sk.mp) || (sk.lb && NF.lb < 100), key = 's' + sk.id + (cd > 0.05 ? cd.toFixed(0) : '') + (lack ? 'x' : ''); if (b.dataset.k !== key) { b.dataset.k = key; b.innerHTML = '<i>' + sk.ic + '</i><u>' + (cd > 0.05 ? cd.toFixed(cd > 9.5 ? 0 : 1) : sk.n) + '</u>'; b.style.setProperty('--c', '#ffd27a'); b.classList.remove('on'); b.style.opacity = lack || cd > 0.05 ? '.55' : '1'; } return; }
+                const id = AR_PAGES[pg][k], e = AR_EL[id], key = pg + id + (ARW.el === id ? 1 : 0); b.style.opacity = '1'; if (b.dataset.k !== key) { b.dataset.k = key; b.innerHTML = '<i>' + AR_EI[id] + '</i><u>' + e.n + '</u>'; b.style.setProperty('--c', '#' + new THREE.Color(e.c).getHexString()); b.classList.toggle('on', ARW.el === id); }
+            });
+            const t = el.querySelector('.t'), tx = pg === 4 ? '🫳 DRAW MAGIC 5/5 · R3' : pg === 3 ? '🏹 BOW 4/5 · R3' : pg === 2 ? '🏹 SKILLS 3/5 · R3' : '🏹 ARROWS ' + (pg + 1) + '/5 · R3'; if (t.textContent !== tx) t.textContent = tx;
         }
         function arCycle(d) { const i = AR_ORDER.indexOf(ARW.el); arSelect(AR_ORDER[(i + d + AR_ORDER.length) % AR_ORDER.length]); }
         function arUi(on) {
@@ -32745,6 +32946,60 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             ARW.arrows.push({ m, o, d, len, dist: 0, hits: hits || [], col: arCol(e.c), colW: arCol(e.w), size, mine, el });
             for (let i = 0; i < 10; i++) arMote(_arA.set(o[0], o[1], o[2]), [d[0] * 4 + (Math.random() - 0.5) * 3, d[1] * 4 + (Math.random() - 0.5) * 3, d[2] * 4 + (Math.random() - 0.5) * 3], arCol(e.c), 0.2, 0.02, 0.35);
         }
+
+        /* ---- ARTEMIS LIMIT BREAK: SPRENGER VOLLEY. A rune circle unfolds in front of the bow, then a thousand arrows pour out of it ---- */
+        const AR_LB_N = 1000;
+        let _arLbTex = null;
+        function arLbTex() {
+            if (_arLbTex) return _arLbTex; const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'); g.translate(256, 256); g.lineCap = 'round';
+            const ring = (r, w, a) => { g.lineWidth = w; g.strokeStyle = 'rgba(255,236,170,' + a + ')'; g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.stroke(); };
+            ring(248, 5, 0.95); ring(236, 2, 0.7); ring(196, 4, 0.9); ring(186, 2, 0.6); ring(110, 3, 0.85);
+            g.fillStyle = 'rgba(255,240,190,.95)'; g.font = 'bold 22px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const R = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+            for (let i = 0; i < 24; i++) { const a = i / 24 * 6.2832; g.save(); g.rotate(a); g.translate(0, -216); g.fillText(R[i], 0, 0); g.restore(); }
+            g.lineWidth = 3; g.strokeStyle = 'rgba(255,230,150,.9)';
+            g.beginPath(); for (let i = 0; i < 3; i++) { const a = i / 3 * 6.2832, r = 186; g.lineTo(Math.sin(a) * r, -Math.cos(a) * r); } g.closePath(); g.stroke();
+            g.beginPath(); for (let i = 0; i < 3; i++) { const a = i / 3 * 6.2832 + 3.1416, r = 186; g.lineTo(Math.sin(a) * r, -Math.cos(a) * r); } g.closePath(); g.stroke();
+            g.beginPath(); for (let i = 0; i < 5; i++) { const a = (i * 2 / 5) * 6.2832, r = 112; g.lineTo(Math.sin(a) * r, -Math.cos(a) * r); } g.closePath(); g.stroke();
+            for (let i = 0; i < 12; i++) { const a = i / 12 * 6.2832; g.beginPath(); g.moveTo(Math.sin(a) * 196, -Math.cos(a) * 196); g.lineTo(Math.sin(a) * 236, -Math.cos(a) * 236); g.stroke(); }
+            const gr = g.createRadialGradient(0, 0, 0, 0, 0, 100); gr.addColorStop(0, 'rgba(255,250,220,.9)'); gr.addColorStop(1, 'rgba(255,220,120,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 100, 0, 6.2832); g.fill();
+            _arLbTex = new THREE.CanvasTexture(c); _arLbTex.colorSpace = THREE.SRGBColorSpace; return _arLbTex;
+        }
+        function arLbStart(s, t) {
+            if (ARW.lb) return; const P = localActor.group.position, tp = new THREE.Vector3(t.x, (t.node ? t.node.position.y : P.y) + 1.2 * (t.big || 1), t.z), o = new THREE.Vector3(P.x, P.y + 1.5, P.z);
+            const d = tp.clone().sub(o); d.y = THREE.MathUtils.clamp(d.y, -4, 6); d.normalize(); const hy = Math.atan2(d.x, d.z); o.x += Math.sin(hy) * 1.7; o.z += Math.cos(hy) * 1.7;
+            const grp = new THREE.Group(), tex = arLbTex(), mk = (sz, op) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(sz, sz), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false })); m.userData.noOutline = true; m.frustumCulled = false; return m; };
+            const c1 = mk(3.6, 1), c2 = mk(2.5, 0.8), c3 = mk(5.2, 0.35); c2.position.z = 0.08; c3.position.z = -0.1; grp.add(c3, c1, c2); grp.position.copy(o); grp.lookAt(o.x + d.x, o.y + d.y, o.z + d.z); grp.scale.setScalar(0.01); (HC.fxg || scene).add(grp);
+            const geo = new THREE.BoxGeometry(0.05, 0.05, 1.5), mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+            const im = new THREE.InstancedMesh(geo, mat, AR_LB_N); im.frustumCulled = false; im.userData.noOutline = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); const col = new THREE.Color(); for (let i = 0; i < AR_LB_N; i++) { col.setHSL(0.1 + Math.random() * 0.08, 0.9, 0.62 + Math.random() * 0.3); im.setColorAt(i, col); } (HC.fxg || scene).add(im);
+            const right = new THREE.Vector3().crossVectors(d, new THREE.Vector3(0, 1, 0)).normalize(), up = new THREE.Vector3().crossVectors(right, d).normalize(), A = [];
+            for (let i = 0; i < AR_LB_N; i++) { const ang = Math.random() * 6.2832, rr = Math.sqrt(Math.random()) * 1.45, sp = 0.012 + Math.random() * 0.2; const jx = (Math.random() - 0.5) * 2, jy = (Math.random() - 0.5) * 2; A.push({ ts: 1.5 + (i / AR_LB_N) * 2.3 + Math.random() * 0.05, px: right.x * Math.cos(ang) * rr + up.x * Math.sin(ang) * rr, py: right.y * Math.cos(ang) * rr + up.y * Math.sin(ang) * rr, pz: right.z * Math.cos(ang) * rr + up.z * Math.sin(ang) * rr, dx: d.x + right.x * jx * sp + up.x * jy * sp, dy: d.y + right.y * jx * sp + up.y * jy * sp, dz: d.z + right.z * jx * sp + up.z * jy * sp, v: 80 + Math.random() * 40, life: 0.5 + Math.random() * 0.35 }); }
+            ARW.lb = { t: 0, s, tgt: t, o, d, grp, c1, c2, c3, im, A, tp, tick: 0, end: 4.4, done: false };
+            nuShowBanner('LIMIT BREAK', 'SPRENGER VOLLEY'); try { localActor.group.rotation.y = hy; localActor.playEmote('ar_overdraw'); localActor.emoteRate = 0; localActor.emoteT = 0.6; nfEmoteNet('ar_overdraw', 0, false); } catch (e) { /* cosmetic */ }
+            try { nfRumble(0.4, 0.5, 600); } catch (e) { /* pad */ }
+        }
+        const _arLbZ = new THREE.Matrix4().makeScale(0, 0, 0), _arLbMx = new THREE.Matrix4(), _arLbQ = new THREE.Quaternion(), _arLbP = new THREE.Vector3(), _arLbS = new THREE.Vector3(1, 1, 1), _arLbZv = new THREE.Vector3(0, 0, 1), _arLbD = new THREE.Vector3();
+        function arLbTick(dt) {
+            const L = ARW.lb; if (!L) return; if (NF.dead) { arLbEnd(); return; } L.t += dt; NF.inv = Math.max(NF.inv || 0, 0.35); NF.comb = 6; const t = L.t;
+            if (L.tgt && !L.tgt.dead && L.tgt.node) L.tp.set(L.tgt.x, L.tgt.node.position.y + 1.2 * (L.tgt.big || 1), L.tgt.z);
+            const grow = Math.min(1, t / 1.1), ge = 1 - Math.pow(1 - grow, 3), fade = t > L.end - 0.5 ? Math.max(0, (L.end - t) / 0.5) : 1;
+            L.grp.scale.setScalar(Math.max(0.01, ge * (1 + 0.04 * Math.sin(t * 30) * (t > 1.4 ? 1 : 0)) * (0.3 + 0.7 * fade))); L.c1.rotation.z += dt * 1.1; L.c2.rotation.z -= dt * 2.1; L.c3.rotation.z += dt * 0.5;
+            L.c1.material.opacity = fade * Math.min(1, t * 2); L.c2.material.opacity = 0.8 * fade * Math.min(1, t * 2); L.c3.material.opacity = 0.35 * fade * Math.min(1, t * 2);
+            if (t < 1.5) { for (let i = 0; i < 3; i++) { const a = Math.random() * 6.2832, r = 2.6 * (1 - ge * 0.4); _arA.set(L.o.x + Math.cos(a) * r * 0.7, L.o.y + Math.sin(a) * r * 0.7, L.o.z); arMote(_arA, [(L.o.x - _arA.x) * 2.5, (L.o.y - _arA.y) * 2.5, 0], arCol(0xffe08a), 0.3, 0.02, 0.5); } }
+            try { const rc = (t * 3) | 0; if (t > 1.45 && t < L.end - 0.4 && rc !== L.rc) { L.rc = rc; localActor.playEmote('ar_recoil'); localActor.emoteRate = 1.4; } } catch (e) { /* cosmetic */ }
+            const im = L.im; for (let i = 0; i < AR_LB_N; i++) {
+                const a = L.A[i], u = t - a.ts; if (u < 0 || u > a.life) { im.setMatrixAt(i, _arLbZ); continue; }
+                _arLbP.set(L.o.x + a.px + a.dx * a.v * u, L.o.y + a.py + a.dy * a.v * u, L.o.z + a.pz + a.dz * a.v * u); _arLbD.set(a.dx, a.dy, a.dz).normalize(); _arLbQ.setFromUnitVectors(_arLbZv, _arLbD); const k = Math.min(1, u * 14) * Math.min(1, (a.life - u) * 8 + 0.2); _arLbS.set(k, k, 0.6 + k * 0.8); _arLbMx.compose(_arLbP, _arLbQ, _arLbS); im.setMatrixAt(i, _arLbMx);
+                if (u + dt > a.life && Math.random() < 0.18) arMote(_arLbP, [(Math.random() - 0.5) * 7, Math.random() * 5, (Math.random() - 0.5) * 7], arCol(0xffe9a8), 0.28, 0.02, 0.45, FXCELL.star);
+            }
+            im.instanceMatrix.needsUpdate = true;
+            if (t > 1.5 && t < L.end - 0.6) {
+                L.tick -= dt; if (L.tick <= 0) { L.tick = 0.12; const mul = (L.s.pot || 7) / 19 * (1 + NF.lv * 0.01); for (const m of nfMobs()) { if (m.dead) continue; if (m === L.tgt || Math.hypot(m.x - L.tp.x, m.z - L.tp.z) < 9) { try { nfDealDmg(m, mul, false); } catch (e) { /* hit */ } } }
+                    try { nfFx('ring', new THREE.Vector3(L.tp.x + (Math.random() - 0.5) * 5, L.tp.y - 0.8, L.tp.z + (Math.random() - 0.5) * 5), L.tp); nsbBell(0, 600 + Math.random() * 900, 0.03, 0.2, 0); nfRumble(0.3, 0.5, 90); } catch (e) { /* fx */ } }
+            }
+            if (!L.fin && t > L.end - 0.6) { L.fin = true; for (let i = 0; i < 60; i++) arMote(L.tp, [(Math.random() - 0.5) * 22, Math.random() * 14, (Math.random() - 0.5) * 22], arCol(0xfff0b0), 0.5, 0.03, 0.9, i % 3 ? FXCELL.glow : FXCELL.star); try { nfFx('limit-ring', L.tp, L.tp); } catch (e) { /* fx */ } }
+            if (t >= L.end) arLbEnd();
+        }
+        function arLbEnd() { const L = ARW.lb; if (!L) return; ARW.lb = null; try { L.grp.removeFromParent(); L.grp.traverse((o) => { if (o.material) o.material.dispose(); }); L.im.removeFromParent(); L.im.geometry.dispose(); L.im.material.dispose(); L.im.dispose(); } catch (e) { /* cleanup */ } NF.inv = Math.max(NF.inv || 0, 0.3); try { if (localActor.emote === 'ar_overdraw' || localActor.emote === 'ar_recoil') localActor.playEmote('stand'); } catch (e) { /* cosmetic */ } }
         function arArrowTick(dt) {
             for (let i = ARW.arrows.length - 1; i >= 0; i--) {
                 const a = ARW.arrows[i]; a.dist += AR_FLY * dt; const k = Math.min(a.dist, a.len); a.m.position.set(a.o[0] + a.d[0] * k, a.o[1] + a.d[1] * k, a.o[2] + a.d[2] * k);
@@ -32767,18 +33022,24 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             localActor.group.rotation.y = NG.yaw; NG.kick = 1; arSpawn(o, d, len, c, el, keep, true); if (keep[0]) nfTarget(keep[0].m);
             try { net && net.send({ t: 'gn', w: 'bow', o: o.map((v) => Math.round(v * 100) / 100), d: d.map((v) => Math.round(v * 1000) / 1000), l: Math.round(len * 10) / 10, k: el, s: Math.round(c * 100) / 100 }); } catch (e) { /* offline */ }
             try { nfRumble(0.15 + 0.4 * c, 0.1 + 0.3 * c, 90 + 120 * c); nsbBell(0, 700 + 700 * c, 0.035, 0.22, 0); nsbBell(0.03, 1400 + 400 * c, 0.02, 0.3, 0); } catch (e) { /* audio */ }
-            const A2 = localActor; try { A2.playEmote('ar_recoil'); A2.emoteRate = 1.4; nfEmoteNet('ar_recoil', 1.4, false); } catch (e) { /* cosmetic */ }
+            const A2 = localActor; ARW.autoUntil = performance.now() + 550; try { A2.playEmote('ar_recoil'); A2.emoteRate = 1.4; nfEmoteNet('ar_recoil', 1.4, false); } catch (e) { /* cosmetic */ }
         }
         function arRelease(fire) {
             const c = ARW.chg, el = ARW.el; ARW.on = false; ARW.chg = 0; NG.cd = 0.3;
             if (fire && c >= 0.06) arShoot(Math.max(0.12, c), el); else { try { if (localActor.emote === 'ar_overdraw') localActor.playEmote('stand'); } catch (e) { /* cosmetic */ } }
         }
         function arTick(dt, on) {
-            ARW.t += dt; const act = arActive() && on !== undefined; try { arArrowTick(dt); arBowTick(dt, arActive()); } catch (e) { if (!window.__arErr) { window.__arErr = e; console.error('artemis', e); } }
+            ARW.t += dt; const act = arActive() && on !== undefined; try { arLbTick(dt); } catch (e) { if (!window.__arLbErr) { window.__arLbErr = e; console.error('artemis lb', e); } ARW.lb = null; } try { arArrowTick(dt); arBowTick(dt, arActive()); } catch (e) { if (!window.__arErr) { window.__arErr = e; console.error('artemis', e); } }
             arUi(arActive()); try { arPadUi(arActive()); } catch (e) { /* ui */ } if (!arActive()) { ARW.on = false; ARW.chg = 0; return; }
             if (!on) { if (ARW.on) arRelease(false); return; }
-            const A = localActor, fire = (NG.fireM || NG.fireP) && NG.ads > 0.5 && !NF.roll && !NF.cast, elem = ARW.el !== 'n';
+            if (ARW.hold && (NG.ads < 0.5 || NF.roll || NF.cast || NF.dead || (ARW.on && ARW.chg >= 1 && ARW.full && (ARW.fullT = (ARW.fullT || 0) + dt) > 0.25))) { ARW.hold = false; ARW.fullT = 0; }
+            const A = localActor, fire = (NG.fireM || NG.fireP || ARW.hold) && NG.ads > 0.5 && !NF.roll && !NF.cast, elem = ARW.el !== 'n';
             if (!fire) ARW.lock = false;
+            try {   // L2 held = the bow stays drawn: hold the draw pose for as long as the aim button is down (the string pose is frozen part-way, charging takes over on R2)
+                const nowT = performance.now(), D = ANIM_EMOTES.ar_overdraw;
+                if (NG.ads > 0.6 && !ARW.on && !NF.roll && !NF.cast && !NF.dead && !(ARW.autoUntil > nowT) && D) { if (A.emote !== 'ar_overdraw') { A.playEmote('ar_overdraw'); nfEmoteNet('ar_overdraw', 0, false); } A.emoteRate = 0; A.emoteT = 0.3 * D.duration; ARW.held = true; }
+                else if (ARW.held && NG.ads < 0.3 && !ARW.on) { ARW.held = false; if (A.emote === 'ar_overdraw' || A.emote === 'ar_recoil') A.playEmote('stand'); }
+            } catch (e) { /* cosmetic */ }
             if (!ARW.on) { if (fire && !ARW.lock && NG.cd <= 0) { if (NF.mp < 3) { if (!ARW.mpT || performance.now() - ARW.mpT > 900) { ARW.mpT = performance.now(); nfPop(nfPos().clone().setY(nfPos().y + 2), 'Not enough MP', '#8fb4ff'); } ARW.lock = true; return; } ARW.on = true; ARW.chg = 0; ARW.full = false; NF.mp -= 3; try { A.playEmote('ar_overdraw'); A.emoteRate = 0; } catch (e) { /* cosmetic */ } try { nsbBell(0, 520, 0.025, 0.3, 0); } catch (e) { /* audio */ } } return; }
             if (NG.ads < 0.5 || NF.roll || NF.cast || NF.dead) { arRelease(false); return; }
             if (!fire) { arRelease(true); return; }
@@ -32812,7 +33073,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
             if (!NG.rig) return;
             const sc = 1 - 0.35 * NG.ads; if (PAD.rx || PAD.ry) { NG.yaw -= (PAD.rx || 0) * 2.6 * sc * dt; NG.pitch = clamp(NG.pitch - (PAD.ry || 0) * 1.6 * sc * dt, -0.85, 0.85); }
             const a = NG.ads, g = localActor.group.position, yaw = NG.yaw, pt = NG.pitch, cp = Math.cos(pt), dl = [Math.sin(yaw) * cp, Math.sin(pt), Math.cos(yaw) * cp], rt = [-Math.cos(yaw), 0, Math.sin(yaw)];
-            const dist = lerp(3.4, 1.9, a), side = lerp(0.3, 0.72, a), h = lerp(1.6, 1.55, a), pv = [g.x + rt[0] * side, g.y + h, g.z + rt[2] * side];
+            NG.sv = (NG.sv === undefined ? 1 : NG.sv) + ((NG.sd || 1) - (NG.sv === undefined ? 1 : NG.sv)) * (1 - Math.exp(-dt * 9)); const dist = lerp(3.4, 1.9, a), side = lerp(0.3, 0.72, a) * NG.sv, h = lerp(1.6, 1.55, a), pv = [g.x + rt[0] * side, g.y + h, g.z + rt[2] * side];
             let cd = dist; for (let t = 0.5; t <= dist; t += 0.3) { const x = pv[0] - dl[0] * t, y = pv[1] - dl[1] * t, z = pv[2] - dl[2] * t; if (y < nuH(x, z) + 0.5 || (nuBlk(x, z) && y < nuH(x, z) + 3)) { cd = Math.max(0.6, t - 0.4); break; } }
             camera.position.set(pv[0] - dl[0] * cd, Math.max(nuH(pv[0] - dl[0] * cd, pv[2] - dl[2] * cd) + 0.4, pv[1] - dl[1] * cd), pv[2] - dl[2] * cd); controls.target.set(pv[0], pv[1], pv[2]); camera.lookAt(pv[0] + dl[0] * 6, pv[1] + dl[1] * 6, pv[2] + dl[2] * 6);
             const f = NG.fov0 * lerp(1, 0.82, a); if (Math.abs(camera.fov - f) > 0.01) { camera.fov = f; camera.updateProjectionMatrix(); }
@@ -33558,6 +33819,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
                 ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
                 ray.setFromCamera(ndc, camera);
                 if (hasScreen() && SCREEN.hit.length && ray.intersectObjects(SCREEN.hit, false).length) { openScreenPanel(); return; }   // click the screen
+                { const sp0 = asClickPeer(ray); if (sp0) { openProfile(sp0); return; } }
                 { const pls = activeMap === 'btl' ? [] : [...peers.values()].filter((p) => p.actor.group.parent), hitP = ray.intersectObjects(pls.map((p) => p.actor.group), true)[0], hitProp = ray.intersectObjects(props, true)[0];
                   if (hitP && (!hitProp || hitP.distance < hitProp.distance)) {
                       const pp = pls.find((p) => { let o = hitP.object; while (o) { if (o === p.actor.group) return true; o = o.parent; } return false; });
@@ -33722,6 +33984,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
                     .catch(() => sysChat('Fullscreen was blocked. Try the button again, or use the browser menu > Add to Home screen and open The Oasis from there.'));
             }
             $('btn-fullscreen').addEventListener('click', toggleFullscreen);
+            { const sb = $('hud-ship'); if (sb) sb.addEventListener('click', (e) => { e.preventDefault(); if (AS.riding) asDismount(); else if (AS.pilot) asSet(false); else if (e.shiftKey) asShow(); else asSet(true); }); }
             { const kb = $('hud-bike'); if (kb) kb.addEventListener('click', (e) => { e.preventDefault(); if (BK.on) bkSet(false); else if (e.shiftKey || !BK.raw.some(Boolean)) bkShow(true); else bkSet(true); kb.blur(); }); }
             { const bb = $('hud-board'); if (bb) { bb.addEventListener('click', (e) => { e.preventDefault(); hbToggle(); bb.blur(); }); hbShowButton(); } }
             { const hb = $('hud-fs');          // a one-tap fullscreen button for touch screens
