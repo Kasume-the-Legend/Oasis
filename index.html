@@ -13499,7 +13499,7 @@ function kbModel(THREE, mk) {
                 + '#nf-xb .xb-dia{display:grid;grid-template-columns:repeat(3,38px);grid-template-rows:repeat(3,38px);gap:1px}#nf-xb .xb-slot{position:relative;pointer-events:auto;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:50%;background:rgba(12,22,44,.82);border:1.5px solid rgba(190,220,255,.6);box-shadow:0 2px 8px rgba(0,0,0,.45);overflow:hidden;transition:transform .12s,background .12s;user-select:none;touch-action:manipulation}'
                 + '#nf-xb .xb-slot i{font-style:normal;font-size:16px;line-height:16px}#nf-xb .xb-slot u{text-decoration:none;font-size:6.5px;line-height:7px;max-width:36px;white-space:nowrap;overflow:hidden;opacity:.85}#nf-xb .xb-slot small{position:absolute;left:5px;top:3px;font-size:7px;opacity:.75}#nf-xb .xb-slot.off{opacity:.45}#nf-xb .xb-slot.hit{transform:scale(1.25);background:rgba(90,170,255,.9)}#nf-xb .xb-slot em{position:absolute;inset:0;background:rgba(0,0,0,.62);font:700 11px system-ui;display:none;align-items:center;justify-content:center;font-style:normal}'
                 + '#nf-xb .xb-f1{grid-column:2;grid-row:1}#nf-xb .xb-f2{grid-column:3;grid-row:2}#nf-xb .xb-f3{grid-column:2;grid-row:3}#nf-xb .xb-f4{grid-column:1;grid-row:2}#nf-xb .xb-dia.fc .xb-f1{border-color:#f5c542}#nf-xb .xb-dia.fc .xb-f2{border-color:#ef5350}#nf-xb .xb-dia.fc .xb-f3{border-color:#4cc36b}#nf-xb .xb-dia.fc .xb-f4{border-color:#4a8cf0}'
-                + '#nf-xb .xb-mid{position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);white-space:nowrap;text-shadow:0 1px 3px #000}#nf-xb .xb-mid span{padding:2px 10px;border-radius:9px;background:rgba(12,22,44,.8);border:1px solid rgba(190,220,255,.4);letter-spacing:.06em}@media (max-width:640px){#nf-xb{transform:translateX(-50%) scale(.82);transform-origin:50% 100%;gap:10px}}'
+                + '#nf-xb .xb-mid{position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);white-space:nowrap;text-shadow:0 1px 3px #000}#nf-xb .xb-mid span{padding:2px 10px;border-radius:9px;background:rgba(12,22,44,.8);border:1px solid rgba(190,220,255,.4);letter-spacing:.06em}@media (max-width:640px){#nf-xb .xb-mid{display:flex;gap:4px;align-items:center;pointer-events:auto}#nf-xb .xb-pg,#nf-xb .xb-bk{cursor:pointer;padding:2px 8px;border-radius:9px;background:rgba(12,22,44,.8);border:1px solid rgba(190,220,255,.4);font-style:normal;font-size:12px;touch-action:manipulation}#nf-xb .xb-mid span{cursor:pointer}#nf-xb .xb-slot.abp{border-color:#ffd24a;box-shadow:0 0 8px rgba(255,210,74,.5)}#nf-xb .xb-slot.lock{filter:grayscale(.8)}#nf-xb{transform:translateX(-50%) scale(.82);transform-origin:50% 100%;gap:10px}}'
                 + '#nf-tbtn{position:absolute;left:calc(50% + 178px);bottom:96px;width:48px;height:48px;border-radius:50%;border:2px solid #6fd4ff;background:radial-gradient(circle,#1c4f8a,#08162e);color:#bff0ff;font:800 20px system-ui;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto}';
             document.head.appendChild(st); const r = document.createElement('div'); r.id = 'nf-root';
             r.innerHTML = '<div id="nf-pf"><div class="c"><div class="nfl"><span>HP</span><em data-k="hpt"></em></div><div class="nfg"><i class="hp" data-k="hp"></i></div></div><div class="c"><div class="nfl"><span>MP</span><em data-k="mpt"></em></div><div class="nfg"><i class="mp" data-k="mp"></i></div></div><div class="w"><div class="nfg sm"><i class="lb" data-k="lb"></i></div><div class="nfx" data-k="xpt"></div></div></div>'
@@ -13518,23 +13518,23 @@ function kbModel(THREE, mk) {
             return true;
         }
         function nfXbRun(side, k) {
-            if (side === 'L') nfUse(k); else if (k < 4) nfUse(8 + k); else { const u = NF_UTIL[k - 4][0]; if (u === 'nf_target') nfCycle(); else if (u === 'nf_use') nfPadUse(); else if (u === 'nf_aether') nfTeleMenu(); else nfClassMenu(); }
+            if (AB.mode && (side === 'L' || k < 4)) abRun(side === 'L' ? k : 8 + k); else if (side === 'L') nfUse(k); else if (k < 4) nfUse(8 + k); else { const u = NF_UTIL[k - 4][0]; if (u === 'nf_target') nfCycle(); else if (u === 'nf_use') nfPadUse(); else if (u === 'nf_aether') nfTeleMenu(); else nfClassMenu(); }
             const el = NF.ui && NF.ui.xb.querySelector('.xb-slot[data-s="' + side + '"][data-k="' + k + '"]'); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 200); }
         }
         function nfXbBuild() {
             const xb = NF.ui.xb; const dia = (side, k0, grp) => '<div class="xb-dia ' + grp + '">' + [1, 2, 3, 4].map((n) => '<b class="xb-slot xb-f' + n + '" data-s="' + side + '" data-k="' + (k0 + n - 1) + '"><i></i><u></u><em></em><small></small></b>').join('') + '</div>';
             // main attacks sit on the far-right (coloured) face buttons under the right thumb; target / use / aether / class go on the left d-pad
-            xb.innerHTML = '<div class="xb-side" data-s="L">' + dia('R', 4, 'dp') + dia('R', 0, 'dp') + '</div><div class="xb-side" data-s="R">' + dia('L', 4, 'dp') + dia('L', 0, 'fc') + '</div><div class="xb-mid"><span></span></div>';
-            xb.addEventListener('pointerdown', (e) => { const b = e.target.closest && e.target.closest('.xb-slot'); if (!b) return; e.preventDefault(); e.stopPropagation(); nfXbRun(b.dataset.s, +b.dataset.k); });
+            xb.innerHTML = '<div class="xb-side" data-s="L">' + dia('R', 4, 'dp') + dia('R', 0, 'dp') + '</div><div class="xb-side" data-s="R">' + dia('L', 4, 'dp') + dia('L', 0, 'fc') + '</div><div class="xb-mid"><b class="xb-pg" title="Switch hotbar page (`)">⇄</b><span></span><b class="xb-bk" title="Arts Book (K)">📖</b></div>';
+            xb.addEventListener('pointerdown', (e) => { const pg = e.target.closest && e.target.closest('.xb-pg,.xb-bk,.xb-mid span'); if (pg) { e.preventDefault(); e.stopPropagation(); if (pg.classList.contains('xb-bk')) abBookOpen(); else abPage(!AB.mode); return; } const b = e.target.closest && e.target.closest('.xb-slot'); if (!b) return; e.preventDefault(); e.stopPropagation(); nfXbRun(b.dataset.s, +b.dataset.k); });
             nfXbDraw();
         }
         function nfXbDraw() {
-            const u = NF.ui; if (!u || !u.xb) return; u.xb.querySelectorAll('.xb-slot').forEach((el) => { const side = el.dataset.s, k = +el.dataset.k; let ic, nm, key; if (side === 'L') { const s = NF_SK[k]; ic = s.ic; nm = s.n; key = String(k + 1); el.title = s.n + ': ' + s.d; } else if (k < 4) { const s = NF_SK[8 + k]; ic = s.ic; nm = s.n; key = '⇧' + (k + 1); el.title = s.n + ': ' + s.d; } else { const q = NF_UTIL[k - 4]; ic = q[1]; nm = q[2]; key = '⇧' + (k + 1); el.title = q[2]; } el.querySelector('i').textContent = ic; el.querySelector('u').textContent = nm; el.querySelector('small').textContent = key; });
-            u.xb.querySelector('.xb-mid span').textContent = nfCls().ic + ' ' + nfCls().n.toUpperCase() + '  ·  LV ' + NF.lv;
+            const u = NF.ui; if (!u || !u.xb) return; u.xb.querySelectorAll('.xb-slot').forEach((el) => { const side = el.dataset.s, k = +el.dataset.k; let ic, nm, key; if (AB.mode && (side === 'L' || k < 4)) { const pi = side === 'L' ? k : 8 + k, v = abPins()[pi], s = abSlotSkill(v); ic = s ? s.ic : '＋'; nm = s ? s.n : 'Empty'; key = side === 'L' ? String(k + 1) : '⇧' + (k + 1); el.title = s ? s.n + ': ' + (s.d || '') : 'Empty: open the Arts Book (K) and pin an ability'; el.classList.toggle('abp', true); el.classList.toggle('lock', !!v && abLocked(v)); el.style.opacity = v ? '' : '.5'; } else if (side === 'L') { el.classList.remove('abp', 'lock'); el.style.opacity = ''; const s = NF_SK[k]; ic = s.ic; nm = s.n; key = String(k + 1); el.title = s.n + ': ' + s.d; } else if (k < 4) { el.classList.remove('abp', 'lock'); el.style.opacity = ''; const s = NF_SK[8 + k]; ic = s.ic; nm = s.n; key = '⇧' + (k + 1); el.title = s.n + ': ' + s.d; } else { const q = NF_UTIL[k - 4]; ic = q[1]; nm = q[2]; key = '⇧' + (k + 1); el.title = q[2]; } el.querySelector('i').textContent = ic; el.querySelector('u').textContent = nm; el.querySelector('small').textContent = key; });
+            u.xb.querySelector('.xb-mid span').textContent = (AB.mode ? '📖 ARTS · ' : '') + nfCls().ic + ' ' + nfCls().n.toUpperCase() + '  ·  LV ' + NF.lv;
         }
         function nfXbTick(now) {
-            const u = NF.ui; if (!u || !u.xb) return; u.xb.querySelectorAll('.xb-slot').forEach((el) => { const side = el.dataset.s, k = +el.dataset.k, s = side === 'L' ? NF_SK[k] : k < 4 ? NF_SK[8 + k] : null, em = el.querySelector('em'); if (!s) return; const cd = Math.max(s.gcd ? NF.gcd : 0, (NF.cds[s.id] || 0) - now), lack = (s.mp && NF.mp < s.mp) || (s.lb && NF.lb < 100); el.classList.toggle('off', !!lack); if (cd > 0.05) { em.style.display = 'flex'; em.textContent = cd.toFixed(cd > 9 ? 0 : 1); } else em.style.display = 'none'; });
-            const lbl = nfCls().ic + ' ' + nfCls().n.toUpperCase() + '  ·  LV ' + NF.lv; const sp = u.xb.querySelector('.xb-mid span'); if (sp.textContent !== lbl) sp.textContent = lbl;
+            const u = NF.ui; if (!u || !u.xb) return; u.xb.querySelectorAll('.xb-slot').forEach((el) => { const side = el.dataset.s, k = +el.dataset.k, s = AB.mode && (side === 'L' || k < 4) ? abSlotSkill(abPins()[side === 'L' ? k : 8 + k]) : side === 'L' ? NF_SK[k] : k < 4 ? NF_SK[8 + k] : null, em = el.querySelector('em'); if (!s) { em.style.display = 'none'; return; } const cd = Math.max(s.gcd ? NF.gcd : 0, (NF.cds[s.id] || 0) - now), lack = (s.mp && NF.mp < s.mp) || (s.lb && NF.lb < 100); el.classList.toggle('off', !!lack); if (cd > 0.05) { em.style.display = 'flex'; em.textContent = cd.toFixed(cd > 9 ? 0 : 1); } else em.style.display = 'none'; });
+            const lbl = (AB.mode ? '📖 ARTS · ' : '') + nfCls().ic + ' ' + nfCls().n.toUpperCase() + '  ·  LV ' + NF.lv; const sp = u.xb.querySelector('.xb-mid span'); if (sp.textContent !== lbl) sp.textContent = lbl;
         }
         function nfClassMenu() {
             if (activeMap !== 'nuu') { try { sysChat('Classes can only be changed in Adventia.'); } catch (e) { /* chat */ } return; } const u = nfUi(); if (u.tele.classList.contains('on')) { nfTeleClose(); return; }
@@ -15342,7 +15342,8 @@ function kbModel(THREE, mk) {
             const C = NF_CLASSES[NF.cls]; if (!C) return; const s = C.moves.find((q) => q.k === 'lb'); if (!s) return; if (!s._o) s._o = { n: s.n, ic: s.ic, pot: s.pot, r: s.r, d: s.d };
             const L = abLbList(NF.cls); let i = AB.lbSel[NF.cls] | 0; if (!L[i] || NF.lv < L[i].lv) { i = 0; AB.lbSel[NF.cls] = 0; } const q = L[i]; s.n = q.n; s.ic = q.ic; s.pot = q.pot; s.r = q.r; s.d = i ? 'Limit Break: ' + q.d : s._o.d;
         }
-        function abPins() { const c = NF.cls; if (!AB.pins[c]) AB.pins[c] = new Array(12).fill(null); return AB.pins[c]; }
+        function abPins() { const c = NF.cls; if (!AB.pins[c]) AB.pins[c] = new Array(16).fill(null); const P = AB.pins[c]; while (P.length < 16) P.push(null); return P; }
+        function abPadSync() { try { const P = abPins(); for (let i = 0; i < 16; i++) { const a = PAD_ACTS['ab_' + i]; if (!a) continue; const s = abSlotSkill(P[i]); a[0] = s ? s.ic : '＋'; a[1] = s ? s.n : 'Empty'; } PAD.drawKey = ''; } catch (e) { /* pad not ready */ } }
         function abSlotSkill(v) { if (!v) return null; if (v[0] === 'c') return NF_SK[+v.slice(1)] || null; const r = AB.by[v]; return r && r.cls === NF.cls ? abSkill(r) : null; }
         function abLocked(v) { if (!v || v[0] === 'c') return false; const r = AB.by[v]; return !r || NF.lv < r.lv; }
         function abToast(t) { try { padToast(t); } catch (e) { /* toast */ } }
@@ -15353,7 +15354,7 @@ function kbModel(THREE, mk) {
         function abUnpin(slot) { abPins()[slot] = null; abSave(); abBarDraw(); if (AB.open) abBookDraw(); }
         function abAuto() {
             const P = abPins(); const ok = (AB.cat[NF.cls] || []).filter((r) => NF.lv >= r.lv); const pick = []; const seen = new Set();
-            for (let i = ok.length - 1; i >= 0 && pick.length < 12; i--) { const key = ok[i].n; if (seen.has(key)) continue; if (/^[BGMT]$/.test(ok[i].code[0]) && pick.filter((q) => /^[BGMT]$/.test(q.code[0])).length >= 3) continue; seen.add(key); pick.push(ok[i]); }
+            for (let i = ok.length - 1; i >= 0 && pick.length < 16; i--) { const key = ok[i].n; if (seen.has(key)) continue; if (/^[BGMT]$/.test(ok[i].code[0]) && pick.filter((q) => /^[BGMT]$/.test(q.code[0])).length >= 3) continue; seen.add(key); pick.push(ok[i]); }
             pick.sort((a, b) => a.lv - b.lv); P.fill(null); pick.forEach((r, i) => { P[i] = r.id; }); abSave(); abBarDraw(); if (AB.open) abBookDraw();
         }
         function abRun(i) {
@@ -15365,14 +15366,14 @@ function kbModel(THREE, mk) {
         }
         function abCss() {
             if (document.getElementById('ab-css')) return; const st = document.createElement('style'); st.id = 'ab-css';
-            st.textContent = '#ab-bar{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);width:max-content;z-index:59;display:none;gap:4px;padding:5px 7px;border-radius:12px;background:rgba(6,16,32,.55);border:1px solid rgba(160,210,255,.25);font-family:Nunito,system-ui,sans-serif;max-width:96vw;flex-wrap:wrap;justify-content:center;user-select:none}#ab-bar.on{display:flex}#ab-bar.key{border-color:#ffd24a;box-shadow:0 0 12px rgba(255,210,74,.45)}'
+            st.textContent = '#ab-bar{display:none!important;position:fixed;left:50%;bottom:150px;transform:translateX(-50%);width:max-content;z-index:59;display:none;gap:4px;padding:5px 7px;border-radius:12px;background:rgba(6,16,32,.55);border:1px solid rgba(160,210,255,.25);font-family:Nunito,system-ui,sans-serif;max-width:96vw;flex-wrap:wrap;justify-content:center;user-select:none}#ab-bar.on{display:flex}#ab-bar.key{border-color:#ffd24a;box-shadow:0 0 12px rgba(255,210,74,.45)}'
                 + '.ab-s{position:relative;width:38px;height:38px;border-radius:8px;background:rgba(14,30,56,.82);border:1px solid rgba(150,200,255,.3);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:#fff;font-style:normal}.ab-s.empty{opacity:.45;font-size:13px}.ab-s.sel{outline:2px solid #ffd24a}.ab-s.off{filter:grayscale(.8) brightness(.7)}.ab-s.lock{opacity:.35}.ab-s.hit{transform:scale(.88);background:rgba(120,180,255,.5)}'
                 + '.ab-s i{font-style:normal}.ab-s em{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);border-radius:8px;font-size:12px;font-style:normal}.ab-s small{position:absolute;left:2px;top:0;font-size:9px;color:#ffe08a;text-shadow:0 1px 2px #000}.ab-s u{display:none}'
                 + '#ab-book{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;background:rgba(2,8,18,.62);font-family:Nunito,system-ui,sans-serif;color:#e8f4ff}#ab-book.on{display:flex}#ab-book *{box-sizing:border-box}'
                 + '.abk{width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column;border-radius:16px;background:linear-gradient(180deg,#10223f,#0a1528);border:1px solid rgba(160,210,255,.35);box-shadow:0 12px 50px rgba(0,0,0,.6);overflow:hidden}.abk-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid rgba(160,210,255,.2)}.abk-h b{font-size:17px;letter-spacing:.08em;flex:1}.abk-h button{background:none;border:0;color:#cfe6ff;font-size:20px;cursor:pointer}'
                 + '.abk-t{display:flex;gap:6px;padding:8px 16px;flex-wrap:wrap}.abk-t button{padding:5px 12px;border-radius:999px;border:1px solid rgba(160,210,255,.35);background:rgba(20,40,70,.7);color:#cfe6ff;font-size:12px;cursor:pointer}.abk-t button.on{background:#2f6fc4;color:#fff;border-color:#8cc4ff}'
                 + '.abk-l{flex:1;overflow:auto;padding:4px 16px 8px;min-height:180px}.ab-row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:9px;cursor:pointer;border-bottom:1px solid rgba(160,210,255,.1)}.ab-row:hover{background:rgba(80,140,220,.2)}.ab-row.lock{opacity:.4}.ab-row .ic{font-size:22px;width:30px;text-align:center}.ab-row .tx{flex:1;min-width:0}.ab-row .tx b{font-size:13.5px}.ab-row .tx small{display:block;font-size:11px;color:#9fc0e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ab-row .lv{font-size:11px;color:#ffd98a;min-width:42px;text-align:right}.ab-row .pn{font-size:11px;color:#8cffb0;min-width:54px;text-align:right}.ab-row.cur{background:rgba(255,210,74,.16);outline:1px solid #ffd24a}'
-                + '.abk-f{padding:10px 16px 14px;border-top:1px solid rgba(160,210,255,.2)}.abk-f .st{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}.abk-f .st .ab-s{width:44px;height:44px}.abk-f .bt{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#9fc0e6;align-items:center}.abk-f .bt button{padding:5px 12px;border-radius:8px;border:1px solid rgba(160,210,255,.35);background:rgba(20,40,70,.7);color:#cfe6ff;font-size:12px;cursor:pointer}';
+                + '.abk-f{padding:10px 16px 14px;border-top:1px solid rgba(160,210,255,.2)}.abk-f .st{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}.abk-f .st br{display:block}.abk-f .st .ab-s{width:44px;height:44px}.abk-f .bt{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#9fc0e6;align-items:center}.abk-f .bt button{padding:5px 12px;border-radius:8px;border:1px solid rgba(160,210,255,.35);background:rgba(20,40,70,.7);color:#cfe6ff;font-size:12px;cursor:pointer}';
             document.head.appendChild(st);
         }
         function abBarBuild() {
@@ -15383,8 +15384,12 @@ function kbModel(THREE, mk) {
             b.addEventListener('drop', (e) => { const s = e.target.closest('.ab-s[data-i]'); if (!s) return; e.preventDefault(); const v = e.dataTransfer.getData('text/plain'); if (v) abPin(v, +s.dataset.i); });
             abBarDraw();
         }
+        function abPage(on) {
+            AB.mode = !!on; abBarDraw(); try { nfXbDraw(); } catch (e) { /* hud */ } try { for (let i = 0; i < 12; i++) { const a = PAD_ACTS['nfm_' + i]; if (!a) continue; const s = AB.mode ? abSlotSkill(abPins()[i]) : NF_SK[i]; a[0] = s ? s.ic : '＋'; a[1] = s ? s.n : 'Empty'; } PAD.drawKey = ''; } catch (e) { /* pad */ }
+            try { nuShowBanner(AB.mode ? 'ARTS PAGE' : 'CLASS PAGE', AB.mode ? 'YOUR PINNED ARTS' : 'YOUR CLASS SKILLS'); } catch (e) { /* banner */ }
+        }
         function abBarDraw() {
-            if (!AB.bar) return; const P = abPins(); AB.bar.querySelectorAll('.ab-s[data-i]').forEach((el) => {
+            try { nfXbDraw(); } catch (e) { /* hud */ } abPadSync(); if (!AB.bar) return; const P = abPins(); AB.bar.querySelectorAll('.ab-s[data-i]').forEach((el) => {
                 const i = +el.dataset.i, v = P[i], s = abSlotSkill(v); el.classList.toggle('empty', !v); el.classList.toggle('lock', !!v && abLocked(v)); el.querySelector('i').textContent = s ? s.ic : '+'; el.title = s ? s.n + ' · ' + (s.d || '') : 'Empty: open the Arts Book (K) to pin an ability'; el.querySelector('small').textContent = AB.mode ? (i < 8 ? String(i + 1) : '⇧' + (i - 7)) : '';
             }); AB.bar.classList.toggle('key', AB.mode);
         }
@@ -15403,10 +15408,10 @@ function kbModel(THREE, mk) {
                 rows = L.map((q, i) => '<div class="ab-row lbrow' + (NF.lv < q.lv ? ' lock' : '') + (i === cur ? ' cur' : '') + '" data-lb="' + i + '"><span class="ic">' + q.ic + '</span><span class="tx"><b>' + q.n + '</b><small>' + q.d + ' · power ×' + q.pot + ' · radius ' + q.r + '</small></span><span class="lv">Lv ' + q.lv + '</span><span class="pn">' + (i === cur ? '◆ ready' : '') + '</span></div>').join('');
             }
             const chips = tab === 'arts' ? '<div class="abk-t" style="padding-top:0">' + [[0, 'All']].concat(Object.keys(AB_GAME).map((g) => [+g, AB_GAME[g]])).map((q) => '<button class="gm' + (AB.game === q[0] ? ' on' : '') + '" data-g="' + q[0] + '">' + q[1] + '</button>').join('') + '</div>' : '';
-            let st = ''; for (let i = 0; i < 12; i++) { const v = P[i], s = abSlotSkill(v); st += '<b class="ab-s' + (v ? '' : ' empty') + (AB.sel === i ? ' sel' : '') + (v && abLocked(v) ? ' lock' : '') + '" data-i="' + i + '" title="' + (s ? s.n : 'Empty') + '"><i>' + (s ? s.ic : '+') + '</i><small>' + (i < 8 ? i + 1 : '⇧' + (i - 7)) + '</small></b>'; }
+            let st = ''; for (let i = 0; i < 16; i++) { if (i === 8) st += '<br style="flex-basis:100%">'; const v = P[i], s = abSlotSkill(v); st += '<b class="ab-s' + (v ? '' : ' empty') + (AB.sel === i ? ' sel' : '') + (v && abLocked(v) ? ' lock' : '') + '" data-i="' + i + '" title="' + (s ? s.n : 'Empty') + '"><i>' + (s ? s.ic : '+') + '</i><small>' + (i < 8 ? 'R' + (i + 1) : 'L' + (i - 7)) + '</small></b>'; }
             d.innerHTML = '<div class="abk"><div class="abk-h"><span style="font-size:24px">📖</span><b>ARTS BOOK · ' + C.ic + ' ' + C.n.toUpperCase() + ' · Lv ' + NF.lv + '</b><span style="font-size:11px;opacity:.75">' + unlocked + ' / ' + cat.length + ' unlocked</span><button class="x" title="Close (K)">✕</button></div>'
                 + '<div class="abk-t">' + [['arts', 'Arts (' + cat.length + ')'], ['class', 'Class skills'], ['lb', 'Limit breaks']].map((q) => '<button class="tb' + (tab === q[0] ? ' on' : '') + '" data-t="' + q[0] + '">' + q[1] + '</button>').join('') + '</div>' + chips
-                + '<div class="abk-l">' + rows + '</div><div class="abk-f"><div class="st">' + st + '</div><div class="bt"><span>Click a slot, then an ability · or drag it onto a slot · click a pinned slot twice to clear</span><button class="auto">Auto-fill best</button><button class="clr">Clear bar</button></div></div></div>';
+                + '<div class="abk-l">' + rows + '</div><div class="abk-f"><div class="st">' + st + '</div><div class="bt"><span>Slots 1–8 = hold RT / R2 bar · 9–16 = hold LT / L2 bar (controller set “Adventia Arts”). Click a slot, then an ability · or drag it onto a slot · click a pinned slot twice to clear</span><button class="auto">Auto-fill best</button><button class="clr">Clear bar</button></div></div></div>';
             const bl = d.querySelector('.abk-l'), sc = AB.scroll | 0; if (sc) bl.scrollTop = sc; bl.addEventListener('scroll', () => { AB.scroll = bl.scrollTop; });
             d.querySelector('.x').onclick = abBookClose;
             d.querySelectorAll('.tb').forEach((b) => { b.onclick = () => { AB.tab = b.dataset.t; AB.scroll = 0; abBookDraw(); }; });
@@ -15418,7 +15423,7 @@ function kbModel(THREE, mk) {
         }
         function abTick(now) {
             if (!AB.ready) { AB.ready = true; try { abBuild(); abBarBuild(); } catch (e) { console.warn('arts', e); } }
-            const key = NF.cls + ':' + NF.lv; if (key !== AB.key) {
+            const key = NF.cls + ':' + NF.lv; if (key !== AB.key) { if (AB.mode && AB.key.split(':')[0] !== NF.cls) abPage(true);
                 const old = AB.key.split(':'); AB.key = key; try { abLbApply(); nfXbDraw(); } catch (e) { /* hud */ }
                 if (old[0] === NF.cls && old[1] && +old[1] < NF.lv) { const nu = (AB.cat[NF.cls] || []).filter((r) => r.lv > +old[1] && r.lv <= NF.lv); if (nu.length) { try { sysChat('📖 Arts Book: ' + nu.length + (nu.length > 1 ? ' new abilities' : ' new ability') + ' unlocked: ' + nu.slice(0, 5).map((r) => r.n).join(', ') + (nu.length > 5 ? '…' : '') + ' (press K)'); } catch (e) { /* chat */ } } }
                 abBarDraw(); if (AB.open) abBookDraw();
@@ -15426,7 +15431,7 @@ function kbModel(THREE, mk) {
             const root = NF.ui && NF.ui.root, vis = !!(root && root.classList.contains('on') && !root.classList.contains('nfhide') && AB.show && activeMap === 'nuu' && NU.ready); if (AB.bar) { AB.bar.classList.toggle('on', vis); if (vis) { const P = abPins(); AB.bar.querySelectorAll('.ab-s[data-i]').forEach((el) => { const v = P[+el.dataset.i], s = abSlotSkill(v), em = el.querySelector('em'); if (!s) { em.style.display = 'none'; return; } const cd = Math.max(s.gcd ? NF.gcd : 0, (NF.cds[s.id] || 0) - now); el.classList.toggle('off', !!((s.mp && NF.mp < s.mp) || (s.lb && NF.lb < 100))); if (cd > 0.05) { em.style.display = 'flex'; em.textContent = cd.toFixed(cd > 9 ? 0 : 1); } else em.style.display = 'none'; }); } }
         }
         function abKey(e) {
-            const k = e.code; if (k === 'Backquote') { AB.mode = !AB.mode; abBarDraw(); try { nuShowBanner(AB.mode ? 'ARTS BAR' : 'CLASS BAR', AB.mode ? 'NUMBER KEYS FIRE YOUR PINNED ARTS' : 'NUMBER KEYS FIRE YOUR CLASS SKILLS'); } catch (x) { /* banner */ } return true; }
+            const k = e.code; if (k === 'Backquote') { abPage(!AB.mode); return true; }
             if (k === 'KeyK') { if (AB.open) abBookClose(); else abBookOpen(); return true; }
             if (AB.open) { if (k === 'Escape') abBookClose(); return k === 'Escape' || /^Digit/.test(k); }
             if (AB.mode && /^Digit[1-8]$/.test(k)) { abRun(+k.slice(5) - 1 + (e.shiftKey && +k.slice(5) <= 4 ? 8 - 0 : 0)); return true; }
@@ -18633,6 +18638,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             1: { name: 'SHADOWVEIL DEPTHS', reg: 4, floor: [0.30, 0.31, 0.37], floorB: [0.40, 0.38, 0.42], rockA: [0.26, 0.24, 0.27], rockB: [0.40, 0.35, 0.34], moss: [0.22, 0.33, 0.24], ceil: [0.17, 0.16, 0.2], cry: 0xb070ff, flame: 0xffa040, glow: ['255,190,100', '255,130,40', '255,100,20'], rune: 0xb070ff, runeB: 0xff4a6a, barrier: 0xb070ff, barrierB: 0xff4a6a, pillar: [0.42, 0.40, 0.44], ice: false, motes: [0xd8c8ff, 0.14, 0.55],
                 names: ['THE THRESHOLD', 'THE SUNKEN HALL', 'THE WHISPERING GALLERY', 'THE ASHEN CRYPT', 'THE LAST VIGIL', 'THE HOLLOW THRONE'], packs: [{ n: 3, lv: 15, cls: ['Striker', 'Guardian'] }, { n: 4, lv: 16, cls: ['Striker', 'Sage', 'Phantom'] }, { n: 4, lv: 17, cls: ['Phantom', 'Blaster', 'Guardian'] }, { n: 3, lv: 18, cls: ['Guardian', 'Berserker', 'Sage'], elite: true }], boss: { cls: 'Phantom', lv: 19, title: 'MALACHAR, THE HOLLOW ONE' } },
             2: { name: 'CARVERNIA CAVERNS', reg: 3, floor: [0.42, 0.5, 0.62], floorB: [0.58, 0.68, 0.8], rockA: [0.13, 0.19, 0.27], rockB: [0.3, 0.4, 0.54], moss: [0.16, 0.42, 0.4], ceil: [0.1, 0.15, 0.24], cry: 0x7fe6ff, flame: 0x6fd4ff, glow: ['170,225,255', '90,170,255', '60,130,255'], rune: 0x7fe6ff, runeB: 0xa0c8ff, barrier: 0x7fe6ff, barrierB: 0xff6a8a, pillar: [0.6, 0.8, 0.98], ice: true, motes: [0xffffff, 0.24, 0.8],
+                first: 'THE FROSTED GATE', bossRoom: 'VALDRIX\'S LAIR', pool: ['THE GLASS HALL', 'THE RIME GALLERY', 'THE WHITEOUT', 'THE LAST HEARTH', 'THE FROZEN CLOISTER', 'THE SHATTERED NAVE', 'THE BLUE CISTERN', 'THE GLACIAL OSSUARY', 'THE ICEBOUND STAIR'],
                 names: ['THE FROSTED GATE', 'THE GLASS HALL', 'THE RIME GALLERY', 'THE WHITEOUT', 'THE LAST HEARTH', 'VALDRIX\'S LAIR'], packs: [{ n: 3, lv: 36, cls: ['Sentinel', 'Guardian'] }, { n: 4, lv: 37, cls: ['Striker', 'Sage', 'Guardian'] }, { n: 4, lv: 38, cls: ['Sentinel', 'Blaster', 'Sage'] }, { n: 3, lv: 39, cls: ['Guardian', 'Berserker', 'Sage'], elite: true }], boss: { cls: 'Sentinel', lv: 40, title: 'CRYO-BEHEMOTH VALDRIX' } },
         };
         DG.th = DG_TH[1];
@@ -18648,15 +18654,15 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function dgH(x, z) { const k = dgIdx(x, z); if (k < 0) return DG_WH; if (DG.mask[k] === 1 || DG.base[k] === 1) return 0; return dgWallY(DG.dist[k], x, z); }
         function dgCeilY(x, z) { const b = DG.rooms[DG.rooms.length - 1], d = Math.hypot(x - b.x, z - b.z), k = Math.max(0, Math.min(1, (b.r + 14 - d) / 16)); return 11 + 7 * k * k * (3 - 2 * k) + (nuFbm(x * 0.05, z * 0.05, 2) - 0.5) * 2; }
         function dgBuildGeo() {
-            dgDispose(); const TH = DG.th, F1 = DG.floor === 1; DG.X0 = F1 ? 1940 : 1970; DG.W = F1 ? 440 : 400; DG.D = F1 ? 440 : 130; DG.side = [];   // the first dungeon is four times as long: a four-row serpentine of halls with hidden chest rooms
+            dgDispose(); const TH = DG.th, F1 = true; DG.X0 = 1940; DG.W = 440; DG.D = 440; DG.side = [];   // the first dungeon is four times as long: a four-row serpentine of halls with hidden chest rooms
             const X0 = DG.X0, Z0 = DG.Z0, C = DG.C, nx = DG.nx = Math.round(DG.W / C), nz = DG.nz = Math.round(DG.D / C), mask = DG.mask = new Uint8Array(nx * nz), DX = DG.DX;
             if (F1) {
-                const xs = [0, 62, 128, 192, 250, 322], zj = [0, -6, 22, -10, 18, 14], RM = []; let pk = 0; const pool = ['THE SUNKEN HALL', 'THE WHISPERING GALLERY', 'THE ASHEN CRYPT', 'THE LAST VIGIL', 'THE WEEPING CLOISTER', 'THE BROKEN NAVE', 'THE BLACK CISTERN', 'THE GILDED OSSUARY', 'THE DROWNED STAIR'], names = ['THE THRESHOLD'];
+                const xs = [0, 62, 128, 192, 250, 322], zj = [0, -6, 22, -10, 18, 14], RM = []; let pk = 0; const pool = TH.pool || ['THE SUNKEN HALL', 'THE WHISPERING GALLERY', 'THE ASHEN CRYPT', 'THE LAST VIGIL', 'THE WEEPING CLOISTER', 'THE BROKEN NAVE', 'THE BLACK CISTERN', 'THE GILDED OSSUARY', 'THE DROWNED STAIR'], names = [TH.first || 'THE THRESHOLD'];
                 for (let row = 0; row < 4; row++) for (let c = 0; c < 6; c++) {
                     const i = row * 6 + c, xi = row % 2 ? 5 - c : c, boss = i === 23, room = { x: DX + xs[xi], z: row * 100 + zj[(c + row * 2) % 6], r: i === 0 ? 11 : 13 + ((i * 7) % 6) };
-                    if (boss) { room.x = DX - 6; room.z = 314; room.r = 26; room.boss = true; room.pillars = 8; names.push('THE HOLLOW THRONE'); }
+                    if (boss) { room.x = DX - 6; room.z = 314; room.r = 26; room.boss = true; room.pillars = 8; names.push(TH.bossRoom || 'THE HOLLOW THRONE'); }
                     else if (i > 0) { names.push(pool[(i - 1) % pool.length] + (i > pool.length ? ' ' + ['II', 'III', 'IV'][Math.floor((i - 1) / pool.length) - 1] : ''));
-                        if (i % 3 === 0) { if (i % 6 === 0) room.pillars = 3; } else { room.pk = { n: 3 + (pk % 2), lv: 14 + Math.floor(i / 22 * 4.99), cls: TH.packs[pk % 4].cls, elite: pk % 5 === 4 }; if (pk % 4 === 1) room.pillars = 3; pk++; } }
+                        if (i % 3 === 0) { if (i % 6 === 0) room.pillars = 3; } else { room.pk = { n: 3 + (pk % 2), lv: TH.packs[0].lv - 1 + Math.floor(i / 22 * 4.99), cls: TH.packs[pk % 4].cls, elite: pk % 5 === 4 }; if (pk % 4 === 1) room.pillars = 3; pk++; } }
                     RM.push(room);
                 }
                 DG.rooms = RM; TH.names = names;
@@ -18897,7 +18903,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
         function dgChestsBuild() {
             for (const e of DG.chests || []) { try { e.c.group.removeFromParent(); } catch (er) { /* gone */ } } DG.chests = []; if (!DG.group) return; chestCss();
-            for (const sd of DG.side || []) { const pt = { x: sd.x, z: sd.z, d: 110, lv: 17, reg: DG.th.reg, dg: true }; const c = makeChest({ x: sd.x, z: sd.z, ry: (sd.x * 7.3 + sd.z) % 6.28, scale: 1.2, noLight: true, onOpen: (C) => nuChestOpened(pt, C), onGone: () => { const i = DG.chests.findIndex((q) => q.pt === pt); if (i >= 0) DG.chests.splice(i, 1); } });
+            for (const sd of DG.side || []) { const pt = { x: sd.x, z: sd.z, d: 110, lv: DG.th.packs[0].lv + 2, reg: DG.th.reg, dg: true }; const c = makeChest({ x: sd.x, z: sd.z, ry: (sd.x * 7.3 + sd.z) % 6.28, scale: 1.2, noLight: true, onOpen: (C) => nuChestOpened(pt, C), onGone: () => { const i = DG.chests.findIndex((q) => q.pt === pt); if (i >= 0) DG.chests.splice(i, 1); } });
                 c.group.position.y = 0; DG.group.add(c.group); const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 14, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false })); beam.position.y = 7; beam.userData.noOutline = true; c.group.add(beam); c.beam = beam; DG.chests.push({ pt, c }); }
         }
         const C0 = 0.5;
@@ -18985,7 +18991,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         (() => { const R = ZN_DEF.reach, cx = R.x0 + R.size / 2, cz = R.z0 + R.size / 2, at = (t) => ({ x: cx + 40 * Math.sin(5.2 * t) * Math.sin(Math.PI * t) + 7, z: cz - 168 + t * 333 });
             const th = NU_ZCRY[0]; th.hub = true; th.main = true; th.x = ZN_DEF.town.x0 + ZN_DEF.town.size / 2; th.z = ZN_DEF.town.z0 + ZN_DEF.town.size / 2; th.name = 'Carvernia Hold · Main Crystal';
             [['zn-reach-1', 'Reach · Frostgate', 0.2], ['zn-reach-2', 'Reach · Whiteout Pass', 0.52], ['zn-reach-3', 'Reach · Caverns Gate', 0.94]].forEach(([id, name, t]) => { const q = at(t), c = { id, name, zone: 'reach', x: q.x, z: q.z }; c.at = { get x() { return c.x + 2.4; }, get z() { return c.z; }, ry: Math.PI }; NU_ZCRY.push(c); }); })();
-        function znCryAct(c) { NF.hp = NF.hpMax; NF.mp = NF.mpMax; NF.last = c.id; if (!NF.att[c.id]) { NF.att[c.id] = 1; nuShowBanner('AETHER CRYSTAL ATTUNED', c.name.toUpperCase()); try { sysChat('◆ Attuned to ' + c.name + '. Open the aether network (T) to teleport between your crystals, and Adventia brings you back to the last one you used.'); } catch (e) { /* chat */ } } else nuShowBanner('RESTED', 'HP AND MP RESTORED'); nfSave(); try { sysChat('The crystal hums. HP and MP restored.'); } catch (e) { /* chat */ } }
+        function znCryAct(c) { if (NF.comb > 0.1) { nuShowBanner('NOT NOW', 'YOU CANNOT USE THE CRYSTAL IN COMBAT'); return; } NF.last = c.id; if (!c.hub && !NF.att[c.id]) { NF.att[c.id] = 1; nfSave(); nuShowBanner('AETHER CRYSTAL ATTUNED', c.name.toUpperCase()); try { sysChat('◆ Attuned to ' + c.name + '. Open the aether network (T) to teleport between your crystals.'); } catch (e) { /* chat */ } return; } nfSave(); nfTeleMenu(); }
         function znHubDais(G, x, y, z, sc, stone, glow) {   // the Starting Plaza's aether crystal design (nuBuildHub): stone disc, two glow rings, six lamp pillars
             const g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(sc);
             const disc = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 7.8, 0.5, 32), stone); g.add(disc);
@@ -19003,7 +19009,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             const bm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 40, 8, 1, true), glow.clone()); bm.material.opacity = 0.35; bm.position.y = 22; g.add(bm);
             try { const lb = makeLabel('◆ ' + c.name.toUpperCase(), { size: 28, border: '#6fd4ff', plain: true }); lb.position.set(0, 6.4 * SC + 1.4, 0); g.add(lb); } catch (e) { /* label */ }
             g.traverse((o) => { o.userData.noOutline = true; }); G.add(g); (Z.crys = Z.crys || []).push({ m: cr, y: y + 3.6 * SC, c }); try { blockDisc(c.x, c.z, 3.2); } catch (e) { /* none */ }
-            NI.list.push({ id: 'zn-r-crystal-' + c.id, x: c.x, z: c.z, r: 4.2, label: 'Rest at ' + c.name, act: () => znCryAct(c), cond: () => ZN.on && ZN.key === 'reach' && !AR.busy });
+            NI.list.push({ id: 'zn-r-crystal-' + c.id, x: c.x, z: c.z, r: 4.2, label: 'Aether crystal: ' + c.name, act: () => znCryAct(c), cond: () => ZN.on && ZN.key === 'reach' && !AR.busy });
         }
         const znOf = (x) => x >= 4900 ? ZN.zones.tent : x < 3700 ? ZN.zones.town : ZN.zones.reach;
         function znH(x, z) {
@@ -19706,7 +19712,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             // gates: south to the Reach, north back to the Forest of Nuu
             const toReach = znGate(Z, G, Z.gates[0].x, Z.gates[0].z, '◆ CARVERNIA REACH', 0x7fe6ff, 'zn-t-reach', () => arGo({ mode: 'zone', key: 'reach', banner: ['CARVERNIA REACH', 'FLOOR 2 · THE SNOWFIELD'] }));
             znGate(Z, G, Z.gates[1].x, Z.gates[1].z, '◆ FOREST OF NUU', 0x6fd44a, 'zn-t-forest', () => arGo({ mode: 'forest', at: { x: NU.hub.x + 4, z: NU.hub.z + 2, ry: 0 }, banner: ['FOREST OF NUU', 'FLOOR 1'] }));
-            NI.list.push({ id: 'zn-t-crystal', x: cx, z: cz + 5.6, r: 4.6, label: 'Rest at the Carvernia Hold main crystal', act: () => znCryAct(NU_ZCRY[0]), cond: () => ZN.on && ZN.key === 'town' && !AR.busy });
+            NI.list.push({ id: 'zn-t-crystal', x: cx, z: cz + 5.6, r: 4.6, label: 'Carvernia Hold aether crystal', act: () => znCryAct(NU_ZCRY[0]), cond: () => ZN.on && ZN.key === 'town' && !AR.busy });
             Z.spawn = { x: cx, z: cz + 9, ry: Math.PI };
             // the same hub services as the Forest of Nuu: Blacksmith Forge and the Hunt Board (equipment shop, Plate Express, supply depot and camp tent are the market stalls)
             try {
@@ -25861,7 +25867,8 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         for (const [, list] of EMOTE_MENU) for (const [ek, ic, lb] of list) PAD_ACTS['e_' + ek] = [ic, lb, () => performEmote(ek)];     // every emote can sit on the cross hotbar
         // Adventia (the MMO room): combat skills, targeting and the aether crystal sit on the cross hotbar too
         const nfPadOn = (f) => () => { if (activeMap !== 'nuu') { padToast('Only works in Adventia'); return; } f(); };
-        for (let i = 0; i < 12; i++) PAD_ACTS['nfm_' + i] = ['•', 'Move', nfPadOn(() => nfUse(i))];
+        for (let i = 0; i < 16; i++) PAD_ACTS['ab_' + i] = ['＋', 'Empty', nfPadOn(() => abRun(i))];
+        for (let i = 0; i < 12; i++) PAD_ACTS['nfm_' + i] = ['•', 'Move', nfPadOn(() => { if (AB.mode) abRun(i); else nfUse(i); })];
         Object.assign(PAD_ACTS, {
             nf_target: ['🎯', 'Next target', nfPadOn(() => nfCycle())], nf_aether: ['💠', 'Aether network', nfPadOn(() => nfTeleMenu())], nf_camp: ['⛺', 'Camp', nfPadOn(() => tnPitch())], nf_class: ['🎭', 'Change class', nfPadOn(() => nfClassMenu())],
             nf_use: ['✋', 'Use / open', nfPadOn(() => { nfPadUse(); })], nf_roll: ['🤸', 'Dodge Roll', nfPadOn(() => nfRoll())], nf_guard: ['🛡️', 'Guard', nfPadOn(() => { const i = NF_SK.findIndex((q) => q && q.k === 'guard'); if (i >= 0) nfUse(i); })], nf_untarget: ['✖️', 'Drop target', nfPadOn(() => nfTarget(null))],
@@ -25875,6 +25882,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         PAD_ACTS.estop = ['\uD83E\uDDCD', 'Stand up', () => { try { localActor.playEmote('stand'); net && net.send({ t: 'emote', name: 'stand' }); } catch (e) { /* offline */ } }];
         const PAD_SETS_DEF = [
             { name: 'Adventia', L: ['nfm_8', 'nfm_9', 'nfm_10', 'nfm_11', 'nf_target', 'nf_use', 'nf_aether', 'nf_class'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },      // hold R2: Y / △ = Fast Blade, B / ○ = Rending Slash, A / ✕ = Cross Cut, X / □ = Spin Slash; the D-pad has the next four. Hold + the face buttons / D-pad for your attacks, L2 for the rest
+            { name: 'Adventia Arts', L: ['ab_12', 'ab_13', 'ab_14', 'ab_15', 'ab_8', 'ab_9', 'ab_10', 'ab_11'], R: ['ab_4', 'ab_5', 'ab_6', 'ab_7', 'ab_0', 'ab_1', 'ab_2', 'ab_3'] },      // hold RT: your first eight pinned Arts; hold LT: the next eight (pin them in the Arts Book, K)
             { name: 'Adventia Magic', L: ['mg_draw', 'mg_drawcast', 'mg_menu', 'mg_jx', 'mg_q0', 'mg_q1', 'mg_q2', 'mg_q3'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },      // hold LT: Draw, Draw-Cast, Magic menu, Junction and four pinned spells; the right bar keeps your attacks
             { name: 'Adventia Items', L: ['nf_potion', 'nf_hipotion', 'nf_ether', 'nf_elixir', 'nf_phoenix', 'nf_equip', 'nf_shop', 'nf_guard'], R: ['nfm_4', 'nfm_5', 'nfm_6', 'nfm_7', 'nfm_0', 'nfm_1', 'nfm_2', 'nfm_3'] },
             { name: 'Emotes 1', L: ['e_cheer', 'e_sit', 'e_bboy', 'e_rumba', 'e_twerk', 'e_hiphop', 'e_gangnam', 'e_slide'], R: ['e_snake', 'e_show', 'e_greet', 'e_peace', 'e_shoot', 'e_spin', 'e_modelpose', 'e_squat'] },
@@ -25891,6 +25899,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (PAD_SETS !== PAD_SETS_DEF && !PAD_SETS.some((x) => x.L.concat(x.R).includes('e_cheer'))) PAD_SETS = PAD_SETS_DEF.slice(0, 2).map((x) => JSON.parse(JSON.stringify(x))).concat(PAD_SETS);   // saved bars from before the emote sets: add them in front
         } catch (e) { /* use defaults */ }
         PAD_SETS = [JSON.parse(JSON.stringify(PAD_SETS_DEF[0]))].concat(PAD_SETS.filter((x) => x.name !== 'Adventia'));   // saved bars from before the MMO room: add its set in front
+        if (!PAD_SETS.some((x) => x.name === 'Adventia Arts')) { const mi = PAD_SETS.findIndex((x) => x.name === 'Adventia Magic'); PAD_SETS.splice(mi >= 0 ? mi : 1, 0, JSON.parse(JSON.stringify(PAD_SETS_DEF.find((x) => x.name === 'Adventia Arts')))); }       // saved bars from before the Arts Book get its set too
         if (!PAD_SETS.some((x) => x.name === 'Adventia Magic')) { const mi = PAD_SETS.findIndex((x) => x.name === 'Adventia Items'); PAD_SETS.splice(mi >= 0 ? mi : 1, 0, JSON.parse(JSON.stringify(PAD_SETS_DEF.find((x) => x.name === 'Adventia Magic')))); }       // saved bars from before the magic system get its set too
         function padBarsSave() { try { localStorage.setItem('oasisPadBars', JSON.stringify(PAD_SETS)); } catch (e) { /* storage unavailable */ } }
         function padBind(set, side, slot, act) { if (!PAD_SETS[set] || !PAD_ACTS[act] || !(slot >= 0 && slot < 8) || (side !== 'L' && side !== 'R')) return false; if (PAD_SETS === PAD_SETS_DEF) PAD_SETS = JSON.parse(JSON.stringify(PAD_SETS_DEF)); PAD_SETS[set][side][slot] = act; padBarsSave(); PAD.drawKey = ''; return true; }
@@ -25979,7 +25988,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
                 bar.querySelector('.pb-auto').classList.toggle('on', !!PAD.auto);
             }
             if (show && activeMap === 'nuu') {            // cooldown numbers over the Adventia move icons
-                const nw = performance.now() / 1000; bar.querySelectorAll('.pb-slot').forEach((el) => { const m = /^nfm_(\d+)$/.exec(el.dataset.act || ''), em = el.querySelector('em'); if (!em) return; const sk = m && NF_SK[+m[1]]; if (!sk) { em.style.display = 'none'; el.classList.remove('off'); return; }
+                const nw = performance.now() / 1000; bar.querySelectorAll('.pb-slot').forEach((el) => { const m = /^nfm_(\d+)$/.exec(el.dataset.act || ''), ma = /^ab_(\d+)$/.exec(el.dataset.act || ''), em = el.querySelector('em'); if (!em) return; const sk = ma ? abSlotSkill(abPins()[+ma[1]]) : m && NF_SK[+m[1]]; if (!sk) { em.style.display = 'none'; el.classList.remove('off'); return; }
                     const cd = Math.max(sk.gcd ? NF.gcd : 0, (NF.cds[sk.id] || 0) - nw), lack = (sk.mp && NF.mp < sk.mp) || (sk.lb && NF.lb < 100); el.classList.toggle('off', !!lack); if (cd > 0.05) { em.style.display = 'flex'; const t = cd > 9.5 ? String(Math.round(cd)) : cd.toFixed(1); if (em.textContent !== t) em.textContent = t; } else em.style.display = 'none'; });
             }
             if (PAD.capT && nowS() > PAD.capT) { PAD.capT = 0; const c = bar.querySelector('.pb-cap'); if (c) c.classList.remove('on'); }
