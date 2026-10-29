@@ -15099,6 +15099,7 @@ function kbModel(THREE, mk) {
             const o = [];
             if (who === NF) {
                 for (const k of Object.keys(NF.st || {})) if (NF.st[k] > 0 && NF_ST[k]) o.push({ ic: NF_ST[k].ic, fd: NF_FDI[k], col: NF_ST[k].col, s: Math.ceil(NF.st[k]) });
+                if (typeof SIM !== 'undefined' && SIM.on) for (const k of ['rest', 'hun', 'hyg']) if (SIM[k] < 40) o.push({ ic: SIM_NAMES[k][0], col: SIM[k] < 20 ? '#e5584a' : '#f0c24a', s: Math.round(SIM[k]) });
                 if (false && NF.fd && NF.fd.left > 0) { const b = NF.fd.bf; o.push({ ic: b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋', fd: fdFood(b), col: '#8fe29a', s: nfFdT(NF.fd.left) }); }
                 { const q = nfStOn(); if (q && NF.stance && NF.stance !== 'off') o.push({ ic: q.ic, fd: NF_FDI.guard, col: q.col, s: '∞' }); }
                 if (NF.guard > 0) o.push({ ic: '🛡️', fd: NF_FDI.guard, col: '#8fb8ff', s: Math.ceil(NF.guard) });
@@ -16481,6 +16482,7 @@ function kbModel(THREE, mk) {
             if (!document.getElementById('nf-fdi-css')) { const fs = document.createElement('style'); fs.id = 'nf-fdi-css'; fs.textContent = '#nf-st .fdi{display:block;width:22px;height:22px;background:url(' + FD_URI + ') 0 0/176px 154px no-repeat;image-rendering:auto;pointer-events:none}'; document.head.appendChild(fs); }
             const items = []; for (const k of Object.keys(NF.st)) items.push({ col: NF_ST[k].col, ic: NF_ST[k].ic, fd: NF_FDI[k], n: NF_ST[k].n, s: Math.ceil(NF.st[k]) });
             for (const [k, ic, fd, col] of NF_GEARST) if (nfG(k) && !(k === 'protect' && NF.mgProt > 0) && !(k === 'shell' && NF.mgShell > 0) && !(k === 'haste' && NF.mgHaste > 0)) items.push({ col, ic, fd, n: k, s: '∞' });
+            if (typeof SIM !== 'undefined' && SIM.on) for (const k of ['rest', 'hun', 'hyg']) if (SIM[k] < 40) items.push({ col: SIM[k] < 20 ? '#e5584a' : '#f0c24a', ic: SIM_NAMES[k][0], n: SIM_NAMES[k][1], s: Math.round(SIM[k]) });   // low needs sit with the buffs and statuses
             if (false && NF.fd) { const b = NF.fd.bf; items.push({ col: '#8fe29a', ic: (b && b.ward ? '🛡️' : b && b.atk ? '⚔️' : b && b.def ? '🧱' : b && b.spd ? '💨' : '😋'), n: NF.fd.n, fd: fdFood(NF.fd.bf), s: nfFdT(NF.fd.left) }); }
             const ov = host && items.length > 1 ? Math.max(3, Math.min(14, (25 * items.length - 72) / (items.length - 1))) : 0;   // the more icons, the more they overlap, so the stack never grows past the HP number
             const parts = items.map((it, i) => host ? '<span style="border-color:' + it.col + ';color:' + it.col + ';' + (i ? 'margin-left:-' + ov.toFixed(1) + 'px;' : '') + '">' + (it.fd ? '<i class="fdi" style="background-position:-' + it.fd[0] * 22 + 'px -' + it.fd[1] * 22 + 'px"></i>' : it.ic) + '<b>' + it.s + '</b></span>' : '<span style="border-color:' + it.col + ';color:' + it.col + '">' + it.ic + ' ' + it.n + ' ' + it.s + 's</span>');
