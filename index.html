@@ -13649,46 +13649,43 @@ function kbModel(THREE, mk) {
             pb.g.position.set(pos.x, pos.y + Math.sin(pb.t * 2.6) * 0.08, pos.z); pb.g.rotation.y = pb.t * 1.8;
         }
         /* ---- TARGET LOCK RETICLE (Kingdom Hearts style): neon corner brackets, a spinning tick ring and arrows that close in on the target ---- */
-        const LK = { el: null, tgt: null, lock: false, vis: false, v: null };
+        const LK = { el: null, tgt: null, lock: false, vis: false, v: null, hov: null };
         function lkBuild() {
             const css = document.createElement('style');
-            css.textContent = `#lk-ret{position:fixed;left:0;top:0;z-index:11;pointer-events:none;display:none;will-change:transform}
-            #lk-ret .lk-in{width:100%;height:100%;opacity:0}#lk-ret svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 2px #d8ff3a) drop-shadow(0 0 7px #35f0e0)}
-            #lk-ret .y{stroke:#e6ff4a;fill:none;stroke-linecap:round;stroke-linejoin:round}#lk-ret .c{stroke:#4cf3ff;fill:none;stroke-linecap:round}#lk-ret .f{fill:#e6ff4a}
-            #lk-ret .lk-r1,#lk-ret .lk-r2,#lk-ret .lk-cor,#lk-ret .lk-arr,#lk-ret .lk-c0,#lk-ret .lk-fl{transform-origin:100px 100px}
+            css.textContent = `#lk-ret{position:fixed;left:0;top:0;z-index:11;pointer-events:none;display:none;will-change:transform;color:#ffae2b}
+            #lk-ret.lock{color:#9b86ff}
+            #lk-ret .lk-in{width:100%;height:100%;opacity:0}#lk-ret svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 3px currentColor) drop-shadow(0 0 10px currentColor)}
+            #lk-ret .b{stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:7}#lk-ret .w{stroke:#fff;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:2.4;opacity:.92}
+            #lk-ret .lk-r1,#lk-ret .lk-r2,#lk-ret .lk-fl{transform-origin:100px 100px}
+            #lk-ret .lk-r1{animation:lkspin 9s linear infinite}#lk-ret .lk-r2{animation:lkspin 6s linear infinite reverse}
             #lk-ret.on .lk-in{opacity:1}#lk-ret.snap .lk-in{animation:lksnap .4s cubic-bezier(.2,.9,.25,1.15)}
             #lk-ret .lk-fl{opacity:0;stroke:#fff;fill:none;stroke-width:3}#lk-ret.snap .lk-fl{animation:lkfl .55s ease-out}
-            #lk-ret .lk-r1{animation:lkspin 7s linear infinite}#lk-ret .lk-r2{animation:lkspin 11s linear infinite reverse}#lk-ret .lk-cor{animation:lkbr 1.6s ease-in-out infinite}
-            #lk-ret .lk-arr{animation:lkarr .85s ease-in-out infinite;display:none}#lk-ret.lock .lk-arr{display:inline}#lk-ret .lk-c0{animation:lkpl 1.2s ease-in-out infinite}
             @keyframes lksnap{0%{transform:scale(2.6) rotate(-130deg);opacity:0}55%{opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
             @keyframes lkfl{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.7)}}
-            @keyframes lkspin{to{transform:rotate(360deg)}}@keyframes lkbr{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
-            @keyframes lkarr{0%,100%{transform:scale(1)}50%{transform:scale(.88)}}@keyframes lkpl{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}`;
+            @keyframes lkspin{to{transform:rotate(360deg)}}`;
             document.head.appendChild(css);
-            const rot = (n, f) => Array.from({ length: n }, (_, i) => `<g transform="rotate(${i * 360 / n} 100 100)">${f}</g>`).join('');
+            const two = (d, ex) => `<path class="b" d="${d}"${ex || ''}/><path class="w" d="${d}"${ex || ''}/>`;
+            const L = 'M16 34L33 53Q42 76 42 100Q42 124 33 147L16 166', R = 'M184 34L167 53Q158 76 158 100Q158 124 167 147L184 166';
+            const inner = 'M100 66A34 34 0 0 1 133 92L127 92Q123 100 127 108L133 108A34 34 0 0 1 100 134A34 34 0 0 1 67 108L73 108Q77 100 73 92L67 92A34 34 0 0 1 100 66Z';
             const el = document.createElement('div'); el.id = 'lk-ret';
             el.innerHTML = `<div class="lk-in"><svg viewBox="0 0 200 200">`
-                + `<g class="lk-cor">${rot(4, '<path class="y" stroke-width="4" d="M8 52V16Q8 8 16 8H52"/><path class="c" stroke-width="1.8" d="M20 44V24H44"/><path class="f" d="M20 24l4.5 0l-4.5 4.5z" opacity=".7"/>')}</g>`
-                + `<path class="c" stroke-width="1.5" d="M84 5H116M84 195H116M5 84V116M195 84V116"/>`
-                + `<g class="lk-r1"><circle class="y" cx="100" cy="100" r="58" stroke-width="3.2" stroke-dasharray="78 24"/></g>`
-                + `<g class="lk-r2"><circle class="c" cx="100" cy="100" r="51" stroke-width="6" stroke-dasharray="1.4 4.4" opacity=".8"/></g>`
-                + `<circle class="c" cx="100" cy="100" r="44" stroke-width="1.6"/>`
-                + `<g class="lk-arr">${rot(8, '<path class="c" stroke-width="1.5" d="M100 22V74"/><path class="f" d="M100 76l-4 -8.5h8z"/>')}</g>`
-                + `<circle class="y lk-c0" cx="100" cy="100" r="10" stroke-width="2.4"/>`
+                + `<g class="lk-r1">${two(L)}${two(R)}${two('M100 48A52 52 0 1 1 99.9 48Z')}</g>`
+                + `<g class="lk-r2">${two(inner)}</g>`
                 + `<circle class="lk-fl" cx="100" cy="100" r="60"/></svg></div>`;
             document.body.appendChild(el); LK.el = el; LK.v = new THREE.Vector3();
+            try { const cv = renderer.domElement; let tm = 0; cv.addEventListener('pointermove', (e) => { if (e.pointerType !== 'mouse') return; const n = performance.now(); if (n - tm < 70) return; tm = n; if (activeMap !== 'nuu' || !NU.ready) { LK.hov = null; return; } try { const m = nfPick(e.clientX, e.clientY); LK.hov = m && !m.dead ? m : null; } catch (x) { LK.hov = null; } }); cv.addEventListener('pointerleave', () => { LK.hov = null; }); } catch (e) { /* no canvas yet */ }
         }
         function lkLoop() {
             requestAnimationFrame(lkLoop);
             try {
                 if (!LK.el) { if (!document.body) return; lkBuild(); }
-                const el = LK.el, tA = (activeMap === 'nuu' && NU.ready && NF.tgt && !NF.tgt.dead && !NF.dead && NF.tgt.node && NF.tgt.node.visible !== false) ? NF.tgt : null, t = tA && NF.lockOn ? tA : null;
-                if (!!t !== !!LK.snd) { LK.snd = !!t; try { if (t) { if (!btCursorSnd(true)) dnBeep(1320, 0.06, 'square', 0.035); } else { dnBeep(660, 0.07, 'triangle', 0.028); setTimeout(() => dnBeep(440, 0.09, 'triangle', 0.022), 60); } } catch (e) { /* audio */ } }   // menu-cursor sound when you lock on, a soft cancel when you let go
+                const el = LK.el, tA = (activeMap === 'nuu' && NU.ready && NF.tgt && !NF.tgt.dead && !NF.dead && NF.tgt.node && NF.tgt.node.visible !== false) ? NF.tgt : null, hv = activeMap === 'nuu' && NU.ready && !NF.dead && LK.hov && !LK.hov.dead && LK.hov.node && LK.hov.node.visible !== false ? LK.hov : null, t = tA && NF.lockOn ? tA : (hv || tA);   // locked: the target, in purple. Otherwise whatever the cursor is over (or the soft target), in orange
+                const lockNow = !!(t && t === tA && NF.lockOn); if (lockNow !== !!LK.snd) { LK.snd = lockNow; try { if (lockNow) { if (!btCursorSnd(true)) dnBeep(1320, 0.06, 'square', 0.035); } else { dnBeep(660, 0.07, 'triangle', 0.028); setTimeout(() => dnBeep(440, 0.09, 'triangle', 0.022), 60); } } catch (e) { /* audio */ } }   // menu-cursor sound when you lock on, a soft cancel when you let go
                 if (!t) { if (LK.vis) { LK.vis = false; LK.tgt = null; el.classList.remove('on', 'snap', 'lock'); el.style.display = 'none'; } return; }
                 const hh = Math.max(0.6, ((t.node.userData && t.node.userData.h) || 1.6) * (t.size || 1)), w3 = LK.w || (LK.w = new THREE.Vector3()); t.node.getWorldPosition(w3); const cy = w3.y + hh * 0.5;      // body centre = its feet + half its real height (model height x the monster's size)
                 const v = LK.v.set(w3.x, cy, w3.z), d = Math.max(2, camera.position.distanceTo(v)), rc = renderer.domElement.getBoundingClientRect(); v.project(camera);   // centred on the monster's body, sized to its silhouette
                 if (v.z > 1 || Math.abs(v.x) > 1.15 || Math.abs(v.y) > 1.15) { el.style.display = 'none'; LK.vis = false; return; }
-                const lock = !!NF.lockOn, fresh = LK.tgt !== t || lock !== LK.lock || !LK.vis;
+                const lock = lockNow, fresh = LK.tgt !== t || lock !== LK.lock || !LK.vis;
                 if (!LK.vis) { el.style.display = 'block'; LK.vis = true; }
                 if (fresh) { LK.tgt = t; LK.lock = lock; el.classList.toggle('lock', lock); el.classList.add('on'); el.classList.remove('snap'); void el.offsetWidth; el.classList.add('snap'); }
                 const px = Math.max(34, Math.min(240, (hh * 1.05 / (2 * d * Math.tan(camera.fov * Math.PI / 360))) * rc.height * (lock ? 1 : 0.85)));
@@ -13698,6 +13695,7 @@ function kbModel(THREE, mk) {
         requestAnimationFrame(lkLoop);
         /* Sim life: need icons rise above the hotbar while a need is low, and leave again once it is met */
         function simHotbar() {
+            { const old = document.getElementById('sim-hot'); if (old) old.style.display = 'none'; return; }   // the floating need icons are removed (needs still work; see the Sim Life panel)
             let el = document.getElementById('sim-hot');
             if (!el) { const st = document.createElement('style'); st.textContent = '#sim-hot{position:fixed;left:50%;transform:translateX(-50%);bottom:152px;z-index:59;display:flex;gap:8px;pointer-events:none}#sim-hot .sn{pointer-events:auto;cursor:pointer;position:relative;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:21px;background:rgba(14,18,30,.88);border:2px solid #f0c24a;box-shadow:0 0 10px rgba(240,194,74,.45);animation:simin .35s ease-out}#sim-hot .sn.crit{border-color:#e5584a;box-shadow:0 0 12px rgba(229,88,74,.7);animation:simin .35s ease-out,simpulse 1s ease-in-out infinite}#sim-hot .sn i{position:absolute;left:5px;right:5px;bottom:-7px;height:4px;border-radius:3px;background:#111;overflow:hidden}#sim-hot .sn i b{display:block;height:100%;background:currentColor}@keyframes simin{from{opacity:0;transform:translateY(14px) scale(.6)}to{opacity:1;transform:none}}@keyframes simpulse{50%{transform:scale(1.12)}}'; document.head.appendChild(st); el = document.createElement('div'); el.id = 'sim-hot'; document.body.appendChild(el); el._k = ''; }
             const show = SIM.on && activeMap === 'nuu' && NU.ready && !NF.dead && !(lobbyOpen && lobbyOpen()), want = show ? ['rest', 'hun', 'hyg'].filter((k) => SIM[k] < 40) : [];
