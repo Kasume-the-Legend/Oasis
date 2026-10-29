@@ -12992,7 +12992,7 @@ function kbModel(THREE, mk) {
          *  then you are put back on the spot you stood. Treasure chests pop up at random spots (press F next to one). Music: Ancient Watcher.
          * ------------------------------------------------------------------ */
         const NU = { group: null, ready: false, loading: false, err: null, nav: null, hub: { x: 0, y: 0, z: 0 }, SAFE_R: 22, lamps: [], t: 0, spw: [], groups: [], chests: [], cpts: [], inBattle: false, ending: false, snap: null, enc: null, grace: 0, skyCtx: null, last: new THREE.Vector3(), music: null, musicWant: false, fade: null, banner: null, ov: null, crystal: null, retry: 0, fates: [], extra: [], cry: [], fSlot: -1, seeds: null, cNear: null, hintOn: false, ringT: 0, foeT: 0 };
-        const NU_X0 = -256, NU_N = 512, NU_BW = 1024, NU_EDGE = 247, NU_GLB = 'nuu/forest.glb', NU_MUSIC = 'nuu/ancient-watcher.mp3', NU_BATTLE = 'nuu/adventia-battle.mp3';
+        const NU_X0 = -256, NU_N = 512, NU_BW = 1024, NU_EDGE = 247, NU_GLB = 'nuu/forest.glb', NU_MUSIC = 'nuu/ancient-watcher.mp3', NU_MUSIC_C = 'nuu/cavern-of-echoes.mp3', NU_BATTLE = 'nuu/adventia-battle.mp3';
         /* fetch a binary asset, trying several likely paths; a host that answers a missing file with its home page is detected by the glTF magic bytes */
         async function assetBuf(list, magic) {
             const tried = [];
@@ -13127,17 +13127,19 @@ function kbModel(THREE, mk) {
         }
         function nuShowBanner(big, small) { nuCss(); const b = NU.banner; b.innerHTML = big + '<small>' + small + '</small>'; b.classList.add('on'); clearTimeout(NU.banT); NU.banT = setTimeout(() => b.classList.remove('on'), 3600); }
         function nuFade(on, ms) { nuCss(); const f = NU.fade; f.style.transition = 'opacity ' + (ms / 1000) + 's'; f.style.opacity = on ? '1' : '0'; return new Promise((r) => setTimeout(r, ms + 30)); }
+        const nuTrackWant = () => { try { return (ZN.on && (ZN.key === 'town' || ZN.key === 'reach')) || (DG.on && DG.floor === 2) ? 'c' : 'f'; } catch (e) { return 'f'; } };   // Cavern of Echoes plays all through Carvernia: the Hold, the Reach and the Caverns
+        function nuMusicEl() { const t = nuTrackWant(); NU.mEl = NU.mEl || {}; NU.mTrack = t; if (!NU.mEl[t]) { const a = new Audio(t === 'c' ? NU_MUSIC_C : NU_MUSIC); a.loop = true; a.volume = 0.42; if (t === 'c') a.addEventListener('error', () => { if (!a._fb) { a._fb = 1; a.src = 'cavern-of-echoes.mp3'; } }); NU.mEl[t] = a; } return NU.mEl[t]; }
         function nuMusic(on) {
             NU.musicWant = on; try { if (localStorage.getItem('oasis.nuu.music') === '0') on = false; } catch (e) { /* storage */ }
-            if (!on) { if (NU.music) { try { NU.music.pause(); } catch (e) { /* ignore */ } } if (NU.bmus) { try { NU.bmus.pause(); NU.bmus.currentTime = 0; } catch (e) { /* ignore */ } } NU.bfade = 0; return; }
-            if (!NU.music) { try { const a = new Audio(NU_MUSIC); a.loop = true; a.volume = 0.42; NU.music = a; } catch (e) { return; } }
+            if (!on) { for (const a of Object.values(NU.mEl || {})) { try { a.pause(); } catch (e) { /* ignore */ } } if (NU.music) { try { NU.music.pause(); } catch (e) { /* ignore */ } } if (NU.bmus) { try { NU.bmus.pause(); NU.bmus.currentTime = 0; } catch (e) { /* ignore */ } } NU.bfade = 0; return; }
+            { const w = nuTrackWant(); if (!NU.music || NU.mTrack !== w) { try { if (NU.music) NU.music.pause(); NU.music = nuMusicEl(); } catch (e) { return; } } }
             NU.music.play().catch(() => { const kick = () => { window.removeEventListener('pointerdown', kick, true); window.removeEventListener('keydown', kick, true); if (NU.musicWant && activeMap === 'nuu' && NU.music) NU.music.play().catch(() => { /* still blocked */ }); }; window.addEventListener('pointerdown', kick, true); window.addEventListener('keydown', kick, true); });
         }
         /* battle theme: while you are fighting the field music fades out and the battle theme fades in (and back out when the fight is over); every fight starts the song from the top */
         function nuMusicTick(dt) {
             try { const tgt = performance.now() / 1000 < (NU.duckUntil || 0) ? 1 : 0; NU.duck = tgt ? Math.min(1, (NU.duck || 0) + dt / 0.3) : Math.max(0, (NU.duck || 0) - dt / 2.8); } catch (e) { /* audio */ }
             try {
-                if (!NU.musicWant || activeMap !== 'nuu') return; let off = false; try { off = localStorage.getItem('oasis.nuu.music') === '0'; } catch (e) { /* storage */ }
+                if (!NU.musicWant || activeMap !== 'nuu') return; if (NU.music && NU.mTrack !== nuTrackWant()) { try { NU.music.pause(); NU.music = nuMusicEl(); NU.music.volume = 0; } catch (e) { /* audio */ } } let off = false; try { off = localStorage.getItem('oasis.nuu.music') === '0'; } catch (e) { /* storage */ }
                 if (off) { if (NU.bmus && !NU.bmus.paused) { NU.bmus.pause(); NU.bmus.currentTime = 0; } NU.bfade = 0; return; }
                 let hunted = false; try { hunted = nfMobs().some((m) => !m.dead && m.aggro && !m.reset && nfDist(m) < 45); } catch (e) { /* mobs not ready */ }      // battle music only while an enemy is actually after you
                 const want = hunted && !NF.dead ? 1 : 0, b = NU.bfade || 0, k = want ? dt / 1.6 : dt / 3.2, nb = want ? Math.min(1, b + k) : Math.max(0, b - k);
@@ -33336,7 +33338,7 @@ void main(){ float m = texture2D(map, vUv).r; if (vSoft > 0.5) m *= smoothstep(1
         }
         function arPeerDrop(id) { const p = peers.get(id); if (p && p.arO) { try { p.arO.root.removeFromParent(); p.arO.root.traverse((o) => { if (o.material) o.material.dispose(); }); } catch (e) { /* gone */ } p.arO = null; } }
         const AR_RLB = [];
-        window.__arn = { nsOnMsg: (f, m) => nsOnMsg(f, m), NS, ARW, AR_RLB, peers, scene, localActor: () => localActor, arPeerState, arLbRemote, net: () => net };
+        window.__arn = { NUm: () => NU, arGo: (d) => arGo(d), NI, TN, nsOnMsg: (f, m) => nsOnMsg(f, m), NS, ARW, AR_RLB, peers, scene, localActor: () => localActor, arPeerState, arLbRemote, net: () => net };
         function arLbRemote(p, m) {
             try {
                 if (AR_RLB.length > 3) return; const o = new THREE.Vector3(+m.o[0], +m.o[1], +m.o[2]), d = new THREE.Vector3(+m.d[0], +m.d[1], +m.d[2]).normalize(); if (!isFinite(o.x + o.y + o.z + d.x + d.y + d.z)) return;
