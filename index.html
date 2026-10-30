@@ -4657,6 +4657,13 @@ function kbModel(THREE, mk) {
             dcEnter(); try { scnEnter(); } catch (er) { console.warn('map editor', er); }
             try { const pd = !isPrivate && DISTRICTS.find((x) => x.id === id && x.pub); if (pd) pubLoad(pd); } catch (er) { console.warn('published map', er); }
             screenReset();
+            /* A map that streams its assets in (Adventia, Journey Ville, College Raimon) must be completely built before anybody is put in it:
+               you, the other players and their avatars all wait here, behind the map's own loading screen, until it is ready. */
+            const tok = room.tok = ++JOIN.seq;
+            const finish = () => {
+              if (!room || room.tok !== tok) return;            // you left, or went somewhere else, while the map was loading
+              if (JOIN.hold && JOIN.hold.tok === tok) JOIN.hold = null;
+              if (net === NET_HOLD) net = null;
             lastNetNote = '';
             const mine = net = new Net(id, onNetMessage, {
                 maxPeers: NET.roomCap,
@@ -4693,6 +4700,29 @@ function kbModel(THREE, mk) {
             presAnnounce();
             renderPlayers();
             closeLobby();
+            };
+            if (mapLoading(map)) { try { closeLobby(); } catch (e) { /* lobby */ } mapHold(map, label, tok, finish); } else finish();
+        }
+        /* ---- map load gate ---- */
+        const JOIN = { seq: 0, hold: null };
+        const NET_HOLD = { send() {}, close() {}, links: [], route: new Map(), mode: 'connecting', closed: false, hide: false, note: '', describe() { return { mode: 'connecting', server: false, direct: false, relays: { open: 0, total: 0 }, peers: 0, note: '', detail: [] }; } };   // stands in for the network while the map loads: nobody is connected yet
+        function mapLoading(id) {      // true while a map that loads in the background is still being built
+            try {
+                if (id === 'nuu') return !NU.ready && !NU.err;
+                if (id === 'jv') return !JV.ready && !JV.err;
+                if (id === 'raimon') return !!(RM.loading || (!RM.nav && !RM.err));
+            } catch (e) { /* that map is not defined yet */ }
+            return false;
+        }
+        function mapHold(map, label, tok, finish) {
+            JOIN.hold = { tok, map, t0: Date.now() };
+            net = NET_HOLD; sysChat('Loading ' + label + '...');
+            const poll = () => {
+                if (!room || room.tok !== tok || (JOIN.hold && JOIN.hold.tok !== tok)) return;               // superseded
+                if (mapLoading(map) && Date.now() - JOIN.hold.t0 < 180000) { setTimeout(poll, 100); return; }
+                requestAnimationFrame(() => requestAnimationFrame(() => { try { finish(); } catch (e) { console.error('join after map load', e); JOIN.hold = null; } }));    // two frames so the map has drawn once before anyone steps in
+            };
+            poll();
         }
 
         // What the network is doing, in words: the Space Info panel, the dot by the room name, and a chat note when something is wrong
@@ -4714,8 +4744,8 @@ function kbModel(THREE, mk) {
         function leaveRoom() {
             if (!room) return;
             emuReset();
-            net.send({ t: 'bye' });
-            net.close();
+            JOIN.hold = null;
+            if (net) { net.send({ t: 'bye' }); net.close(); }
             [...peers.keys()].forEach((id) => removePeer(id, false));
             if (dirCh && !room.isPrivate) dirCh.postMessage({ room: room.id, count: 0 });
             try { $('chat-feed').innerHTML = ''; peers.forEach((q) => q.actor && q.actor.hideBubble && q.actor.hideBubble()); } catch (e) { /* ignore */ }
@@ -19666,7 +19696,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function arSet(mode) {
             if (mode === 'forest') { if (AR.hid) { for (const [c, v] of DG.hidden) c.visible = v; DG.hidden = []; AR.hid = false; } }
             else if (!AR.hid) { DG.hidden = []; for (const c of NU.group.children) { if (c.isLight || c.userData.keep) continue; DG.hidden.push([c, c.visible]); c.visible = false; } AR.hid = true; }
-            { const SK = NU.skyCtx && NU.skyCtx.sky; if (SK && mode !== 'forest') for (const k of ['sky', 'stars', 'clouds']) if (SK[k]) SK[k].visible = mode === 'zone'; }
+            { const SK = NU.skyCtx && NU.skyCtx.sky; if (SK) for (const k of ['sky', 'stars', 'clouds']) if (SK[k]) SK[k].visible = mode !== 'dungeon'; }
             if (DG.group) DG.group.visible = mode === 'dungeon'; if (ZN.group) ZN.group.visible = mode === 'zone';
             DG.on = mode === 'dungeon'; ZN.on = mode === 'zone'; if (DG.on) { try { setTimeout(() => { if (DG.on) sysChat('◆ Natural recovery does not work in a dungeon. Bring potions, cures and a healer.'); }, 1800); } catch (e) { /* chat */ } }
             if (mode === 'forest') { const S = NU.skyCtx; if (S) { S.sun.intensity = 2.4; S.hemi.intensity = 0.9 * Math.PI; S.amb.intensity = 0.22 * Math.PI; S.sun.color.set(0xfff0d6); } }
@@ -38114,7 +38144,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             PG.el.querySelector('#pg-fire').disabled = !nd.ok || PG.cd > 0 || PG.trav;
             const s = list.querySelector('.sel'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest' });
         }
-        function pgBlocked() { try { return !room || lobbyOpen() || !!SVX.ov || !!RXX.ov || startOpen() || PG.trav || (activeMap === 'btl' && BT.phase !== 'idle') || charModalOpen() || equipOpen() || invOpen(); } catch (e) { return false; } }
+        function pgBlocked() { try { return !room || !!JOIN.hold || lobbyOpen() || !!SVX.ov || !!RXX.ov || startOpen() || PG.trav || (activeMap === 'btl' && BT.phase !== 'idle') || charModalOpen() || equipOpen() || invOpen(); } catch (e) { return false; } }
         function pgToggle(force) {
             pgBuild(); const want = force == null ? !PG.open : !!force; if (want === PG.open) return;
             if (want && pgBlocked()) { return; }
@@ -38167,7 +38197,8 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             PG.trav = true; pgBuild(); const c = PG.card; c.querySelector('.b').textContent = String(r.name).toUpperCase(); c.querySelector('.c').textContent = String(r.tag || '').toUpperCase();
             c.classList.add('on'); void c.offsetWidth; c.classList.add('vis'); pgSound('step');
             setTimeout(() => { try { cb(); } catch (e) { sysChat('The portal fizzled: ' + (e.message || e)); } }, 450);
-            setTimeout(() => { c.classList.remove('vis'); setTimeout(() => { c.classList.remove('on'); PG.trav = false; }, 400); }, 2300);
+            const t0 = Date.now(), shut = () => { if ((JOIN.hold || mapLoading(activeMap)) && Date.now() - t0 < 190000) { setTimeout(shut, 150); return; } c.classList.remove('vis'); setTimeout(() => { c.classList.remove('on'); PG.trav = false; }, 400); };
+            setTimeout(shut, 2300);
         }
         function pgGo(r) {
             const pr = PG.portal; PG.portal = null; if (pr) { pr.closing = 0.001; PG.dying = pr; }
@@ -38542,7 +38573,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
 
             animFrameNo++;
             padUpdate(dt);
-            updateLocalPlayer(dt);
+            if (!JOIN.hold) updateLocalPlayer(dt);          // (not while the map is still loading: there is no ground yet)
             hbFrame(dt);
             updateLookMarker();
             levelTick(dt); updateHolo(dt);
