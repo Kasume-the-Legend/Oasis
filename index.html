@@ -974,17 +974,17 @@
             </div>
 
             <div id="cls-panel" class="mb-4">
-                <label class="text-xs text-gray-400 block mb-2">Class &amp; weapon <span class="text-gray-500">(the weapon in your hand is your class)</span></label>
+                <label class="text-xs text-gray-400 block mb-2">Class</label>
                 <div class="grid grid-cols-2 gap-2 mb-2">
+                    <div class="col-span-2 text-[12px] text-gray-200 font-semibold">Adventia classes <span class="text-gray-400 font-normal">(your class everywhere: unlock as you level; gear comes from the Equipment shop)</span></div>
+                    <div id="nf-cls-grid" class="col-span-2 grid grid-cols-2 gap-2"></div>
+                    <div class="col-span-2 text-[11px] text-gray-400 mt-2">Weapon stance <span class="text-gray-500">(used in other worlds and minigames)</span></div>
                     <button id="wpn-fists" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">👊 Fists <span class="block text-[10px] font-normal text-gray-300">base animations</span></button>
                     <button id="wpn-sword" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">⚔ Sword <span class="block text-[10px] font-normal text-gray-300">Hero class</span></button>
-                    <button id="wpn-blitz" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🏐 Blitzball <span class="block text-[10px] font-normal text-gray-300">Wakka stance · ball emotes</span></button>
                     <button id="wpn-fighter" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🥋 Fighter <span class="block text-[10px] font-normal text-gray-300">Martial arts · bare hands</span></button>
                     <button id="wpn-pistol" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🔫 Gunner <span class="block text-[10px] font-normal text-gray-300">Military weapons below</span></button>
                     <button id="wpn-keyblade" type="button" class="py-3 rounded-xl text-sm font-semibold transition bg-white/10">🗝️ Keyblade Chosen <span class="block text-[10px] font-normal text-gray-300">Combos, magic and Drive · Adventia Lv 8</span></button>
-                    <div class="col-span-2 text-[11px] text-gray-400 mt-1">Adventia classes <span class="text-gray-500">(unlock as you level; gear comes from the Equipment shop)</span></div>
-                    <div id="nf-cls-grid" class="col-span-2 grid grid-cols-2 gap-2"></div>
-                    <div id="gw-grid" class="col-span-2 grid grid-cols-4 gap-1.5"></div>
+                                        <div id="gw-grid" class="col-span-2 grid grid-cols-4 gap-1.5"></div>
                     <div id="gcus-panel" class="col-span-2"></div>
                     <div class="col-span-2 text-[11px] text-gray-400 mt-1">Sword style <span class="text-gray-500">(Hero)</span></div>
                     <div id="sk-grid" class="col-span-2 grid grid-cols-3 gap-1.5"></div><div id="csw-panel" class="col-span-2"></div>
@@ -1561,11 +1561,7 @@ await (async()=>{const ids=['anim-board-fbx', 'anim-male-set', 'emote-pack', 'an
         for (const [, list] of EMOTE_MENU.slice(1)) for (const [k, , , as] of list) EMOTES[k] = { dur: Infinity, hold: true, as };   // these play until you move, jump or use them again
         const VRMA_DUR = { show: 11.8, greet: 7.27, peace: 11.68, shoot: 9.6, spin: 9.32, modelpose: 7.52, squat: 11.52 };      // the VRoid Motion Pack clips (credit: pixiv Inc. VRoid Project) play once, then end
         for (const [k, d] of Object.entries(VRMA_DUR)) EMOTES[k] = { dur: d, as: null };
-        // Blitzball class (Wakka stance): hand-built poses plus a ball that follows the right hand. See blzPose / blzBall.
-        EMOTE_MENU.push(['Blitzball', [['wk_idle', '\uD83C\uDFD0', 'Wakka Stance', null], ['wk_point', '\u261D\uFE0F', 'Point', null], ['wk_toss', '\uD83C\uDFD0', 'Ball Toss', null], ['wk_spin', '\uD83C\uDF00', 'Ball Spin', null], ['wk_cheer', '\uD83D\uDE4C', 'Ya!', null]]]);
-        for (const [k, d] of [['wk_idle', Infinity], ['wk_point', 4.2], ['wk_toss', 5.2], ['wk_spin', 5], ['wk_cheer', 3.2]]) EMOTES[k] = { dur: d, hold: d === Infinity, as: null };
-        const BLZ = { on: false, pose: {} };
-        try { BLZ.on = localStorage.getItem('oasisBlitzCls') === '1'; } catch (e) { /* storage unavailable */ }
+        const BLZ = { on: false, pose: {} }; try { localStorage.removeItem('oasisBlitzCls'); } catch (e) { /* storage */ }
         // Emotes that play a baked clip (instead of the hand-built procedural poses). Gender-neutral: every VRM uses the same ones.
         const ANIM_EMOTES = { sit: JSON.parse(document.getElementById('anim-emote-sit').textContent) };
         // the dances and poses: one gzipped block of 16-bit quaternion tracks, unpacked at start-up into the same clip format
@@ -4564,7 +4560,7 @@ function kbModel(THREE, mk) {
                 case 'blitz': { try { bzInvite(from, m); } catch (e) { console.warn('blitz invite', e); } break; }
                 case 'gm': { try { gmOnMsg(from, m); } catch (e) { console.warn('game message', e); } break; }
                 case 'duel': { try { duelOnMsg(from, m); } catch (e) { console.warn('duel message', e); } break; }
-                case 'blz': { const p = peers.get(from); if (p && p.actor) { p.actor.blitz = m.on ? 1 : 0; p.actor.blitzSeen = Date.now(); } break; }
+                case 'blz': break;
                 case 'emote': {
                     const p = peers.get(from);
                     if (p && typeof m.name === 'string') { if (m.u) p.actor.playUpper(m.name, typeof m.r === 'number' ? clamp(m.r, 0.5, 3) : 1); else { p.actor.playEmote(m.name); if (typeof m.r === 'number') p.actor.emoteRate = clamp(m.r, 0.5, 2); if (m.h) p.actor.emoteDur = Infinity; } }
@@ -13448,6 +13444,7 @@ function kbModel(THREE, mk) {
             Trickster: { sfx: 'Jester', atk: 1.2, def: 0.9, hp: 0.9, ranged: 0, m: ['harpy', 'mantis', 'viper'], el: 'wind' }, Sentinel: { sfx: 'Golem', atk: 1.0, def: 1.4, hp: 1.2, ranged: 0, m: ['golem', 'igolem', 'cscorp'], el: 'ice' },
             Berserker: { sfx: 'Fiend', atk: 1.6, def: 0.7, hp: 0.9, ranged: 0, m: ['behemoth', 'dknight', 'awolf'], el: 'chaos' },
         };
+        const NU_FLAVOR_CV = { wolf: 'fwolf', awolf: 'fwolf', raptor: 'fwolf', golem: 'igolem', behemoth: 'igolem', beetle: 'fgel', bomb: 'rimebomb', harpy: 'rimeharpy', mantis: 'rimeharpy', viper: 'glacierserp', sprout: 'frostbloom', spore: 'frostbloom', vine: 'frostbloom', wraith: 'cairnwraith', lich: 'frostacolyte', drone: 'cairnsentry', sdrone: 'cairnsentry', colossus: 'cairnsentry', guard: 'rimeguard', bone: 'rimeguard', dknight: 'rimeguard', reaper: 'banshee' };
         const NU_CLS_KEYS = Object.keys(NU_CLS), NU_FLAVOR = { glacial: { wolf: 'fwolf', golem: 'igolem', beetle: 'fgel', bomb: 'fgel' }, infernal: { wolf: 'egel', golem: 'cbomb', sprout: 'egel', guard: 'scorp' }, shadow: { wolf: 'awolf', sprout: 'wraith', golem: 'dknight', bomb: 'banshee' } };
         const NU_FATES = (r) => [{ k: 'slay', title: 'Culling the ' + r.pre[0] + ' Horde', n: 18 }, { k: 'slay', title: 'Hold the Line in the ' + r.name, n: 28 }, { k: 'boss', title: r.boss, sub: r.bossTitle }];
         const nuHash = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; };
@@ -13747,6 +13744,235 @@ function kbModel(THREE, mk) {
         };
         const BL_BY_TYPE = { slime: 'acid', fgel: 'chill', egel: 'ember', vgel: 'volt', spore: 'spore', wolf: 'howl', fwolf: 'howl', bomb: 'bombburst', cbomb: 'bombburst', harpy: 'gale', roc: 'gale', viper: 'venom', scorp: 'venom', cscorp: 'venom', raptor: 'chomp', mantis: 'rend' };
         const BL_BY_CLS = { Striker: 'chomp', Berserker: 'frenzy', Guardian: 'ironhide', Sentinel: 'stoneskin', Sage: 'mindblast', Healer: 'whitewind', Blaster: 'firebreath', Phantom: 'siphon', Trickster: 'hopslam' };
+        /* ================= ENEMY SKILL LIBRARY: monster abilities from FF7, FF8, FF9, FF12 and FF14, learnable by the Chef (Draw / Devour), each with its own VFX and sound ================= */
+        const ENS_DATA = `frogsong|Frog Song|🐸|FF7|water|a|1.2|gel,beast|Croaking wave on everything around you
+l4suicide|L4 Suicide|💀|FF7|dark|a|2.2|undead,bomb|Death rattle that hits all nearby
+magichammer|Magic Hammer|🔨|FF7·FF9|phys|r|1.1|mage,undead|A hammer of pure mana
+bigguard|Big Guard|🛡️|FF7|buff|g|0|mech,golem|Take 70% less damage for 8 s
+angelwhisper|Angel Whisper|👼|FF7|heal|w|0|bird,mage|A whisper that heals you and allies
+dragonforce|Dragon Force|🐉|FF7|buff|b|0|beast,drake|Attack +30% for 15 s
+deathforce|Death Force|☠️|FF7|dark|r|1.6|undead|Dark pulse that drains
+flamethrower|Flame Thrower|🔥|FF7·FF14|fire|l|1.7|bomb,mech|Roaring jet of fire
+laser|Laser|🔦|FF7|beam|l|1.8|mech|Piercing beam of light
+matramagic|Matra Magic|✨|FF7·FF9·FF14|beam|r|1.5|mage|Shaves off a share of enemy health
+badbreath|Bad Breath|🤢|FF7·FF8·FF9·FF14|poison|c|1.4|plant,gel|Noxious cloud that lingers
+beta|Beta|☢️|FF7|fire|x|2.4|mage,bomb|Scorching nuclear blast
+aqualung|Aqualung|🌊|FF7·FF8·FF9|water|a|1.9|gel,snake|A crushing wave of water
+trine|Trine|🔱|FF7|bolt|x|2.5|mage|Three-way lightning strike
+magicbreath|Magic Breath|🌈|FF7|fire|c|2.3|drake|Fire, ice and lightning at once
+questionmarks|????|❓|FF7|dark|r|1.3|any|Unknowable power
+goblinpunch|Goblin Punch|🥊|FF7·FF9|phys|h|1.9|beast,gel|Stronger the more lopsided the fight
+chocobuckle|Chocobuckle|🐤|FF7·FF9|phys|h|1.8|bird,beast|A flurry of kicks
+l5death|L5 Death|⚰️|FF7·FF9|dark|x|2.3|undead|A hex that finishes strong
+deathsentence|Death Sentence|📜|FF7|dark|d|1.0|undead,mage|A curse that ticks away life
+roulette|Roulette|🎲|FF7·FF9|dark|x|2.1|any|Fate picks the target
+shadowflare|Shadow Flare|🌑|FF7|dark|x|3.2|mage,undead|Lightless blast of the abyss
+pandorasbox|Pandora's Box|🎁|FF7|dark|a|2.8|mech,mage|Opens on everything nearby
+laserEye|Laser Eye|👁️|FF8|beam|r|1.5|bird,mech|Beam from the eyes
+ultrawaves|Ultra Waves|📡|FF8|beam|a|1.8|mech,bug|Waves that shake everything near
+electrocute|Electrocute|⚡|FF8|bolt|r|1.7|gel,mech|Arc of electricity
+degenerator|Degenerator|🧬|FF8|poison|d|1.2|plant,gel|Breaks the enemy down piece by piece
+aquabreath|Aqua Breath|💧|FF8·FF9|water|c|1.6|gel,snake|Breath of rushing water
+micromissiles|Micro Missiles|🚀|FF8|fire|c|1.5|mech,bomb|Swarm of tiny missiles
+acidspray|Acid|🧪|FF8|poison|r|1.3|gel,bug|Corrosive spray
+gatlinggun|Gatling Gun|🔫|FF8|phys|l|1.7|mech|Burst of rapid fire
+firebreathff8|Dragon Breath|🐲|FF8·FF9|fire|c|2.0|drake|Breath of flame
+hominglaser|Homing Laser|🎯|FF8|beam|r|2.0|mech,bird|Beams that cannot miss
+raybomb|Ray-Bomb|💥|FF8|fire|x|2.3|bomb|A drifting bomb of light
+shockwavepulsar|Shockwave Pulsar|🌐|FF8|beam|a|3.0|mech,golem|Pulse that clears the room
+lv5petrify|Level 5 Petrify|🗿|FF14|earth|x|1.7|golem,bug|Stone wave on those at level 5
+limitglove|Limit Glove|🧤|FF9|phys|h|2.0|golem,beast|A hit that scales with your wounds
+lv4holy|Level 4 Holy|✝️|FF9|holy|x|2.4|mage,undead|Holy light on level 4 foes
+lv3defless|Level 3 Def-less|📉|FF9|dark|r|1.4|mech,undead|Strips protection from level 3 foes
+angelssnack|Angel's Snack|🍬|FF9·FF14|heal|w|0|bird,plant|A treat that heals
+twister|Twister|🌪️|FF9|wind|a|2.1|bird,beast|A spinning tornado
+vanish|Vanish|🫥|FF9|buff|g|0|undead,mage|Fade away and take 80% less damage for 5 s
+night|Night|🌙|FF9|dark|a|1.5|bird,undead|Puts the world to sleep
+doom|Doom|🔔|FF9|dark|x|2.6|undead,mage|A tolling that ends in ruin
+cyclone|Cyclone|🌀|FF9|wind|a|1.9|bird|Sweeping winds
+earthshake|Earth Shake|🌋|FF9|earth|a|2.2|golem,beast|The ground heaves
+pumpkinhead|Pumpkin Head|🎃|FF9|fire|h|1.8|plant,undead|A spooky smash
+autolife|Auto-Life|💖|FF9|heal|w|0|mage,plant|Warm light heals allies
+mustardbomb|Mustard Bomb|💨|FF9|poison|x|2.0|bomb,plant|Choking blast
+gemdust|Gem Dust|💎|FF9|earth|x|2.2|golem,bug|Glittering dust that cuts
+waterblast|Water Cannon|🚿|FF14|water|r|1.5|gel,snake|Pressurised water jet
+flyingfrenzy|Flying Frenzy|🪽|FF14|phys|h|2.0|bird|Swoop and strike
+drillcannons|Drill Cannons|🛠️|FF14|phys|l|2.0|mech|Drills that bore a line
+highvoltage|High Voltage|🔌|FF14|bolt|c|1.9|mech,gel|A wall of current
+hydropull|Hydro Pull|🌀|FF14|water|a|1.6|gel,snake|Drags the water to you
+mindblast2|Mind Blast|🧠|FF14|beam|a|1.8|mage|Thought wave that dazes
+stickytongue|Sticky Tongue|👅|FF14|phys|r|1.2|beast,plant|Snags the enemy
+toadoil|Toad Oil|🐸|FF14|buff|g|0|gel,beast|A slick film takes 50% less damage for 8 s
+thelook|The Look|👀|FF14|dark|a|1.7|undead,bird|A gaze that unsettles
+sharpenedknife|Sharpened Knife|🔪|FF14|phys|h|1.5|undead,beast|A quick vicious stab
+glassdance|Glass Dance|🪩|FF14|ice|c|1.8|gel,bug|Spinning shards of glass
+plaincracker|Plaincracker|💫|FF14|earth|a|1.7|golem|Stamping quake
+bristle|Bristle|🦔|FF14|buff|b|0|beast,plant|Attack +30% for 15 s
+whiteknights|White Knight's Tour|♘|FF14|holy|c|1.8|mech,undead|A leaping charge of white light
+blackknights|Black Knight's Tour|♞|FF14|dark|c|1.8|mech,undead|A leaping charge of shadow
+whistle|Whistle|🎵|FF14|buff|b|0|bird,beast|Rouse yourself, attack +30%
+sonicboom|Sonic Boom|🔊|FF14|wind|r|1.2|bird,bug|A crack of air
+mortalflame|Mortal Flame|🕯️|FF14|fire|d|1.1|bomb,undead|Flame that will not go out
+perpetualray|Perpetual Ray|🔆|FF14|beam|r|1.6|mech|Beam of dazzling light
+ramsvoice|Ram's Voice|🐏|FF14|ice|a|1.6|beast|Chilling bleat
+dragonsvoice|Dragon's Voice|🐉|FF14|bolt|a|1.8|drake|Roar that crackles
+chocometeor|Choco Meteor|☄️|FF14|fire|x|2.8|bird,beast|A meteor from the sky
+tailscrew|Tail Screw|🦎|FF14|phys|h|2.2|snake,drake|Corkscrew tail strike
+finalsting|Final Sting|🦂|FF14|poison|h|3.2|bug,snake|One devastating sting
+transfusion|Transfusion|🩸|FF14|heal|w|0|undead,mage|Drain life for your allies
+faze|Faze|😵|FF14|dark|r|1.2|any|A disorienting jolt
+snort|Snort|🐗|FF14|wind|a|1.3|beast|A blast of breath
+bombtoss|Bomb Toss|💣|FF14|fire|x|1.7|bomb|Lob a bomb at the target
+loom|Loom|🕸️|FF14|dark|r|1.0|bug,snake|Ominous web of shadow
+eruption|Eruption|🌋|FF14|fire|x|2.5|bomb,drake|Magma erupts below
+mountainbuster|Mountain Buster|⛰️|FF14|earth|h|2.7|golem|A mountain-crushing blow
+missile|Missile|🚀|FF14|fire|r|1.6|mech,bomb|A single heavy missile
+tatamigaeshi|Tatami-Gaeshi|🎌|FF14|earth|c|1.9|golem,beast|Flip the floor over
+rehydration|Rehydration|💦|FF14|heal|w|0|gel,plant|Soak up water and recover
+ultravibration|Ultravibration|📳|FF14|earth|a|2.4|golem,mech|Vibrations that petrify
+revengeblast|Revenge Blast|😤|FF14|phys|h|2.6|beast,undead|Hits hard when you are hurt
+gobskin|Gobskin|🧥|FF14|buff|g|0|beast,gel|A thick hide takes 60% less damage for 8 s
+pomcure|Pom Cure|🧸|FF14|heal|w|0|plant,bird|A soft heal for friends
+breathofmagic|Breath of Magic|🌬️|FF14|fire|c|1.9|drake,mage|Magic breath that scorches
+peripheralsynthesis|Peripheral Synthesis|🧩|FF14|beam|x|2.2|mech|Fires a lance from the sky
+phantomflurry|Phantom Flurry|👻|FF14|phys|a|2.9|undead|Flurry of spectral blows
+surpanakha|Surpanakha|🗡️|FF14|phys|c|2.3|undead,beast|Four sweeping slashes
+quasar|Quasar|🌌|FF14|beam|a|2.6|mage,mech|A bright star bursts
+moonflute|Moon Flute|🌕|FF14|buff|b|0|bird,mage|A song that bolsters you, attack +30%
+offguard|Off-guard|🥴|FF14|dark|r|1.1|mech,beast|Leaves the enemy exposed
+seashanty|Sea Shanty|🏴‍☠️|FF14|water|a|1.5|snake,gel|A rolling wave
+aethericspark|Aetherial Spark|✴️|FF14|fire|d|1.1|mage|Burning aether
+winged|Winged Reprobation|🕊️|FF14|holy|r|2.1|bird,mage|Holy wings strike
+stotram|Stotram|📿|FF14|holy|a|1.8|mage|A verse that burns evil
+tripletrident|Triple Trident|🔱|FF14|water|l|2.3|snake,gel|Three strikes in a line
+cactguard|Cactguard|🌵|FF14|buff|g|0|plant|Spiny shield takes 50% less damage for 8 s
+bubble|Bubble|🫧|FF12|water|r|1.0|gel|A bubble that bursts
+karma|Karma|🧿|FF12|dark|r|1.6|mage,undead|The foe's own pain returns
+rendflesh|Rend Flesh|🩻|FF12|phys|c|1.7|beast,undead|Ripping slash
+deathsong|Death Song|🎶|FF12|dark|a|1.7|undead|A melody that ends all
+terrify|Terrify|😱|FF12|dark|r|1.0|undead,beast|Scares through sound
+gravitystrike|Gravity Strike|🌍|FF12|grav|x|2.1|golem,mech|The foe is pressed to the ground
+graviton|Graviton|🕳️|FF14|grav|a|1.9|mage,mech|A crushing pull
+voidzone|Void Zone|⚫|FF12|grav|x|2.4|mage,undead|A hole in space
+chrono|Chrono Blast|⏳|FF12|time|r|1.5|mage|Time stutters
+slowwave|Slow Wave|🐌|FF12|time|a|1.4|gel,bug|Slows everything near you
+stopfield|Stop Field|⏸️|FF12|time|x|2.0|mage,mech|Stills the target area`;
+        const ENS_SH = { h: 'Melee', r: 'Ranged', a: 'Around you', x: 'Ground target', c: 'Cone', l: 'Line', d: 'Damage over time', w: 'Heals party', g: 'Guard', b: 'Buff' };
+        const ENS_COL = { fire: 0xff6a1c, ice: 0x9fe6ff, bolt: 0xffe84a, wind: 0xb8ffd8, earth: 0xc9985a, water: 0x3a9bff, holy: 0xfff2b0, dark: 0x9a4cff, poison: 0x9cff3a, beam: 0xff6bd0, grav: 0x7a5cff, time: 0x7affd8, phys: 0xff5068, heal: 0x66ffa0, buff: 0xffd45a };
+        const ENS_THEME = { slime: 'gel', fgel: 'gel', egel: 'gel', vgel: 'gel', gilded: 'gel', spore: 'plant', sprout: 'plant', vine: 'plant', wolf: 'beast', fwolf: 'beast', awolf: 'beast', raptor: 'beast', behemoth: 'beast', bomb: 'bomb', cbomb: 'bomb', harpy: 'bird', roc: 'bird', viper: 'snake', hydra: 'snake', beetle: 'bug', scorp: 'bug', cscorp: 'bug', mantis: 'bug', bone: 'undead', wraith: 'undead', banshee: 'undead', reaper: 'undead', vwraith: 'undead', pknight: 'undead', lichking: 'undead', lich: 'mage', drone: 'mech', sdrone: 'mech', colossus: 'mech', guard: 'mech', dknight: 'mech', golem: 'golem', igolem: 'golem', titan: 'golem', drake: 'drake', cdrake: 'drake', mimic: 'any' };
+        const ENS = []; const ENS_BY = {};
+        ENS_DATA.trim().split('\n').forEach((ln) => {
+            const [key, name, ic, games, el, sh, pot, tags, desc] = ln.split('|'); const p = +pot, mp = Math.round(p * 4 + 2); let d;
+            if (sh === 'h') d = { k: 'hit', gcd: 1, range: 3.8, pot: p, mp }; else if (sh === 'r') d = { k: 'hit', gcd: 1, range: 14, pot: p, mp }; else if (sh === 'd') d = { k: 'hit', gcd: 1, range: 8, pot: p, mp, dot: { pot: 0.4, sec: 12 } };
+            else if (sh === 'a') d = Object.assign({ k: 'aoe', r: 3.8 + p * 0.9, pot: p, mp }, p >= 2.2 ? { cd: 10 } : { gcd: 1 }); else if (sh === 'x') d = { k: 'ground', cd: 6 + p * 3, range: 16, r: 3.6 + p * 0.6, pot: p, mp };
+            else if (sh === 'c') d = { k: 'cone', gcd: 1, len: 6, a: 1.9, pot: p, mp }; else if (sh === 'l') d = { k: 'line', gcd: 1, len: 12, w: 2.6, pot: p, mp };
+            else if (sh === 'w') d = { k: 'aoe', cd: 26, r: 8, pot: 0, heal: 0.3, mp: 16 }; else if (sh === 'g') d = { k: 'guard', cd: key === 'vanish' ? 24 : 30, sec: key === 'vanish' ? 5 : 8, red: key === 'bigguard' ? 0.7 : key === 'vanish' ? 0.8 : 0.5 }; else d = { k: 'buff', cd: 35, sec: 15 };
+            if (sh !== 'g' && sh !== 'b' && sh !== 'w' && !(d.cd)) d.cd = p >= 2.6 ? 12 : 0; if (!d.cd) delete d.cd;
+            d.fx = sh === 'g' ? 'guard' : sh === 'w' ? 'e_heal' : sh === 'b' ? 'e_buff' : 'e_' + el; d.key = key; d.sfx = sh === 'g' ? 'guard' : sh === 'w' ? 'heal' : sh === 'b' ? 'buff' : el; d.sh = sh;
+            const e = { key, name, ic, games, el, sh, pot: p, tags: tags.split(','), desc, d }; ENS.push(e); ENS_BY[key] = e;
+            if (!BL_SPELLS[key]) BL_SPELLS[key] = [name, ic, desc + ' · ' + games.replace(/·/g, ' ') + ' · ' + ENS_SH[sh], d];
+        });
+        // old hand-made blue spells also get an element so they look and sound right
+        const BL_EL = { acid: 'poison', chill: 'ice', ember: 'fire', volt: 'bolt', spore: 'poison', howl: 'phys', bombburst: 'fire', gale: 'wind', venom: 'poison', rend: 'phys', chomp: 'phys', frenzy: 'phys', ironhide: 'buff', stoneskin: 'buff', mindblast: 'beam', whitewind: 'heal', firebreath: 'fire', siphon: 'dark', hopslam: 'phys' };
+        Object.keys(BL_EL).forEach((k) => { const d = BL_SPELLS[k] && BL_SPELLS[k][3]; if (d) { d.key = k; d.sfx = BL_EL[k]; if (d.fx !== 'guard' && d.fx !== 'heal') d.fx = 'e_' + BL_EL[k]; } });
+        function ensPick(t) {   // what a monster has to teach: tied to its kind, gated by its level
+            const th = ENS_THEME[t.type] || 'any', lv = t.lv || 1, ok = (e) => lv >= (e.pot < 1.6 ? 0 : e.pot < 2.4 ? 5 : e.pot < 3 ? 11 : 17);
+            let pool = ENS.filter((e) => ok(e) && (e.tags.includes(th) || e.tags.includes('any'))); const fresh = pool.filter((e) => !BL.learned.includes(e.key));
+            if (fresh.length) return fresh[Math.floor(Math.random() * fresh.length)].key;
+            const any = ENS.filter((e) => ok(e) && !BL.learned.includes(e.key)); if (any.length && Math.random() < 0.7) return any[Math.floor(Math.random() * any.length)].key;
+            const old = BL_BY_TYPE[t.type] || BL_BY_CLS[t.cls]; return pool.length ? pool[Math.floor(Math.random() * pool.length)].key : (old || 'chomp');
+        }
+        /* ---- VFX: one look per element, all built from additive glows ---- */
+        const ENS_FXV = (() => {
+            let G = null; const glow = () => G || (G = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); return t; })());
+            const R = (a, b) => a + Math.random() * (b - a), SP = (col, s, o) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: col, transparent: true, opacity: o == null ? 1 : o, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.scale.set(s, s, 1); m.userData.noOutline = true; return m; };
+            const ring = (col, r0, r1) => { const m = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 48), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.userData.noOutline = true; return m; };
+            const streak = (a, b, col, w) => { const len = a.distanceTo(b), m = new THREE.Mesh(new THREE.CylinderGeometry(w, w, 1, 8, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.geometry.rotateX(Math.PI / 2); m.position.copy(a).lerp(b, 0.5); m.lookAt(b); m.scale.set(1, 1, Math.max(0.1, len)); m.userData.noOutline = true; return m; };
+            const clean = (g) => { try { g.traverse((o) => { if (o.material) o.material.dispose(); if (o.geometry) o.geometry.dispose(); }); } catch (e) { /* gone */ } };
+            const run = (g, dur, upd) => { let done = false; nfFxAdd(g, dur, (k) => { upd(k); if (k >= 0.999 && !done) { done = true; clean(g); } }); };
+            return function (el, from, to) {
+                const col = ENS_COL[el] || 0xffffff, big = from && to && from.distanceTo(to) < 0.8 ? 1.7 : 1, g = new THREE.Group(), y0 = to.y + 0.1; g.position.set(to.x, y0, to.z);
+                const flash = SP(0xffffff, 3.4 * big, 0.9); flash.position.y = 1.0; g.add(flash); const rg = ring(col, 0.35, 0.6); rg.position.y = 0.08; g.add(rg);
+                const N = el === 'poison' ? 18 : 48, P = []; for (let i = 0; i < N; i++) { const s = SP(i % 3 ? col : 0xffffff, R(0.25, 0.7) * (el === 'poison' ? 3 : 1), 0.9); g.add(s); P.push({ s, a: R(0, 6.283), r: R(0.2, 1.4) * big, v: R(1.5, 4.5), t: R(0, 0.35), h: R(0, 1.5) }); }
+                let sx = null; if (el === 'beam' || el === 'bolt' || el === 'phys') { const a = from ? new THREE.Vector3(from.x, from.y + 1.3, from.z) : new THREE.Vector3(to.x, to.y + 6, to.z), b = new THREE.Vector3(to.x, to.y + 1.0, to.z); if (el === 'bolt') a.set(to.x + R(-0.4, 0.4), to.y + 8, to.z + R(-0.4, 0.4)); sx = streak(a.sub(g.position), new THREE.Vector3(0, 1, 0), col, el === 'beam' ? 0.16 : 0.07); g.add(sx); }
+                run(g, el === 'poison' || el === 'time' ? 1.3 : 0.9, (k) => {
+                    const fade = 1 - k; flash.material.opacity = Math.max(0, 0.9 - k * 3); flash.scale.setScalar((3.4 + k * 4) * big); rg.scale.setScalar(1 + k * 5 * big); rg.material.opacity = 0.9 * fade;
+                    if (sx) { sx.material.opacity = Math.max(0, 1 - k * 2.2); if (el === 'beam') sx.scale.x = sx.scale.y = 1 + Math.sin(k * 20) * 0.2 + (1 - k) * 2; }
+                    for (const q of P) {
+                        const kk = Math.max(0, k - q.t * 0.4), u = kk / (1 - q.t * 0.4 || 1), s = q.s;
+                        if (el === 'fire' || el === 'heal' || el === 'buff' || el === 'holy') { s.position.set(Math.cos(q.a + u * 2) * q.r, q.h * 0.2 + u * q.v, Math.sin(q.a + u * 2) * q.r); }
+                        else if (el === 'ice') { s.position.set(Math.cos(q.a) * q.r, 5 - u * (5 - q.h * 0.3), Math.sin(q.a) * q.r); }
+                        else if (el === 'wind') { const a = q.a + u * 9, rr = q.r * (0.6 + u); s.position.set(Math.cos(a) * rr, u * 3.2 + q.h * 0.3, Math.sin(a) * rr); }
+                        else if (el === 'earth') { s.position.set(Math.cos(q.a) * q.r * u * 1.5, q.v * u * 1.3 - 4.5 * u * u, Math.sin(q.a) * q.r * u * 1.5); }
+                        else if (el === 'water') { s.position.set(Math.cos(q.a) * q.r * u, q.v * u * 1.4 - 5 * u * u, Math.sin(q.a) * q.r * u); }
+                        else if (el === 'dark' || el === 'grav') { const rr = (1 - u) * (q.r + 2.5); s.position.set(Math.cos(q.a + u * 5) * rr, 1 + Math.sin(q.a * 2) * 0.6 * (1 - u), Math.sin(q.a + u * 5) * rr); }
+                        else if (el === 'poison') { s.position.set(Math.cos(q.a) * q.r * (0.5 + u), 0.4 + q.h * 0.5 + u * 0.8, Math.sin(q.a) * q.r * (0.5 + u)); }
+                        else if (el === 'time') { const a = q.a + u * 3; s.position.set(Math.cos(a) * 1.8 * big, 0.6 + q.h * 0.6, Math.sin(a) * 1.8 * big); }
+                        else { s.position.set(Math.cos(q.a) * q.r * u * 2, 0.8 + q.h * 0.3 + u * 0.6, Math.sin(q.a) * q.r * u * 2); }
+                        s.material.opacity = Math.max(0, 0.95 * (el === 'poison' ? 0.5 : 1) * (1 - Math.pow(u, 3))); s.scale.setScalar(Math.max(0.01, (el === 'poison' ? 3.2 : 1.2) * (1 - u * 0.5)));
+                    }
+                });
+                if (el === 'holy' || el === 'heal' || el === 'buff') { const cy = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 6, 20, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); cy.position.set(to.x, y0 + 3, to.z); cy.userData.noOutline = true; run(cy, 0.9, (k) => { cy.material.opacity = 0.5 * Math.sin(Math.PI * Math.min(1, k * 1.2)); cy.scale.set(1 - k * 0.6, 1, 1 - k * 0.6); }); }
+                if (el === 'time') { const cl = ring(col, 1.7 * big, 1.85 * big); cl.position.set(to.x, y0 + 0.12, to.z); const ar = streak(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1.5 * big, 0, 0), 0xffffff, 0.04); ar.position.set(to.x + 0.75 * big, y0 + 0.14, to.z); const gg = new THREE.Group(); gg.add(cl); gg.add(ar); run(gg, 1.3, (k) => { cl.material.opacity = 0.9 * (1 - k); ar.material.opacity = 1 - k; }); }
+                if (el === 'dark' || el === 'grav') { const core = SP(0x000000, 2.2 * big, 0.95); core.material.blending = THREE.NormalBlending; core.position.set(to.x, y0 + 1, to.z); run(core, 0.9, (k) => { core.material.opacity = Math.sin(Math.PI * k); core.scale.setScalar((1 + Math.sin(k * 14) * 0.15) * (1 - k * 0.5) * 2.2 * big); }); }
+            };
+        })();
+        /* ---- FF8-style DRAW: a spiralling stream of light pours out of the monster into you ---- */
+        function ensDraw(from, to, col, done) {
+            col = col || 0x9fd8ff; const g = new THREE.Group(), N = 56, P = [], R = (a, b) => a + Math.random() * (b - a), mk = (c, s, o) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: (ENS_FXV.tex || (ENS_FXV.tex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })())), color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.scale.set(s, s, 1); m.userData.noOutline = true; return m; };
+            const A = new THREE.Vector3(from.x, from.y + 1.1, from.z), B = new THREE.Vector3(to.x, to.y + 1.3, to.z), M = A.clone().lerp(B, 0.5); M.y += 2.6;
+            const circ = (r0, r1, c) => { const m = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 56), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.userData.noOutline = true; return m; };
+            const c1 = circ(1.2, 1.35, col), c2 = circ(0.7, 0.78, 0xffffff); c1.position.set(A.x, from.y + 0.1, A.z); c2.position.copy(c1.position); g.add(c1); g.add(c2);
+            const core = mk(col, 2.8, 0.0); core.position.copy(A); g.add(core);
+            for (let i = 0; i < N; i++) { const s = mk(i % 4 ? col : 0xffffff, R(0.18, 0.4), 0); g.add(s); P.push({ s, a: R(0, 6.283), r: R(0.4, 1.3), d: R(0, 0.45), h: R(0, 1.4), w: R(5, 9) }); }
+            const end = mk(0xffffff, 0.1, 0); end.position.copy(B); g.add(end); const er = circ(0.3, 0.45, col); er.position.set(B.x, to.y + 0.1, B.z); g.add(er); er.material.opacity = 0;
+            let fired = false, DUR = 1.9;
+            nfFxAdd(g, DUR, (k) => {
+                const t = k * DUR; c1.rotation.z = t * 3; c2.rotation.z = -t * 4; c1.scale.setScalar(1 + Math.sin(t * 6) * 0.05 + Math.min(1, t) * 0.2); c1.material.opacity = Math.max(0, 0.8 * Math.min(1, t * 3) * (t > 1.4 ? Math.max(0, 1 - (t - 1.4) * 2) : 1)); c2.material.opacity = c1.material.opacity;
+                core.material.opacity = Math.min(0.8, t * 1.5) * (t > 1.5 ? Math.max(0, 1 - (t - 1.5) * 2.5) : 1); core.scale.setScalar(2.8 + Math.sin(t * 12) * 0.5);
+                for (const q of P) {
+                    const u = Math.max(0, Math.min(1, (t - 0.25 - q.d) / 1.0)); const s = q.s;
+                    if (t < 0.25 + q.d) { s.material.opacity = 0; continue; }
+                    const sw = (1 - u), a = q.a + t * q.w * (0.4 + sw), rr = q.r * sw * sw;      // swirl round the monster, tightening as it leaves
+                    const px = A.x * sw * sw + 2 * M.x * u * sw + B.x * u * u, py = A.y * sw * sw + 2 * M.y * u * sw + B.y * u * u + q.h * 0.3 * sw, pz = A.z * sw * sw + 2 * M.z * u * sw + B.z * u * u;
+                    s.position.set(px + Math.cos(a) * rr, py, pz + Math.sin(a) * rr); s.material.opacity = Math.min(1, u * 5) * (u > 0.9 ? (1 - u) * 10 : 1); s.scale.setScalar(0.4 + 0.7 * Math.sin(Math.PI * u));
+                }
+                if (t > 1.35) { const e = (t - 1.35) / 0.55; end.material.opacity = Math.max(0, 1 - e) * 0.9; end.scale.setScalar(1.2 + e * 5); er.material.opacity = Math.max(0, 0.9 - e); er.scale.setScalar(1 + e * 6); if (!fired) { fired = true; try { if (done) done(); } catch (e2) { /* learn */ } } }
+            });
+        }
+        /* ---- SFX: every element has its own layered synth voice; each skill bends it by its key and its shape (single hit, spread, burst) ---- */
+        const ENS_SFX = (() => {
+            const R = (a, b) => a + Math.random() * (b - a), hs = (k) => { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; return h; };
+            const V = {
+                fire(p, w, big) { nsbN(0, 0.5 * w, 300 * p, 2400 * p, 0.9, 0.17, 'bandpass', 0, 0.35); nsbN(0.04, 0.45, 1200, 400, 0.7, 0.07, 'lowpass', 0, 0.2); nsbT(0, 180 * p, 70, 0.35 * w, 0.2, 'sawtooth', 0, 0.3, 0.02, 900); for (let i = 0; i < 9; i++) nsbN(0.1 + i * 0.045 * w, 0.03, R(3000, 7000), 2000, 3, 0.06, 'bandpass', R(-0.5, 0.5), 0.2); if (big) { nsbT(0.2, 110, 36, 0.7, 0.34, 'sine', 0, 0.5, 0.004); nsbN(0.2, 0.6, 4000, 300, 0.7, 0.2, 'bandpass', 0, 0.6); } },
+                ice(p, w, big) { nsbN(0, 0.35, 8000, 4000, 1, 0.07, 'highpass', 0, 0.6); for (let i = 0; i < 6; i++) nsbBell(i * 0.045, 2093 * p * NSB_PENTA[(i * 2) % 6], 0.05, 0.7, R(-0.7, 0.7)); nsbT(0, 900 * p, 180, 0.3, 0.09, 'sine', 0, 0.4); nsbN(0.2 * w, 0.12, 6000, 3000, 2.5, 0.2, 'bandpass', 0, 0.5); if (big) { nsbT(0.2, 140, 50, 0.5, 0.3, 'sine', 0, 0.4); } },
+                bolt(p, w, big) { nsbT(0, 2800 * p, 80, 0.14, 0.14, 'sawtooth', 0, 0.3, 0.001, 6000); nsbN(0, 0.07, 7000, 2500, 0.7, 0.3, 'bandpass', 0, 0.3); for (let i = 0; i < 4; i++) nsbN(0.05 + i * 0.03, 0.025, R(4000, 8000), 3000, 2, 0.1, 'bandpass', R(-0.6, 0.6)); nsbT(0.06, 85, 34, 0.5 * w, 0.34, 'sine', 0, 0.4, 0.004); nsbN(0.07, 0.7, 2200, 250, 1.2, 0.09, 'bandpass', 0, 0.8); },
+                wind(p, w) { nsbN(0, 0.6 * w, 400 * p, 3200 * p, 2.4, 0.15, 'bandpass', -0.5, 0.3); nsbN(0.1, 0.6 * w, 3000 * p, 500 * p, 2.4, 0.12, 'bandpass', 0.5, 0.3); nsbT(0, 500 * p, 1200 * p, 0.5, 0.05, 'sine', 0, 0.5, 0.15); nsbT(0.3, 1200 * p, 400 * p, 0.4, 0.04, 'sine', 0.3, 0.5, 0.05); },
+                earth(p, w, big) { nsbT(0, 90 * p, 32, 0.6 * w, 0.4, 'sine', 0, 0.35, 0.004); nsbN(0, 0.5, 700, 90, 0.8, 0.28, 'lowpass', 0, 0.3); for (let i = 0; i < 12; i++) nsbN(0.08 + Math.pow(Math.random(), 1.6) * 0.8, 0.045, R(500, 1800), 300, 4, 0.1, 'bandpass', R(-0.7, 0.7), 0.2); if (big) nsbN(0.1, 1.1, 150, 50, 0.6, 0.2, 'lowpass', 0, 0.5); },
+                water(p, w) { nsbN(0, 0.4 * w, 1200 * p, 4200, 1.1, 0.14, 'bandpass', 0, 0.4); for (let i = 0; i < 8; i++) { const f = R(500, 1600) * p; nsbT(0.04 + i * 0.05, f, f * R(1.6, 2.4), 0.09, 0.07, 'sine', R(-0.6, 0.6), 0.4, 0.004); } nsbT(0, 200 * p, 90, 0.3, 0.14, 'sine', 0, 0.3, 0.01); nsbN(0.25, 0.5, 5000, 1500, 0.8, 0.07, 'highpass', 0, 0.6); },
+                holy(p, w) { [0, 1, 2, 3, 4].forEach((i) => nsbBell(i * 0.08, 784 * p * [1, 1.26, 1.5, 2, 2.52][i], 0.07, 1.1, (i - 2) * 0.2)); nsbT(0, 392 * p, 784 * p, 0.9, 0.08, 'triangle', 0, 0.8, 0.2); nsbT(0, 588 * p, 1176 * p, 0.9, 0.04, 'sine', 0, 0.8, 0.2); nsbN(0, 1, 5000, 11000, 0.8, 0.035, 'highpass', 0, 0.9); },
+                dark(p, w) { nsbT(0, 140 * p, 55, 1.0 * w, 0.17, 'sawtooth', 0, 0.6, 0.12, 700); nsbT(0, 147 * p, 58, 1.0 * w, 0.12, 'sawtooth', 0, 0.6, 0.12, 700); nsbN(0, 1.0, 1200, 200, 1.5, 0.08, 'bandpass', 0, 0.8); nsbT(0.5, 70, 30, 0.7, 0.3, 'sine', 0, 0.5, 0.004); for (let i = 0; i < 3; i++) nsbT(0.1 + i * 0.12, 900 * p, 300, 0.4, 0.025, 'sine', R(-0.8, 0.8), 0.9, 0.1); },
+                poison(p, w) { for (let i = 0; i < 10; i++) { const f = R(120, 420) * p; nsbT(i * 0.06, f, f * R(1.8, 3), 0.12, 0.1, 'sine', R(-0.5, 0.5), 0.3, 0.005); } nsbN(0, 0.8 * w, 5000, 3000, 0.9, 0.09, 'highpass', 0, 0.4); nsbN(0.1, 0.7, 2500, 900, 2, 0.06, 'bandpass', 0, 0.5); nsbT(0, 90, 70, 0.4, 0.1, 'sawtooth', 0, 0.3, 0.05, 400); },
+                beam(p, w, big) { nsbT(0, 300 * p, 1800 * p, 0.25, 0.1, 'sawtooth', 0, 0.3, 0.1, 3000); nsbT(0.25, 1800 * p, 600 * p, 0.45 * w, 0.14, 'square', 0, 0.4, 0.004, 3500); nsbT(0.25, 1810 * p, 610 * p, 0.45 * w, 0.1, 'sawtooth', 0.2, 0.4, 0.004, 3500); nsbN(0.25, 0.5, 3000, 8000, 1, 0.08, 'highpass', 0, 0.4); if (big) nsbT(0.3, 120, 40, 0.6, 0.3, 'sine'); },
+                grav(p, w) { nsbT(0, 400 * p, 40, 0.9 * w, 0.2, 'sine', 0, 0.5, 0.05); nsbT(0, 410 * p, 42, 0.9 * w, 0.14, 'triangle', 0.1, 0.5, 0.05, 900); nsbN(0, 0.8, 3000, 200, 1.1, 0.12, 'bandpass', 0, 0.6); nsbT(0.7 * w, 90, 28, 0.6, 0.4, 'sine', 0, 0.4, 0.004); nsbN(0.7 * w, 0.4, 3000, 300, 0.7, 0.18, 'lowpass', 0, 0.5); },
+                time(p, w) { for (let i = 0; i < 6; i++) nsbN(i * 0.11, 0.025, 4500 * p, 4000, 5, 0.12, 'bandpass', i % 2 ? 0.3 : -0.3, 0.3); nsbT(0, 1200 * p, 200, 0.7, 0.05, 'triangle', 0, 0.6, 0.2); nsbBell(0.66, 1568 * p, 0.07, 1.2); nsbBell(0.7, 2093 * p, 0.04, 1.2); nsbN(0, 0.7, 6000, 800, 1, 0.04, 'bandpass', 0, 0.7); },
+                phys(p, w, big) { nsbN(0, 0.14, 700 * p, 3800, 1.4, 0.2, 'bandpass', -0.2, 0.1); nsbN(0.07, 0.11, 2200, 6000, 1.4, 0.18, 'bandpass', 0.2, 0.1); nsbT(0.08, 160 * p, 52, 0.18, 0.34, 'sine', 0, 0.12, 0.002); nsbN(0.08, 0.09, 1800, 500, 1, 0.22, 'bandpass', 0, 0.2); if (big) { nsbT(0.2, 130, 40, 0.35, 0.3, 'sine'); nsbN(0.2, 0.3, 3000, 400, 0.8, 0.15, 'lowpass'); } },
+                heal(p) { [0, 1, 2, 3, 4, 5].forEach((i) => nsbBell(i * 0.07, 659 * p * [1, 1.26, 1.5, 1.89, 2.52, 3][i], 0.065, 0.9, (i - 2.5) * 0.15)); nsbT(0, 330 * p, 660 * p, 0.55, 0.045, 'sine', 0, 0.7, 0.1); nsbN(0, 0.6, 6000, 10000, 1, 0.025, 'highpass', 0, 0.8); },
+                buff(p) { nsbT(0, 180 * p, 540 * p, 0.45, 0.12, 'sawtooth', 0, 0.4, 0.05, 1600); nsbT(0.05, 360 * p, 1080 * p, 0.45, 0.07, 'square', 0, 0.4, 0.05, 2200); [0, 1, 2, 3].forEach((i) => nsbBell(0.28 + i * 0.07, 784 * p * [1, 1.26, 1.5, 2][i], 0.055, 0.6)); nsbN(0, 0.45, 400, 3800, 0.8, 0.05, 'bandpass', 0, 0.3); },
+                guard(p) { nsbT(0, 520 * p, 480 * p, 0.35, 0.12, 'square', 0, 0.4, 0.002, 2400); nsbT(0, 790 * p, 760 * p, 0.3, 0.09, 'triangle', 0, 0.5, 0.002); nsbN(0, 0.12, 4000, 1500, 1.5, 0.12, 'bandpass', 0, 0.4); nsbBell(0.05, 1568 * p, 0.05, 0.7); }
+            };
+            return {
+                play(s) {
+                    const f = V[s.sfx]; if (!f) return false; const h = hs(s.key || s.n || 'x'), p = 0.88 + (h % 28) / 100, w = s.sh === 'c' || s.sh === 'l' ? 1.1 : s.sh === 'a' || s.sh === 'x' ? 1.3 : 0.9, big = (s.pot || 0) >= 2.4;
+                    try { f(p, w, big); if (s.sh === 'a' && s.sfx !== 'heal') { nsbT(0.04, 110, 40, 0.35, 0.14, 'sine'); } } catch (e) { return false; } return true;
+                },
+                draw(col) {   // the Draw: a rising whirl of airy tones drawn inward, then a bright "stock" chime
+                    nsbN(0, 1.3, 400, 3500, 3, 0.1, 'bandpass', -0.4, 0.6); nsbN(0.1, 1.2, 3600, 600, 3, 0.09, 'bandpass', 0.4, 0.6); nsbT(0, 300, 1500, 1.3, 0.07, 'sine', 0, 0.8, 0.5); nsbT(0.1, 450, 2250, 1.2, 0.05, 'triangle', 0, 0.8, 0.5);
+                    for (let i = 0; i < 12; i++) nsbBell(0.2 + i * 0.09, 1568 * NSB_PENTA[i % 6] * (1 + Math.floor(i / 6) * 0.5), 0.02 + i * 0.002, 0.5, Math.sin(i) * 0.7);
+                    nsbT(1.3, 600, 1800, 0.12, 0.1, 'sine', 0, 0.5, 0.002); [0, 1, 2].forEach((i) => nsbBell(1.35 + i * 0.07, 1318 * [1, 1.5, 2][i], 0.07, 1.1)); nsbN(1.35, 0.5, 6000, 12000, 1, 0.04, 'highpass', 0, 0.8);
+                }
+            };
+        })();
         const BL = { learned: [], slots: [null, null, null, null, null] };
         try { const o = JSON.parse(localStorage.getItem('oasis.bluemagic') || '{}'); if (Array.isArray(o.learned)) BL.learned = o.learned.filter((k) => BL_SPELLS[k]); if (Array.isArray(o.slots)) BL.slots = [0, 1, 2, 3, 4].map((i) => (BL_SPELLS[o.slots[i]] && BL.learned.includes(o.slots[i]) ? o.slots[i] : null)); } catch (e) { /* fresh */ }
         const blSave = () => { try { localStorage.setItem('oasis.bluemagic', JSON.stringify(BL)); } catch (e) { /* storage */ } };
@@ -13815,7 +14041,7 @@ function kbModel(THREE, mk) {
             chef: { n: 'Chef', ic: '👨‍🍳', w: 'sword', lv: 5, hp: 1.1, mp: 1.0, atk: 0.95, mag: 0.9, auto: 3.6, d: 'Blue-mage cook, in the style of Quina. Weaken a monster, then Devour it to learn its attack as Blue Magic (5 slots, /blue to rearrange). Anyone can cook at a kitchen; Chefs just do it better.', moves: [
                 nfS('c1', 'Cleaver Chop', '🔪', 'Quick cleaver strike', { k: 'hit', gcd: 1, range: 3.6, pot: 1.0, fx: 'slash' }), nfS('c2', 'Pan Slap', '🍳', 'Heavy pan swing', { k: 'hit', gcd: 1, range: 3.6, pot: 1.2, mp: 3, fx: 'slash' }),
                 nfS('c3', 'Julienne', '🥕', 'Wide slicing cone', { k: 'cone', gcd: 1, len: 5, a: 1.6, pot: 1.25, mp: 5, fx: 'slash' }), nfS('c7', 'Taste Test', '🥄', 'Recover 30% HP', { k: 'heal', cd: 25, heal: 0.3, fx: 'heal' }),
-                nfS('c8', 'Pot Lid', '🥘', 'Half damage for 6 s', { k: 'guard', cd: 22, sec: 6, red: 0.5, fx: 'guard' }), nfS('c6', 'Devour', '😋', 'Eat a monster below 35% HP to learn its attack (not bosses). Also restores 12% HP.', { k: 'devour', cd: 3, range: 3.8, fx: 'slash' }),
+                nfS('c8', 'Pot Lid', '🥘', 'Half damage for 6 s', { k: 'guard', cd: 22, sec: 6, red: 0.5, fx: 'guard' }), nfS('c6', 'Devour', '😋', 'DRAW a skill from any monster (it may refuse, 7 s). Below 35% HP it is a sure thing and you eat it for 12% HP. Bosses can be drawn from, never eaten.', { k: 'devour', cd: 3, range: 3.8, fx: 'slash' }),
                 blSlot(0), blSlot(1), blSlot(2), blSlot(3), blSlot(4),
                 nfS('c12', 'Grand Banquet', '🍽️', 'Limit Break: a feast of strikes', { k: 'lb', lb: 1, cd: 3, range: 14, pot: 7, r: 6, fx: 'limit' })] },
             thief: { n: 'Thief', ic: '🗡️', w: 'sword', lv: 9, hp: 1.0, mp: 0.8, atk: 1.1, mag: 0.6, auto: 3.4, d: 'Fast daggers, poison and stealing.', moves: [
@@ -13974,6 +14200,7 @@ function kbModel(THREE, mk) {
         function nfFx(kind, from, to) {
             try { if (!NF_FXR && from) nsSend({ k: 'fx', fk: String(kind).slice(0, 12), f: nsV3(from), t: nsV3(to || from) }); } catch (e) { /* offline */ }
             try {
+                if (typeof kind === 'string' && kind.startsWith('e_') && from) { ENS_FXV(kind.slice(2), from, to || from); return; }
                 if (nfFxNew(kind, from, to)) return; const add = additive;
                 if (kind === 'slash') { const m = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.9, 20, 1, 0, 2.2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.copy(to); m.position.y += 0.9; m.lookAt(camera.position); m.rotation.z += Math.random() * 3; nfFxAdd(m, 0.22, (k) => { m.material.opacity = 0.9 * (1 - k); m.scale.setScalar(1 + k * 0.8); }); }
                 else if (kind === 'bolt' || kind === 'limit') { const m = new THREE.Mesh(new THREE.SphereGeometry(kind === 'limit' ? 0.7 : 0.28, 12, 10), new THREE.MeshBasicMaterial({ color: kind === 'limit' ? 0xffe27a : 0xff7a30, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })); const a = from.clone(); a.y += 1.3; nfFxAdd(m, 0.34, (k) => { m.position.lerpVectors(a, new THREE.Vector3(to.x, to.y + 1.0, to.z), k); m.material.opacity = k > 0.9 ? 0.4 : 0.95; }); }
@@ -15604,13 +15831,22 @@ function kbModel(THREE, mk) {
             const tpos = t ? new THREE.Vector3(t.x, t.node.position.y, t.z) : p, big = (m) => (m.big || 1) * 0.55, hitAll = (f, mul) => { for (const m of mobs) if (!m.dead && f(m)) nfDealDmg(m, mul, s.mag); };
             switch (s.k) {
                 case 'devour': {
-                    if (!t) return; if (t.duel) { nfPop(up, 'Cannot eat a duelist', '#ffb347'); NF.cds[s.id] = now + 2; return; } if (nfIsBoss(t) || t.boss) { nfPop(up, 'Too big to eat', '#ffb347'); NF.cds[s.id] = now + 2; return; } if (t.hp > t.hpMax * 0.35) { nfPop(up, 'Too lively to eat: weaken it first', '#ffb347'); NF.cds[s.id] = now + 1; return; }
-                    const key = BL_BY_TYPE[t.type] || BL_BY_CLS[t.cls] || 'chomp'; try { nfFx('heal', p, p); } catch (e) { /* fx */ } nfMobDie(t); NF.hp = Math.min(NF.hpMax, NF.hp + NF.hpMax * 0.12); nfPop(up, '😋 Devoured!', '#ffd0a0', true); blLearn(key, t); break;
+                    if (!t) return; if (t.duel) { nfPop(up, 'Cannot eat a duelist', '#ffb347'); NF.cds[s.id] = now + 2; return; }
+                    const weak = t.hp <= t.hpMax * 0.35, boss = nfIsBoss(t) || t.boss;
+                    if (boss && !t.rank && t.hp > t.hpMax * 0.35) { /* bosses can be drawn from, never eaten */ }
+                    const key = ensPick(t), def = BL_SPELLS[key], col = ENS_COL[(def && def[3].sfx) || 'beam'] || 0x9fd8ff, from = new THREE.Vector3(t.x, t.node.position.y, t.z);
+                    if (!weak) {   // Draw (FF8): pull the skill out of a living monster. It may refuse
+                        NF.cds[s.id] = now + 7; try { ENS_SFX.draw(); } catch (e) { /* audio */ }
+                        ensDraw(from, p, col, () => { if (Math.random() < (boss ? 0.35 : 0.55)) blLearn(key, t); else nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Nothing drawn', '#9fb4c8', true); }); nfPop(up, '🔷 Drawing…', '#9fd8ff', true); break;
+                    }
+                    if (boss) { nfPop(up, 'Too big to eat', '#ffb347'); NF.cds[s.id] = now + 2; return; }
+                    try { ENS_SFX.draw(); } catch (e) { /* audio */ } ensDraw(from, p, col, () => { NF.hp = Math.min(NF.hpMax, NF.hp + NF.hpMax * 0.12); nfPop(nfPos().clone().setY(nfPos().y + 2.2), '😋 Devoured!', '#ffd0a0', true); blLearn(key, t); });
+                    t.hp = Math.max(1, t.hp); setTimeout(() => { try { if (!t.dead) nfMobDie(t); } catch (e) { /* gone */ } }, 750); break;
                 }
                 case 'hit': if (!t) return; if (s.fx && !nfSpellFx(s, p, Object.assign(tpos.clone(), { userData: { h: (t.node.userData.h || 1.5) * (t.big || 1) } }))) nfFx(s.fx, p, tpos); nfDealDmg(t, s.pot, s.mag); if (s.dot && !t.dead) nfDot(t, { id: s.id, pot: s.dot.pot, sec: s.dot.sec }, s.mag); break;
                 case 'cone': nfShapeFx('cone', p.x, p.z, ang, { len: s.len, a: s.a }); hitAll((m) => { const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz); if (d > s.len + big(m)) return false; let da = Math.atan2(dx, dz) - ang; da = Math.atan2(Math.sin(da), Math.cos(da)); return d < 1.2 || Math.abs(da) < s.a / 2 + 0.15; }, s.pot); if (s.fx) nfFx(s.fx, p, new THREE.Vector3(p.x + Math.sin(ang) * 2.2, p.y, p.z + Math.cos(ang) * 2.2)); break;
                 case 'line': nfShapeFx('line', p.x, p.z, ang, { len: s.len, w: s.w }); hitAll((m) => { const dx = m.x - p.x, dz = m.z - p.z, lz = dx * Math.sin(ang) + dz * Math.cos(ang), lx = dx * Math.cos(ang) - dz * Math.sin(ang); return lz > -0.5 && lz < s.len + big(m) && Math.abs(lx) < s.w / 2 + big(m); }, s.pot); if (s.fx) nfFx(s.fx, p, new THREE.Vector3(p.x + Math.sin(ang) * s.len * 0.6, p.y, p.z + Math.cos(ang) * s.len * 0.6)); break;
-                case 'aoe': nfShapeFx('circle', p.x, p.z, 0, { r: s.r }); if (s.fx && !nfSpellFx(s, p, p)) nfFx('ring', p, p); if (s.pot > 0) hitAll((m) => Math.hypot(m.x - p.x, m.z - p.z) < s.r + big(m), s.pot); if (s.heal) { const h = Math.round(NF.hpMax * s.heal); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); for (const al of nfAllies(s.r + 6)) nfHealAlly(al, al.v.hm * s.heal); } break;
+                case 'aoe': nfShapeFx('circle', p.x, p.z, 0, { r: s.r }); if (s.fx && !nfSpellFx(s, p, p)) nfFx(String(s.fx).startsWith('e_') ? s.fx : 'ring', p, p); if (s.pot > 0) hitAll((m) => Math.hypot(m.x - p.x, m.z - p.z) < s.r + big(m), s.pot); if (s.heal) { const h = Math.round(NF.hpMax * s.heal); NF.hp = Math.min(NF.hpMax, NF.hp + h); nfPop(up, '+' + h, '#7dffa0', true); for (const al of nfAllies(s.r + 6)) nfHealAlly(al, al.v.hm * s.heal); } break;
                 case 'ground': { if (!t) return; const cx = t.x, cz = t.z; nfShapeFx('circle', cx, cz, 0, { r: s.r, col: 0xffa55a }); if (s.fx && !nfSpellFx(s, p, tpos)) nfFx(s.fx, p, tpos); hitAll((m) => Math.hypot(m.x - cx, m.z - cz) < s.r + big(m), s.pot); break; }
                 case 'dash': {
                     const g = localActor.group, fx0 = p.clone(); let dx, dz, tx = p.x, tz = p.z;
@@ -15747,7 +15983,7 @@ function kbModel(THREE, mk) {
         }
         function nfMobDie(m, remote) {
             if (m && m.duel) return;      // a duel opponent is never a monster: their own game decides if they fall
-            if (m.dead) return; try { finStart(m, remote); } catch (e) { /* cinematic is optional */ } m.dead = true; try { nfLogAdd('kill', String(m.name || m.cls || 'A monster') + (m.boss ? ' (boss)' : '') + ' was defeated', { boss: !!m.boss }); } catch (e) { /* log */ } if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); try { if (m.node.visible) nuShatter(m.node, m.big || 1); } catch (e) { /* cosmetic */ } m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.stBar) { try { disposeSprite(m.stBar); } catch (e) { /* gone */ } m.stBar = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
+            if (m.dead) return; try { if (!remote && !m.duel) HBD.kill(m); } catch (e) { /* daily */ } try { finStart(m, remote); } catch (e) { /* cinematic is optional */ } m.dead = true; try { nfLogAdd('kill', String(m.name || m.cls || 'A monster') + (m.boss ? ' (boss)' : '') + ' was defeated', { boss: !!m.boss }); } catch (e) { /* log */ } if (m.sid && !remote) nsSend({ k: 'x', id: m.sid }); try { if (m.node.visible) nuShatter(m.node, m.big || 1); } catch (e) { /* cosmetic */ } m.node.visible = false; if (m.label) { try { disposeSprite(m.label); } catch (e) { /* gone */ } m.label = null; } if (m.stBar) { try { disposeSprite(m.stBar); } catch (e) { /* gone */ } m.stBar = null; } if (m.bar) { try { disposeSprite(m.bar); } catch (e) { /* gone */ } m.bar = null; }
             try { if (!remote || m.mine) nfFoodDrop(m); } catch (e) { /* food */ }
             try { if (!remote || m.mine || nfDist(m) < 40) nfStMp('kill'); } catch (e) { /* stance */ }
             if (NF.tgt === m) NF.tgt = null; const lv = m.lv, mul = m.rankMul || (m.boss ? 12 : m.fate ? 1.3 : 1), xp = (14 + lv * 9) * mul * Math.max(0.3, Math.min(1.6, 1 + (lv - NF.lv) * 0.12)), gil = Math.round((5 + lv * 4) * (0.6 + Math.random() * 0.8) * (m.gilMul || (m.boss ? 8 : 1)));
@@ -15963,12 +16199,12 @@ function kbModel(THREE, mk) {
         const NU_TYPE_SIZE = { raptor: 2.7 };   // dinosaurs are big: a Glacier Raider stands well over a person
         function nuNight() { return (typeof CYT !== 'undefined' && CYT.nightF) || 0; }
         function nuMobStats(lv, cls, boss) { const c = NU_CLS[cls] || NU_CLS.Striker; return { hpMax: Math.round((48 + 24 * lv + 1.5 * lv * lv) * c.hp * (boss ? 14 : 1)), atk: (6 + 2.6 * lv) * c.atk * (boss ? 1.5 : 1) }; }
-        function nuModelFor(reg, cls) { const c = NU_CLS[cls] || NU_CLS.Striker; let t = c.m[Math.floor(Math.random() * c.m.length)]; const fl = NU_FLAVOR[NU_REG[reg].id]; if (fl && fl[t] && Math.random() < 0.8) t = fl[t]; return BT_FOES[t] ? t : 'slime'; }
+        function nuModelFor(reg, cls) { const c = NU_CLS[cls] || NU_CLS.Striker; let t = c.m[Math.floor(Math.random() * c.m.length)]; const cvx = reg === 3 && ((typeof ZN !== 'undefined' && ZN.on) || (typeof DG !== 'undefined' && DG.on && DG.floor === 2)), fl = cvx ? NU_FLAVOR_CV : NU_FLAVOR[NU_REG[reg].id]; if (fl && fl[t] && Math.random() < (cvx ? 0.92 : 0.8)) t = fl[t]; return BT_FOES[t] ? t : 'slime'; }
         function nuMobBuild(o) {   // o: { reg, cls, lv, boss, x, z, type, name, group, fate, rank, hunt, size, hm, am }
             o.lv = Math.max(1, Math.min(100, o.lv | 0));   // Forest of Nuu monsters are Lv 1-19, Carvernia Lv 20-40, and every floor above climbs on
-            const R = NU_REG[o.reg], C = NU_CLS[o.cls] || NU_CLS.Striker, st = nuMobStats(o.lv, o.cls, o.boss), type0 = 0; if (o.hm) { st.hpMax = Math.round(st.hpMax * o.hm); st.atk *= o.am || 1; } if (!o.type && !o.boss && !o.hunt && !o.fate && Math.random() < [0.08, 0.14, 0.2, 0.22, 0.24][Math.min(4, o.reg | 0)]) { o.type = 'drake'; if (!o.name) o.name = R.pre[Math.floor(Math.random() * R.pre.length)] + ' Drake'; }
+            const R = NU_REG[o.reg], C = NU_CLS[o.cls] || NU_CLS.Striker, st = nuMobStats(o.lv, o.cls, o.boss), type0 = 0; if (o.hm) { st.hpMax = Math.round(st.hpMax * o.hm); st.atk *= o.am || 1; } if (!o.type && !o.boss && !o.hunt && !o.fate && Math.random() < [0.08, 0.14, 0.2, 0.22, 0.24][Math.min(4, o.reg | 0)] * ((typeof ZN !== 'undefined' && ZN.on) || (typeof DG !== 'undefined' && DG.on && DG.floor === 2) ? 0.3 : 1)) { o.type = 'drake'; if (!o.name) o.name = R.pre[Math.floor(Math.random() * R.pre.length)] + ' Drake'; }
             const type = o.type || (o.boss ? R.bossType : nuModelFor(o.reg, o.cls));
-            const m = { cls: o.cls, type, name: o.name || (o.boss ? R.boss : R.pre[Math.floor(Math.random() * R.pre.length)] + ' ' + C.sfx), lv: o.lv, hp: st.hpMax, hpMax: st.hpMax, atk: st.atk, ranged: o.rg !== undefined ? !!o.rg : !!(C.ranged && !o.boss && Math.random() < 0.35), sid: o.sid || null, unit: o.unit || null, ax: o.ax, az: o.az, orin: o.orin || 140, orkeep: o.orkeep || 170, boss: !!o.boss, big: o.size || (o.boss ? 1.9 : 1) * (NU_TYPE_SIZE[type] || 1), size: o.size || (o.boss ? 1.9 : 1) * (NU_TYPE_SIZE[type] || 1), rank: o.rank || null, hunt: o.hunt || null, rankMul: o.rankMul || 0, gilMul: o.gilMul || 0, node: new THREE.Group(), x: o.x, z: o.z, tx: o.x, tz: o.z, wait: Math.random() * 3, ang: Math.random() * 6.28, aggro: false, atkT: 1 + Math.random() * 1.5, dead: false, group: o.group || null, fate: o.fate || null, reg: o.reg, home: { x: o.x, z: o.z }, slamT: 6 };
+            const m = { cls: o.cls, type, name: o.name || (o.boss ? R.boss : (BT_FOES[type] && BT_FOES[type].cv ? BT_FOES[type].n : R.pre[Math.floor(Math.random() * R.pre.length)] + ' ' + C.sfx)), lv: o.lv, hp: st.hpMax, hpMax: st.hpMax, atk: st.atk, ranged: o.rg !== undefined ? !!o.rg : !!(C.ranged && !o.boss && Math.random() < 0.35), sid: o.sid || null, unit: o.unit || null, ax: o.ax, az: o.az, orin: o.orin || 140, orkeep: o.orkeep || 170, boss: !!o.boss, big: o.size || (o.boss ? 1.9 : 1) * (NU_TYPE_SIZE[type] || 1), size: o.size || (o.boss ? 1.9 : 1) * (NU_TYPE_SIZE[type] || 1), rank: o.rank || null, hunt: o.hunt || null, rankMul: o.rankMul || 0, gilMul: o.gilMul || 0, node: new THREE.Group(), x: o.x, z: o.z, tx: o.x, tz: o.z, wait: Math.random() * 3, ang: Math.random() * 6.28, aggro: false, atkT: 1 + Math.random() * 1.5, dead: false, group: o.group || null, fate: o.fate || null, reg: o.reg, home: { x: o.x, z: o.z }, slamT: 6 };
             const d = BT_FOES[type] || {}; let model = null; try { model = btBuildFoe(type); } catch (e) { model = null; } m.stub = !!(model && model.userData && model.userData.stub);
             if (model) { try { if (!d.skin && !m.stub && !(model.userData && model.userData.enm)) toonify(model); } catch (e) { /* plain */ } model.rotation.y = 0; m.node.add(model); m.node.userData.h = (model.userData && model.userData.h) || 1.6; }
             m.node.scale.setScalar(m.size); m.node.position.set(o.x, nuH(o.x, o.z), o.z); m.node.userData.noOutline = true; NU.group.add(m.node);
@@ -16030,7 +16266,7 @@ function kbModel(THREE, mk) {
             function render() {
                 const T = threat(), tr = tier(), el = H.el; let h = '<div class="p"><h2>📜 ENDLESS HUNT BOARD</h2><div class="s">Threat ' + T + ' · Tier: <b style="color:' + (tr.c && tr.c !== 'rainbow' ? hex(tr.c) : '#fff') + '">' + tr.n + '</b> · Hunts cleared ' + H.done + (tierIdx(T) < TIER.length - 1 ? ' · Next tier at Threat ' + TIER[tierIdx(T) + 1].at : '') + '</div>';
                 for (const c of H.board) { const cf = CFG[c.rank], rw = rew(c, 'GOLD', 4), tc = c.ti ? (TIER[c.ti].c === 'rainbow' ? '#ff9ae8' : hex(TIER[c.ti].c)) : '#ffffff'; h += '<div class="hb-c"><div class="k" style="color:' + (c.rank === 'S' ? '#ff4a3a' : c.rank === 'A' ? '#ffa33a' : '#6fb8ff') + '">' + c.rank + '</div><div class="m"><b style="color:' + tc + '">' + c.name + '</b><br>HP ×' + c.hm + ' · ATK ×' + c.am + ' · Par ' + fmt(c.par) + (cf.sty ? ' · Style rank scored' : '') + '<br>Up to ' + rw.gil + ' gil · ' + rw.xp + ' XP' + (H.best[c.rank] ? ' · Best: ' + H.best[c.rank] : '') + '</div><button data-id="' + c.id + '">' + (H.act ? 'Busy' : 'Accept') + '</button></div>'; }
-                h += '<button class="x" id="hb-re">↻ New board</button> <button class="x" id="hb-ab">Abandon hunt</button> <button class="x" id="hb-cl">Close</button></div>'; el.innerHTML = h;
+                try { h += HBD.html(); } catch (e) { /* daily */ } h += '<button class="x" id="hb-re">↻ New board</button> <button class="x" id="hb-ab">Abandon hunt</button> <button class="x" id="hb-cl">Close</button></div>'; el.innerHTML = h; try { HBD.bind(el, render); } catch (e) { /* daily */ }
                 el.querySelectorAll('.hb-c button').forEach((b) => { b.onclick = () => { if (!H.act) accept(b.dataset.id); }; }); el.querySelector('#hb-cl').onclick = close; el.querySelector('#hb-re').onclick = () => { H.board = gen(); save(); render(); }; el.querySelector('#hb-ab').onclick = () => { abandon(true); render(); };
             }
             function accept(id) {
@@ -16041,7 +16277,7 @@ function kbModel(THREE, mk) {
             function abandon(msg) { if (!H.act) return; const m = H.act.m; try { if (!m.dead) { nuDisposeMob(m); const i = NU.extra.indexOf(m); if (i >= 0) NU.extra.splice(i, 1); } } catch (e) { /* gone */ } H.act = null; H.st = null; if (H.hud) H.hud.style.display = 'none'; if (msg) { try { sysChat('Hunt abandoned.'); } catch (e) { /* chat */ } } }
             function kill(m, remote) {
                 if (!H.act || H.act.m !== m || remote) return; const c = H.act.c, el = performance.now() / 1000 - H.act.t0, medal = el <= c.par ? 'GOLD' : el <= c.par * 1.6 ? 'SILVER' : 'BRONZE', cf = CFG[c.rank], sr = cf.sty ? finalRank() : 0, rw = rew(c, medal, sr);
-                H.done++; const key = c.rank; if (cf.sty && (H.best[key] == null || RK.indexOf(H.best[key]) < sr)) H.best[key] = RK[sr]; H.act = null; H.st = null; H.board = []; save(); if (H.hud) H.hud.style.display = 'none';
+                try { HBD.hunt(); } catch (e) { /* daily */ } H.done++; const key = c.rank; if (cf.sty && (H.best[key] == null || RK.indexOf(H.best[key]) < sr)) H.best[key] = RK[sr]; H.act = null; H.st = null; H.board = []; save(); if (H.hud) H.hud.style.display = 'none';
                 try { window.oasisGil.add(rw.gil, true); } catch (e) { /* gil */ } try { SMF.hbBonus(Math.max(1, Math.min(5, c.ti + Math.ceil(NF.lv / 8))), c.rank); } catch (e) { /* forge */ } try { nfXp(rw.xp); } catch (e) { /* xp */ }
                 let got = []; try { const n = (k, q, lbl) => { btBagAdd(k, q); got.push(q + '× ' + lbl); }; n('hipotion', 1 + (c.rank !== 'B' ? 1 : 0), 'Hi-Potion'); if (c.rank !== 'B') n('ether', 2, 'Ether'); if (sr >= 4 || medal === 'GOLD' && c.rank === 'S') n('elixir', 1 + (sr >= 5 ? 1 : 0), 'Elixir'); if (sr >= 5 || c.rank === 'S') n('phoenix', 1, 'Phoenix Down'); if (sr >= 5 && cf.sty) { ttPackDrop('boss'); got.push('Card pack'); } } catch (e) { /* bag */ }
                 const col = RC[sr]; H.res.innerHTML = '<div class="p"><div style="letter-spacing:.2em;font-size:12px;color:#9fb6d0">HUNT COMPLETE</div><h2 style="margin:4px 0">' + c.name + '</h2>' + (cf.sty ? '<div class="big" style="color:' + col + '">' + RK[sr] + '</div><div style="font-size:12px;color:#9fb6d0">STYLE RANK · ' + (H.st ? '' : '') + '</div>' : '') + '<div style="font-size:20px;margin:6px 0;color:' + (medal === 'GOLD' ? '#ffd24a' : medal === 'SILVER' ? '#cfd8e0' : '#c98a5a') + '">' + medal + ' · ' + fmt(el) + ' <small style="color:#9fb6d0">(par ' + fmt(c.par) + ')</small></div><div>+' + rw.gil + ' gil · +' + rw.xp + ' XP</div><div style="font-size:12px;color:#9fb6d0;margin:6px 0 12px">' + got.join(' · ') + '</div><button id="hb-ok">Continue</button></div>';
@@ -16055,6 +16291,48 @@ function kbModel(THREE, mk) {
                 const tr = H.act && H.act.m.hbTint || null; if (tr && tr.c === 'rainbow') { const col = tcol(tr, H.rt); H.act.m.node.traverse((o) => { if (o.userData.hbT && o.material && o.material.color) o.material.color.copy(col); }); }
             }
             return { tick, hit, skill, dodge, kill, tint, mulStats, tier, open, close, threat, TIER, near, pos: () => H.prop && [H.prop.x, H.prop.z], reset: () => { H.prop = null; H.act = null; try { if (H.hud) H.hud.style.display = 'none'; } catch (e) { /* hud */ } } };
+        })();
+        /* ================= DAILY BOUNTIES: every floor posts its own quests on the hunt board, new ones each local day ================= */
+        const HBD = (() => {
+            const K = 'oasis.hb.daily.v1', FL = { 1: { n: 'Forest of Nuu', ic: '🌲', m: 1 }, 2: { n: 'Carvernia', ic: '❄️', m: 2.3 } };
+            const FAM = {
+                1: [['Gels', ['slime', 'egel', 'vgel', 'fgel', 'gilded']], ['Beasts', ['wolf', 'awolf', 'raptor', 'fwolf', 'behemoth']], ['The Undead', ['bone', 'wraith', 'banshee', 'reaper', 'vwraith', 'pknight']], ['Plants and Fungi', ['sprout', 'spore', 'vine']], ['Machines', ['drone', 'sdrone', 'guard', 'colossus', 'dknight']], ['Winged and Winding', ['harpy', 'roc', 'mantis', 'viper']], ['Bombs', ['bomb', 'cbomb']]],
+                2: [['Rime Beasts', ['fwolf', 'rimeharpy', 'glacierserp']], ['Stone Sentinels', ['igolem', 'cairnsentry', 'cairnwraith', 'rimeguard']], ['Frost Casters', ['frostacolyte', 'frostbloom', 'banshee']], ['Cold Fusing', ['rimebomb', 'cscorp', 'fgel']]]
+            };
+            let S = { d: '', f: {} }; try { const o = JSON.parse(localStorage.getItem(K) || '{}'); if (o && o.f) S = o; } catch (e) { /* fresh */ }
+            const save = () => { try { localStorage.setItem(K, JSON.stringify(S)); } catch (e) { /* storage */ } };
+            const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+            const rng = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0; return () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+            function gen(f, day) {   // the same day always gives the same four quests on a floor
+                const r = rng(day + ':' + f), pick = (a) => a[Math.floor(r() * a.length)], F = FL[f], lvm = Math.max(1, Math.min(60, NF.lv || 1)), out = [];
+                const rw = (k) => ({ gil: Math.round((180 + lvm * 14) * F.m * k), xp: Math.round((90 + lvm * 10) * F.m * k) });
+                out.push({ id: 'sl', k: 'slay', n: 18 + Math.floor(r() * 4) * 4, txt: 'Defeat monsters on the ' + F.n + ' floor', rw: rw(1) });
+                const fam = pick(FAM[f]); out.push({ id: 'fam', k: 'fam', fam: fam[0], types: fam[1], n: 8 + Math.floor(r() * 4) * 2, txt: 'Defeat ' + fam[0], rw: rw(1.2) });
+                if (r() < 0.5) out.push({ id: 'hunt', k: 'hunt', n: 1, txt: 'Clear a contract from the Hunt Board', rw: rw(1.6) }); else out.push({ id: 'ga', k: 'gather', n: 6 + Math.floor(r() * 3) * 2, txt: 'Gather materials', rw: rw(0.9) });
+                out.push({ id: 'dg', k: 'dungeon', n: 1, txt: f === 1 ? 'Defeat Malachar in the Shadowveil Depths' : 'Defeat Valdrix in the Carvernia Caverns', rw: rw(3) });
+                out.forEach((q) => { q.p = 0; q.c = false; }); return out;
+            }
+            function roll() { const d = today(); if (S.d === d) return false; S = { d, f: { 1: gen(1, d), 2: gen(2, d) } }; save(); return true; }
+            roll();
+            const floorNow = () => { try { return ZN.on || (DG.on && DG.floor === 2) ? 2 : 1; } catch (e) { return 1; } };
+            const pop = (q) => { try { nfPop(nfPos().clone().setY(nfPos().y + 2.8), '📜 ' + q.txt.split(' ').slice(0, 3).join(' ') + ' ' + Math.min(q.p, q.n) + '/' + q.n, '#ffe27a', true); } catch (e) { /* pop */ } };
+            function bump(f, test, by) {
+                roll(); let done = null; for (const q of S.f[f] || []) { if (q.c || !test(q)) continue; q.p = Math.min(q.n, q.p + (by || 1)); if (q.p >= q.n) { q.c = true; done = q; } else if (q.p % 3 === 0 || q.n - q.p <= 2) pop(q); }
+                save(); if (done) { try { nuShowBanner('DAILY BOUNTY COMPLETE', done.txt.toUpperCase()); sysChat('◆ Daily bounty done: ' + done.txt + '. Claim your reward at the Hunt Board.'); } catch (e) { /* ui */ } }
+            }
+            function kill(m) { if (!m || m.hbd) return; m.hbd = 1; const f = floorNow(); bump(f, (q) => q.k === 'slay' || (q.k === 'fam' && q.types.includes(m.type))); }
+            const gather = () => bump(floorNow(), (q) => q.k === 'gather'), hunt = () => bump(floorNow(), (q) => q.k === 'hunt'), dungeon = (f) => bump(f, (q) => q.k === 'dungeon');
+            function html() {
+                roll(); const cur = floorNow(); let h = '<div style="margin:12px 0 4px;font-size:13px;letter-spacing:.1em;color:#ffe27a">DAILY BOUNTIES · refresh at midnight</div>';
+                for (const f of [cur, cur === 1 ? 2 : 1]) { h += '<div style="margin:8px 0 2px;font-weight:700;color:' + (f === cur ? '#fff' : '#8fa4bb') + '">' + FL[f].ic + ' ' + FL[f].n + (f === cur ? ' (you are here)' : ' (progress counts only on that floor)') + '</div>';
+                    S.f[f].forEach((q, i) => { const pc = Math.round(100 * q.p / q.n); h += '<div style="display:flex;gap:8px;align-items:center;margin:4px 0;font-size:12.5px"><div style="flex:1"><div>' + q.txt + ' <span style="opacity:.7">' + q.p + '/' + q.n + '</span></div><div style="height:4px;background:#1c2a3c;border-radius:2px;margin-top:3px"><i style="display:block;height:4px;width:' + pc + '%;background:' + (q.c ? '#7dffb4' : '#6fb8ff') + ';border-radius:2px"></i></div></div><div style="opacity:.8;white-space:nowrap">' + q.rw.gil + 'g · ' + q.rw.xp + 'xp</div>' + (q.c && !q.cl ? '<button class="x hbd-claim" data-f="' + f + '" data-i="' + i + '">Claim</button>' : q.cl ? '<span style="color:#7dffb4">✔</span>' : '<span style="width:52px"></span>') + '</div>'; }); }
+                return h;
+            }
+            function bind(el, again) {
+                el.querySelectorAll('.hbd-claim').forEach((b) => { b.onclick = () => { const q = S.f[b.dataset.f][+b.dataset.i]; if (!q || !q.c || q.cl) return; q.cl = true; save(); try { window.oasisGil.add(q.rw.gil, true); } catch (e) { /* gil */ } try { nfXp(q.rw.xp); } catch (e) { /* xp */ } try { btBagAdd('hipotion', 1); } catch (e) { /* bag */ } try { sysChat('◆ Daily bounty reward: ' + q.rw.gil + ' gil, ' + q.rw.xp + ' XP, 1 Hi-Potion.'); } catch (e) { /* chat */ } try { again(); } catch (e) { /* ui */ } }; });
+            }
+            setInterval(() => { try { if (roll()) sysChat('◆ New daily bounties are posted on the Hunt Board.'); } catch (e) { /* chat */ } }, 60000);
+            return { kill, gather, hunt, dungeon, html, bind, roll, S: () => S, gen };
         })();
         { const _mb = nuMobBuild; nuMobBuild = function (o) { const m = _mb(o); try { const tr = HB.tier(); if (tr.c && !o.hm) { HB.tint(m, tr); HB.mulStats(m, tr); } } catch (e) { /* tier colour */ } return m; }; }
         /* ================= BLACKSMITH FORGE: SAO smithing x FFXIV crafting =================
@@ -16448,7 +16726,7 @@ window.addEventListener('keyup', (e) => { if (F.st && belKey(e)) F.st.bel = fals
         const NF_ESP_SELF = new Set(['cure', 'cura', 'curaga', 'regen', 'protect', 'shell', 'haste']);
         function nfEspOk(sp) { if (!sp) return false; if (NF_ESP_SELF.has(sp.id)) return true; if (sp.k === 'hit' || sp.k === 'ground' || sp.k === 'drain' || sp.k === 'pct') return true; if (sp.k === 'slow' || sp.k === 'stop') return true; if (sp.k === 'status') return ['petrify', 'silence', 'sleep', 'blind', 'confuse', 'toad'].includes(sp.st); return sp.id === 'berserk'; }
         function nfEnemySpell(m) {
-            if (m.mgSil > 0 || m.duel) return null; const base = (NF_ESP_CAST[m.cls] || 0.1) * (m.ranged ? 1.1 : 1) * (m.boss ? 1.6 : m.rank ? 1.4 : 1); if (Math.random() > Math.min(0.9, base)) return null;
+            if (m.mgSil > 0 || m.duel) return null; { const kf = BT_FOES[m.type]; if (kf && kf.sp && !m.boss) { if (Math.random() < (kf.spc || 0.4)) { const c = kf.sp.filter((id) => MG_SP[id] && (MG_SP[id].lv || 1) <= (m.lv || 1) + 4 && nfEspOk(MG_SP[id])); if (c.length) return c[(Math.random() * c.length) | 0]; } return null; } } const base = (NF_ESP_CAST[m.cls] || 0.1) * (m.ranged ? 1.1 : 1) * (m.boss ? 1.6 : m.rank ? 1.4 : 1); if (Math.random() > Math.min(0.9, base)) return null;
             for (let i = 0; i < 4; i++) { let id = null; try { id = mgPickSpell(m); } catch (e) { return null; } if (nfEspOk(MG_SP[id])) return id; } return null;
         }
         function nfEnemySelfSpell(m, sp) {
@@ -16484,7 +16762,7 @@ window.addEventListener('keyup', (e) => { if (F.st && belKey(e)) F.st.bel = fals
             if (!on) nfPop(new THREE.Vector3(m.x, m.node.position.y + 2.6, m.z), 'Stone broke', '#cfd8e0');
         }
         function nfTelStart(m, p) {
-            const kinds = m.boss ? ['circle', 'cone', 'line', 'self', 'donut'] : [NU_TELE[m.cls] || 'circle']; let kind = kinds[Math.floor(Math.random() * kinds.length)];
+            const kfx = (BT_FOES[m.type] || {}).kit, kinds = m.boss ? ['circle', 'cone', 'line', 'self', 'donut'] : kfx || [NU_TELE[m.cls] || 'circle']; let kind = kinds[Math.floor(Math.random() * kinds.length)];
             const wind = m.boss ? 1.8 : 1.5, ang = Math.atan2(p.x - m.x, p.z - m.z), sc = m.boss ? 1.3 : 1, T = { kind, t: 0, wind, m, ang, dmg: m.atk * sc, x: m.x, z: m.z };
             if (kind === 'circle') { T.r = m.boss ? 5.5 : 3.6; T.x = p.x; T.z = p.z; T.dmg *= 1.7; } else if (kind === 'self') { T.r = m.boss ? 7.5 : 4.6; T.dmg *= 1.6; } else if (kind === 'donut') { T.r = m.boss ? 11 : 8; T.ri = m.boss ? 4.2 : 3; T.dmg *= 1.8; } else if (kind === 'cone') { T.r = m.boss ? 10 : 7; T.a = 1.15; T.dmg *= 1.9; } else { T.len = m.boss ? 18 : 13; T.w = m.boss ? 3.4 : 2.4; T.dmg *= 2.0; }
             let _sp = null; try { const sid = nfEnemySpell(m); _sp = sid ? MG_SP[sid] : null; } catch (e) { _sp = null; }
@@ -17361,7 +17639,7 @@ window.addEventListener('keyup', (e) => { if (F.st && belKey(e)) F.st.bel = fals
             }
         }
         function gaPick(n) {
-            if (!n.on || NF.dead) return; n.on = false; n.back = Date.now() + (130 + Math.random() * 70) * 1000; n.grow = 0; n.mesh.visible = false;
+            if (!n.on || NF.dead) return; try { HBD.gather(); } catch (e) { /* daily */ } n.on = false; n.back = Date.now() + (130 + Math.random() * 70) * 1000; n.grow = 0; n.mesh.visible = false;
             const k = n.t.k, q = 1 + (Math.random() < 0.45 ? 1 : 0) + (Math.random() < 0.12 ? 1 : 0), I = FOOD_ING[k]; foodAdd('ing', k, q);
             const P = nfPos(); nfPop(P.clone().setY(P.y + 2.3), I.ico + ' ' + I.n + ' ×' + q, '#ffe9a0', true);
             try { nsbN(0, 0.12, 3500, 1800, 0.8, 0.07, 'bandpass', 0, 0.2); nsbBell(0.02, 1318, 0.04, 0.35); nsbBell(0.09, 1760, 0.035, 0.4); } catch (e) { /* audio */ }
@@ -18436,7 +18714,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             },
             // the sound of your own skills: shaped by what the move is and which weapon the class carries
             skill(s) {
-                if (!s) return; if (/^(hit|cone|aoe|line|dash|lb|steal|ground)$/.test(s.k) && !s.mag && cswSndPlay(CSW_SLOT[NF.cls] || '', 'sw', s.k === 'lb' ? 1.25 : 1)) return; const R = (a, b) => a + Math.random() * (b - a), k = s.k, w = (nfCls() || {}).w || 'sword', mag = !!s.mag, nm = (s.n || '').toLowerCase();
+                if (!s) return; if (s.sfx && ENS_SFX.play(s)) return; if (/^(hit|cone|aoe|line|dash|lb|steal|ground)$/.test(s.k) && !s.mag && cswSndPlay(CSW_SLOT[NF.cls] || '', 'sw', s.k === 'lb' ? 1.25 : 1)) return; const R = (a, b) => a + Math.random() * (b - a), k = s.k, w = (nfCls() || {}).w || 'sword', mag = !!s.mag, nm = (s.n || '').toLowerCase();
                 const el = /fire|flare|ifrit|burst|meteo|ultima|ember|blaze|fireball|magnet/.test(nm) && !/magnet/.test(nm) ? 'fire' : /blizzard|ice|shiva|frost|freeze/.test(nm) ? 'ice' : /thunder|ramuh|bolt|zap|lightning|trinity/.test(nm) ? 'thunder' : /holy|cure|regen|bene|light|assize|physick/.test(nm) ? 'holy' : null;
                 const sheen = (at, f, vol, pan) => { nsbT(at, f, f * 1.5, 0.22, vol, 'triangle', pan, 0.5, 0.004); nsbT(at, f * 1.51, f * 2.2, 0.16, vol * 0.5, 'sine', pan, 0.5, 0.004); };
                 const swish = (at, dur, f0, f1, vol, pan) => nsbN(at, dur, f0, f1, 1.4, vol, 'bandpass', pan, 0.1);
@@ -18746,7 +19024,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                         if (i % 3 === 0) { if (i % 6 === 0) room.pillars = 3; } else { room.pk = { n: 3 + (pk % 2), lv: TH.packs[0].lv - 1 + Math.floor(i / 22 * 4.99), cls: TH.packs[pk % 4].cls, elite: pk % 5 === 4 }; if (pk % 4 === 1) room.pillars = 3; pk++; } }
                     RM.push(room);
                 }
-                DG.rooms = RM; TH.names = names;
+                DG.rooms = RM; TH.names = names; try { dgLorePlan(RM, names); } catch (e) { console.warn('dungeon plan', e); }
             } else {
             DG.rooms = [
                 { x: DX, z: 0, r: 11 }, { x: DX + 62, z: -6, r: 17, pk: { n: 3, lv: 15, cls: ['Striker', 'Guardian'] } }, { x: DX + 128, z: 22, r: 18, pillars: 3, pk: { n: 4, lv: 16, cls: ['Striker', 'Sage', 'Phantom'] } },
@@ -19057,6 +19335,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             } catch (e) { res = { text: '...', tone: 'calm' }; try { sysChat(p.name + ' could not answer: ' + (e.message || e)); } catch (er) { /* none */ } }
             CSN.thinking--; try { csnTyping(p, false); } catch (e) { /* none */ }
             if (!CSN.on || CSN.sid !== sid || !res || !res.text) return;
+            CSN.lastAns = { p, text: res.text };
             { const parts = p.kind === 'cmp' ? cmpChunks(res.text) : [res.text]; parts.forEach((t, i) => { const last = i === parts.length - 1; csnFeed(p.id, t, { tone: res.tone, emo: i === 0 ? res.emo : null, opts: last ? res.opts : null, to: from ? from.id : null }); if (CSN.host || p.kind === 'cmp') csnNetLine(p, { text: t, emo: null, tone: res.tone }); }); }
         }
         function csnTyping(p, on) { const a = csnA(p); if (a && a.setTyping) a.setTyping(on); }
@@ -19065,8 +19344,20 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             if (!CSN.on) return; const mp = CSN.cast.find((p) => p.kind === 'me'); text = String(text || '').trim().slice(0, 260);
             if (!text) { if (emo) csnEmote(mp, emo); return; }
             const adr = (CSN.cur && CSN.cur.spk !== mp && CSN.cur.spk) || CSN.cast.find((p) => p !== mp); csnFeed(mp.id, text, { emo, to: adr && adr.id }); csnNetLine(mp, { text, emo });
-            for (const p of CSN.cast) if (p.kind === 'cmp' || (p.npc && p.npc.say)) csnAsk(p, text, mp);
-            CSN.emo = null; CSN.opts = []; csnUiSync();
+            csnAskAll(text, mp, adr); CSN.emo = null; CSN.opts = []; csnUiSync();
+        }
+        /* everyone who can answer does so one after another, so each one hears what the one before said; now and then two of them talk to each other */
+        async function csnAskAll(text, mp, adr) {
+            const sid = CSN.sid; let ai = CSN.cast.filter((p) => p.kind === 'cmp' || (p.npc && p.npc.say)); if (!ai.length) return;
+            if (adr && ai.includes(adr)) ai = [adr].concat(ai.filter((p) => p !== adr)); const seq = (CSN.askSeq = (CSN.askSeq || 0) + 1); let prev = null;
+            for (const p of ai) {
+                if (!CSN.on || CSN.sid !== sid || CSN.askSeq !== seq) return; CSN.lastAns = null;
+                await csnAsk(p, prev ? '[' + mp.name + ' said: "' + text + '". ' + prev.name + ' just answered: "' + prev.text + '". Give your own reaction in your own voice. Do not repeat what was already said.]' : text, mp);
+                if (CSN.lastAns && CSN.lastAns.p === p) prev = { name: p.name, text: CSN.lastAns.text };
+            }
+            if (ai.length > 1 && prev && Math.random() < 0.4 && CSN.on && CSN.sid === sid && CSN.askSeq === seq) {
+                const a = ai[Math.floor(Math.random() * ai.length)], b = ai.find((p) => p !== a); if (a && b) await csnAsk(a, '[' + prev.name + ' said: "' + prev.text + '". Turn to ' + b.name + ' and say something to them in your own voice, short.]', b);
+            }
         }
         /* ---- start / end ---- */
         function csnStart(cast, opt) {
@@ -19115,9 +19406,9 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             st.textContent = '#csn{position:fixed;inset:0;z-index:58;pointer-events:none;display:none;font-family:Nunito,Inter,system-ui,sans-serif;color:#eaf3ff}#csn.on{display:block}#csn .b{position:absolute;left:0;right:0;background:#000;height:0;transition:height .5s cubic-bezier(.2,.8,.2,1)}#csn .b.t{top:0}#csn .b.m{bottom:0}#csn.on .b{height:11vh}'
                 + '#csn-box{position:absolute;max-width:min(470px,46vw);min-width:90px;padding:14px 22px;border-radius:22px;background:var(--f,#fff);color:var(--k,#0f172a);box-shadow:0 6px 22px rgba(0,0,0,.45);opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:auto;cursor:pointer;font:600 20px/1.4 Inter,system-ui,sans-serif;word-break:break-word}#csn-box.v{opacity:1;transform:none}'
                 + '#csn-box::after{content:"";position:absolute;bottom:-14px;width:0;height:0;border:12px solid transparent;border-top-color:var(--f,#fff);border-bottom:0}#csn-box.tl::after{left:26px}#csn-box.tr::after{right:26px}#csn-box p{margin:0;font:inherit;color:inherit}#csn-box p a{color:inherit}#csn-box i{display:none}'
-                + '#csn-ui{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(11vh + 10px);width:min(620px,94vw);display:none;pointer-events:auto}#csn-ui.v{display:block}#csn-opts{display:grid;gap:5px;margin-bottom:6px}#csn-opts button{display:flex;gap:8px;align-items:center;text-align:left;font:700 14px Nunito,sans-serif;color:#eaf3ff;background:linear-gradient(90deg,rgba(14,32,66,.92),rgba(8,16,36,.88));border:1px solid rgba(150,190,255,.45);padding:7px 12px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}#csn-opts button:hover,#csn-opts button:focus{background:linear-gradient(90deg,rgba(40,90,170,.95),rgba(14,30,66,.9));outline:2px solid #ffe27a}#csn-opts em{font:900 12px Nunito;color:#ffd27a;font-style:normal}'
+                + '#csn-ui{position:absolute;left:0;right:0;bottom:0;padding:34px max(3vw,calc(50vw - 310px)) calc(11vh + 10px);background:linear-gradient(to top,#000 0,#000 11vh,rgba(4,8,18,.82) calc(11vh + 10px),rgba(4,8,18,.55) 70%,rgba(4,8,18,0) 100%);display:none;pointer-events:auto}#csn-ui.v{display:block}#csn-opts{display:grid;gap:5px;margin-bottom:6px}#csn-opts button{display:flex;gap:8px;align-items:center;text-align:left;font:700 14px Nunito,sans-serif;color:#eaf3ff;background:linear-gradient(90deg,rgba(14,32,66,.92),rgba(8,16,36,.88));border:1px solid rgba(150,190,255,.45);padding:7px 12px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}#csn-opts button:hover,#csn-opts button:focus{background:linear-gradient(90deg,rgba(40,90,170,.95),rgba(14,30,66,.9));outline:2px solid #ffe27a}#csn-opts em{font:900 12px Nunito;color:#ffd27a;font-style:normal}'
                 + '#csn-row{display:flex;gap:6px}#csn-in{flex:1;min-width:0;font:600 15px Nunito,sans-serif;color:#fff;background:rgba(6,12,28,.9);border:1px solid rgba(150,190,255,.55);padding:8px 10px;outline:none}#csn-in:focus{border-color:#ffe27a}#csn-ui button.s{font:800 13px Nunito;color:#fff;background:#2a6fd0;border:0;padding:0 14px;cursor:pointer}#csn-emo{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}#csn-emo button{font:700 11px Nunito;color:#dbe9ff;background:rgba(20,40,80,.8);border:1px solid rgba(150,190,255,.35);padding:3px 8px;cursor:pointer;border-radius:10px}#csn-emo button.on{background:#d9a21a;color:#111;border-color:#ffe27a}#csn-emo button:focus{outline:2px solid #ffe27a}'
-                + '#csn-hint{position:absolute;right:14px;bottom:calc(11vh + 8px);font:700 11px Nunito;letter-spacing:.08em;color:rgba(230,240,255,.6);pointer-events:none;text-shadow:0 1px 2px #000}body.csn-on #ni-q{display:none!important}';
+                + '#csn-hint{position:absolute;right:14px;bottom:calc(11vh - 22px);font:700 11px Nunito;letter-spacing:.08em;color:rgba(230,240,255,.6);pointer-events:none;text-shadow:0 1px 2px #000}body.csn-on #ni-q{display:none!important}';
             document.head.appendChild(st); const el = document.createElement('div'); el.id = 'csn'; el.innerHTML = '<div class="b t"></div><div class="b m"></div><div id="csn-box"><p></p></div><div id="csn-ui"><div id="csn-opts"></div><div id="csn-row"><input id="csn-in" maxlength="240" placeholder="Type your own reply and press Enter…" autocomplete="off"><button class="s" type="button">Say</button><button class="s" id="csn-end" type="button" style="background:#7a2a2a">Leave</button></div><div id="csn-emo"></div></div><div id="csn-hint">Esc leave · 1-3 choose · Enter type</div>';
             document.body.appendChild(el); CSN.el = el; const inp = el.querySelector('#csn-in');
             const send = () => { const v = inp.value; const em = CSN.emo; inp.value = ''; csnSay(v, em); try { inp.blur(); } catch (e) { /* focus */ } };
@@ -19212,7 +19503,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             for (const n of CSN.npcs) { const a = n.actor, p = a && a.group ? a.group.position : { x: n.x, z: n.z }, d = Math.hypot(p.x - P.x, p.z - P.z); if (d < Math.min(bd, n.r || 3.4)) { bd = d; best = { kind: 'npc', id: 'npc:' + n.id, name: n.name, x: p.x, z: p.z, npc: n }; } }
             return best;
         }
-        NI.list.push({ id: 'csn-talk', r: 4, get x() { const t = csnNear(); return t ? t.x : 1e9; }, get z() { const t = csnNear(); return t ? t.z : 1e9; }, get label() { const t = csnNear(); return t ? 'Talk to ' + t.name : 'Talk'; }, act: () => { const t = csnNear(); if (!t) return; const mp = csnMakeP(t); csnStart([mp], { greet: t.npc && t.npc.greet }); }, cond: () => !CSN.on && !!csnNear() });
+        NI.list.push({ id: 'csn-talk', r: 4, get x() { const t = csnNear(); return t ? t.x : 1e9; }, get z() { const t = csnNear(); return t ? t.z : 1e9; }, get label() { const t = csnNear(); return t ? 'Talk to ' + t.name : 'Talk'; }, act: () => { const t = csnNear(); if (!t) return; const mp = csnMakeP(t), cast = [mp]; if (t.kind === 'cmp') for (const [cid, r] of CMP.active) { if ('cmp:' + cid !== t.id && r.actor && r.actor.group) cast.push(csnMakeP({ kind: 'cmp', id: 'cmp:' + cid, name: r.c.name, c: r.c })); } csnStart(cast, { greet: t.npc && t.npc.greet }); }, cond: () => !CSN.on && !!csnNear() });
         let _csnNT = -1, _csnNV = null; function csnNear() { const f = performance.now(); if (f - _csnNT > 120) { _csnNT = f; _csnNV = csnNearTarget(); } return _csnNV; }
         window.__csn = { CSN, csnStart, csnEnd, csnFeed, csnMannequin, csnAddNpc, csnSay, csnOpenStarter, csnMakeP, csnTick, csnNear };
         // clicking the door itself also uses it when you are close enough
@@ -19229,13 +19520,97 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             if (on) { DG.hidden = []; for (const c of NU.group.children) { if (c === DG.group || c.isLight) continue; DG.hidden.push([c, c.visible]); c.visible = false; } DG.group.visible = true; }
             else { for (const [c, v] of DG.hidden) c.visible = v; DG.hidden = []; DG.group.visible = false; }
         }
+        /* ================= DUNGEON PACING AND LORE =================
+           Modelled on how Final Fantasy XIV dungeons are built: a straight run of rooms, "pulls" of 3 to 5 monsters you clear before the gate opens,
+           two lieutenant fights (mid-bosses) that split the run into three sections, then the final boss. A whole run is about 15 to 20 minutes.
+           Each dungeon also has a short story, told through lore tablets (collect all five) and the speeches of its lieutenants, ending at the boss. */
+        const DG_PLAN = { walk: 9, kill: 8, mid: 120, boss: 200, lo: 15, hi: 19 };   // seconds: per room walked, per monster killed, per lieutenant, for the boss
+        const DG_LORE = {
+            1: {
+                title: 'THE HOLLOW ONE', mids: [{ name: 'SISTER VENN, LAST OF THE VIGIL', cls: 'Phantom', line: 'Malachar swore us to silence. I kept my vow, even after the breathing stopped.' }, { name: 'WARDEN ORREC THE ASHEN', cls: 'Guardian', line: 'The gate holds. It has always held. Turn back, or be added to its stones.' }], midRooms: ['THE VIGIL OF SISTER VENN', 'THE ASHEN WARDEN\'S GATE'],
+                tablets: [
+                    ['The Oath of the Veil', 'Our order was founded to keep a door shut. Behind it sleeps the grief of the whole forest. We take turns holding it, one keeper to a century.'],
+                    ['A Letter Never Sent', 'Malachar asks to hold the door alone. He says the keepers are too few and too tired. The council refuses. He does not argue. That worries me more than shouting would.'],
+                    ['The Sunken Hall', 'We found the east vigil empty and wet with something that is not water. The keepers are standing, every one, facing the wall. They do not answer when called.'],
+                    ['Orrec\'s Last Entry', 'I bar the lower gate on his order. Malachar says the door has begun to speak, and that he alone can answer it. I did not see his face. I saw that his shadow no longer matched him.'],
+                    ['The Hollow Throne', 'He did not open the door. He opened himself. What walks the throne room now wears Malachar the way a coat wears a hook. If you read this, strike at the hollow in his chest. It is the only part of him that is still the door.']
+                ],
+                bossIntro: 'The throne is empty. Then it is not. Malachar turns, and there is nothing inside the robe but the dark the keepers guarded.', epilogue: 'The hollow closes. The door is only a door again. Somewhere above, a vigil bell rings once, then stops.'
+            },
+            2: {
+                title: 'THE FROST-HEART', mids: [{ name: 'THE RIME MATRON', cls: 'Sage', line: 'He was ours. He was warm. We bound the cold to him to save the Hold, and he bled for it.' }, { name: 'GLASSWARDEN KORR', cls: 'Sentinel', line: 'I stand between the beast and the Hold. I always have. Now the beast is the Hold\'s own heart.' }], midRooms: ['THE MATRON\'S CISTERN', 'KORR\'S GLASS BASTION'],
+                tablets: [
+                    ['Founding of the Hold', 'The avalanche came every winter until the first Warden found a creature that slept inside the mountain. It agreed to hold the snow back, if someone would stay with it.'],
+                    ['The Binding', 'We cut a frost-heart from the glacier and set it in the creature\'s chest. It would hold the ice in place. It would also hold the creature, for as long as the heart stayed whole.'],
+                    ['Winter of the Long Dark', 'The heart cracks a little each year. Valdrix has stopped greeting the watch. Last night he did not blink when the lanterns were lit.'],
+                    ['Korr\'s Report', 'The cold is no longer outside him. It is the inside of him now. I tried to cool the fever with fire and he did not notice the burns. Please send healers. Please do not send soldiers.'],
+                    ['The Lair', 'The beast we bound is not angry at the Hold. It is trying to get the heart out. Break the heart and the avalanche will come, but so will he, whole and free. That is the only mercy we left him.']
+                ],
+                bossIntro: 'The ice shudders. Something huge uncurls in the blue dark and its chest glows like a window on a winter night. Valdrix lifts his head.', epilogue: 'The frost-heart shatters into snow and the great shape breathes out for the last time. For a moment the whole cavern is warm.'
+            }
+        };
+        const DG_LK = 'oasis.dglore.v1'; let DG_READ = {}; try { DG_READ = JSON.parse(localStorage.getItem(DG_LK) || '{}') || {}; } catch (e) { DG_READ = {}; }
+        const dgReadN = (f) => (DG_READ[f] || []).length;
+        function dgEstimate(rooms) {   // how long a clean run takes, from the room plan: the number of monsters is what we tune
+            let mobs = 0, mids = 0; for (const r of rooms) { if (r.pk) { if (r.pk.mid) mids++; else mobs += r.pk.n; } }
+            const sec = rooms.length * DG_PLAN.walk + mobs * DG_PLAN.kill + mids * DG_PLAN.mid + DG_PLAN.boss; return { mobs, mids, min: sec / 60 };
+        }
+        function dgTune(rooms) {   // grow or trim the pulls until the run lands in the 15 to 20 minute band
+            let e = dgEstimate(rooms), g = 40; const packs = rooms.filter((r) => r.pk && !r.pk.mid);
+            while (e.min < DG_PLAN.lo && g-- > 0) { const p = packs.filter((r) => r.pk.n < 6).sort((a, b) => a.pk.n - b.pk.n)[0]; if (!p) break; p.pk.n++; e = dgEstimate(rooms); }
+            while (e.min > DG_PLAN.hi && g-- > 0) { const p = packs.filter((r) => r.pk.n > 3).sort((a, b) => b.pk.n - a.pk.n)[0]; if (!p) break; p.pk.n--; e = dgEstimate(rooms); }
+            return e;
+        }
+        function dgLorePlan(rooms, names) {   // lieutenants in rooms 9 and 18, tablets in the quiet rooms between
+            const L = DG_LORE[DG.floor], TH = DG.th; if (!L) return;
+            [9, 18].forEach((i, k) => { const r = rooms[i]; if (!r || r.boss) return; r.pillars = 3; r.pk = { n: 1, mid: true, k, lv: TH.packs[0].lv + 1 + k * 2, cls: [L.mids[k].cls], elite: true }; r.r = Math.max(r.r, 19); names[i] = L.midRooms[k]; });
+            [3, 6, 12, 15, 21].forEach((i, k) => { const r = rooms[i]; if (r && !r.pk && !r.boss) r.lore = k; });
+            DG.est = dgTune(rooms);
+        }
+        function dgLoreCss() {
+            if (document.getElementById('dg-lore-css')) return; const s = document.createElement('style'); s.id = 'dg-lore-css';
+            s.textContent = '#dg-lore{position:fixed;inset:0;z-index:63;background:rgba(4,6,12,.72);display:flex;align-items:center;justify-content:center;font:15px/1.55 Georgia,serif;color:#efe6d0}#dg-lore .p{width:min(520px,92vw);background:linear-gradient(#2a2430,#17141c);border:2px solid var(--c,#b070ff);border-radius:6px;padding:20px 24px;box-shadow:0 0 40px var(--c,#b070ff)}#dg-lore h3{margin:0 0 2px;font-size:20px;letter-spacing:.06em;color:var(--c,#b070ff)}#dg-lore small{display:block;opacity:.6;margin-bottom:10px;font:11px system-ui}#dg-lore p{margin:0 0 14px}#dg-lore button{font:700 13px system-ui;background:var(--c,#b070ff);color:#10101a;border:0;border-radius:6px;padding:7px 16px;cursor:pointer}'; document.head.appendChild(s);
+        }
+        function dgLoreOpen(k) {
+            const L = DG_LORE[DG.floor]; if (!L || !L.tablets[k]) return; dgLoreCss(); const t = L.tablets[k], first = !(DG_READ[DG.floor] || []).includes(k);
+            if (first) { (DG_READ[DG.floor] = DG_READ[DG.floor] || []).push(k); try { localStorage.setItem(DG_LK, JSON.stringify(DG_READ)); } catch (e) { /* storage */ } }
+            let el = document.getElementById('dg-lore'); if (el) el.remove(); el = document.createElement('div'); el.id = 'dg-lore'; el.style.setProperty('--c', '#' + (DG.th.cry || 0xb070ff).toString(16).padStart(6, '0')); ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((ev) => el.addEventListener(ev, (e) => e.stopPropagation()));
+            el.innerHTML = '<div class="p"><small>' + DG.th.name + ' · LORE ' + dgReadN(DG.floor) + ' / ' + L.tablets.length + (first ? ' · NEW' : '') + '</small><h3>' + t[0] + '</h3><p>' + t[1] + '</p><button type="button">Close</button></div>';
+            el.addEventListener('pointerdown', (e) => { if (e.target === el || e.target.tagName === 'BUTTON') el.remove(); }); document.body.appendChild(el);
+            const onk = (e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === 'e' || e.key === 'E') { el.remove(); removeEventListener('keydown', onk, true); } }; addEventListener('keydown', onk, true);
+            try { nsbBell(0, 523, 0.05, 1.2); nsbBell(0.1, 784, 0.05, 1.2); nsbBell(0.2, 1046, 0.04, 1.4); } catch (e) { /* audio */ }
+            if (first) { try { sysChat('◆ Lore found: ' + t[0] + ' (' + dgReadN(DG.floor) + '/' + L.tablets.length + ')'); } catch (e) { /* chat */ } if (dgReadN(DG.floor) === L.tablets.length) setTimeout(() => { try { sysChat('◆ You have read every tablet of ' + DG.th.name + '. Whatever waits at the end, you know its name.'); } catch (e) { /* chat */ } }, 800); }
+            const mark = DG.tabs && DG.tabs[k]; if (mark) mark.glow.material.opacity = 0.25;
+        }
+        function dgLoreBuild() {   // the stone tablets (one per quiet room) and their prompts
+            NI.list = NI.list.filter((o) => !/^dg-lore-/.test(o.id)); DG.tabs = []; const L = DG_LORE[DG.floor]; if (!L || !DG.group) return;
+            DG.rooms.forEach((r) => {
+                if (r.lore == null) return; const k = r.lore; let x = r.x + Math.cos(k * 2.1) * r.r * 0.45, z = r.z + Math.sin(k * 2.1) * r.r * 0.45; for (let q = 0; q < 24 && !dgWalk(x, z); q++) { x = r.x + Math.cos(k * 2.1 + q) * r.r * 0.3; z = r.z + Math.sin(k * 2.1 + q) * r.r * 0.3; }
+                const G = new THREE.Group(); G.position.set(x, 0, z); const col = DG.th.cry || 0xb070ff;
+                const st = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3.0, 0.4), new THREE.MeshLambertMaterial({ color: 0x4a4650 })); st.position.y = 1.5; G.add(st);
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.4, 14, 1, false, 0, Math.PI), new THREE.MeshLambertMaterial({ color: 0x4a4650 })); cap.rotation.z = Math.PI / 2; cap.rotation.y = Math.PI / 2; cap.position.y = 3.0; cap.rotation.set(0, 0, 0); cap.rotation.x = Math.PI / 2; G.add(cap);
+                const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.0), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: (DG_READ[DG.floor] || []).includes(k) ? 0.25 : 0.75, blending: THREE.AdditiveBlending, depthWrite: false })); glow.position.set(0, 1.7, 0.22); glow.userData.noOutline = true; G.add(glow);
+                const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 9, 6, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false })); beam.position.y = 4.5; beam.userData.noOutline = true; G.add(beam);
+                G.rotation.y = Math.atan2(r.x - x, r.z - z); DG.group.add(G); DG.tabs[k] = { glow, G };
+                NI.list.push({ id: 'dg-lore-' + k, x, z, r: 3.2, label: 'Read the tablet', act: () => dgLoreOpen(k), cond: () => DG.on && !NF.dead && !AR.busy });
+            });
+        }
+        function dgLoreRoom(i, r) {   // what the dungeon says when you step into a lieutenant's or the boss's hall
+            const L = DG_LORE[DG.floor]; if (!L) return;
+            if (r.pk && r.pk.mid) { const m = L.mids[r.pk.k]; setTimeout(() => { try { nuShowBanner(m.name, 'LIEUTENANT · ' + L.title); sysChat('◆ ' + m.name + ': "' + m.line + '"'); } catch (e) { /* ui */ } }, 700); }
+            else if (r.boss) { const n = dgReadN(DG.floor), all = n === L.tablets.length; setTimeout(() => { try { sysChat('◆ ' + L.bossIntro); if (all) sysChat('◆ You know what he was. (Lore ' + n + '/' + L.tablets.length + ')'); else sysChat('◆ You have read ' + n + ' of ' + L.tablets.length + ' tablets. Some of this story is still missing.'); } catch (e) { /* chat */ } }, 900); }
+        }
+        function dgLoreEnd() {   // after the boss: the last page of the story, and a reward for those who read all of it
+            const L = DG_LORE[DG.floor]; if (!L) return; setTimeout(() => { try { sysChat('◆ ' + L.epilogue); } catch (e) { /* chat */ } }, 1500);
+            if (dgReadN(DG.floor) === L.tablets.length && !DG_READ['done' + DG.floor]) { DG_READ['done' + DG.floor] = 1; try { localStorage.setItem(DG_LK, JSON.stringify(DG_READ)); } catch (e) { /* storage */ } setTimeout(() => { try { lvAward('win', 120 + DG.floor * 60, 25); nuShowBanner('ARCHIVIST', 'ALL LORE OF ' + DG.th.name + ' READ · BONUS XP'); } catch (e) { /* reward */ } }, 3000); }
+        }
         function dgPopulate() {
             dgClear(); try { dgChestsBuild(); } catch (e) { console.warn('dungeon chests', e); } const R = DG.rooms, PR = seeded(7001 + DG.floor * 31), dgMk = (o) => { const MR = Math.random; Math.random = PR; try { return nuMobBuild(o); } finally { Math.random = MR; } };   // the same seed for everyone: every player in the dungeon builds the same monsters in the same places for (const r of R) r.seen = false;
             R.forEach((r, i) => {
                 if (r.pk) {
                     const pk = { mobs: [], dg: true, k: i, dead: false }; DG.packs.push(pk);
                     for (let n = 0; n < r.pk.n; n++) { const a = PR() * 6.283, d = 2 + PR() * (r.r * 0.5), x = r.x + Math.cos(a) * d, z = r.z + Math.sin(a) * d, cls = r.pk.cls[n % r.pk.cls.length]; if (!dgWalk(x, z)) { n--; continue; }
-                        const m = dgMk({ reg: DG.th.reg, cls, lv: r.pk.lv + (n === 0 ? 1 : 0), x, z, ax: r.x, az: r.z, group: pk, sid: 'D' + DG.floor + '.' + i + '.' + n, unit: 'D' + DG.floor + '.' + i, orin: 600, orkeep: 700, hm: r.pk.elite ? 1.7 : 1.15, am: r.pk.elite ? 1.15 : 1, size: r.pk.elite ? 1.35 : 1 }); m.orkeep = 300; pk.mobs.push(m); NU.extra.push(m); }
+                        const m = dgMk({ ...(r.pk.mid ? { boss: true, name: DG_LORE[DG.floor].mids[r.pk.k].name } : {}), reg: DG.th.reg, cls, lv: r.pk.lv + (n === 0 ? 1 : 0), x, z, ax: r.x, az: r.z, group: pk, sid: 'D' + DG.floor + '.' + i + '.' + n, unit: 'D' + DG.floor + '.' + i, orin: 600, orkeep: 700, hm: r.pk.mid ? 0.75 : r.pk.elite ? 1.7 : 1.15, am: r.pk.mid ? 0.95 : r.pk.elite ? 1.15 : 1, size: r.pk.mid ? 1.5 : r.pk.elite ? 1.35 : 1 }); m.orkeep = 300; pk.mobs.push(m); NU.extra.push(m); }
                     // the barrier sealing the way on
                     const nx2 = r.mx - r.x, nz2 = r.mz - r.z, l = Math.hypot(nx2, nz2) || 1, ux = nx2 / l, uz = nz2 / l, bx = r.x + ux * (r.r + 8), bz = r.z + uz * (r.r + 8), cells = [];
                     for (let t = -7; t <= 7; t += C0) for (let u = -1.2; u <= 1.2; u += C0) { const x = bx + ux * u - uz * t, z = bz + uz * u + ux * t, k = dgIdx(x, z); if (k >= 0 && DG.mask[k] === 1) { cells.push(k); DG.mask[k] = 0; } }
@@ -19246,6 +19621,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                     const m = dgMk({ reg: DG.th.reg, cls: DG.th.boss.cls, boss: true, lv: DG.th.boss.lv, x, z, ax: r.x, az: r.z, group: pk, sid: 'D' + DG.floor + '.' + i + '.b', unit: 'D' + DG.floor + '.' + i, orin: 600, orkeep: 700, hm: DG.floor === 1 ? 1.9 : 1.4, am: DG.floor === 1 ? 1.28 : 1.1 }); m.dgBoss = true; m.orkeep = 300; pk.mobs.push(m); NU.extra.push(m); DG.boss = m;
                 }
             });
+            try { dgLoreBuild(); const e = DG.est || dgEstimate(R); sysChat('◆ ' + dgNm() + ': about ' + Math.round(e.min) + ' minutes. ' + e.mobs + ' monsters in ' + R.filter((q) => q.pk && !q.pk.mid).length + ' pulls, ' + e.mids + ' lieutenants, 1 boss' + (DG_LORE[DG.floor] ? ', 5 lore tablets (' + dgReadN(DG.floor) + ' read)' : '') + '.'); } catch (er) { console.warn('dungeon lore', er); }
         }
         function dgChestsBuild() {
             for (const e of DG.chests || []) { try { e.c.group.removeFromParent(); } catch (er) { /* gone */ } } DG.chests = []; if (!DG.group) return; chestCss();
@@ -19257,7 +19633,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             for (const e of DG.chests || []) { try { e.c.group.removeFromParent(); } catch (er) { /* gone */ } } DG.chests = [];
             for (const m of NU.extra.slice()) if (m.group && m.group.dg) { nuDisposeMob(m); NU.extra.splice(NU.extra.indexOf(m), 1); }
             for (const b of DG.barriers) { for (const k of b.cells) DG.mask[k] = 1; b.mesh.removeFromParent(); b.mesh.geometry.dispose(); b.mesh.material.dispose(); }
-            DG.barriers = []; DG.packs = []; DG.boss = null; if (DG.exit) { DG.exit.mesh.removeFromParent(); NI.list = NI.list.filter((o) => o.id !== 'dg-exit'); DG.exit = null; }
+            DG.barriers = []; DG.packs = []; DG.boss = null; if (DG.exit) { DG.exit.mesh.removeFromParent(); NI.list = NI.list.filter((o) => o.id !== 'dg-exit'); DG.exit = null; } NI.list = NI.list.filter((o) => !/^dg-lore-/.test(o.id)); for (const t of DG.tabs || []) { try { t && t.G.removeFromParent(); } catch (e) { /* gone */ } } DG.tabs = [];
         }
         function dgSeal(r) {   // the way back closes once you step into the boss hall
             const prev = DG.rooms[DG.rooms.length - 2], ux = r.x - prev.mx, uz = r.z - prev.mz, l = Math.hypot(ux, uz) || 1, dx = ux / l, dz = uz / l, bx = r.x - dx * (r.r + 2), bz = r.z - dz * (r.r + 2), cells = [];
@@ -19273,7 +19649,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             if (DG.chests && DG.chests.length) { const pp0 = localActor.group.position; for (const e of DG.chests.slice()) { try { e.c.update(Math.min(dt, 0.1)); e.c.beam.visible = e.c.state === 'closed' && Math.hypot(e.pt.x - pp0.x, e.pt.z - pp0.z) < 60; } catch (er) { /* ignore */ } } }
             { const near = !!nuChestNear(); if (near !== NU.hintOn) { NU.hintOn = near; chestCss(); if (CH.hint) CH.hint.classList.toggle('on', near); } }
             // chambers announce themselves; the boss hall seals behind you
-            for (let i = 0; i < DG.rooms.length; i++) { const r = DG.rooms[i]; if (r.seen) continue; const pp = nfPos(); if (Math.hypot(pp.x - r.x, pp.z - r.z) < r.r - 3) { r.seen = true; if (i > 0) nuShowBanner(DG.th.names[i], i === DG.rooms.length - 1 ? DG.th.boss.title : DG.th.name); if (r.boss && DG.boss && !DG.boss.dead) dgSeal(r); } }
+            for (let i = 0; i < DG.rooms.length; i++) { const r = DG.rooms[i]; if (r.seen) continue; const pp = nfPos(); if (Math.hypot(pp.x - r.x, pp.z - r.z) < r.r - 3) { r.seen = true; if (i > 0) nuShowBanner(DG.th.names[i], i === DG.rooms.length - 1 ? DG.th.boss.title : DG.th.name); try { dgLoreRoom(i, r); } catch (e) { /* lore */ } if (r.boss && DG.boss && !DG.boss.dead) dgSeal(r); } }
             if (DG.crys) { const q = 0.82 + 0.18 * Math.sin(t * 1.7); for (const c of DG.crys) c.material.opacity = q; }
             for (const b of DG.barriers) {
                 if (!b.open) { b.mesh.material.opacity = 0.3 + 0.1 * Math.sin(t * 3 + b.x); if (b.pk.mobs.every((m) => m.dead)) { b.open = true; for (const k of b.cells) DG.mask[k] = 1; b.t = 0; nuShowBanner('THE WAY OPENS', 'THE BARRIER FADES'); try { sysChat('The barrier fades.'); } catch (e) { /* chat */ } } }
@@ -19322,7 +19698,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             return arGo({ mode: r.mode || 'forest', key: r.key, at: r });
         }
         function dgBossDown() {
-            NF.fl = Math.max(NF.fl | 0, DG.floor); try { nfSave(); } catch (e) { /* storage */ } nuShowBanner('FLOOR ' + DG.floor + ' CLEARED', DG.th.boss.title + ' IS DEFEATED');
+            NF.fl = Math.max(NF.fl | 0, DG.floor); try { nfSave(); } catch (e) { /* storage */ } nuShowBanner('FLOOR ' + DG.floor + ' CLEARED', DG.th.boss.title + ' IS DEFEATED'); try { HBD.dungeon(DG.floor); } catch (e) { /* daily */ } try { dgLoreEnd(); } catch (e) { /* lore */ }
             const b = DG.rooms[DG.rooms.length - 1], x = b.x + 12, z = b.z, G = new THREE.Group(); G.position.set(x, 0, z);
             const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.14, 8, 40), new THREE.MeshBasicMaterial({ color: 0x7fe6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.2; G.add(ring);
             const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 14, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0x7fe6ff, transparent: true, opacity: 0.22, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); beam.position.y = 7; G.add(beam);
@@ -20852,7 +21228,7 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
             try { renderer.domElement.addEventListener('webglcontextlost', () => add('WebGL context lost: the graphics driver dropped the page')); } catch (e) { /* no renderer yet */ }
             setInterval(() => { try { let el = document.getElementById('nu-diag'); if (activeMap !== 'nuu' || !buf.length || closed) { if (el) el.style.display = 'none'; return; } const t = buf.join('\n\n'); if (!el) { el = document.createElement('pre'); el.id = 'nu-diag'; el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:min(92vw,640px);max-height:45vh;overflow:auto;margin:0;padding:8px 10px;border-radius:8px;background:rgba(60,0,0,.92);color:#ffd8d8;font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word;cursor:pointer'; el.title = 'tap to close'; el.addEventListener('pointerdown', (e) => { e.stopPropagation(); closed = true; el.style.display = 'none'; }); document.body.appendChild(el); } el.style.display = 'block'; if (t !== shown) { shown = t; el.textContent = 'ADVENTIA DIAGNOSTIC (send me this):\n' + t; } } catch (e) { /* diag */ } }, 1500);
         })();
-        window.__nuu = { zdbg: () => ({ znH, znBlk, pgRooms, nuWhere, nfApplyClass, nuSpawnExtra, nfTarget, nfMobs, AB, abRun, abPin, abBookOpen, abAuto, abSkill, abKey, nfUse, NF, NF_SK, nfMobDie, FIN, camera, dgWalk, localActor, NU, ZN, SMF, znFateFor, znChestSpawn, nuFateTick, nuChestNear, NI, nfPos }), tpl: () => ({ tnPlate, tnPlateSpot, znBlk, TN, ZN }), ar: () => ({ arPick, ARW, AR_EL, arShoot, arTick, arRelease, nfAdv, nfGunOn, NG }), bow: (p, pot) => nfBowAuto(p, pot, false, 1), hacts: () => HERO_ACTS, cmp: () => ({ nfCmpCast, nfCmpStep, nfCmpK, nfCmpKit, CMP_CLASSES }), spl: () => ({ SPV, MG_SP, MG, nfEnemySpell, nfTelStart, nfTelTick, nfStAdd, mgResolve, nfSpellFxAt, nfFoes, nfMobAI }), mb: () => ({ nuMobBuild, SIM, nfAffCalc, nfAffOf, nfDealDmg }), stn: () => ({ nfStanceCycle, nfStMp, NF_STANCE, nfThr, nfStOn, nfUse, nfApplyClass, sk: () => NF_SK }), aui: () => AUI, fin: () => ({ FIN, finStart, finTick }), sdx: () => ({ NI, sdxOrder, sdxStatus, sdxDeliver, sdxSpare, SDX, sdxOpen }), art: () => ({ ARW, NG, nfApplyClass, nfPickClass, nfUse, nfXp, nfAdv, arSelect, arCycle, arTick, nfTop, nfClsLv, nfSave }), mage: (s, ph) => nfMageAnim(s, ph), bake: (b, k) => bakeFbxClip(b, k), SLOTS, castFx: nfCastFx, get controls() { return controls; }, get cam() { return camera; }, nfFx, nfSpellFx, MG_SP, mgResolve, nuChestSpawn, NU, nuH, SMF, HB, nfMobDie, nfDealDmg, nfMobs, SPV, MC, nfPos, camera, yt: { ytTitle, ytFetch, srcLabel, ytIsIdLabel, YT_T }, st: { add: nfStAdd, has: nfStHas, cure: nfStCure, tick: nfStTick, eat: foodEat }, gf: { tick: gfTick, apply: gfApply, at: gfAt, enc: gfEnc, dec: gfDec, GF, clean: (r) => dcCleanItem(r), wire: (it) => dcWireItem(it), place: (it) => dcPlace(it), starter: gfStarter }, gd: { THREE, tick: gdTick, make: dcMake, mods: GD_MOD, open: gdOpen, starter: gdStarter, vis: gdVis, DC }, cb: { open: cbOpen }, sim: { SIM, simTick, simMods, simAdd, simSoap, shower: tnShower, ui: simUi }, lb: { start: (t) => { const s = NF_SK.find((q) => q.lb); NF.lb = 100; nfUse(NF_SK.indexOf(s)); return !!NF.lbSeq; }, seq: () => NF.lbSeq && { i: NF.lbSeq.i, n: NF.lbSeq.n }, sep: nuSeparate, NF, spawn: nuSpawnExtra, mobs: nfMobs, tick: nfLbTick }, spell: { fx: (id, k) => { const s = NF_SK.find((q) => q.id === id) || { id, r: 5 }; const p = nfPos(); const t = new THREE.Vector3(p.x + 6, p.y, p.z); t.userData = { h: 2 }; return nfSpellFx(s, p, t); }, castfx: (id) => { const s = NF_SK.find((q) => q.id === id); NF.cast = { s, dur: s.cast, t0: performance.now() / 1000 }; nfCastFx(s); return NF.fx.length; }, anim: (id, ph) => { const s = NF_SK.find((q) => q.id === id); nfMageAnim(s, ph); return localActor.emote; }, NF }, lk: { cycle: nfCycle, spawn: nuSpawnExtra, NF }, gun: { use: (i) => nfUse(i), mod: nfGunMod, tick: nfMachTick, ui: nfGunUi, sk: () => NF_SK, NF, set: (id) => nfApplyClass(id, true) }, food: { sv: () => ({ DC, SV, svTick, ap: activeMap }), ckAct, ckKey, ckSim, ckDraw, ckTheme, FOOD, ckOpen, ckCook, ckMatch, foodEat, foodItems, gaPick, ck: CK, nodes: () => NU.gaN, add: foodAdd, fd: () => NF.fd }, dgT: () => { try { nfDangerTick(); return "ok"; } catch (e) { return String(e.stack).slice(0, 300); } }, telBuild: nfTelBuild, glow: (s) => { nfBladeGlow(s); return NF.glow; }, tick: nfGlowTick, die: () => nfDie(), revive: nfRevive, ret: nfReturn, itemUse: nfItemUse, fallNear: nfFallNear, fallBuild: nfFallBuild, down: nfDownAct, thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle, plate: tnPlate }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
+        window.__nuu = { zdbg: () => ({ HBD, HB, DG, DG_LORE, DG_READ, dgEnter, dgLoreOpen, dgEstimate, dgWalk, NI, ENS, ENS_FXV, ENS_SFX, ENS_COL, ensDraw, ensPick, BL, BL_SPELLS, blLearn, blRefresh, NF_CLASSES, znH, znBlk, pgRooms, nuWhere, nfApplyClass, nuSpawnExtra, nfTarget, nfMobs, AB, abRun, abPin, abBookOpen, abAuto, abSkill, abKey, nfUse, NF, NF_SK, nfMobDie, FIN, camera, dgWalk, localActor, NU, ZN, SMF, znFateFor, znChestSpawn, nuFateTick, nuChestNear, NI, nfPos }), tpl: () => ({ tnPlate, tnPlateSpot, znBlk, TN, ZN }), ar: () => ({ arPick, ARW, AR_EL, arShoot, arTick, arRelease, nfAdv, nfGunOn, NG }), bow: (p, pot) => nfBowAuto(p, pot, false, 1), hacts: () => HERO_ACTS, cmp: () => ({ nfCmpCast, nfCmpStep, nfCmpK, nfCmpKit, CMP_CLASSES }), spl: () => ({ SPV, MG_SP, MG, nfEnemySpell, nfTelStart, nfTelTick, nfStAdd, mgResolve, nfSpellFxAt, nfFoes, nfMobAI }), mb: () => ({ nuMobBuild, SIM, nfAffCalc, nfAffOf, nfDealDmg }), stn: () => ({ nfStanceCycle, nfStMp, NF_STANCE, nfThr, nfStOn, nfUse, nfApplyClass, sk: () => NF_SK }), aui: () => AUI, fin: () => ({ FIN, finStart, finTick }), sdx: () => ({ NI, sdxOrder, sdxStatus, sdxDeliver, sdxSpare, SDX, sdxOpen }), art: () => ({ ARW, NG, nfApplyClass, nfPickClass, nfUse, nfXp, nfAdv, arSelect, arCycle, arTick, nfTop, nfClsLv, nfSave }), mage: (s, ph) => nfMageAnim(s, ph), bake: (b, k) => bakeFbxClip(b, k), SLOTS, castFx: nfCastFx, get controls() { return controls; }, get cam() { return camera; }, nfFx, nfSpellFx, MG_SP, mgResolve, nuChestSpawn, NU, nuH, SMF, HB, nfMobDie, nfDealDmg, nfMobs, SPV, MC, nfPos, camera, yt: { ytTitle, ytFetch, srcLabel, ytIsIdLabel, YT_T }, st: { add: nfStAdd, has: nfStHas, cure: nfStCure, tick: nfStTick, eat: foodEat }, gf: { tick: gfTick, apply: gfApply, at: gfAt, enc: gfEnc, dec: gfDec, GF, clean: (r) => dcCleanItem(r), wire: (it) => dcWireItem(it), place: (it) => dcPlace(it), starter: gfStarter }, gd: { THREE, tick: gdTick, make: dcMake, mods: GD_MOD, open: gdOpen, starter: gdStarter, vis: gdVis, DC }, cb: { open: cbOpen }, sim: { SIM, simTick, simMods, simAdd, simSoap, shower: tnShower, ui: simUi }, lb: { start: (t) => { const s = NF_SK.find((q) => q.lb); NF.lb = 100; nfUse(NF_SK.indexOf(s)); return !!NF.lbSeq; }, seq: () => NF.lbSeq && { i: NF.lbSeq.i, n: NF.lbSeq.n }, sep: nuSeparate, NF, spawn: nuSpawnExtra, mobs: nfMobs, tick: nfLbTick }, spell: { fx: (id, k) => { const s = NF_SK.find((q) => q.id === id) || { id, r: 5 }; const p = nfPos(); const t = new THREE.Vector3(p.x + 6, p.y, p.z); t.userData = { h: 2 }; return nfSpellFx(s, p, t); }, castfx: (id) => { const s = NF_SK.find((q) => q.id === id); NF.cast = { s, dur: s.cast, t0: performance.now() / 1000 }; nfCastFx(s); return NF.fx.length; }, anim: (id, ph) => { const s = NF_SK.find((q) => q.id === id); nfMageAnim(s, ph); return localActor.emote; }, NF }, lk: { cycle: nfCycle, spawn: nuSpawnExtra, NF }, gun: { use: (i) => nfUse(i), mod: nfGunMod, tick: nfMachTick, ui: nfGunUi, sk: () => NF_SK, NF, set: (id) => nfApplyClass(id, true) }, food: { sv: () => ({ DC, SV, svTick, ap: activeMap }), ckAct, ckKey, ckSim, ckDraw, ckTheme, FOOD, ckOpen, ckCook, ckMatch, foodEat, foodItems, gaPick, ck: CK, nodes: () => NU.gaN, add: foodAdd, fd: () => NF.fd }, dgT: () => { try { nfDangerTick(); return "ok"; } catch (e) { return String(e.stack).slice(0, 300); } }, telBuild: nfTelBuild, glow: (s) => { nfBladeGlow(s); return NF.glow; }, tick: nfGlowTick, die: () => nfDie(), revive: nfRevive, ret: nfReturn, itemUse: nfItemUse, fallNear: nfFallNear, fallBuild: nfFallBuild, down: nfDownAct, thr: () => ({ add: nfThreatAdd, fix: nfThreatFix, pick: nsPickTarget, msg: nsOnMsg, mobs: nfMobs, heal: nfHealAlly, allies: nfAllies, resolve: nfResolve, skills: () => NF_SK, role: nfMyRole, NSx: NS, PARTYx: PARTY, me, peers }), portalTest: (c, t, d) => { const g = dgPortalMesh('◆ TEST', c, t), q = nfPos(); g.position.set(q.x + (d || 14), q.y, q.z); g.rotation.y = -Math.PI / 2; NU.group.add(g); return true; }, tent: () => ({ TN, build: (sl) => { TN.slot = sl; return tentBuild(); }, blk: (x, z) => nuBlk(x, z), slotOf: tnSlot, shop: tnShopOpen, occ: tnOccupied, pitch: tnPitch, enter: () => TN.mine && tnEnter(TN.mine), leave: tnLeave, sleep: tnSleep, tv: tnTvCycle, plate: tnPlate }), PARTY: () => PARTY, me: () => me, NS, hour: (h) => { CYT.override = h; }, kbAnim: (id) => kbAnim({ id }), kbDress: (on) => kbDress(localActor, on), emotes: () => Object.keys(ANIM_EMOTES).filter((k) => /^kb_/.test(k)), A: () => localActor, tel: (kind, dx, dz, ang) => { const p = nfPos(), x = p.x + (dx || 0), z = p.z + (dz || 0), T = { kind, t: 0, wind: 60, m: { x, z, dead: false, reset: false, aggro: true, wind: true }, ang: ang || 0, dmg: 1, x, z, r: 9, ri: 3, a: 1.15, len: 18, w: 3.4 }; nfTelBuild(T.m, T); return true; }, zn: () => ZN, arGo: (d) => arGo(d), mmErr: () => String(window.__mmErr || ''), place: (x, z, ry) => { nuPlace({ x, y: nuH(x, z), z, ry: ry || 0 }); NU.last.set(x, 1, z); }, kill: () => { for (const m of nfMobs()) nfMobDie(m); }, dg: () => DG, dgEnter: (f) => dgEnter(f), dgLeave: (n) => dgLeave(n), ni: () => NI, ng: () => NG, NFx: NF, gunShoot: () => nfGunShoot(), setCls: (c) => nfApplyClass(c, true), shatter: (n) => { const m = n || (nfMobs()[0] || {}).node; if (m) { nuShatter(m, 1); return true; } return false; }, fx: NU_WF, setWx: (w, sn, dir) => { NU.windForce = w; NU.snowForce = sn; NU.windDir = dir || null; }, roll: () => nfRoll(), NF, nuKeepCam, NS, go: (x, z) => nuPlace({ x, y: nuH(x, z), z, ry: 0 }), dmg: (sid, mul) => { const m = NS.mobs.get(sid); return m ? nfDealDmg(m, mul || 1, false) : -1; }, ns: () => ({ pl: NS.pl, own: [...NS.own], gs: NS.gs }), cls: (id) => nfApplyClass(id), classes: () => Object.keys(NF_CLASSES), moves: () => NF_SK.map((m) => m.n), hunts: () => NU.hunts, huntGo: (id) => { const h = NU.hunts.find((q) => q.id === id); if (!h) return false; nuPlace({ x: h.x + 10, y: nuH(h.x + 10, h.z), z: h.z, ry: -Math.PI / 2 }); return true; }, NU, h: nuH, NF, nfUse, nfCycle, fates: () => NU.fates, tele: nfTeleGo, mob: (t, lv, b) => nuSpawnExtra(t || 'slime', lv || 1, b), crystal: (i) => { const c = NU.cry[i | 0]; if (!c) return false; nuPlace({ x: c.x + 2.4, y: nuH(c.x + 2.4, c.z), z: c.z, ry: Math.PI }); return true; }, fateGo: (i) => { const f = NU.fates[i | 0]; if (!f) return false; nuPlace({ x: f.x + 6, y: nuH(f.x + 6, f.z), z: f.z, ry: -Math.PI / 2 }); return true; }, stand: (i) => { const s = NU.spw[i | 0]; if (!s) return false; nuPlace({ x: s.x - 6, y: nuH(s.x - 6, s.z), z: s.z, ry: Math.PI / 2 }); return true; }, chest: () => { const e = NU.chests[0]; if (!e) return false; nuPlace({ x: e.pt.x, y: nuH(e.pt.x, e.pt.z), z: e.pt.z + 1.2, ry: Math.PI }); return true; }, open: nuChestOpenNear, wx: nuBattleWx };
         MAP_DEFS.school = { id: 'school', ground: schGround, clamp: schClamp, collide: schCollide, spawn: schSpawn, update: schUpdate };
         window.__sch = { SCH, ground: schGround, am: () => activeMap, m: MAP_DEFS.school };   // (handy for tests)
         /* ------------------------------------------------------------------ *
@@ -21512,6 +21888,15 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
             cscorp: { n: 'Crystal Scorpion', tier: 'A', lv: 15, hp: 760, atk: 76, spd: 0.21, weak: 'bolt', moves: ['Sting', 'Pincer', 'Quake'], gil: 115, m: 'scorpion', v: { sh: ['#3a4a7a', '#8aa0e0', '#0c1228'], crystal: 0x7ad0ff, sting: 0xaaf0ff, eye: 0x7affff }, sz: 1.2, bio: ['cavern'] },
             vine: { n: 'Strangler Vine', tier: 'A', lv: 16, hp: 820, atk: 72, spd: 0.19, weak: 'fire', moves: ['Chomp', 'Vine Lash', 'Spore Burst'], gil: 125, m: 'plant', v: { big: 1, lf: ['#1f5a2a', '#48a040', '#0c2c14'], pet: ['#5a1a6a', '#b04ad0', '#1a0828'], in: 0xd04aff }, bio: ['jungle', 'garden', 'forest'] },
             igolem: { n: 'Ice Golem', tier: 'A', lv: 18, hp: 950, atk: 82, spd: 0.17, weak: 'fire', moves: ['Smash', 'Chill', 'Smash', 'Fortify'], gil: 130, m: 'golem', v: { rock: ['#7a98b8', '#d8f0ff', '#2a3a5a', '#7ad8ff'], glow: 0x7ad8ff, moss: ['#9ab8d8', '#e8f8ff', '#4a6a8a', null] }, sz: 0.65, bio: ['pines'] },
+            /* Carvernia's own monsters: frost and stone palettes of the Nuu models, each with its own ground-attack kit (kit) and spell list (sp) */
+            rimeharpy: { n: 'Rime Harpy', tier: 'B', lv: 20, hp: 300, atk: 46, spd: 0.29, weak: 'fire', moves: ['Peck', 'Chill', 'Gale'], gil: 48, m: 'harpy', v: { fe: ['#e8f4ff', '#ffffff'], eye: 0x7ad0ff }, cv: 1, kit: ['line', 'circle'], sp: ['blizzard', 'aero'], spc: 0.35, bio: ['pines'] },
+            rimebomb: { n: 'Rime Bomb', tier: 'B', lv: 20, hp: 330, atk: 50, spd: 0.2, weak: 'fire', moves: ['Chill', 'Bash'], gil: 46, m: 'bomb', v: { skin: ['#d8f0ff', '#5ab0ff'], em: 0x1a4a8a }, cv: 1, kit: ['self', 'self', 'circle'], bio: ['pines'] },
+            cairnwraith: { n: 'Cairn Wraith', tier: 'B', lv: 21, hp: 320, atk: 48, spd: 0.23, weak: 'fire', moves: ['Drain', 'Chill', 'Wail'], gil: 56, m: 'wraith', v: { cl: ['#6a6a78', '#b0b0c0', '#1a1a22'], gl: 0xb0d0ff }, cv: 1, kit: ['donut', 'circle'], sp: ['stop', 'slow', 'silence'], spc: 0.4, bio: ['hall', 'pines'] },
+            rimeguard: { n: 'Rime Guard', tier: 'B', lv: 22, hp: 480, atk: 58, spd: 0.16, weak: 'bolt', moves: ['Slash', 'Shield Bash', 'Fortify', 'Chill'], gil: 62, m: 'guard', v: { steel: ['#6a88a8', '#d8f0ff', '#1a2a3a', null], trim: ['#2a5a8a', '#7ad0ff', '#0a1a2a'], cloth: ['#1a2a3a', '#3a5a7a', '#050a10'], visor: 0x7affff, blade: 0x9fe6ff }, cv: 1, kit: ['cone', 'self'], bio: ['hall', 'pines'] },
+            frostbloom: { n: 'Frostbloom', tier: 'B', lv: 20, hp: 360, atk: 44, spd: 0.17, weak: 'fire', moves: ['Chomp', 'Vine Lash', 'Chill'], gil: 44, m: 'plant', v: { lf: ['#3a6a8a', '#a8e0f0', '#10303c'], pet: ['#9ad8ff', '#ffffff', '#3a6a9a'], in: 0x7affff }, cv: 1, kit: ['circle', 'self'], sp: ['blizzard', 'cure', 'regen'], spc: 0.45, bio: ['pines'] },
+            glacierserp: { n: 'Glacier Serpent', tier: 'A', lv: 24, hp: 640, atk: 66, spd: 0.22, weak: 'fire', moves: ['Fang', 'Smash', 'Chill'], gil: 90, m: 'serpent', v: { heads: 1, sc: ['#4a7aa0', '#bfe6ff', '#102838'], bel: ['#e8f8ff', '#ffffff', '#8aaac0'], hood: ['#2a5a8a', '#ffffff', '#0a1a2a'], eye: 0x7affff }, cv: 1, kit: ['line', 'cone'], sp: ['blizzara', 'slow'], spc: 0.3, bio: ['pines'] },
+            cairnsentry: { n: 'Cairn Sentry', tier: 'B', lv: 22, hp: 340, atk: 52, spd: 0.24, weak: 'bolt', moves: ['Ram', 'Static', 'Chill'], gil: 52, m: 'drone', v: { m: ['#6a6a78', '#c8c8d8', '#1a1a22', '#7ad8ff'], eye: 0x7ad8ff }, cv: 1, kit: ['line', 'line', 'circle'], sp: ['thunder', 'blizzard'], spc: 0.4, bio: ['hall', 'pines'] },
+            frostacolyte: { n: 'Frost Acolyte', tier: 'A', lv: 26, hp: 560, atk: 70, spd: 0.21, weak: 'fire', moves: ['Chill', 'Static', 'Drain', 'Fortify'], gil: 105, m: 'lich', v: { cl: ['#2a4a7a', '#9ad0ff', '#08142a'], gl: 0x7ad8ff }, cv: 1, kit: ['circle', 'donut'], sp: ['blizzara', 'blizzaga', 'sleep', 'stop', 'protect'], spc: 0.6, bio: ['hall', 'cavern'] },
             vwraith: { n: 'Void Wraith', tier: 'S', lv: 20, hp: 820, atk: 96, spd: 0.26, weak: 'bolt', moves: ['Drain', 'Chill', 'Wail', 'Drain'], gil: 180, m: 'wraith', v: { cl: ['#120820', '#3a1a5a', '#000000'], gl: 0xff5aff, crown: 1 }, sz: 1.1, bio: ['cavern', 'hall'] },
             lich: { n: 'Lich Mage', tier: 'S', lv: 22, hp: 900, atk: 100, spd: 0.24, weak: 'fire', moves: ['Fireball', 'Chill', 'Static', 'Drain'], gil: 200, m: 'lich', bio: ['hall', 'cavern'] },
             colossus: { n: 'Iron Colossus', tier: 'S', lv: 24, hp: 1600, atk: 115, spd: 0.15, weak: 'bolt', moves: ['Smash', 'Quake', 'Core Beam', 'Fortify'], gil: 260, m: 'titan', sz: 0.6, bio: ['mako', 'plaza'] },
@@ -21874,84 +22259,8 @@ function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retr
             const a = localActor; if (!a || !a.hugWith) return; const pa = hugActor(a.hugWith); if (!pa) return; const lp = a.group.position, pp = pa.group.position; let dx = lp.x - pp.x, dz = lp.z - pp.z; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
             lp.set(pp.x + dx * HUGC.d, lp.y, pp.z + dz * HUGC.d); a.group.rotation.y = Math.atan2(-dx, -dz); try { playerVelocity.set(0, 0, 0); } catch (e) { /* velocity */ } try { if (a.prev) a.prev.copy(lp); a.speed = 0; } catch (e) { /* tracking */ }      // the shift is not a walk: without this a fast slider drag reads as walking off and ends the hug
         }
-        /* ---------- Blitzball class: Wakka's stance, five emotes and a ball that follows the hand ---------- */
-        const _blq1 = new THREE.Quaternion(), _blq2 = new THREE.Quaternion(), _blr = new THREE.Vector3(), _bld = new THREE.Vector3(), _blw = new THREE.Vector3();
-        function blzLeg(U, L, side, d1, d2, e, f) {   // upper leg and shin by direction (x outward, y up, z forward), like hugArm does for arms
-            if (!U || !L) return;
-            _blr.set(0, -1, 0); _bld.set(d1[0] * side * f, d1[1], d1[2] * f).normalize(); const Qu = _blq1.setFromUnitVectors(_blr, _bld).clone();
-            _bld.set(d2[0] * side * f, d2[1], d2[2] * f).normalize(); const Qd = _blq2.setFromUnitVectors(_blr, _bld), Q2 = Qu.clone().invert().multiply(Qd);
-            U.quaternion.slerp(Qu, e); L.quaternion.slerp(Q2, e);
-        }
-        const BLZ_IDLE = {   // arms and legs as directions, torso and head as small turns. The character's LEFT arm points, the RIGHT hand holds the ball on the hip.
-            hip: 0.17, lean: 0.16, twist: 0.16, chest: 0.1, headY: 0.42, headX: -0.05, headZ: -0.08,
-            lu: [0.9, 0.25, 0.3], lf: [0.15, 1, 0.4], ru: [0.25, -0.9, 0.25], rf: [0.15, 0.0, 1],
-            ll: [0.42, -0.72, 0.5], lk: [0.18, -0.95, -0.3], rl: [0.78, -0.62, 0.12], rk: [0.5, -0.86, -0.1]
-        };
-        function blzPose(a, f) {
-            const b = a.bones, k = a.emote, H = a.vrm && a.vrm.humanoid; if (!b) return;
-            const et = nowS() - a.emoteStart, dur = a.emoteDur || EMOTES[k].dur, e = Math.max(0, Math.min(1, et / 0.3, (dur - et) / 0.3));
-            const S = Object.assign({}, BLZ_IDLE, BLZ.pose); S.lu = S.lu.slice(); S.lf = S.lf.slice(); S.ru = S.ru.slice(); S.rf = S.rf.slice(); S.ll = S.ll.slice(); S.lk = S.lk.slice(); S.rl = S.rl.slice(); S.rk = S.rk.slice();
-            let hop = 0; a.blzBallOff = null;
-            if (k === 'wk_point') {
-                const j = Math.sin(et * 6.5) * 0.5 + 0.5;
-                S.lu = [0.45, 0.35 + 0.1 * j, 0.85]; S.lf = [0.1, 0.35 + 0.15 * j, 1]; S.lean += 0.08; S.headX = 0.02 + 0.06 * j; S.twist = 0.05;
-            } else if (k === 'wk_toss') {
-                const ph = (et % 1.5) / 1.5, fl = Math.sin(ph * Math.PI);
-                S.ru = [0.25, -0.4 + 0.95 * fl, 0.4]; S.rf = [0.1, 0.25 + 0.75 * fl, 0.75 - 0.3 * fl]; S.lu = [0.6, -0.35, 0.2]; S.lf = [0.1, -0.1, 0.9]; S.twist = -0.08; S.headY = 0; S.headX = -0.1 * fl; S.lean = 0.06 + 0.06 * fl;
-                a.blzBallOff = [0, 4 * ph * (1 - ph) * 0.95 * (ph > 0.12 && ph < 0.88 ? 1 : 0), 0, 0];
-            } else if (k === 'wk_spin') {
-                S.ru = [0.3, 0.95, 0.15]; S.rf = [0.1, 1, 0.05]; S.lu = [0.6, -0.5, 0.1]; S.lf = [-0.4, -0.1, 0.7]; S.twist = 0.25 * Math.sin(et * 2); S.headY = 0.1; S.headX = -0.18; S.lean = 0.02;
-                a.blzBallOff = [0, 0.03, 0, et * 10];
-            } else if (k === 'wk_cheer') {
-                hop = Math.abs(Math.sin(et * 7)) * 0.1; S.hip = 0.04; S.lu = [0.5, 0.9, 0.1]; S.lf = [0.3, 1, 0]; S.ru = [0.5, 0.9, 0.1]; S.rf = [0.3, 1, 0]; S.ll = [0.3, -0.95, 0.05]; S.lk = [0.2, -0.98, -0.05]; S.rl = [0.3, -0.95, 0.05]; S.rk = [0.2, -0.98, -0.05];
-                S.lean = -0.1; S.twist = 0; S.headY = 0; S.headX = -0.22; S.headZ = 0;
-                a.blzBallOff = [0, 0.05, 0, et * 3];
-            }
-            hugArm(b, 1, S.lu, S.lf, e, f); hugArm(b, -1, S.ru, S.rf, e, f);
-            if (H) { blzLeg(H.getNormalizedBoneNode('leftUpperLeg'), H.getNormalizedBoneNode('leftLowerLeg'), 1, S.ll, S.lk, e, f); blzLeg(H.getNormalizedBoneNode('rightUpperLeg'), H.getNormalizedBoneNode('rightLowerLeg'), -1, S.rl, S.rk, e, f); }
-            if (b.hips) b.hips.position.y += (hop - S.hip) * e;
-            if (b.spine) { b.spine.rotation.x += S.lean * e * f; b.spine.rotation.y += S.twist * e; }
-            if (b.chest) { b.chest.rotation.x += S.lean * 0.4 * e * f; b.chest.rotation.y += S.chest * e; }
-            if (b.head) { b.head.rotation.y += S.headY * e; b.head.rotation.x += S.headX * e * f; b.head.rotation.z += S.headZ * e * f; }
-            p0blz(a, e);
-        }
-        function p0blz(a, e) { a.blzE = e; }
-        function blzIdle(a, speed, air) {   // the class stance: whenever a Blitzball player stands still with nothing else going on
-            if (a !== localActor && a.blitz && a.blitzSeen && Date.now() - a.blitzSeen > 15000) a.blitz = 0;
-            if (a.blitz && !a.emote && speed < 0.4 && !air && !(a.boardLift > 0.02) && a.sitSmooth < 0.05) { a.emote = 'wk_idle'; a.emoteStart = nowS(); a.emoteClip = null; a.emoteDur = 0; a.emoteRate = 1; }
-        }
-        let _blzTex = null;
-        function blzBallMesh() {
-            if (!_blzTex) { const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#2d63d6'; g.fillRect(0, 0, 256, 128); g.fillStyle = '#7fb0ff'; g.fillRect(0, 0, 256, 10); g.fillRect(0, 118, 256, 10);
-                g.strokeStyle = '#f2f6ff'; g.lineWidth = 9; for (let i = 0; i < 4; i++) { g.beginPath(); for (let x = 0; x <= 256; x += 8) { const y = 64 + Math.sin((x / 256 + i * 0.25) * Math.PI * 4) * 34; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
-                g.strokeStyle = '#1b3f9a'; g.lineWidth = 3; for (let i = 0; i < 4; i++) { g.beginPath(); for (let x = 0; x <= 256; x += 8) { const y = 64 + Math.sin((x / 256 + i * 0.25) * Math.PI * 4) * 34 + 7; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
-                _blzTex = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) _blzTex.colorSpace = THREE.SRGBColorSpace; }
-            const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshLambertMaterial({ map: _blzTex })); m.frustumCulled = false; return m;
-        }
-        const _blw2 = new THREE.Vector3();
-        function blzThrow(a, p, dur, col) { a.blzThrow = { t0: nowS(), dur: dur || 0.46, p: new THREE.Vector3(p[0], p[1], p[2]), col: col || 0 }; }   // the ball flies from the hand to p and back
-        function blzBall(a, dt) {   // the ball rides above the right hand, in world space so it does not depend on the rig's bone axes
-            const want = a.kind === 'vrm' && a.vrm && (a.blitz || a.blzThrow || (a.emote && a.emote.startsWith('wk_')));
-            if (!want) { if (a.blzMesh) a.blzMesh.visible = false; return; }
-            const H = a.vrm.humanoid, hand = H.getNormalizedBoneNode('rightHand') || H.getNormalizedBoneNode('rightLowerArm'); if (!hand) return;
-            if (!a.blzMesh) { a.blzMesh = blzBallMesh(); a.group.add(a.blzMesh); }
-            const M = a.blzMesh, hs = (a.height || 1.6) / 1.6 * (a.tweak ? a.tweak.scale : 1), r = 0.115 * hs, off = a.blzBallOff || [0, 0, 0, 0];
-            hand.getWorldPosition(_blw); const yaw = a.group.rotation.y;
-            _blw.x += Math.sin(yaw) * 0.035 * hs; _blw.z += Math.cos(yaw) * 0.035 * hs; _blw.y += (r * 0.8 + off[1] * hs);
-            a.group.worldToLocal(_blw); M.position.copy(_blw); M.scale.setScalar(r / (a.group.scale ? a.group.scale.x : 1)); M.visible = true;
-            M.rotation.y = off[3] || 0; if (!off[3]) M.rotation.y = (a.blzSpinBase = (a.blzSpinBase || 0) + dt * 0.4);
-            if (a.blzThrow) { const T = a.blzThrow, k = (nowS() - T.t0) / T.dur; if (k >= 1) { a.blzThrow = null; if (M.material.emissive) M.material.emissive.setHex(0); } else { const sp = 1 - Math.abs(2 * k - 1); hand.getWorldPosition(_blw2); _blw2.lerp(T.p, sp); _blw2.y += Math.sin(Math.PI * sp) * 0.3 + r * 0.8; a.group.worldToLocal(_blw2); M.position.copy(_blw2); M.rotation.y += k * 24; if (M.material.emissive) M.material.emissive.setHex(T.col); } }
-        }
-        function blzSet(on, quiet) {   // the class is a stance, not a weapon: it clears any weapon class and has no combat of its own
-            BLZ.on = !!on; try { localStorage.setItem('oasisBlitzCls', on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
-            if (on && CLS.wpn !== 'fists') { BLZ.keep = true; try { clsEquip('fists', true); } finally { BLZ.keep = false; } }
-            if (localActor) { localActor.blitz = on ? 1 : 0; if (!on && localActor.emote && localActor.emote.startsWith('wk_')) localActor.emote = null; }
-            try { net && net.send({ t: 'blz', on: on ? 1 : 0 }); } catch (e) { /* offline */ }
-            if (!quiet) sysChat(on ? 'Blitzball class: you take Wakka\'s stance when you stand still. Blitzball emotes are in the Emotes menu.' : 'Blitzball class off.');
-            clsRender();
-        }
-        setInterval(() => { try { if (localActor && localActor.blitz !== (BLZ.on ? 1 : 0)) localActor.blitz = BLZ.on ? 1 : 0; if (BLZ.on && net) net.send({ t: 'blz', on: 1 }); } catch (e) { /* ignore */ } }, 4000);
-        window.__blz = BLZ; BLZ.set = blzSet;
+        /* the Blitzball class was removed; these stubs keep old call sites harmless */
+        const blzIdle = () => {}, blzBall = () => {}, blzPose = () => {}, blzThrow = () => {}, blzSet = () => {};
         function hugPose(a, p, e, f) {
             const b = a.bones, P = HUG_POSE[hugRole(a)]; if (!b) return; const C = a === localActor ? HUGC : (a.hugc || HUGC_DEF);
             const U = [P.u[0] + C.wrap, P.u[1] + C.up, P.u[2] + C.fwd], Lw = [P.l[0] + C.wrap * 0.5, P.l[1] + C.up * 0.7, P.l[2] + C.fwd * 0.8];
@@ -26633,7 +26942,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
         const PAD = { dead: 0.2, prev: [], uiHold: 0, uiDir: '', hudHold: 0, hudDir: '', active: false, name: '', set: 0, auto: false, autoDir: [0, -1], lockId: null, trigUp: -9, bar: null, drawKey: '' };
         try { PAD.set = Math.max(0, parseInt(localStorage.getItem('oasisPadSet') || '0', 10) || 0); } catch (e) { /* storage unavailable */ }
         const padIds = ['tg-menu', 'sprite-modal', 'zip3d-modal', 'char-modal', 'anim-modal', 'lobby', 'space-info-modal', 'screen-panel', 'equip-modal', 'gm-ask', 'gm-modal', 'start-menu', 'pcard', 'inv-modal', 'trade-modal', 'party-panel', 'wx-panel', 'lt-panel', 'mg-menu', 'hb-menu'];
-        const padOverlay = () => { const ck = $('ck'); if (ck && ck.classList.contains('on')) return ck; try { const u = NF.ui; if (u && u.tele && u.tele.classList.contains('on')) return u.tele; const gd = $('gd'); if (gd && gd.classList.contains('on')) return gd; const hr = $('hb-res'); if (hr && hr.style.display === 'flex') return hr; const fgE = $('fg'); if (fgE && fgE.classList.contains('on')) return fgE; const csE = $('csn'); if (csE && csE.classList.contains('on')) return csE; } catch (e) { /* menus */ } for (const id of padIds) { const el = $(id); if (el && !el.classList.contains('hidden')) return el; } return null; };
+        const padOverlay = () => { const ck = $('ck'); if (ck && ck.classList.contains('on')) return ck; try { const u = NF.ui; if (u && u.tele && u.tele.classList.contains('on')) return u.tele; const gd = $('gd'); if (gd && gd.classList.contains('on')) return gd; const hr = $('hb-res'); if (hr && hr.style.display === 'flex') return hr; const fgE = $('fg'); if (fgE && fgE.classList.contains('on')) return fgE; const csE = $('csn'); if (csE && csE.classList.contains('on')) return csE; const dlE = $('dg-lore'); if (dlE) return dlE; } catch (e) { /* menus */ } for (const id of padIds) { const el = $(id); if (el && !el.classList.contains('hidden')) return el; } return null; };
         function padRead() {
             let list = [];
             try { list = Array.from(navigator.getGamepads ? navigator.getGamepads() : []).filter((g) => g && g.connected); } catch (e) { return null; }
@@ -28385,7 +28694,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             $('pc-trade').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) tradeBegin(p.id); });
             $('pc-ship').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) asRide(p.id); });
             $('pc-duel').addEventListener('click', () => { const p = pcardPeer; closeProfile(); if (p) duelBegin(p.id); });
-            $('wpn-fists').addEventListener('click', () => { if (BLZ.on) blzSet(false, true); clsEquip('fists'); }); $('wpn-blitz').addEventListener('click', () => blzSet(!BLZ.on)); $('wpn-sword').addEventListener('click', () => clsEquip('sword')); $('wpn-pistol').addEventListener('click', () => clsEquip('pistol')); $('wpn-fighter').addEventListener('click', () => clsEquip('fighter')); $('wpn-keyblade').addEventListener('click', () => nfPickClass('keyblade')); $('bm-default').addEventListener('click', () => baseMoveSet('default')); $('bm-starter').addEventListener('click', () => baseMoveSet('starter')); clsRender();
+            $('wpn-fists').addEventListener('click', () => { if (BLZ.on) blzSet(false, true); clsEquip('fists'); }); $('wpn-sword').addEventListener('click', () => clsEquip('sword')); $('wpn-pistol').addEventListener('click', () => clsEquip('pistol')); $('wpn-fighter').addEventListener('click', () => clsEquip('fighter')); $('wpn-keyblade').addEventListener('click', () => nfPickClass('keyblade')); $('bm-default').addEventListener('click', () => baseMoveSet('default')); $('bm-starter').addEventListener('click', () => baseMoveSet('starter')); clsRender();
             window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && tradeUiOpen()) { e.preventDefault(); e.stopPropagation(); tradeEnd('Trade cancelled.', true); } else if (e.key === 'Escape' && invOpen()) { e.preventDefault(); e.stopPropagation(); closeInv(); } }, true);
             window.__inv = { invDiscard, INVDIR, invDirSave, INV, TR, invAddFile, invList, tradeBegin, tradeAdd, tradeLockToggle, tradeConfirm, openInv, tradeOpenUi, renderTrade };
         }
@@ -33347,7 +33656,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
             if (!document.querySelector('#gw-grid button')) gnBuildUi();
             for (const [id, w] of [['wpn-fists', 'fists'], ['wpn-sword', 'sword'], ['wpn-pistol', 'pistol'], ['wpn-fighter', 'fighter']]) { const b = document.getElementById(id); if (b) { const on = CLS.wpn === w && !(w === 'fists' && BLZ.on); b.classList.toggle('bg-psGlow', on); b.classList.toggle('bg-white/10', !on); } }
             { const kb = NF.cls === 'keyblade' && CLS.wpn === 'sword', b = document.getElementById('wpn-keyblade'), sw = document.getElementById('wpn-sword'); if (b) { b.classList.toggle('bg-psGlow', kb); b.classList.toggle('bg-white/10', !kb); } if (kb && sw) { sw.classList.remove('bg-psGlow'); sw.classList.add('bg-white/10'); } }
-            { const b = document.getElementById('wpn-blitz'); if (b) { b.classList.toggle('bg-psGlow', BLZ.on); b.classList.toggle('bg-white/10', !BLZ.on); } }
+            
             const sg = document.getElementById('sk-grid');
             if (sg) { if (!sg.children.length) for (const i of [...Array(swdList().swords.length + 1).keys(), 98, 99]) { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = i; b.textContent = swdName(i); b.className = 'py-1.5 px-1 rounded-lg text-[11px] font-semibold transition bg-white/10'; b.addEventListener('click', () => clsSkin(i)); sg.appendChild(b); }
                 for (const b of sg.children) { const on = +b.dataset.k === CLS.skin; b.classList.toggle('bg-psGlow', on); b.classList.toggle('bg-white/10', !on); } }
@@ -33361,7 +33670,6 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
                 (cur ? `<div class="text-gray-400">HP ${clsHpMax()} · damage +${Math.round((clsDmgMul() - 1) * 100)}%</div>` : '') +
                 `<div class="text-gray-500" style="margin-top:4px">Class XP comes from duels (and Construct kills for Hero). Sword / Fighter: J. Gunner: J / K or hold the 🔫 button to fire, R reload, 1-7 or Q (🔁 on touch, D-pad on a pad) to switch weapon.</div>`;
             if (!BLZ.on && NF.cls === 'keyblade' && CLS.wpn === 'sword') card.innerHTML = `<b style="color:#7dffb4">Class: Keyblade Chosen</b> · Adventia Lv ${NF.lv}<div class="text-gray-400" style="margin-top:4px">Fast keyblade combos, magic and Drive forms. The keyblade is summoned when a fight starts. Change class with the class slot on the cross hotbar in Adventia.</div>`;
-            if (BLZ.on) card.innerHTML = '<b style="color:#7dffb4">Class: Blitzball</b> · ball in hand<div class="text-gray-400" style="margin-top:4px">Stand still and you take Wakka\'s stance. Blitzball emotes (Ya!, Point, Ball Toss, Ball Spin) are in the Emotes menu. This class has no combat or XP yet.</div>';
         }
         function clsSkin(i) {
             if (i === 99 && !(CSW && CSW.s.hero.tpl)) { try { cswWire(); CSW.sel = 'hero'; cswSync(); document.getElementById('csw-file').click(); } catch (e) { /* ui */ } return; }
