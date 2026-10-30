@@ -18594,6 +18594,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         })();
         function nuMapChanged(id) {
             if (id === 'nuu') {
+                try { arReset(); } catch (e) { console.warn('area reset', e); }      // you come in at the Forest: any Carvernia / dungeon state left from last time is cleared first
                 NS.wanted = false; NS.wantT = 0; NS.own.clear(); nuCss(); ensureNuu(); nuHookInput(); try { const ai = PAD_SETS.findIndex((x) => x.name === 'Adventia'); if (ai >= 0 && PAD.set !== ai) { NU.padPrev = PAD.set; PAD.set = ai; PAD.drawKey = ''; } } catch (e) { /* pad not ready */ } NU.lbl.classList.add('on'); nuMusic(true); nuShowBanner('LINK START', 'ADVENTIA · FOREST OF NUU'); NU.grace = 4;
                 const u = nfUi(); u.root.classList.add('on'); try { BTL.load(); } catch (e) { /* later */ }
             } else {
@@ -19700,6 +19701,15 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             if (DG.group) DG.group.visible = mode === 'dungeon'; if (ZN.group) ZN.group.visible = mode === 'zone';
             DG.on = mode === 'dungeon'; ZN.on = mode === 'zone'; if (DG.on) { try { setTimeout(() => { if (DG.on) sysChat('◆ Natural recovery does not work in a dungeon. Bring potions, cures and a healer.'); }, 1800); } catch (e) { /* chat */ } }
             if (mode === 'forest') { const S = NU.skyCtx; if (S) { S.sun.intensity = 2.4; S.hemi.intensity = 0.9 * Math.PI; S.amb.intensity = 0.22 * Math.PI; S.sun.color.set(0xfff0d6); } }
+        }
+        /* Leaving Adventia while you stood in Carvernia or a dungeon left the Forest switched off (AR.hid) and the zone flags on, so the next visit
+           (portal gun, lobby, login) dropped you into a forest with no terrain. Entering Adventia now always starts from the Forest. */
+        function arReset() {
+            if (!NU.ready || !NU.group) return;
+            if (!(AR.hid || ZN.on || DG.on || AR.busy || DG.busy)) return;
+            if (DG.on) { try { dgClear(); } catch (e) { /* nothing to clear */ } }
+            arSet('forest'); AR.busy = DG.busy = false; ZN.key = null;
+            try { nuFade(false, 150); } catch (e) { /* no fade layer yet */ }
         }
         async function arGo(dest, door) {
             if (AR.busy || DG.busy || ZN.busy || !NU.ready) return; AR.busy = DG.busy = true;
@@ -30291,12 +30301,12 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                     const rp = pgMakePortal(new THREE.Vector3(m.x, m.y, m.z), m.yaw, pgHue(rr.id), rr); rp.remote = id; PG.rps.set(id, rp); sysParty(cur.name + ' opened a portal to ' + rr.name + '. Walk in to follow.'); break;
                 }
                 case 'pchat': { const t = String(m.text || '').slice(0, 140); if (t && cur) addChat('[Party] ' + cur.name, t, '#c4b5fd'); break; }
-                case 'pfol': {      // the leader stepped through a portal: the party follows (a few seconds to stay behind)
-                    if (id !== partyLeaderId() || id === me.id) break; const rm = partyRmOk(m.rm); if (!rm) break;
+                case 'pfol': {      // a party member stepped through a portal: the rest of the party follows (a few seconds to stay behind)
+                    if (!cur || id === me.id) break; const rm = partyRmOk(m.rm); if (!rm) break;
                     if (room && ((rm.p && room.isPrivate && room.code === rm.c) || (!rm.p && !room.isPrivate && room.id === rm.c))) break;
                     if (typeof pgGameMap === 'function' && pgGameMap(typeof activeMap !== 'undefined' ? activeMap : '')) { sysParty('Your leader went through a portal, but you are in a game. Use Go to in the party window to follow.'); break; }
                     let stay = false; partyToast({ title: `Following ${cur ? cur.name : 'the leader'}...`, sub: rm.l || 'through the portal', ms: 3200, btns: [{ label: 'Stay here', fn: () => { stay = true; } }] });
-                    setTimeout(() => { if (!stay && PARTY.net) partyGoTo(rm); }, 3000); break;
+                    setTimeout(() => { if (stay || !PARTY.net) return; if (room && ((rm.p && room.isPrivate && room.code === rm.c) || (!rm.p && !room.isPrivate && room.id === rm.c))) return; if (PG.trav || JOIN.hold) return; partyGoTo(rm); }, 3000); break;
                 }
                 case 'psum': {
                     const rm = partyRmOk(m.rm); if (!rm || !cur) break;
@@ -38202,7 +38212,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         }
         function pgGo(r) {
             const pr = PG.portal; PG.portal = null; if (pr) { pr.closing = 0.001; PG.dying = pr; }
-            try { if (typeof partyIsLeader === 'function' && partyIsLeader() && PARTY.net && PARTY.members.size > 1) { const rm = r.studio ? { c: myLoftCode(), l: 'Harbor Studio', m: 'loft', p: 1 } : { c: r.d.id, l: `${r.d.name} • ${r.d.tag}`.slice(0, 40), m: r.d.map || 'mall', p: 0 }; PARTY.net.send({ t: 'pfol', rm }); sysParty('The party is following you through the portal.'); } } catch (e) { /* party is optional */ }
+            try { if (PARTY.code && PARTY.net && PARTY.members.size > 1) { const rm = r.studio ? { c: myLoftCode(), l: 'Harbor Studio', m: 'loft', p: 1 } : { c: r.d.id, l: `${r.d.name} • ${r.d.tag}`.slice(0, 40), m: r.d.map || 'mall', p: 0 }; PARTY.net.send({ t: 'pfol', rm }); sysParty('The party is following you through the portal.'); } } catch (e) { /* party is optional */ }
             pgTitle(r, () => { if (r.studio) acHome(); else districtGo(r.d); });
         }
         function pgFrame(dt) {
