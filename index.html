@@ -19264,7 +19264,9 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
            over-the-shoulder 50 / 100 mm, profile, long lens, forward, low and high dramatic angles, wide high / low. Type your own replies, pick emotes that fire as you speak. ================= */
         const CSN = { on: false, cast: [], sid: '', host: false, q: [], cur: null, shot: null, side: 1, state: '', sv: null, hid: [], el: null, t: 0, nLine: 0, lastShot: {}, seq: 0, emo: null, thinking: 0, invites: new Map(), starter: null, hist: [], opts: [], npcs: [], endT: 0, intro: 0, mm: [], tgtCache: null, spr: [] };
         const csnLock = () => CSN.on;
-        const CSN_TYPE_CPS = 38, CSN_READ_CPS = 20, CSN_READ_MAX = 12;      // typing speed, comfortable reading speed (characters per second, typing time included), longest a single line stays up
+        const CSN_TYPE_CPS = 38;      // how fast a line types out
+        const CSN_PACE = [['Quick', 22, 0.8, 12], ['Normal', 14, 1.4, 20], ['Relaxed', 10, 2.2, 30]];      // name, reading speed (characters per second, typing time included), base seconds, longest a single line stays up
+        let csnPaceI = 1; try { const v = parseInt(localStorage.getItem('csnPace'), 10); if (v >= 0 && v < 3) csnPaceI = v; } catch (e) { /* storage blocked */ }
         const csnFov = (mm) => 2 * Math.atan(12 / mm) * 180 / Math.PI;      // vertical field of view of a lens on a 24 mm tall frame
         const csnEase = (x) => x * x * (3 - 2 * x);
         const csnA = (p) => p.actor || null;
@@ -19302,6 +19304,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function csnShotOk(o) {      // never put the lens inside a wall, a tree, the ground or the ceiling
             const g = csnGround(o.px, o.pz); const gm = (activeMap === 'nuu' && !ZN.on && !DG.on) ? 0.8 : 0.18; if (g != null && o.py < g + gm) o.py = g + gm;
             try { if (ZN.on && znRoom(ZN.key)) o.py = Math.min(o.py, 2.7); if (DG.on) o.py = Math.min(o.py, dgCeilY(o.px, o.pz) - 0.8); } catch (e) { /* none */ }
+            try { if (activeMap === 'loft') { const { X0, X1, Z0, Z1, H } = LOFT, g = localActor.group.position; if (g.x >= X0 && g.x <= X1 && g.z >= Z0 && g.z <= Z1 && g.y <= H) { o.px = Math.min(X1 - 0.3, Math.max(X0 + 0.3, o.px)); o.pz = Math.min(Z1 - 0.3, Math.max(Z0 + 0.3, o.pz)); o.py = Math.min(H - 0.3, Math.max(0.3, o.py)); } } } catch (e) { /* not in the studio */ }
             return csnFree(o.px, o.pz);
         }
         function csnShotFor(kind, S, L, side) {      // try the wanted shot, then the same lens from the other side, then tighter, so the camera is never buried
@@ -19340,7 +19343,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function csnNextLine() {
             const ln = CSN.q.shift(); if (!ln) return false; const spk = csnById(ln.who); if (!spk) return true; const adr = csnAdr(spk, ln.to); ln.spk = spk; ln.adr = adr; ln.n = 0; ln.hold = 0; ln.plan = csnPlan(ln, spk, adr); ln.pi = 0; ln.pt = 0;
             const len = ln.text.length, same = !!(CSN.cur && CSN.cur.spk === spk && CSN.cur.adr === adr && CSN.shot && CSN.shot.k0 !== 'react' && !CSN.cur.idle && CSN.nLine > 0);
-            ln.read = Math.min(CSN_READ_MAX, Math.max(2.4, 0.8 + len / CSN_READ_CPS)); ln.need = Math.max(0.8, ln.read - len / CSN_TYPE_CPS); ln.dur = ln.read; ln.cont = same; ln.fin = false; ln.gone = false; ln.gap = 0;
+            const pc = CSN_PACE[csnPaceI]; ln.read = Math.min(pc[3], Math.max(3, pc[2] + len / pc[1])); ln.need = Math.max(0.8, ln.read - len / CSN_TYPE_CPS); ln.dur = ln.read; ln.cont = same; ln.fin = false; ln.gone = false; ln.gap = 0;
             if (same) ln.plan = [[CSN.shot.k0, 1]];      // the same person carrying on: keep the shot, no cut
             CSN.cur = ln; CSN.opts = ln.opts || []; CSN.busyT = 0; csnShow(ln); if (!same) csnStartShot(ln.plan[0][0], spk, adr, ln.dur * ln.plan[0][1]); csnUiSync();
             if (ln.emo) csnEmote(spk, ln.emo); else if (CSN.nLine === 0 && spk.kind !== 'me' && /\b(hello|hi|hey|greetings|welcome)\b/i.test(ln.text) && EMOTES.greet) csnEmote(spk, 'greet');
@@ -19413,7 +19416,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         /* ---- start / end ---- */
         function csnStart(cast, opt) {
             opt = opt || {}; if (CSN.on || !localActor || cast.length < 1) return false; try { if (fpOn) fpToggle(); } catch (e) { /* camera */ }
-            const mp = { id: me.id, name: me.name, kind: 'me', actor: localActor, color: '#38bdf8' }; CSN.cast = [mp].concat(cast); CSN.sid = opt.sid || (me.id + ':' + Date.now().toString(36)); CSN.host = opt.host !== false; CSN.q = []; CSN.cur = null; CSN.shot = null; CSN.nLine = 0; CSN.lastShot = {}; CSN.seq = 0; CSN.hist = []; CSN.opts = []; CSN.thinking = 0; CSN.askBusy = 0; CSN.busyT = 0; CSN.cam = null; CSN.typing = false; CSN.t = 0; CSN.endT = 0; CSN.side = Math.random() < 0.5 ? 1 : -1; CSN.emo = null;
+            const mp = { id: me.id, name: me.name, kind: 'me', actor: localActor, color: '#38bdf8' }; CSN.cast = [mp].concat(cast); CSN.sid = opt.sid || (me.id + ':' + Date.now().toString(36)); CSN.host = opt.host !== false; CSN.q = []; CSN.cur = null; CSN.shot = null; CSN.nLine = 0; CSN.lastShot = {}; CSN.seq = 0; CSN.hist = []; CSN.opts = []; CSN.thinking = 0; CSN.askBusy = 0; CSN.busyT = 0; CSN.cam = null; CSN.lift = 0; CSN.typing = false; CSN.t = 0; CSN.endT = 0; CSN.side = Math.random() < 0.5 ? 1 : -1; CSN.emo = null;
             CSN.sv = { p: camera.position.clone(), t: controls.target.clone(), f: camera.fov, en: controls.enabled, up: camera.up.clone() }; controls.enabled = false;
             csnUi(); CSN.on = true; CSN.state = 'intro'; CSN.intro = 2.3; document.body.classList.add('csn-on'); CSN.hid = [];
             for (const el of document.body.children) { if (el === CSN.el || el.tagName === 'CANVAS' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.id === 'csn') continue; const cs = getComputedStyle(el); if (cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden') { CSN.hid.push([el, el.style.visibility]); el.style.visibility = 'hidden'; } }
@@ -19429,12 +19432,12 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             for (const o of CSN.spr) o.visible = true; CSN.spr = []; const s = CSN.sv; if (s) { camera.position.copy(s.p); controls.target.copy(s.t); camera.fov = s.f; camera.up.copy(s.up); camera.updateProjectionMatrix(); controls.enabled = s.en; camera.lookAt(s.t); } try { NU.camLast = null; } catch (e) { /* none */ } CSN.sv = null; CSN.cam = null; CSN.askBusy = 0; CSN.invited = null; CSN.cast = []; CSN.q = []; CSN.cur = null; CSN.shot = null;
         }
         function csnTick(dt) {
-            if (!CSN.on) return; dt = Math.min(dt, 0.1); CSN.t += dt; csnFace(dt);
+            if (!CSN.on) { csnPromptTick(); return; } if (_csnPill && _csnPill.style.display !== 'none') _csnPill.style.display = 'none'; dt = Math.min(dt, 0.1); CSN.t += dt; csnFace(dt);
             if (CSN.state === 'intro') { CSN.intro -= dt; if (CSN.intro <= 0) csnSet('run'); }
             const ln = CSN.cur;
             if (CSN.state === 'run') {
                 if (ln && !ln.fin) {      // the line types out, then stays up long enough to read
-                    ln.n = Math.min(ln.text.length, ln.n + dt * CSN_TYPE_CPS); ln.pt += dt; if (ln.n >= ln.text.length) ln.hold += dt;
+                    ln.n = Math.min(ln.text.length, ln.n + dt * CSN_TYPE_CPS); ln.pt += dt; if (ln.n >= ln.text.length && !CSN.hover) ln.hold += dt;
                     if (ln.n >= ln.text.length && ln.hold >= ln.need) ln.fin = true;
                     let acc = 0; for (let i = 0; i < ln.plan.length; i++) { acc += ln.plan[i][1] * ln.dur; if (ln.pt < acc || i === ln.plan.length - 1) { if (i !== ln.pi) { ln.pi = i; csnStartShot(ln.plan[i][0], ln.spk, ln.adr, Math.max(0.7, ln.plan[i][1] * ln.dur)); } break; } }
                 } else if (ln && ln.fin) {
@@ -19458,7 +19461,10 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                 let C = CSN.cam; if (!C) C = CSN.cam = { p: new THREE.Vector3(), t: new THREE.Vector3(), f: fv };
                 if (s.snap) { C.p.set(px, py, pz); C.t.set(o.tx, o.ty, o.tz); C.f = fv; s.snap = false; }
                 else { const a = 1 - Math.exp(-dt * 7); C.p.x += (px - C.p.x) * a; C.p.y += (py - C.p.y) * a; C.p.z += (pz - C.p.z) * a; C.t.x += (o.tx - C.t.x) * a; C.t.y += (o.ty - C.t.y) * a; C.t.z += (o.tz - C.t.z) * a; C.f += (fv - C.f) * a; }
-                camera.position.copy(C.p); camera.up.set(0, 1, 0); camera.lookAt(C.t); if (o.roll) camera.rotateZ(o.roll * Math.PI / 180);
+                camera.position.copy(C.p); camera.up.set(0, 1, 0);
+                let want = 0; { const ui = CSN.el.querySelector('#csn-ui'); if (ui.classList.contains('v') && !CSN.min) { const rc = CSN.el.getBoundingClientRect(); if (rc.height > 0) { const top = (ui.getBoundingClientRect().top + 34 - rc.top) / rc.height; want = Math.max(0, Math.min(0.32, 0.5 - (0.11 + top) / 2)); } } }      // while the reply panel is up, lift the shot so the speaker sits above it, not behind it
+                CSN.lift = (CSN.lift || 0) + (want - (CSN.lift || 0)) * (1 - Math.exp(-dt * 5)); const dy = CSN.lift * 2 * C.p.distanceTo(C.t) * Math.tan(csnFov(C.f) * Math.PI / 360);
+                camera.lookAt(C.t.x, C.t.y - dy, C.t.z); if (o.roll) camera.rotateZ(o.roll * Math.PI / 180);
                 const fov = csnFov(C.f); if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); } controls.target.copy(C.t);
             }
             for (const p of CSN.cast) { const a = csnA(p); if (!a || !a.group) continue; if (a.label) a.label.visible = false; a.group.traverse((o) => { if (o.isSprite && o.visible && o !== a.typingSprite && !(a.bubbles && a.bubbles.some((b) => b.sprite === o))) { o.visible = false; CSN.spr.push(o); } }); }
@@ -19468,21 +19474,27 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function csnUi() {
             if (CSN.el) return; const st = document.createElement('style');
             st.textContent = '#csn{position:fixed;inset:0;z-index:58;pointer-events:none;display:none;font-family:Nunito,Inter,system-ui,sans-serif;color:#eaf3ff}#csn.on{display:block}#csn .b{position:absolute;left:0;right:0;background:#000;height:0;transition:height .5s cubic-bezier(.2,.8,.2,1)}#csn .b.t{top:0}#csn .b.m{bottom:0}#csn.on .b{height:11vh}'
-                + '#csn-box{position:absolute;max-width:min(470px,46vw);min-width:90px;padding:14px 22px;border-radius:22px;background:var(--f,#fff);color:var(--k,#0f172a);box-shadow:0 6px 22px rgba(0,0,0,.45);opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:auto;cursor:pointer;font:600 20px/1.4 Inter,system-ui,sans-serif;word-break:break-word}#csn-box.v{opacity:1;transform:none}'
+                + '#csn-box{position:absolute;max-width:min(470px,46vw);min-width:90px;padding:14px 22px;border-radius:22px;background:var(--f,#fff);color:var(--k,#0f172a);box-shadow:0 6px 22px rgba(0,0,0,.45);opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:auto;cursor:pointer;font:600 20px/1.4 Inter,system-ui,sans-serif;word-break:break-word}#csn-box.v{opacity:1;transform:none}#csn-box:not(.v){pointer-events:none}#csn-box.hv{box-shadow:0 0 0 3px rgba(255,226,122,.85),0 6px 22px rgba(0,0,0,.45)}'
                 + '#csn-box::after{content:"";position:absolute;bottom:-14px;width:0;height:0;border:12px solid transparent;border-top-color:var(--f,#fff);border-bottom:0}#csn-box.tl::after{left:26px}#csn-box.tr::after{right:26px}#csn-box p{margin:0;font:inherit;color:inherit}#csn-box p a{color:inherit}#csn-box i{display:none}#csn-box .nm{font:800 11px Nunito,sans-serif;letter-spacing:.12em;text-transform:uppercase;opacity:.65;margin-bottom:4px}'
                 + '#csn-ui{position:absolute;left:0;right:0;bottom:0;padding:34px max(3vw,calc(50vw - 310px)) calc(11vh + 10px);background:linear-gradient(to top,#000 0,#000 11vh,rgba(4,8,18,.82) calc(11vh + 10px),rgba(4,8,18,.55) 70%,rgba(4,8,18,0) 100%);display:none;pointer-events:auto}#csn-ui.v{display:block}#csn-opts{display:grid;gap:5px;margin-bottom:6px}#csn-opts button{display:flex;gap:8px;align-items:center;text-align:left;font:700 14px Nunito,sans-serif;color:#eaf3ff;background:linear-gradient(90deg,rgba(14,32,66,.92),rgba(8,16,36,.88));border:1px solid rgba(150,190,255,.45);padding:7px 12px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}#csn-opts button:hover,#csn-opts button:focus{background:linear-gradient(90deg,rgba(40,90,170,.95),rgba(14,30,66,.9));outline:2px solid #ffe27a}#csn-opts em{font:900 12px Nunito;color:#ffd27a;font-style:normal}'
-                + '#csn-row{display:flex;gap:6px}#csn-in{flex:1;min-width:0;font:600 15px Nunito,sans-serif;color:#fff;background:rgba(6,12,28,.9);border:1px solid rgba(150,190,255,.55);padding:8px 10px;outline:none}#csn-in:focus{border-color:#ffe27a}#csn-ui button.s{font:800 13px Nunito;color:#fff;background:#2a6fd0;border:0;padding:0 14px;cursor:pointer}#csn-emo{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}#csn-emo button{font:700 11px Nunito;color:#dbe9ff;background:rgba(20,40,80,.8);border:1px solid rgba(150,190,255,.35);padding:3px 8px;cursor:pointer;border-radius:10px}#csn-emo button.on{background:#d9a21a;color:#111;border-color:#ffe27a}#csn-emo button:focus{outline:2px solid #ffe27a}'
-                + '#csn-hint{position:absolute;right:14px;bottom:calc(11vh - 22px);font:700 11px Nunito;letter-spacing:.08em;color:rgba(230,240,255,.6);pointer-events:none;text-shadow:0 1px 2px #000}body.csn-on #ni-q{display:none!important}';
-            document.head.appendChild(st); const el = document.createElement('div'); el.id = 'csn'; el.innerHTML = '<div class="b t"></div><div class="b m"></div><div id="csn-box"><div class="nm"></div><p></p></div><div id="csn-ui"><div id="csn-opts"></div><div id="csn-row"><input id="csn-in" maxlength="240" placeholder="Type your own reply and press Enter…" autocomplete="off"><button class="s" type="button">Say</button><button class="s" id="csn-end" type="button" style="background:#7a2a2a">Leave</button></div><div id="csn-emo"></div></div><div id="csn-hint">Esc leave · 1-3 choose · Enter type</div>';
+                + '#csn-row{display:flex;gap:6px}#csn-in{flex:1;min-width:0;font:600 15px Nunito,sans-serif;color:#fff;background:rgba(6,12,28,.9);border:1px solid rgba(150,190,255,.55);padding:8px 10px;outline:none}#csn-in:focus{border-color:#ffe27a}#csn-ui button.s{font:800 13px Nunito;color:#fff;background:#2a6fd0;border:0;padding:0 14px;cursor:pointer}#csn-emo{display:none;gap:4px;flex-wrap:wrap;margin-top:6px}#csn-emo.o{display:flex}#csn-emo button{font:700 11px Nunito;color:#dbe9ff;background:rgba(20,40,80,.8);border:1px solid rgba(150,190,255,.35);padding:3px 8px;cursor:pointer;border-radius:10px}#csn-emo button.on{background:#d9a21a;color:#111;border-color:#ffe27a}#csn-emo button:focus{outline:2px solid #ffe27a}'
+                + '#csn-hint{position:absolute;right:14px;bottom:calc(11vh - 22px);font:700 11px Nunito;letter-spacing:.08em;color:rgba(230,240,255,.6);pointer-events:none;text-shadow:0 1px 2px #000}body.csn-on #ni-q{display:none!important}#csn-min{position:absolute;top:6px;right:max(3vw,calc(50vw - 310px));font:800 11px Nunito,sans-serif;letter-spacing:.08em;color:#dbe9ff;background:rgba(10,18,40,.8);border:1px solid rgba(150,190,255,.45);border-radius:10px;padding:3px 10px;cursor:pointer}#csn-ui.min #csn-opts,#csn-ui.min #csn-row,#csn-ui.min #csn-emo{display:none!important}#csn-ui.min{background:none;padding-top:30px}';
+            document.head.appendChild(st); const el = document.createElement('div'); el.id = 'csn'; el.innerHTML = '<div class="b t"></div><div class="b m"></div><div id="csn-box"><div class="nm"></div><p></p></div><div id="csn-ui"><button id="csn-min" type="button"></button><div id="csn-opts"></div><div id="csn-row"><input id="csn-in" maxlength="240" placeholder="Type your own reply and press Enter…" autocomplete="off"><button class="s" type="button">Say</button><button class="s" id="csn-emo-t" type="button" style="background:#3b4a66"></button><button class="s" id="csn-end" type="button" style="background:#7a2a2a">Leave</button></div><div id="csn-emo"></div></div><div id="csn-hint">Esc leave · 1-3 choose · Enter type · hover the box to pause</div><button id="csn-pace" type="button" style="position:absolute;right:14px;top:calc(11vh + 10px);pointer-events:auto;font:800 11px Nunito,sans-serif;letter-spacing:.08em;color:#dbe9ff;background:rgba(10,18,40,.75);border:1px solid rgba(150,190,255,.45);border-radius:10px;padding:4px 10px;cursor:pointer"></button>';
             document.body.appendChild(el); CSN.el = el; const inp = el.querySelector('#csn-in');
             const send = () => { CSN.typing = false; const v = inp.value; const em = CSN.emo; inp.value = ''; csnSay(v, em); try { inp.blur(); } catch (e) { /* focus */ } };
             el.querySelector('.s').addEventListener('click', send); el.querySelector('#csn-end').addEventListener('click', () => csnEnd(true)); inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } else if (e.key === 'Escape') { e.preventDefault(); CSN.typing = false; inp.blur(); csnUiSync(); } });
             el.querySelector('#csn-box').addEventListener('pointerdown', (e) => { e.preventDefault(); csnSkip(); });
+            { const bxe = el.querySelector('#csn-box'); bxe.addEventListener('pointerenter', () => { CSN.hover = true; }); bxe.addEventListener('pointerleave', () => { CSN.hover = false; }); }      // resting the pointer on the speech box pauses the line so you can read at your own speed
+            { try { CSN.emoOpen = localStorage.getItem('csnEmoOpen') === '1'; CSN.min = localStorage.getItem('csnMin') === '1'; } catch (e) { CSN.emoOpen = false; CSN.min = false; }
+              const sv = (k, v) => { try { localStorage.setItem(k, v ? '1' : '0'); } catch (e) { /* storage blocked */ } };
+              el.querySelector('#csn-emo-t').addEventListener('click', () => { CSN.emoOpen = !CSN.emoOpen; sv('csnEmoOpen', CSN.emoOpen); csnUiSync(); });      // the emote chips fold away so the panel does not cover the scene
+              el.querySelector('#csn-min').addEventListener('click', () => { CSN.min = !CSN.min; sv('csnMin', CSN.min); csnUiSync(); }); }
+            { const pb = el.querySelector('#csn-pace'), pl = () => { pb.textContent = 'Reading: ' + CSN_PACE[csnPaceI][0]; }; pl(); pb.addEventListener('click', () => { csnPaceI = (csnPaceI + 1) % CSN_PACE.length; try { localStorage.setItem('csnPace', String(csnPaceI)); } catch (e) { /* storage blocked */ } pl(); }); }
             const keys = ['greet', 'cheer', 'peace', 'spin', 'shoot', 'modelpose', 'squat', 'show'].concat(typeof CMP_DANCES !== 'undefined' ? CMP_DANCES : []).filter((k) => EMOTES[k]); const lab = {}; try { for (const [, list] of EMOTE_MENU) for (const [k, ic, nm] of list) lab[k] = ic + ' ' + nm; } catch (e) { /* menu */ }
-            const row = el.querySelector('#csn-emo'); for (const k of keys) { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = k; b.textContent = lab[k] || k; b.addEventListener('click', () => { CSN.emo = CSN.emo === k ? null : k; if (CSN.emo && !inp.value.trim()) { csnSay('', k); CSN.emo = null; } csnUiSync(); }); row.appendChild(b); }
+            CSN.emoLab = lab; const row = el.querySelector('#csn-emo'); for (const k of keys) { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = k; b.textContent = lab[k] || k; b.addEventListener('click', () => { CSN.emo = CSN.emo === k ? null : k; if (CSN.emo && !inp.value.trim()) { csnSay('', k); CSN.emo = null; } csnUiSync(); }); row.appendChild(b); }
             window.addEventListener('keydown', (e) => {
                 if (!CSN.on) return; if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); csnEnd(true); return; } if (e.target && e.target.id === 'csn-in') return;
-                if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) { if (CSN.state === 'wait' || !csnBusy() && !CSN.q.length) { try { CSN.typing = true; csnUiSync(); inp.focus(); } catch (x) { /* focus */ } } else csnSkip(); } return; }
+                if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) { if (CSN.state === 'wait' || !csnBusy() && !CSN.q.length) { try { CSN.typing = true; CSN.min = false; csnUiSync(); inp.focus(); } catch (x) { /* focus */ } } else csnSkip(); } return; }
                 if (e.code === 'Space') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) csnSkip(); return; }
                 if (/^[1-3]$/.test(e.key) && CSN.opts[+e.key - 1]) { e.preventDefault(); e.stopImmediatePropagation(); csnSay(CSN.opts[+e.key - 1], CSN.emo); return; }
                 if (/^(Key[WASDQE]|Arrow|Digit|Tab)/.test(e.code)) { e.stopImmediatePropagation(); }
@@ -19491,14 +19503,18 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function csnSkip() { const ln = CSN.cur; if (!CSN.on || !ln) return; if (ln.n < ln.text.length) ln.n = ln.text.length; else ln.hold = 99; }
         function csnFill(p) { try { if (p.fill) return p.fill; if (p.kind === 'me') return validHex(myBubble) || colorFor(me.id); if (p.kind === 'cmp') return cmpColor(p.c); if (p.kind === 'npc') return validHex(p.npc.color) || colorFor('npc_' + p.npc.id); return colorFor(p.id); } catch (e) { return '#ffffff'; } }
         function csnShow(ln) { const bx = CSN.el.querySelector('#csn-box'), f = csnFill(ln.spk); ln.fill = f; bx.style.setProperty('--f', f); try { bx.style.setProperty('--k', textOn(f, 0.72)); } catch (e) { /* ink */ } ln.last = null; const nmEl = bx.querySelector('.nm'); if (nmEl) nmEl.textContent = ln.name || ln.spk.name; bx.classList.add('v'); }
+        function csnUiChrome() {
+            const el = CSN.el, ui = el.querySelector('#csn-ui'), mb = el.querySelector('#csn-min'), eb = el.querySelector('#csn-emo-t'); ui.classList.toggle('min', !!CSN.min); if (mb) mb.textContent = CSN.min ? '\u25b4 Reply' : '\u25be Hide';
+            if (eb) { const k = CSN.emo; eb.textContent = (k ? ((CSN.emoLab && CSN.emoLab[k]) || k) : '\u{1F600} Emotes') + (CSN.emoOpen ? ' \u25be' : ' \u25b8'); } el.querySelector('#csn-emo').classList.toggle('o', !!CSN.emoOpen);
+        }
         function csnUiSync() {
-            if (!CSN.el) return; const ui = CSN.el.querySelector('#csn-ui'), human = CSN.cast.filter((p) => p.kind === 'me' || p.kind === 'peer').length > 1, typing = !!CSN.typing || document.activeElement === CSN.el.querySelector('#csn-in') || !!CSN.el.querySelector('#csn-in').value.trim(), show = CSN.on && (CSN.state === 'wait' || human || typing);
+            if (!CSN.el) return; csnUiChrome(); const ui = CSN.el.querySelector('#csn-ui'), human = CSN.cast.filter((p) => p.kind === 'me' || p.kind === 'peer').length > 1, typing = !!CSN.typing || document.activeElement === CSN.el.querySelector('#csn-in') || !!CSN.el.querySelector('#csn-in').value.trim(), show = CSN.on && (CSN.state === 'wait' || human || typing);
             ui.classList.toggle('v', !!show); const ol = CSN.el.querySelector('#csn-opts'); ol.innerHTML = ''; if (show && CSN.opts && CSN.opts.length && CSN.state === 'wait') CSN.opts.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = '<em>' + (i + 1) + '</em>'; b.append(o); b.addEventListener('click', () => csnSay(o, CSN.emo)); ol.appendChild(b); });
             CSN.el.querySelectorAll('#csn-emo button').forEach((b) => b.classList.toggle('on', b.dataset.k === CSN.emo));
         }
         function csnUiTick(dt) {
             const ln = CSN.cur, bx = CSN.el.querySelector('#csn-box'); if (!ln || CSN.state === 'intro' || ln.gone) { bx.classList.remove('v'); return; }
-            const p = bx.querySelector('p'), txt = ln.text.slice(0, Math.floor(ln.n)); if (ln.last !== txt) { ln.last = txt; try { p.replaceChildren(...mdNodes(txt)); } catch (e) { p.textContent = txt; } } bx.classList.add('v');
+            const p = bx.querySelector('p'), txt = ln.text.slice(0, Math.floor(ln.n)); if (ln.last !== txt) { ln.last = txt; try { p.replaceChildren(...mdNodes(txt)); } catch (e) { p.textContent = txt; } } bx.classList.add('v'); bx.classList.toggle('hv', !!CSN.hover && !ln.fin);
             const sp = csnPos(ln.spk), v = new THREE.Vector3(sp.x, csnHead(ln.spk) + 0.15, sp.z).project(camera), W = innerWidth, H = innerHeight; let sx = (v.x * 0.5 + 0.5) * W, sy = (-v.y * 0.5 + 0.5) * H; if (v.z > 1) { sx = W / 2; sy = H * 0.4; }
             const bw = bx.offsetWidth || 300, bh = bx.offsetHeight || 90, right = sx < W * 0.5; let x = right ? sx + 70 : sx - 70 - bw; x = Math.max(18, Math.min(W - bw - 18, x)); let y = Math.max(H * 0.13, Math.min(H * 0.86 - bh - 90, sy - bh * 0.5)); if (ln.bx == null) { ln.bx = x; ln.by = y; } else { const ea = 1 - Math.exp(-(dt || 0.016) * 10); ln.bx += (x - ln.bx) * ea; ln.by += (y - ln.by) * ea; } x = ln.bx; y = ln.by; bx.style.left = x + 'px'; bx.style.top = y + 'px'; bx.classList.toggle('tl', right); bx.classList.toggle('tr', !right);
         }
@@ -19582,13 +19598,31 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         // anything that stands somewhere in the world can be talked to: csnAddNpc({ id, name, color, actor|null, x, z, say: async (text, ctx) => ({ text, tone, emo, opts }), greet })
         function csnAddNpc(d) { const i = CSN.npcs.findIndex((n) => n.id === d.id); if (i >= 0) CSN.npcs.splice(i, 1); CSN.npcs.push(d); return d; }
         function csnNearTarget() {      // the "?" bubble: whoever you could talk to right now
-            if (!localActor || CSN.on || (activeMap !== 'nuu')) return null; const P = nfPos(); let best = null, bd = 3.4;
-            for (const [id, r] of CMP.active) { if (!r.actor || !r.actor.group || r.actor.group.visible === false) continue; const p = r.actor.group.position, d = Math.hypot(p.x - P.x, p.z - P.z); if (d < bd) { bd = d; best = { kind: 'cmp', id: 'cmp:' + id, name: r.c.name, x: p.x, z: p.z, c: r.c }; } }
-            for (const n of CSN.npcs) { const a = n.actor, p = a && a.group ? a.group.position : { x: n.x, z: n.z }, d = Math.hypot(p.x - P.x, p.z - P.z); if (d < Math.min(bd, n.r || 3.4)) { bd = d; best = { kind: 'npc', id: 'npc:' + n.id, name: n.name, x: p.x, z: p.z, npc: n }; } }
+            if (!localActor || CSN.on) return null; const P = activeMap === 'nuu' ? nfPos() : localActor.group.position; let best = null, bd = 3.4;
+            for (const [id, r] of CMP.active) { if (!r.actor || !r.actor.group || r.actor.group.visible === false) continue; const p = r.actor.group.position, d = Math.hypot(p.x - P.x, p.z - P.z); if (d < bd) { bd = d; best = { kind: 'cmp', id: 'cmp:' + id, name: r.c.name, x: p.x, y: p.y, z: p.z, c: r.c }; } }
+            for (const n of (activeMap === 'nuu' ? CSN.npcs : [])) { const a = n.actor, p = a && a.group ? a.group.position : { x: n.x, z: n.z }, d = Math.hypot(p.x - P.x, p.z - P.z); if (d < Math.min(bd, n.r || 3.4)) { bd = d; best = { kind: 'npc', id: 'npc:' + n.id, name: n.name, x: p.x, z: p.z, npc: n }; } }
             return best;
         }
         NI.list.push({ id: 'csn-talk', r: 4, get x() { const t = csnNear(); return t ? t.x : 1e9; }, get z() { const t = csnNear(); return t ? t.z : 1e9; }, get label() { const t = csnNear(); return t ? 'Talk to ' + t.name : 'Talk'; }, act: () => { const t = csnNear(); if (!t) return; const mp = csnMakeP(t), cast = [mp]; if (t.kind === 'cmp') for (const [cid, r] of CMP.active) { if ('cmp:' + cid !== t.id && r.actor && r.actor.group) cast.push(csnMakeP({ kind: 'cmp', id: 'cmp:' + cid, name: r.c.name, c: r.c })); } csnStart(cast, { greet: t.npc && t.npc.greet }); }, cond: () => !CSN.on && !!csnNear() });
         let _csnNT = -1, _csnNV = null; function csnNear() { const f = performance.now(); if (f - _csnNT > 120) { _csnNT = f; _csnNV = csnNearTarget(); } return _csnNV; }
+        /* ---- the Talk prompt outside Adventia: a bubble over a companion who is close, tap it to start a cinematic scene (Adventia has its own "?" bubble) ---- */
+        let _csnPill = null;
+        function csnTalkNear() {
+            const t = csnNear(); if (!t || CSN.on) return false; const cast = [csnMakeP(t)];
+            if (t.kind === 'cmp') for (const [cid, r] of CMP.active) { if ('cmp:' + cid !== t.id && r.actor && r.actor.group) cast.push(csnMakeP({ kind: 'cmp', id: 'cmp:' + cid, name: r.c.name, c: r.c })); }
+            return csnStart(cast, { greet: t.npc && t.npc.greet });
+        }
+        function csnPromptTick() {
+            let t = null; try { if (activeMap !== 'nuu' && !(BT && BT.phase !== 'idle')) t = csnNear(); } catch (e) { t = null; }
+            if (!t) { if (_csnPill && _csnPill.style.display !== 'none') _csnPill.style.display = 'none'; return; }
+            if (!_csnPill) {
+                const st = document.createElement('style'); st.textContent = '#csn-pill{position:fixed;left:0;top:0;z-index:21;display:none;pointer-events:auto;cursor:pointer;text-align:center;user-select:none;-webkit-user-select:none;touch-action:manipulation}#csn-pill b{display:block;width:46px;height:46px;margin:0 auto;border-radius:50%;background:#fff;border:3px solid #1a1a22;box-shadow:0 3px 10px rgba(0,0,0,.45);font:900 24px/40px Nunito,Inter,system-ui,sans-serif;color:#1a1a22}#csn-pill i{display:block;margin-top:6px;font:800 11px Nunito,Inter,system-ui,sans-serif;font-style:normal;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;letter-spacing:.04em;white-space:nowrap}'; document.head.appendChild(st);
+                const d = document.createElement('div'); d.id = 'csn-pill'; d.innerHTML = '<b>\ud83d\udcac</b><i></i>'; document.body.appendChild(d); d.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); csnTalkNear(); }); d.addEventListener('click', (e) => e.stopPropagation()); _csnPill = d;
+            }
+            const v = new THREE.Vector3(t.x, (t.y || 0) + 2.2, t.z).project(camera); if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) { _csnPill.style.display = 'none'; return; }
+            const rc = renderer.domElement.getBoundingClientRect(), sx = rc.left + (v.x * 0.5 + 0.5) * rc.width, sy = rc.top + (-v.y * 0.5 + 0.5) * rc.height, lb = 'Talk to ' + t.name;
+            _csnPill.style.display = 'block'; _csnPill.style.transform = 'translate(' + Math.round(sx - 23) + 'px,' + Math.round(sy - 56) + 'px)'; const li = _csnPill.querySelector('i'); if (li.textContent !== lb) li.textContent = lb;
+        }
         window.__csn = { CSN, csnStart, csnEnd, csnFeed, csnMannequin, csnAddNpc, csnSay, csnOpenStarter, csnMakeP, csnTick, csnNear };
         // clicking the door itself also uses it when you are close enough
         window.addEventListener('pointerdown', (e) => {
@@ -36476,8 +36510,10 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             setupStartMenu();
             $('btn-emotes').addEventListener('click', () => { closeScreenPanel(); toggleStart('emotes'); });
             const ep = $('emote-panel'); let sceneSub = null;      // the Scene tile opens an inline submenu: pick the players and companions in the conversation
+            { const bar = document.createElement('div'); bar.style.cssText = 'display:flex;gap:14px;justify-content:flex-end;margin-bottom:6px;font:700 11px Nunito,sans-serif;letter-spacing:.08em;text-transform:uppercase'; const mkb = (t, c) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.style.cssText = 'color:#9db4d8;cursor:pointer;background:none;border:0;padding:2px 0;font:inherit'; b.addEventListener('click', () => emFoldAll(ep, c)); return b; }; bar.append(mkb('Collapse all', true), mkb('Expand all', false)); ep.append(bar); }
             for (const [title, list] of EMOTE_MENU) {
                 const h = document.createElement('div'); h.className = 'text-[10px] uppercase tracking-widest text-gray-400 mt-3 mb-1.5 first:mt-0'; h.textContent = title; ep.append(h);
+                const wrap = document.createElement('div'); emFold(h, wrap, title); ep.append(wrap);
                 const g = document.createElement('div'); g.className = 'sm-grid';
                 for (const [key, ico, lab, hint] of list) {
                     const b = document.createElement('button'); b.type = 'button'; b.dataset.emote = key; b.className = 'emote-btn sm-tile';
@@ -36487,12 +36523,12 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
                         if (key !== 'scene') { performEmote(key); return; }
                         if (CSN.on) { csnEnd(true); return; }
                         if (sceneSub) { sceneSub.remove(); sceneSub = null; b.classList.remove('on'); return; }
-                        const sub = sceneSub = document.createElement('div'); sub.style.cssText = 'grid-column:1/-1;margin:8px 0 2px;padding:10px;border-radius:12px;background:rgba(8,14,30,.96);border:1px solid #8fb4ff;color:#eaf3ff;font:700 13px Nunito,sans-serif'; g.after(sub); b.classList.add('on');
+                        const sub = sceneSub = document.createElement('div'); sub.style.cssText = 'grid-column:1/-1;margin:8px 0 2px;padding:10px;border-radius:12px;background:rgba(8,14,30,.96);border:1px solid #8fb4ff;color:#eaf3ff;font:700 13px Nunito,sans-serif'; g.after(sub); b.classList.add('on'); try { sub.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* scroll */ }
                         csnPicker(sub, (started) => { sub.remove(); if (sceneSub === sub) sceneSub = null; b.classList.remove('on'); if (started) { try { closeStart(); } catch (e) { /* menu */ } } }, '\uD83C\uDFAC Scene \u00b7 who is in it?');
                     });
                     g.append(b);
                 }
-                ep.append(g);
+                wrap.append(g);
             }
             try { ceInit(); } catch (e) { console.warn('custom emotes', e); }
 
@@ -37984,6 +38020,8 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             }
             if (SPK.map.size) SPK.raf = requestAnimationFrame(spkLoop);
         }
+        /* how companions trail you: base/gap = how far behind (first companion / extra per companion), start = how far you must get ahead before they begin walking, stop = how close they get before they rest again */
+        const CMP_FOLLOW = { base: 2.8, gap: 1.4, start: 2.6, stop: 0.35 };
         function cmpFrame(dt) {
             if (!CMP.active.size) { CMP.trail.length = 0; return; }
             try { cmpSimTick(dt); } catch (e) { /* needs are cosmetic */ }
@@ -37994,13 +38032,15 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             let i = 0;
             for (const r of CMP.active.values()) {
                 if (!r.actor) { i++; continue; }
-                const ag = r.actor.group, D = 2.0 + 1.3 * i; let t = cmpTrailPoint(D, P); if (!t) { const an = cmpAnchor(i); t = an; }
+                if (CSN.on) { r.moving = false; r.actor.group.visible = activeMap !== 'btl'; r.actor.update(dt); i++; continue; }      // during a scene nobody follows you: the camera is built from where they stand, so they must stay put (csnFace turns them)
+                const ag = r.actor.group, D = CMP_FOLLOW.base + CMP_FOLLOW.gap * i; let t = cmpTrailPoint(D, P); if (!t) { const an = cmpAnchor(i); t = an; }
                 let fo = null; if (activeMap === 'nuu' && NU.ready && !NF.dead) { try { fo = nfCmpFoe(r); } catch (e) { fo = null; } }
                 if (fo) { const K = nfCmpK((r.c && r.c.cls) || 'hero'), fdx = ag.position.x - fo.x, fdz = ag.position.z - fo.z, fl = Math.hypot(fdx, fdz) || 1, stop = K.rng * 0.8 + (fo.big || 1) * 0.7 + i * 0.5; t = { x: fo.x + fdx / fl * stop, z: fo.z + fdz / fl * stop, y: nuH(fo.x + fdx / fl * stop, fo.z + fdz / fl * stop) }; }
                 r.actor.group.visible = activeMap !== 'btl';
                 let flee = false; try { const dg = cmpDodge(r, ag, t); if (dg) { t = dg; flee = true; } } catch (e) { /* dodge is a bonus */ }
                 let dx = t.x - ag.position.x, dz = t.z - ag.position.z, d = Math.hypot(dx, dz);
                 if (snap || d > 45) { const an = cmpAnchor(i); ag.position.set(an.x, an.y, an.z); r.actor.firstFrame = true; dx = dz = d = 0; }
+                if (!fo && !flee && !snap) { if (r.moving) { if (d < CMP_FOLLOW.stop) r.moving = false; } else if (d > CMP_FOLLOW.start) r.moving = true; if (!r.moving) { dx = dz = d = 0; } } else r.moving = true;      // rest until you are a few steps ahead, then walk until caught up
                 let step = 0; if (d > 0.12) { const spd = flee ? 11.5 : Math.min(fo ? 9 : 7.2, 0.5 + d * 2.6) * cmpSimMods(r.c).move; step = Math.min(d, spd * dt); ag.position.x += dx / d * step; ag.position.z += dz / d * step; }
                 ag.position.y += (t.y - ag.position.y) * (1 - Math.exp(-dt * 10));
                 const want = fo && d < 3 ? Math.atan2(fo.x - ag.position.x, fo.z - ag.position.z) : step > 0.004 ? Math.atan2(dx, dz) : Math.atan2(P.x - ag.position.x, P.z - ag.position.z);
@@ -38596,16 +38636,26 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             ceIndexSave(); ceRender(); try { sysChat(out.join(' · ')); } catch (e) { /* chat */ }
         }
         function ceRemove(id) { const r = CE.list.find((x) => x.id === id); if (!r) return; CE.list = CE.list.filter((x) => x.id !== id); delete EMOTES[r.key]; delete ANIM_EMOTES[r.key]; store.del('ce:' + id).catch(() => {}); ceIndexSave(); ceRender(); }
+        /* ---- the emote panel: every section folds and unfolds (remembered), plus Collapse all / Expand all ---- */
+        const EM_FOLD = (() => { try { return JSON.parse(localStorage.getItem('emFold') || '{}') || {}; } catch (e) { return {}; } })();
+        function emFoldSave() { try { localStorage.setItem('emFold', JSON.stringify(EM_FOLD)); } catch (e) { /* storage blocked */ } }
+        function emFold(h, wrap, key) {
+            const t = h.textContent, sync = () => { const c = !!EM_FOLD[key]; wrap.style.display = c ? 'none' : ''; h.textContent = (c ? '\u25b8 ' : '\u25be ') + t; h.setAttribute('aria-expanded', c ? 'false' : 'true'); };
+            h.dataset.fk = key; h._sync = sync; h.style.cursor = 'pointer'; h.style.userSelect = 'none'; h.setAttribute('role', 'button'); h.tabIndex = 0;
+            const tog = () => { EM_FOLD[key] = !EM_FOLD[key]; emFoldSave(); sync(); };
+            h.addEventListener('click', tog); h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } }); sync();
+        }
+        function emFoldAll(ep, c) { for (const h of ep.querySelectorAll('[data-fk]')) { EM_FOLD[h.dataset.fk] = c; h._sync(); } emFoldSave(); }
         function ceRender() {
             const s = CE.sec; if (!s) return; s.textContent = '';
-            const h = document.createElement('div'); h.className = 'text-[10px] uppercase tracking-widest text-gray-400 mt-3 mb-1.5'; h.textContent = 'Custom emotes (shared with your companions)'; s.append(h);
+            const h = document.createElement('div'); h.className = 'text-[10px] uppercase tracking-widest text-gray-400 mt-3 mb-1.5'; h.textContent = 'Custom emotes (shared with your companions)'; s.append(h); const wrap = document.createElement('div'); emFold(h, wrap, 'custom'); s.append(wrap);
             const g = document.createElement('div'); g.className = 'sm-grid';
             for (const r of CE.list) {
                 const b = document.createElement('button'); b.type = 'button'; b.className = 'emote-btn sm-tile'; b.title = r.loop ? 'Loops until you move' : 'Plays once'; b.innerHTML = '<span class="sm-ico">' + (r.loop ? '🕺' : '✨') + '</span><span class="sm-lab"></span>'; b.querySelector('.sm-lab').textContent = r.name;
                 b.addEventListener('click', () => performEmote(r.key)); b.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.confirm('Remove the emote "' + r.name + '"?')) ceRemove(r.id); }); g.append(b);
             }
             const add = document.createElement('button'); add.type = 'button'; add.className = 'emote-btn sm-tile'; add.innerHTML = '<span class="sm-ico">⬆️</span><span class="sm-lab">Import .fbx</span>'; add.addEventListener('click', () => $('ce-file').click()); g.append(add);
-            s.append(g); if (CE.list.length) { const n = document.createElement('div'); n.className = 'text-[10px] text-gray-500 mt-1'; n.textContent = 'Right-click (or long-press) a custom emote to remove it.'; s.append(n); }
+            wrap.append(g); if (CE.list.length) { const n = document.createElement('div'); n.className = 'text-[10px] text-gray-500 mt-1'; n.textContent = 'Right-click (or long-press) a custom emote to remove it.'; wrap.append(n); }
         }
         function ceInit() {
             const ep = $('emote-panel'); if (!ep || CE.sec) return; CE.sec = document.createElement('div'); ep.append(CE.sec);
