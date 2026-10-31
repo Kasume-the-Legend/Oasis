@@ -547,7 +547,7 @@
         <!-- Hidden File Input for Native File Browser Selection -->
         <input type="file" id="model-file-input" accept=".vrm,.gltf,.glb,.obj,.zip,.bbmodel" class="hidden">
 
-        <div class="xmb pointer-events-none"><div class="xmb-row pointer-events-auto" role="menubar"><div class="xmb-col" data-k="0"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-user"></i></span><span class="xl">Avatar</span></button><div class="xmb-list" role="menu"><button id="btn-character" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-user"></i></span><span class="xt"><b>Character</b><small>Pick or upload your look</small></span></button><button id="btn-equip" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment</b><small>Wear clothes and items</small></span></button><button id="btn-inventory" type="button" class="xmb-item"><span class="xi">🎒</span><span class="xt"><b>Inventory</b><small>Your bag, files and trading</small></span></button><a id="xmb-booth" class="xmb-item" href="https://booth.pm/en/search/VRoid%20clothes" target="_blank" rel="noopener noreferrer"><span class="xi"><i class="fa-solid fa-bag-shopping"></i></span><span class="xt"><b>Booth Shop</b><small>Find VRoid clothes (opens Booth)</small></span></a><button id="btn-companions" type="button" class="xmb-item"><span class="xi">👥</span><span class="xt"><b>Companions</b><small>Import NPCs, give them a VRM, talk</small></span></button><button id="btn-animations" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-person-running"></i></span><span class="xt"><b>Animations</b><small>Walk, run and idle clips</small></span></button><button id="btn-upload" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-file-arrow-up"></i></span><span class="xt"><b>Upload VRM</b><small>Use your own avatar</small></span></button></div></div><div class="xmb-col" data-k="1"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-comments"></i></span><span class="xl">Social</span></button><div class="xmb-list" role="menu"><button id="btn-emotes" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-icons"></i></span><span class="xt"><b>Emotes</b><small>Dances and poses</small></span></button><button id="btn-friends" type="button" class="xmb-item"><span class="xi">💚</span><span class="xt"><b>Friends</b><small>Add friends, see who is online</small></span></button><button id="btn-party" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Party</b><small>Friends, invites, codes (J)</small></span></button><button id="btn-lobbies" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-door-open"></i></span><span class="xt"><b>Lobbies</b><small>Change room or invite friends</small></span></button><button id="btn-retrogift" type="button" class="xmb-item"><span class="xi">🎁</span><span class="xt"><b>Retro-Gift</b><small>Wrap, send and unbox ROM gifts</small></span></button><button id="btn-chat" type="button" class="xmb-item lg:hidden"><span class="xi"><i class="fa-solid fa-comment-dots"></i></span><span class="xt"><b>Chat</b><small>Open the chat log</small></span></button></div></div><div class="xmb-col" data-k="2"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-house"></i></span><span class="xl">Home</span></button><div class="xmb-list" role="menu"><button id="btn-decorate" type="button" class="xmb-item"><span class="xi">🛋️</span><span class="xt"><b>Decorate</b><small>Furnish your Harbor Studio</small></span></button><button id="btn-mapedit" type="button" class="xmb-item"><span class="xi">🧰</span><span class="xt"><b>Edit Map</b><small>Delete, move or build in your own rooms</small></span></button><button id="btn-charimp" type="button" class="xmb-item"><span class="xi">🧍</span><span class="xt"><b>Character Importer</b><small>Turn an FBX / GLB into a .vrm avatar</small></span></button><button id="btn-airship" type="button" class="xmb-item"><span class="xi">🚀</span><span class="xt"><b>Airship</b><small>Fly it, take friends along, upload your own .glb / .fbx</small></span></button><button id="btn-theater" type="button" class="xmb-item"><span class="xi">🎬</span><span class="xt"><b>Your Theater</b><small>IMAX screen, watch together</small></span></button><button id="btn-diner" type="button" class="xmb-item"><span class="xi">🍔</span><span class="xt"><b>Key's Diner</b><small>Cooking rush game</small></span></button><button id="btn-bowl" type="button" class="xmb-item"><span class="xi">🎳</span><span class="xt"><b>Zen Bowl</b><small>Multiplayer bowling</small></span></button><button id="btn-btl" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Warriors of Light</b><small>Co-op turn-based fights</small></span></button><button id="btn-surv" type="button" class="xmb-item"><span class="xi">🧟</span><span class="xt"><b>Harbor Inn: Survivor</b><small>Fixed-camera survival horror</small></span></button><button id="btn-gear" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment Shop</b><small>FF7 / FF8 / FF9 gear for Gil</small></span></button><button id="btn-blitz" type="button" class="xmb-item"><span class="xi">🌊</span><span class="xt"><b>Blitzball</b><small>Underwater ball, vs CPU or a friend</small></span></button><button id="btn-tag" type="button" class="xmb-item"><span class="xi">🔫</span><span class="xt"><b>Laser Tag</b><small>Guns, bows and blades</small></span></button><button id="btn-budokai" type="button" class="xmb-item"><span class="xi">🥋</span><span class="xt"><b>Budokai</b><small>3D fighting: VS, practice, tournament</small></span></button><button id="btn-industries" type="button" class="xmb-item"><span class="xi">🛹</span><span class="xt"><b>Oasis Industries</b><small>Build your hoverboard</small></span></button><button id="btn-weather" type="button" class="xmb-item"><span class="xi">🌦️</span><span class="xt"><b>Weather</b><small>Seasons, radar, forecast (U)</small></span></button><button id="btn-inspector" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-cubes"></i></span><span class="xt"><b>Inspector</b><small>Props in this room</small></span></button></div></div><div class="xmb-col" data-k="9"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc">🌀</span><span class="xl">Portal</span></button><div class="xmb-list" role="menu"><button id="btn-portalgun" type="button" class="xmb-item"><span class="xi">🌀</span><span class="xt"><b>Portal Gun</b><small>Open a portal to any room (P)</small></span></button></div></div><div class="xmb-col" data-k="3"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-tv"></i></span><span class="xl">Media</span></button><div class="xmb-list" role="menu"><button id="btn-tv" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-tv"></i></span><span class="xt"><b>Central TV</b><small>Videos and retro games</small></span></button></div></div><div class="xmb-col" data-k="4"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-circle-info"></i></span><span class="xl">Info</span></button><div class="xmb-list" role="menu"><button id="btn-space" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-circle-info"></i></span><span class="xt"><b>Space Info</b><small>Network, help and about</small></span></button><button id="btn-fit" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-expand"></i></span><span class="xt"><b>Screen Fit</b><small>16:9 console frame</small></span></button><button id="btn-fullscreen" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-maximize"></i></span><span class="xt"><b>Fullscreen</b><small>Hide the browser bars</small></span></button><button id="btn-settings" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-gear"></i></span><span class="xt"><b>Settings</b><small>Frame counter</small></span></button><button id="btn-logout" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-right-from-bracket"></i></span><span class="xt"><b>Log Out</b><small>Save, sign out and exit the game</small></span></button></div></div></div></div>
+        <div class="xmb pointer-events-none"><div class="xmb-row pointer-events-auto" role="menubar"><div class="xmb-col" data-k="0"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-user"></i></span><span class="xl">Avatar</span></button><div class="xmb-list" role="menu"><button id="btn-character" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-user"></i></span><span class="xt"><b>Character</b><small>Pick or upload your look</small></span></button><button id="btn-equip" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment</b><small>Wear clothes and items</small></span></button><button id="btn-inventory" type="button" class="xmb-item"><span class="xi">🎒</span><span class="xt"><b>Inventory</b><small>Your bag, files and trading</small></span></button><a id="xmb-booth" class="xmb-item" href="https://booth.pm/en/search/VRoid%20clothes" target="_blank" rel="noopener noreferrer"><span class="xi"><i class="fa-solid fa-bag-shopping"></i></span><span class="xt"><b>Booth Shop</b><small>Find VRoid clothes (opens Booth)</small></span></a><button id="btn-companions" type="button" class="xmb-item"><span class="xi">👥</span><span class="xt"><b>Companions</b><small>Import NPCs, give them a VRM, talk</small></span></button><button id="btn-animations" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-person-running"></i></span><span class="xt"><b>Animations</b><small>Walk, run and idle clips</small></span></button><button id="btn-upload" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-file-arrow-up"></i></span><span class="xt"><b>Upload VRM</b><small>Use your own avatar</small></span></button></div></div><div class="xmb-col" data-k="1"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-comments"></i></span><span class="xl">Social</span></button><div class="xmb-list" role="menu"><button id="btn-emotes" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-icons"></i></span><span class="xt"><b>Emotes</b><small>Dances and poses</small></span></button><button id="btn-friends" type="button" class="xmb-item"><span class="xi">💚</span><span class="xt"><b>Friends</b><small>Add friends, see who is online</small></span></button><button id="btn-party" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Party</b><small>Friends, invites, codes (J)</small></span></button><button id="btn-lobbies" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-door-open"></i></span><span class="xt"><b>Lobbies</b><small>Change room or invite friends</small></span></button><button id="btn-retrogift" type="button" class="xmb-item"><span class="xi">🎁</span><span class="xt"><b>Retro-Gift</b><small>Wrap, send and unbox ROM gifts</small></span></button><button id="btn-chat" type="button" class="xmb-item lg:hidden"><span class="xi"><i class="fa-solid fa-comment-dots"></i></span><span class="xt"><b>Chat</b><small>Open the chat log</small></span></button></div></div><div class="xmb-col" data-k="2"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-house"></i></span><span class="xl">Home</span></button><div class="xmb-list" role="menu"><button id="btn-decorate" type="button" class="xmb-item"><span class="xi">🛋️</span><span class="xt"><b>Decorate</b><small>Furnish your Harbor Studio</small></span></button><button id="btn-mapedit" type="button" class="xmb-item"><span class="xi">🧰</span><span class="xt"><b>Edit Map</b><small>Delete, move or build in your own rooms</small></span></button><button id="btn-charimp" type="button" class="xmb-item"><span class="xi">🧍</span><span class="xt"><b>Character Importer</b><small>Turn an FBX / GLB into a .vrm avatar</small></span></button><button id="btn-airship" type="button" class="xmb-item"><span class="xi">🚀</span><span class="xt"><b>Airship</b><small>Fly it, take friends along, upload your own .glb / .fbx</small></span></button><button id="btn-theater" type="button" class="xmb-item"><span class="xi">🎬</span><span class="xt"><b>Your Theater</b><small>IMAX screen, watch together</small></span></button><button id="btn-diner" type="button" class="xmb-item"><span class="xi">🍔</span><span class="xt"><b>Key's Diner</b><small>Cooking rush game</small></span></button><button id="btn-bowl" type="button" class="xmb-item"><span class="xi">🎳</span><span class="xt"><b>Zen Bowl</b><small>Multiplayer bowling</small></span></button><button id="btn-btl" type="button" class="xmb-item"><span class="xi">⚔️</span><span class="xt"><b>Warriors of Light</b><small>Co-op turn-based fights</small></span></button><button id="btn-surv" type="button" class="xmb-item"><span class="xi">🧟</span><span class="xt"><b>Harbor Inn: Survivor</b><small>Fixed-camera survival horror</small></span></button><button id="btn-gear" type="button" class="xmb-item"><span class="xi">🛡️</span><span class="xt"><b>Equipment Shop</b><small>FF7 / FF8 / FF9 gear for Gil</small></span></button><button id="btn-blitz" type="button" class="xmb-item"><span class="xi">🌊</span><span class="xt"><b>Blitzball</b><small>Underwater ball, vs CPU or a friend</small></span></button><button id="btn-tag" type="button" class="xmb-item"><span class="xi">🔫</span><span class="xt"><b>Laser Tag</b><small>Guns, bows and blades</small></span></button><button id="btn-budokai" type="button" class="xmb-item"><span class="xi">🥋</span><span class="xt"><b>Budokai</b><small>3D fighting: VS, practice, tournament</small></span></button><button id="btn-construct" type="button" class="xmb-item"><span class="xi">🕶</span><span class="xt"><b>The Construct</b><small>Hero class training</small></span></button><button id="btn-industries" type="button" class="xmb-item"><span class="xi">🛹</span><span class="xt"><b>Oasis Industries</b><small>Build your hoverboard</small></span></button><button id="btn-weather" type="button" class="xmb-item"><span class="xi">🌦️</span><span class="xt"><b>Weather</b><small>Seasons, radar, forecast (U)</small></span></button><button id="btn-inspector" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-cubes"></i></span><span class="xt"><b>Inspector</b><small>Props in this room</small></span></button></div></div><div class="xmb-col" data-k="9"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc">🌀</span><span class="xl">Portal</span></button><div class="xmb-list" role="menu"><button id="btn-portalgun" type="button" class="xmb-item"><span class="xi">🌀</span><span class="xt"><b>Portal Gun</b><small>Open a portal to any room (P)</small></span></button></div></div><div class="xmb-col" data-k="3"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-tv"></i></span><span class="xl">Media</span></button><div class="xmb-list" role="menu"><button id="btn-tv" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-tv"></i></span><span class="xt"><b>Central TV</b><small>Videos and retro games</small></span></button></div></div><div class="xmb-col" data-k="4"><button type="button" class="xmb-cat" aria-haspopup="true"><span class="xc"><i class="fa-solid fa-circle-info"></i></span><span class="xl">Info</span></button><div class="xmb-list" role="menu"><button id="btn-space" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-circle-info"></i></span><span class="xt"><b>Space Info</b><small>Network, help and about</small></span></button><button id="btn-fit" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-expand"></i></span><span class="xt"><b>Screen Fit</b><small>16:9 console frame</small></span></button><button id="btn-fullscreen" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-maximize"></i></span><span class="xt"><b>Fullscreen</b><small>Hide the browser bars</small></span></button><button id="btn-settings" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-gear"></i></span><span class="xt"><b>Settings</b><small>Frame counter</small></span></button><button id="btn-logout" type="button" class="xmb-item"><span class="xi"><i class="fa-solid fa-right-from-bracket"></i></span><span class="xt"><b>Log Out</b><small>Save, sign out and exit the game</small></span></button></div></div></div></div>
     </nav>
 
     <!-- Lobby Browser -->
@@ -584,6 +584,7 @@
 
             <h3 class="font-orbitron text-xs tracking-wider text-blue-300 uppercase mb-2">Rooms (private, by code)</h3>
             <div class="grid grid-cols-2 gap-2 mb-2">
+                <button id="pm-mall" class="py-2 rounded-xl text-xs font-semibold transition">Central Mall</button>
                 <button id="pm-loft" class="py-2 rounded-xl text-xs font-semibold transition">Harbor Studio</button>
                 <button id="pm-city" class="py-2 rounded-xl text-xs font-semibold transition">Destiny City</button>
                 <button id="pm-galleria" class="py-2 rounded-xl text-xs font-semibold transition">Oasis Galleria</button>
@@ -2117,10 +2118,14 @@ function kbModel(THREE, mk) {
         }
 
         const DISTRICTS = [
+            { id: 'plaza-01', name: 'Central Mall', tag: 'Channel 1' },
+            { id: 'plaza-02', name: 'Central Mall', tag: 'Channel 2' },
+            { id: 'plaza-03', name: 'Central Mall', tag: 'Channel 3' },
             { id: 'city-01', name: 'Destiny City', tag: 'Channel 1', map: 'city' },
             { id: 'galleria-01', name: 'Oasis Galleria', tag: 'Channel 1', map: 'galleria' },
             { id: 'school-01', name: 'College Raimon', tag: 'Channel 1', map: 'raimon' },
             { id: 'nuu-01', name: 'Adventia', tag: 'Field • Forest of Nuu', map: 'nuu' },
+            { id: 'jv-01', name: 'Journey Ville', tag: 'Town • Sky Islands', map: 'jv' },
             { id: 'bowl-01', name: 'Zen Bowl', tag: 'Channel 1', map: 'bowl' },
             { id: 'btl-01', name: 'Warriors of Light', tag: 'Channel 1', map: 'btl' },
             { id: 'blitz-01', name: 'Blitzball Arena', tag: 'Play now', map: 'blitz' },
@@ -2132,7 +2137,8 @@ function kbModel(THREE, mk) {
             { id: 'tbs-01', name: 'Toy Box Smash', tag: 'Platform fighter', map: 'toysmash' },
             { id: 'diner-01', name: "Key's Kitchen Clash", tag: 'Channel 1', map: 'diner' },
             { id: 'tag-01', name: 'Laser Tag Arena', tag: 'Channel 1', map: 'tag' },
-            { id: 'budokai-01', name: 'Budokai Arena', tag: 'Channel 1', map: 'budokai' }
+            { id: 'budokai-01', name: 'Budokai Arena', tag: 'Channel 1', map: 'budokai' },
+            { id: 'construct-01', name: 'The Construct (Hero class)', tag: 'Channel 1', map: 'construct' }
         ];
 
         function inWalkable(x, z) {
@@ -4638,17 +4644,16 @@ function kbModel(THREE, mk) {
             }
         }
 
-        function joinRoom(id, { label, isPrivate = false, code = null, map = 'city' }) {
+        function joinRoom(id, { label, isPrivate = false, code = null, map = 'mall' }) {
             if (isPrivate && code && selfBanned(code)) { sysChat('You cannot join that room: its owner banned you.'); if (!room) { try { acHome(); } catch (e) { /* ignore */ } } return; }
             leaveRoom();
             me.name = ($('name-input').value.trim() || me.name).slice(0, 16);
             localStorage.setItem('psHomeName', me.name);
             localActor.setName(me.name);
 
-            if (map === 'mall' || map === 'jv' || map === 'construct') { map = 'city'; if (!isPrivate) { id = 'city-01'; label = 'Destiny City • Channel 1'; } }      // the Central Mall, Journey Ville and the Construct no longer exist
-            if (!MAP_DEFS[map]) map = 'city';
+            if (!MAP_DEFS[map]) map = 'mall';
             room = { id, label, isPrivate, code, map, joinedAt: Date.now() }; setTimeout(() => { try { defRoomRender(); } catch (e) { /* menu */ } }, 0);
-            try { localStorage.setItem('oasis.lastroom', !isPrivate && ['city', 'galleria', 'school', 'raimon', 'nuu'].includes(map) ? JSON.stringify({ id, label, map }) : ''); } catch (e) { /* storage */ }      // where you logged out: only public open-world rooms are remembered
+            try { localStorage.setItem('oasis.lastroom', !isPrivate && ['mall', 'city', 'galleria', 'school', 'raimon', 'nuu', 'jv'].includes(map) ? JSON.stringify({ id, label, map }) : ''); } catch (e) { /* storage */ }      // where you logged out: only public open-world rooms are remembered
             setMap(map);
             dcEnter(); try { scnEnter(); } catch (er) { console.warn('map editor', er); }
             try { const pd = !isPrivate && DISTRICTS.find((x) => x.id === id && x.pub); if (pd) pubLoad(pd); } catch (er) { console.warn('published map', er); }
@@ -4705,6 +4710,7 @@ function kbModel(THREE, mk) {
         function mapLoading(id) {      // true while a map that loads in the background is still being built
             try {
                 if (id === 'nuu') return !NU.ready && !NU.err;
+                if (id === 'jv') return !JV.ready && !JV.err;
                 if (id === 'raimon') return !!(RM.loading || (!RM.nav && !RM.err));
             } catch (e) { /* that map is not defined yet */ }
             return false;
@@ -4813,7 +4819,7 @@ function kbModel(THREE, mk) {
             const pc = presCounts(), pm = presNet ? presNet.describe() : null;
             $('lobby-online').textContent = pm && pm.mode === 'online' || pc.total > 1 ? `${pc.total} player${pc.total === 1 ? '' : 's'} online right now` : pm && (pm.mode === 'connecting' || pm.mode === 'waiting') ? (pm.mode === 'waiting' ? 'You are the only one online right now' : 'Looking for other players...') : 'Online count unavailable (peer-to-peer is blocked here)';
             for (const d of DISTRICTS) {
-                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'nuu' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'survivor3' && d.map !== 'outbreak' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'budokai') continue;
+                if (!d.pub && d.map !== 'city' && d.map !== 'galleria' && d.map !== 'school' && d.map !== 'raimon' && d.map !== 'nuu' && d.map !== 'jv' && d.map !== 'bowl' && d.map !== 'btl' && d.map !== 'blitz' && d.map !== 'survivor' && d.map !== 'survivor2' && d.map !== 'survivor3' && d.map !== 'outbreak' && d.map !== 'ryderx' && d.map !== 'diner' && d.map !== 'tag' && d.map !== 'budokai' && d.map !== 'construct') continue;   // the Central Mall channels stay out of the list
                 const seen = dirSeen.get(d.id);
                 let count = Math.max(seen && Date.now() - seen.ts < 6000 ? seen.count : 0, pc.byRoom[d.id] || 0);      // tabs of this browser, and what other players report
                 if (room && room.id === d.id) count = Math.max(count, peers.size + 1);
@@ -4835,13 +4841,13 @@ function kbModel(THREE, mk) {
         }
 
         const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        // The first letter of a private code says which map it opens: L = Harbor Studio, anything else = Destiny City.
+        // The first letter of a private code says which map it opens: L = Harbor Studio, anything else = Central Mall.
         // 11 random characters (55 bits) after the map letter: too many to guess, so the code is a real key (it also encrypts the room's traffic)
-        const makeCode = (map = 'city') => (map === 'loft' ? 'L' : map === 'city' ? 'C' : map === 'galleria' ? 'G' : map === 'school' ? 'S' : map === 'bowl' ? 'B' : map === 'btl' ? 'F' : map === 'diner' ? 'K' : map === 'tag' ? 'T' : map === 'plot' ? 'P' : map === 'ship' ? 'H' : map === 'theater' ? 'N' : map === 'party' ? 'Q' : 'M') + Array.from(crypto.getRandomValues(new Uint8Array(11)), (b) => CODE_CHARS[b % 32]).join('');
+        const makeCode = (map = 'mall') => (map === 'loft' ? 'L' : map === 'city' ? 'C' : map === 'galleria' ? 'G' : map === 'school' ? 'S' : map === 'bowl' ? 'B' : map === 'btl' ? 'F' : map === 'diner' ? 'K' : map === 'tag' ? 'T' : map === 'plot' ? 'P' : map === 'ship' ? 'H' : map === 'theater' ? 'N' : map === 'party' ? 'Q' : 'M') + Array.from(crypto.getRandomValues(new Uint8Array(11)), (b) => CODE_CHARS[b % 32]).join('');
         const normCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
         const validCode = (c) => /^[MLCPGKTSBFHN][A-Z0-9]{10,14}$/.test(c);
         const fmtCode = (c) => (String(c).match(/.{1,4}/g) || [String(c)]).join('-');
-        const mapOfCode = (code) => (String(code)[0] === 'L' ? 'loft' : String(code)[0] === 'C' ? 'city' : String(code)[0] === 'G' ? 'galleria' : String(code)[0] === 'S' ? 'school' : String(code)[0] === 'B' ? 'bowl' : String(code)[0] === 'F' ? 'btl' : String(code)[0] === 'K' ? 'diner' : String(code)[0] === 'T' ? 'tag' : String(code)[0] === 'H' ? 'ship' : String(code)[0] === 'N' ? 'theater' : String(code)[0] === 'P' ? 'plot' : 'city');
+        const mapOfCode = (code) => (String(code)[0] === 'L' ? 'loft' : String(code)[0] === 'C' ? 'city' : String(code)[0] === 'G' ? 'galleria' : String(code)[0] === 'S' ? 'school' : String(code)[0] === 'B' ? 'bowl' : String(code)[0] === 'F' ? 'btl' : String(code)[0] === 'K' ? 'diner' : String(code)[0] === 'T' ? 'tag' : String(code)[0] === 'H' ? 'ship' : String(code)[0] === 'N' ? 'theater' : String(code)[0] === 'P' ? 'plot' : 'mall');
         function joinPrivate(code) {
             const map = mapOfCode(code);
             joinRoom('private-' + code, { label: map === 'loft' ? 'Private Harbor Studio' : map === 'city' ? 'Private Destiny City' : map === 'galleria' ? 'Private Oasis Galleria' : map === 'school' ? 'Private Oasis High School' : map === 'bowl' ? 'Private Zen Bowl' : map === 'btl' ? 'Private Warriors of Light' : map === 'diner' ? 'Private Kitchen Clash' : map === 'tag' ? 'Private Laser Tag' : map === 'theater' ? 'Your Theater' : map === 'plot' ? (myPlots().find((x) => x.code === code) || {}).name || "Builder's Plot" : 'Private Room', isPrivate: true, code, map });
@@ -4852,10 +4858,11 @@ function kbModel(THREE, mk) {
             if (!c || !/^L[A-Z0-9]{11}$/.test(c)) { c = makeCode('loft'); localStorage.setItem('psHomeLoft', c); }
             return c;
         }
-        let privateMap = 'city';
+        let privateMap = 'mall';
         function renderPrivateMap() {
             const on = 'py-2 rounded-xl text-xs font-semibold transition bg-psGlow text-white';
             const off = 'py-2 rounded-xl text-xs font-semibold transition bg-white/10 text-gray-300 hover:bg-white/20';
+            $('pm-mall').className = privateMap === 'mall' ? on : off;
             $('pm-loft').className = privateMap === 'loft' ? on : off;
             $('pm-city').className = (privateMap === 'city' ? on : off);
             $('pm-galleria').className = (privateMap === 'galleria' ? on : off);
@@ -7782,7 +7789,7 @@ function kbModel(THREE, mk) {
         // ---- your own files ----
         const isVideoFile = (f) => /^video\//.test(f.type) || /\.(mp4|webm|mkv|mov|m4v|ogv|ogg|avi)$/i.test(f.name);
         function openLocalFiles(list) {
-            if (!hasScreen()) { sysChat('There is no TV in this room. Try your Harbor Studio.'); return; }
+            if (!hasScreen()) { sysChat('There is no TV in this room. Try the Central Mall or your Harbor Studio.'); return; }
             const files = Array.from(list || []).filter(isVideoFile).slice(0, 60);
             if (!files.length) { setScreenNote('Pick video files (mp4, webm, mkv, mov...).'); return; }
             setScreenNote('');
@@ -8018,7 +8025,7 @@ function kbModel(THREE, mk) {
             return true;
         }
         function openScreenPanel() {
-            if (!hasScreen()) { sysChat('There is no TV in this room. Try your Harbor Studio.'); return; }
+            if (!hasScreen()) { sysChat('There is no TV in this room. Try the Central Mall or your Harbor Studio.'); return; }
             closeStart();
             $('screen-panel').classList.remove('hidden');
             Object.keys(keys).forEach((k) => (keys[k] = false));
@@ -8029,7 +8036,7 @@ function kbModel(THREE, mk) {
         function closeScreenPanel() { $('screen-panel').classList.add('hidden'); }
         function toggleScreenPanel() {
             if (screenPanelOpen()) { closeScreenPanel(); return; }
-            if (!hasScreen()) { sysChat('There is no TV in this room. Try your Harbor Studio.'); return; }
+            if (!hasScreen()) { sysChat('There is no TV in this room. Try the Central Mall or your Harbor Studio.'); return; }
             if (Math.hypot(localActor.group.position.x - SCREEN.x, localActor.group.position.z - SCREEN.z) > SCREEN.reach) { sysChat('Walk closer to the TV and press F.'); return; }
             openScreenPanel();
         }
@@ -8173,7 +8180,7 @@ function kbModel(THREE, mk) {
         // ---- host: load the game, capture its picture and sound
         async function emuStart(file) {
             if (!file) return;
-            if (!room || !hasScreen()) { emuSetStatus('Go to a room with a TV first (your Harbor Studio).'); return; }
+            if (!room || !hasScreen()) { emuSetStatus('Go to a room with a TV first (the Central Mall or your Harbor Studio).'); return; }
             if (EMU.on) { emuSetStatus(EMU.isHost ? 'Stop the current game first.' : `${EMU.hostName} already has a game on. Ask them to stop it first.`); return; }
             const sys = $('emu-sys').value || emuGuessSys(file);
             if (!sys) { emuSetStatus('I cannot tell which console that file is for. Pick the console from the list, then load it again.'); return; }
@@ -21218,7 +21225,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             x.putImageData(im, 0, 0); return { cv, x0: DG.X0, z0: DG.Z0, cell: DG.C * 4 };
         }
         function mmTick(dt) {
-            const hideMaps = ['btl', 'diner', 'bowl', 'budokai', 'blitz', 'tag']; const show = !!localActor && !fpOn && !hideMaps.includes(activeMap) && !(typeof EMU !== 'undefined' && EMU.playing) && !(activeMap === 'nuu' && ZN.on && ZN.key === 'tent');
+            const hideMaps = ['btl', 'diner', 'bowl', 'budokai', 'blitz', 'tag', 'construct']; const show = !!localActor && !fpOn && !hideMaps.includes(activeMap) && !(typeof EMU !== 'undefined' && EMU.playing) && !(activeMap === 'nuu' && ZN.on && ZN.key === 'tent');
             if (!MM.el) {
                 const st = document.createElement('style'); st.textContent = '#mm{position:fixed;right:12px;bottom:10px;width:136px;z-index:13;pointer-events:none;text-align:center}#mm .ring{position:relative;width:136px;height:136px;border-radius:50%;border:5px solid #6b4a24;box-shadow:0 0 0 2px #2a1a0a,0 0 0 4px #c9a15a,0 4px 14px rgba(0,0,0,.6),inset 0 0 18px rgba(60,35,10,.7);overflow:hidden;background:#cdb88a}#mm canvas{position:absolute;inset:0;width:100%;height:100%}#mm.top{top:12px;bottom:auto}body.mm-top #wx-chip{right:168px!important;top:16px!important}body.mm-top #nf-fate{top:204px}#mm .lab{margin-top:4px;display:inline-block;max-width:150px;padding:2px 9px;border-radius:9px;background:rgba(46,30,12,.82);border:1px solid #c9a15a;color:#f3e2b8;font:800 10px Nunito,Inter,system-ui,sans-serif;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media (pointer:coarse){#mm{width:104px;right:10px}#mm .ring{width:104px;height:104px}}@media (max-height:520px){#mm{width:100px}#mm .ring{width:100px;height:100px}}';
                 document.head.appendChild(st); const d = document.createElement('div'); d.id = 'mm'; d.innerHTML = '<div class="ring"><canvas width="272" height="272"></canvas></div><span class="lab"></span>'; document.body.appendChild(d); MM.el = d; MM.cv = d.querySelector('canvas'); MM.cx = MM.cv.getContext('2d'); MM.lab = d.querySelector('.lab');
@@ -21261,6 +21268,90 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
 function ensureNuu() { if (NU.ready || NU.loading) return; if (NU.err && NU.retryAt && Date.now() < NU.retryAt) return; NU.err = null; nuLoad(); }
         MAP_DEFS.nuu = { id: 'nuu', ground: (x, z) => nuH(x, z), clamp: nuClamp, collide: nuCollide, spawn: nuSpawn, update: nuUpdate };
+        /* ================= Journey Ville: sky-island town (jv/Journey_Ville.glb) ================= */
+        const JV = { group: null, ready: false, loading: false, err: null, retryAt: 0, H: null, ex: null, cols: [], last: new THREE.Vector3(), sky: null, ov: null, t: 0 };
+        const JV_X0 = -150, JV_Z0 = -90, JV_NX = 600, JV_NZ = 480, JV_CELL = 0.5;
+        function jvOverlay(msg, sticky) {
+            try {
+                if (!msg) { if (JV.ov) { JV.ov.remove(); JV.ov = null; } return; }
+                if (!JV.ov) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:8200;background:radial-gradient(circle at 50% 40%,#1a1850,#050818);color:#d8e6ff;display:flex;align-items:center;justify-content:center;font:700 18px system-ui;letter-spacing:.14em;text-align:center;text-shadow:0 0 14px #7a6bff;white-space:pre-wrap;padding:24px'; document.body.appendChild(d); JV.ov = d; }
+                JV.ov.textContent = msg; if (sticky) { JV.ov.style.fontSize = '14px'; JV.ov.onclick = () => jvOverlay(null); }
+            } catch (e) { /* no dom */ }
+        }
+        function jvCell(x, z) { return (Math.floor((z - JV_Z0) / JV_CELL)) * JV_NX + Math.floor((x - JV_X0) / JV_CELL); }
+        function jvH(x, z) {
+            const H = JV.H; if (!H) return 0; const fx = (x - JV_X0) / JV_CELL - 0.5, fz = (z - JV_Z0) / JV_CELL - 0.5, i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j;
+            if (i < 0 || j < 0 || i >= JV_NX - 1 || j >= JV_NZ - 1) return 0;
+            const a = H[j * JV_NX + i], b = H[j * JV_NX + i + 1], c = H[(j + 1) * JV_NX + i], d = H[(j + 1) * JV_NX + i + 1];
+            if (a > -1e8 && b > -1e8 && c > -1e8 && d > -1e8) return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+            const v = [a, b, c, d].filter((q) => q > -1e8); return v.length ? Math.max(...v) : 0;
+        }
+        function jvBlk(x, z) { const H = JV.H; if (!H) return false; const i = Math.floor((x - JV_X0) / JV_CELL), j = Math.floor((z - JV_Z0) / JV_CELL); if (i < 0 || j < 0 || i >= JV_NX || j >= JV_NZ) return true; return H[j * JV_NX + i] < -1e8; }
+        function jvBake(meshes) {
+            const H = new Float32Array(JV_NX * JV_NZ).fill(-1e9), v = new THREE.Vector3();
+            for (const mesh of meshes) {
+                mesh.updateWorldMatrix(true, false); const P = mesh.geometry.attributes.position, I = mesh.geometry.index ? mesh.geometry.index.array : null, M = mesh.matrixWorld, n = I ? I.length : P.count, W = new Float32Array(P.count * 3);
+                for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(M); W[i * 3] = v.x; W[i * 3 + 1] = v.y; W[i * 3 + 2] = v.z; }
+                for (let t = 0; t < n; t += 3) {
+                    const a = (I ? I[t] : t) * 3, b = (I ? I[t + 1] : t + 1) * 3, c = (I ? I[t + 2] : t + 2) * 3;
+                    const ny = (W[b + 2] - W[a + 2]) * (W[c] - W[a]) - (W[b] - W[a]) * (W[c + 2] - W[a + 2]); if (Math.abs(ny) < 1e-6) continue;   // vertical sliver
+                    const e = Math.max(Math.hypot(W[b] - W[a], W[b + 2] - W[a + 2]), Math.hypot(W[c] - W[a], W[c + 2] - W[a + 2]), Math.hypot(W[c] - W[b], W[c + 2] - W[b + 2])), nn = Math.max(1, Math.ceil(e / 0.3));
+                    for (let i = 0; i <= nn; i++) for (let j = 0; j <= nn - i; j++) {
+                        const u = i / nn, w2 = j / nn, w = 1 - u - w2, x = W[a] * w + W[b] * u + W[c] * w2, y = W[a + 1] * w + W[b + 1] * u + W[c + 1] * w2, z = W[a + 2] * w + W[b + 2] * u + W[c + 2] * w2;
+                        const ci = Math.floor((x - JV_X0) / JV_CELL), cj = Math.floor((z - JV_Z0) / JV_CELL); if (ci < 0 || cj < 0 || ci >= JV_NX || cj >= JV_NZ) continue; const k = cj * JV_NX + ci; if (y > H[k]) H[k] = y;
+                    }
+                }
+            }
+            // fill 1-cell pinholes between sample points, then pull the walkable edge in one cell and drop steep cells
+            for (let pass = 0; pass < 2; pass++) { const nh = H.slice(); for (let j = 1; j < JV_NZ - 1; j++) for (let i = 1; i < JV_NX - 1; i++) { const k = j * JV_NX + i; if (H[k] > -1e8) continue; const q = [H[k - 1], H[k + 1], H[k - JV_NX], H[k + JV_NX]].filter((y) => y > -1e8); if (q.length >= 3) nh[k] = q.reduce((a, b) => a + b, 0) / q.length; } H.set(nh); }
+            const out = H.slice();
+            for (let j = 1; j < JV_NZ - 1; j++) for (let i = 1; i < JV_NX - 1; i++) {
+                const k = j * JV_NX + i; if (H[k] < -1e8) continue; const nb = [H[k - 1], H[k + 1], H[k - JV_NX], H[k + JV_NX]];
+                if (nb.some((y) => y < -1e8) || nb.some((y) => Math.abs(y - H[k]) > 0.9)) out[k] = -1e9;
+            }
+            return out;
+        }
+        function jvCollide(pos) {
+            if (!JV.H) return; const L = JV.last; if (Math.hypot(pos.x - L.x, pos.z - L.z) > 4 || L.y === 0) L.set(pos.x, 1, pos.z);
+            const R = 0.35;
+            for (const c of JV.cols) {
+                if (c[0] === 'd') { const dx = pos.x - c[1], dz = pos.z - c[2], rr = c[3] + R, d2 = dx * dx + dz * dz; if (d2 < rr * rr) { const d = Math.sqrt(d2) || 1e-3; pos.x = c[1] + dx / d * rr; pos.z = c[2] + dz / d * rr; } }
+                else {
+                    const dx = pos.x - c[1], dz = pos.z - c[2]; if (dx * dx + dz * dz > (c[3] + c[4] + 2) * (c[3] + c[4] + 2)) continue;
+                    const cs = Math.cos(c[5]), sn = Math.sin(c[5]), lx = dx * cs - dz * sn, lz = dx * sn + dz * cs, hx = c[3] / 2 + R, hz = c[4] / 2 + R;
+                    if (Math.abs(lx) < hx && Math.abs(lz) < hz) { let nx = lx, nz = lz; if (hx - Math.abs(lx) < hz - Math.abs(lz)) nx = Math.sign(lx || 1) * hx; else nz = Math.sign(lz || 1) * hz; pos.x = c[1] + nx * cs + nz * sn; pos.z = c[2] - nx * sn + nz * cs; }
+                }
+            }
+            if (!jvBlk(pos.x, pos.z)) { L.set(pos.x, 1, pos.z); return; }
+            if (!jvBlk(pos.x, L.z)) pos.z = L.z; else if (!jvBlk(L.x, pos.z)) pos.x = L.x; else { pos.x = L.x; pos.z = L.z; }
+        }
+        function jvSpawn() { const x = (Math.random() - 0.5) * 6, z = -52 + (Math.random() - 0.5) * 3; JV.last.set(x, 1, z); return { x, y: JV.H ? jvH(x, z) : 0, z, ry: 0 }; }
+        async function jvLoad() {
+            if (JV.loading || JV.ready) return; JV.loading = true; jvOverlay('JOURNEY VILLE\nLoading the sky islands...');
+            try {
+                const buf = await assetBuf(['jv/Journey_Ville.glb', 'Jv/Journey_Ville.glb', 'Journey_Ville.glb', 'assets/jv/Journey_Ville.glb', 'maps/Journey_Ville.glb'], 'glTF');
+                const gl = await new Promise((ok, no) => new GLTFLoader().parse(buf, '', ok, no)); gl.scene.updateMatrixWorld(true);
+                const walk = [], skyM = []; const root = new THREE.Group(); root.visible = false;
+                gl.scene.traverse((o) => {
+                    if (!o.isMesh) return; o.userData.noOutline = true;
+                    if (o.name === 'Terrain' || o.name === 'Streets') walk.push(o);
+                    if (o.name === 'Sky') { skyM.push(o); o.frustumCulled = false; o.renderOrder = -10; }
+                    for (const m of [].concat(o.material)) { if (o.name === 'Sky') { m.fog = false; m.depthWrite = false; } else if ('metalness' in m) { m.metalness = Math.min(m.metalness, 0.15); m.roughness = Math.max(m.roughness, 0.7); } m.needsUpdate = true; }
+                });
+                if (!walk.length) throw new Error('no Terrain mesh in Journey_Ville.glb');
+                JV.H = jvBake(walk); JV.ex = (gl.scene.userData && gl.scene.userData.kind) ? gl.scene.userData : (gl.scenes[0] && gl.scenes[0].userData) || {};
+                JV.cols = Array.isArray(JV.ex.colliders) ? JV.ex.colliders : [];
+                root.add(gl.scene); JV.sky = skyM[0] || null;
+                const sun = new THREE.DirectionalLight(0xffe2b8, 1.5); sun.position.set(-60, 90, -40); const hemi = new THREE.HemisphereLight(0x8fa4f0, 0x3a3258, 0.8 * Math.PI), amb = new THREE.AmbientLight(0xb8aaf0, 0.1 * Math.PI); root.add(sun, sun.target, hemi, amb);
+                scene.add(root); JV.group = root; JV.ready = true; jvOverlay(null);
+                if (activeMap === 'jv') { const g = localActor.group.position; g.y = jvH(g.x, g.z); root.visible = true; }
+            } catch (e) { JV.err = e; JV.retryAt = Date.now() + 6000; console.error('Journey Ville failed', e); jvOverlay('Could not load Journey Ville\n\n' + (e && e.message) + '\n\n(tap to close - upload jv/Journey_Ville.glb next to index.html)', true); setTimeout(() => jvOverlay(null), 30000); }
+            JV.loading = false;
+        }
+        function ensureJv() { if (JV.ready || JV.loading) return; if (JV.err && JV.retryAt && Date.now() < JV.retryAt) return; JV.err = null; jvLoad(); }
+        function jvUpdate(g, dt) { JV.t += dt; if (JV.sky && camera) JV.sky.position.copy(camera.position); }
+        try { window.__jv = { JV, jvH, jvBlk, jvCollide }; } catch (e) { /* no window */ }
+        MAP_DEFS.jv = { id: 'jv', ground: (x, z) => jvH(x, z), clamp: (p) => { if (jvBlk(p.x, p.z) && JV.H) { /* collide handles it */ } }, collide: jvCollide, spawn: jvSpawn, update: jvUpdate };
 
         (function nuDiag() {      // if Adventia's map renders wrong, say why on screen: shader / graphics-context errors and crashes are collected and shown in a small box (tap it to close)
             const buf = [], noise = /WebSocket|Suback|Connection closed|mqtt|broker|tunnel|ERR_|NaN|bounding|404|tailwind|Failed to load resource|toNonIndexed|GPU stall|favicon|net::|mqtt|nostr|tracker|Trystero|data channel|RTCPeer|RTCData|ICE |peer connection|signaling|relay|connack|_onConnack|connection timeout|broker|MQTT|Q\._on|keepalive|socket|offline|disconnect/i; let shown = '', closed = false;
@@ -24293,7 +24384,7 @@ function btMusicStop() {
 
 
         /* ---- Sign-in gate: after the splash you either log in or sign up. Sign up -> make your character -> your Harbor Studio. Log in -> your studio, or the open-world room you last left. Never someone else's room. ---- */
-        const AC_OW = ['city', 'galleria', 'school', 'raimon', 'nuu'];
+        const AC_OW = ['mall', 'city', 'galleria', 'school', 'raimon', 'nuu', 'jv'];
         const acGateOn = () => !acSess() && !!acApi() && !csGet('oasis.nogate', '') && !sessionStorage.getItem('oasis.guest');
         function acHome() { const code = myLoftCode(); joinRoom('private-' + code, { label: 'My Harbor Studio', isPrivate: true, code, map: 'loft' }); }
         function acLand() {
@@ -24462,7 +24553,7 @@ function btMusicStop() {
          * ==================================================================================================== */
         const SHIP_X = 4.4, SHIP_ZN = -8.2, SHIP_ZS = 8.0;
         const SHIP = { ready: false, group: null, dock: null, rects: [], stars: null, glow: [], near: null, btn: null, t: 0 };
-        const SHIP_NO = ['btl', 'tag', 'budokai', 'diner', 'bowl', 'blitz', 'survivor', 'survivor2', 'survivor3', 'outbreak', 'ryderx'];
+        const SHIP_NO = ['btl', 'tag', 'budokai', 'diner', 'bowl', 'blitz', 'survivor', 'survivor2', 'survivor3', 'outbreak', 'ryderx', 'construct'];
         try { SHIP.dock = JSON.parse(localStorage.getItem('oasis.ship') || 'null'); } catch (e) { SHIP.dock = null; }
         function myShipCode() { let c = null; try { c = localStorage.getItem('oasis.shipcode'); } catch (e) { /* storage */ } if (!c || !/^H[A-Z0-9]{11}$/.test(c)) { c = makeCode('ship'); try { localStorage.setItem('oasis.shipcode', c); } catch (e) { /* storage */ } } return c; }
         function shipGround() { return 0; }
@@ -24523,7 +24614,7 @@ function btMusicStop() {
             try { shipDockHere(); const code = myShipCode(); joinRoom('private-' + code, { label: 'Your Ship', isPrivate: true, code, map: 'ship' }); sysChat('Welcome aboard. The hatch is at the back; the helm is at the front.'); } catch (e) { console.error(e); sysChat('Could not board the ship.'); }
         }
         function shipLeave() {
-            const d = SHIP.dock && SHIP.dock.id && SHIP.dock.map !== 'ship' ? SHIP.dock : { id: 'city-01', label: 'Destiny City • Channel 1', isPrivate: false, code: null, map: 'city' };
+            const d = SHIP.dock && SHIP.dock.id && SHIP.dock.map !== 'ship' ? SHIP.dock : { id: 'plaza-01', label: 'Central Mall • Channel 1', isPrivate: false, code: null, map: 'mall' };
             try { joinRoom(d.id, { label: d.label, isPrivate: d.isPrivate, code: d.code, map: d.map }); } catch (e) { console.error(e); sysChat('Could not leave the ship.'); }
         }
         function shipAct() { if (activeMap !== 'ship') return; if (SHIP.near === 'hatch') shipLeave(); else if (SHIP.near === 'helm') sysChat('The helm is on standby. Flying the world map is the next update.'); }
@@ -26104,7 +26195,7 @@ window.__ts = TSK;
 const SCN = { edit: false, owner: false, items: new Map(), obj: new Map(), objKey: new WeakMap(), meta: new WeakMap(), sel: null, depth: 1, hist: [], hi: -1, holes: [], solids: [], box: null, ghost: null, drag: null, saveT: null, bcT: null, ui: null, tab: 'obj', hit: null, snap: true, step: 0.25, hinted: false, prim: { sh: 'box', w: 1, h: 1, d: 1, col: '#9aa7b8', f: 'matte' } };
 const SCN_LIM = 1500;
 function scnRoot() {
-    try { const m = { mall: mallGroup, loft: loftGroup, city: CITY.group, plot: PLOT.group, galleria: GAL.group, school: SCH.group, bowl: BW.group, raimon: RM.group, nuu: NU.group, btl: BT.group, diner: KC.group, theater: THEATER.group, ship: SHIP.group, tag: TG.group, construct: HC.group }; return m[activeMap] || null; } catch (e) { return null; }
+    try { const m = { mall: mallGroup, loft: loftGroup, city: CITY.group, plot: PLOT.group, galleria: GAL.group, school: SCH.group, bowl: BW.group, raimon: RM.group, nuu: NU.group, jv: JV.group, btl: BT.group, diner: KC.group, theater: THEATER.group, ship: SHIP.group, tag: TG.group, construct: HC.group }; return m[activeMap] || null; } catch (e) { return null; }
 }
 const SCN_ALLOWED = ['kasumex', 'royalreina'];
 function scnAllowed() { try { const u = acSess(); return !!(u && SCN_ALLOWED.includes(chestNorm(u.u))); } catch (e) { return false; } }
@@ -26803,7 +26894,7 @@ function lsExportHM() { const D = LS.data; if (!D) return; const n1 = D.n + 1, c
  * loads that file, so it exists for everybody even when you are offline. "Publish on this device" lists it in your own lobby straight
  * away; to make it public for everyone, put the exported file in the maps folder and add its line to maps/index.json (see NOTES.md).
  * Players see it in the Lobby next to Destiny City and the rest; nobody but you can change it. */
-const PUB_BASES = new Set(['mall', 'loft', 'city', 'galleria', 'school', 'raimon', 'bowl', 'btl', 'diner', 'tag', 'budokai', 'plot', 'ship', 'theater']);
+const PUB_BASES = new Set(['mall', 'loft', 'city', 'galleria', 'school', 'raimon', 'bowl', 'btl', 'diner', 'tag', 'budokai', 'plot', 'ship', 'theater', 'construct']);
 const PUB = { cache: new Map(), local: [] };
 const pubSlug = (n) => String(n || 'room').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) || 'room';
 async function pubGather(name) {
@@ -26880,7 +26971,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             clearTimeout(GPU_EV.t);
             GPU_EV.t = setTimeout(() => {
                 if (activeMap !== id) return;
-                const L = [['city', CITY.group], ['plot', PLOT.group], ['galleria', GAL.group], ['school', SCH.group], ['raimon', RM.group], ['nuu', NU.group], ['btl', BT.group]];
+                const L = [['city', CITY.group], ['plot', PLOT.group], ['galleria', GAL.group], ['school', SCH.group], ['raimon', RM.group], ['nuu', NU.group], ['jv', JV.group], ['btl', BT.group]];
                 for (const [k, g] of L) if (g && k !== id && !g.visible) gpuEvictGroup(g);
             }, 1500);
         }
@@ -26892,6 +26983,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (id === 'school') { try { ensureSchool(); } catch (e) { console.error('School failed to build', e); } }
             if (id === 'raimon') { try { ensureRaimon(); } catch (e) { console.error('College Raimon failed to build', e); } }
             if (id === 'nuu') { try { ensureNuu(); } catch (e) { console.error('Forest of Nuu failed to build', e); } }
+            if (id === 'jv') { try { ensureJv(); } catch (e) { console.error('Journey Ville failed to build', e); } }
             if (id === 'bowl') { try { ensureBowl(); } catch (e) { console.error('Zen Bowl failed to build', e); } }
             if (id === 'btl') { try { ensureBtl(); } catch (e) { console.error('Warriors of Light failed to build', e); } }
             if (id === 'loft') { try { loftForestEnsure(); } catch (e) { console.warn('forest edge', e); } }
@@ -26905,6 +26997,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             if (BW.group) BW.group.visible = id === 'bowl';
             if (RM.group) RM.group.visible = id === 'raimon';
             if (NU.group) NU.group.visible = id === 'nuu';
+            if (JV.group) JV.group.visible = id === 'jv';
             if (BT.group) BT.group.visible = id === 'btl';
             try { gpuEvictOthers(id); } catch (e) { console.warn('gpu evict', e); }
             if (id === 'diner') { try { ensureKitchen(); } catch (e) { console.error('Kitchen failed to build', e); } }
@@ -26914,13 +27007,14 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             try { if (id === 'tag') ensureTagArena(); if (TG.ready && TG.group) TG.group.visible = id === 'tag'; } catch (e) { console.error('Laser tag arena failed to build', e); }
             try { if (id === 'budokai') ensureBudokai(); if (BUD.ready && BUD.group) BUD.group.visible = id === 'budokai'; } catch (e) { console.error('Budokai arena failed to build', e); }
             { const host = id === 'plot' ? PLOT.group : loftGroup; if (DC.root && host && DC.root.parent !== host) host.add(DC.root); if (DC.wallG) DC.wallG.visible = id !== 'plot'; BP.dirty = true; }
-            if (camera) { camera.far = id === 'loft' ? 1000 : id === 'city' ? 1900 : id === 'plot' ? 3400 : id === 'raimon' ? 900 : id === 'nuu' ? 800 : (id === 'galleria' || id === 'school') ? 2000 : 400; camera.updateProjectionMatrix(); }
+            if (camera) { camera.far = id === 'loft' ? 1000 : id === 'city' ? 1900 : id === 'plot' ? 3400 : id === 'raimon' ? 900 : id === 'nuu' ? 800 : id === 'jv' ? 1500 : (id === 'galleria' || id === 'school') ? 2000 : 400; camera.updateProjectionMatrix(); }
             if (id === 'loft') { scene.background = new THREE.Color(0xe9dcc0); scene.fog = new THREE.FogExp2(0xcfe8f0, 0.0021); }
             else if (id === 'city') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0011); }
             else if (id === 'galleria') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0011); }
             else if (id === 'btl') { scene.background = new THREE.Color(0x070b1c); scene.fog = new THREE.FogExp2(0x070b1c, 0.006); }
             else if (id === 'raimon') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0012); }
             else if (id === 'nuu') { scene.background = new THREE.Color(0xbfdcee); scene.fog = new THREE.FogExp2(0xc4e0ee, 0.0029); }
+            else if (id === 'jv') { scene.background = new THREE.Color(0x0b1236); scene.fog = new THREE.FogExp2(0x1a2a5c, 0.0011); }
             else if (id === 'bowl') { scene.background = new THREE.Color(0x0b0a1a); scene.fog = new THREE.FogExp2(0x0b0a1a, 0.012); }
             else if (id === 'school') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.0009); }
             else if (id === 'plot') { scene.background = new THREE.Color(0xcfe8f0); scene.fog = new THREE.FogExp2(0xd3e9f1, 0.00085); }
@@ -26931,7 +27025,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             else if (id === 'ship') { scene.background = new THREE.Color(0x02030a); scene.fog = new THREE.FogExp2(0x02030a, 0.004); }
             else if (id === 'construct') { scene.background = new THREE.Color(0xf4f6f8); scene.fog = new THREE.FogExp2(0xf4f6f8, 0.011); }
             else { scene.background = new THREE.Color(0x030712); scene.fog = new THREE.FogExp2(0x030712, 0.011); }
-            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'nuu' ? 18 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'budokai' ? 14 : id === 'construct' ? 15 : id === 'ship' ? 9 : id === 'theater' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : id === 'nuu' ? Math.PI / 2 + 0.85 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
+            if (controls) { controls.maxDistance = id === 'loft' ? 14 : id === 'city' ? 16 : id === 'plot' ? 30 : id === 'galleria' ? 18 : id === 'school' ? 15 : id === 'raimon' ? 24 : id === 'nuu' ? 18 : id === 'jv' ? 18 : id === 'bowl' ? 12 : id === 'btl' ? 60 : id === 'diner' ? 26 : id === 'tag' ? 11 : id === 'budokai' ? 14 : id === 'construct' ? 15 : id === 'ship' ? 9 : id === 'theater' ? 14 : 20; controls.maxPolarAngle = id === 'loft' ? Math.PI / 2 + 0.6 : (id === 'city' || id === 'plot' || id === 'galleria') ? Math.PI / 2 + 0.25 : id === 'nuu' ? Math.PI / 2 + 0.85 : Math.PI / 2 - 0.02; }   // in the studio the camera may dip below eye level, so you can look up at the TV
             if (typeof fpOn !== 'undefined' && fpOn && controls) { if (fpSaved) fpSaved.polar = controls.maxPolarAngle; controls.maxPolarAngle = Math.PI - 0.05; controls.minPolarAngle = 0.05; }
             if ((id === 'loft' || id === 'diner' || id === 'tag' || id === 'construct' || id === 'bowl' || id === 'btl' || id === 'ship' || id === 'theater') && typeof hbSet === 'function' && hbOn) hbSet(false, true);
             if (typeof BK !== 'undefined' && BK.on && !BK_OUT.includes(id)) bkSet(false, true);
@@ -28165,6 +28259,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (/^\/(battle|arena|ff)$/i.test(text)) { btlOpen(); return true; }
             if (/^\/(settings|graphics|fps|cloud)$/i.test(text)) { gfxToggle(true); return true; }
             if (/^\/(tag|lasertag)$/i.test(text)) { tgOpen(); return true; }
+            if (/^\/(construct|hero|training)$/i.test(text)) { constructOpen(); return true; }
             if (/^\/(airship|hangar)$/i.test(text)) { if (AS.riding) asDismount(); else if (AS.pilot) asSet(false); else asShow(true); return true; }
             if (/^\/garage$/i.test(text)) { bkShow(true); return true; }
             if (/^\/(bike|motorbike|motorcycle)$/i.test(text)) { if (!BK.raw.some(Boolean)) bkShow(true); bkToggle(); return true; }
@@ -28175,6 +28270,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             { const cm = /^\/(magic|junction|refine)$/i.exec(text); if (cm) { mgOpen(cm[1].toLowerCase() === 'junction' ? 'jx' : cm[1].toLowerCase() === 'refine' ? 'refine' : 'magic'); return true; } }
             { const cm = /^\/draw$/i.exec(text); if (cm) { mgDraw(false); return true; } }
             { const cm = /^\/cmpbattle(?:\s+(on|off))?$/i.exec(text); if (cm) { if (cm[1]) cmpBattleSet(cm[1].toLowerCase() === 'on'); sysChat('Companions ' + (CMPBT.on ? 'comment on fights (they read the battle log). /cmpbattle off quiets them.' : 'stay quiet during fights. /cmpbattle on lets them comment.')); return true; } }
+            { const cm = /^\/cmpbrain(?:\s+(on|off|debug|reset))?$/i.exec(text); if (cm) { brSlash((cm[1] || '').toLowerCase()); return true; } }
             { const cm = /^\/cmpshare(?:\s+(on|off))?$/i.exec(text); if (cm) { if (cm[1]) cmpnShareSet(cm[1].toLowerCase() === 'on'); sysChat('Companions are ' + (CMPN.share ? 'shown to other players (their words go to your party only). /cmpshare off hides them.' : 'hidden from other players. /cmpshare on shows them.')); return true; } }
             if (/^\/(games?|cards?|tt|c4)$/i.test(text)) { gmOpen(); return true; }
             if (text.startsWith('/') && EMOTES[text.slice(1)]) { performEmote(text.slice(1)); return true; }
@@ -30220,7 +30316,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const partyRmOk = (rm) => {
             if (!rm || typeof rm !== 'object') return null;
             if (rm.p) return validCode(String(rm.c)) ? { c: String(rm.c), l: String(rm.l || '').slice(0, 40), m: mapOfCode(rm.c), p: 1 } : null;
-            const d = DISTRICTS.find((x) => x.id === rm.c); return d ? { c: d.id, l: `${d.name} • ${d.tag}`.slice(0, 40), m: d.map || 'city', p: 0 } : null;
+            const d = DISTRICTS.find((x) => x.id === rm.c); return d ? { c: d.id, l: `${d.name} • ${d.tag}`.slice(0, 40), m: d.map || 'mall', p: 0 } : null;
         };
         function partyTick() {
             const now = Date.now();
@@ -30316,7 +30412,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         function partyGoTo(rm) {
             rm = partyRmOk(rm); if (!rm) return;
             if (room && ((rm.p && room.isPrivate && room.code === rm.c) || (!rm.p && !room.isPrivate && room.id === rm.c))) { sysChat('You are already in that room.'); return; }
-            if (rm.p) joinPrivate(rm.c); else { const d = DISTRICTS.find((x) => x.id === rm.c) || DISTRICTS.find((x) => x.id === 'city-01'); joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'city' }); }
+            if (rm.p) joinPrivate(rm.c); else { const d = DISTRICTS.find((x) => x.id === rm.c); joinRoom(d.id, { label: `${d.name} • ${d.tag}`, map: d.map || 'mall' }); }
         }
         function partySummon() {
             if (!PARTY.net) return; const rm = partyRoomInfo(); if (!rm) { sysChat('Enter a room first.'); return; }
@@ -30832,6 +30928,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 }
                 case 'raimon': k = 'concrete'; outdoors = true; break;
                 case 'nuu': k = 'grass'; outdoors = true; break;
+                case 'jv': k = 'stone'; outdoors = true; break;
                 case 'mall': k = 'tile'; break;
                 case 'diner': k = 'tile'; break;
                 case 'bowl': k = (z > 0.1 && z < 6) ? 'wood' : 'tile'; break;
@@ -31003,7 +31100,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             panel.addEventListener('pointerdown', (e) => e.stopPropagation()); panel.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
             WX.ui = { chip, panel, body, built: false };
             const open = $('btn-weather'); if (open) open.addEventListener('click', () => wxToggle(true));
-            { const bbu = $('btn-budokai'); if (bbu) bbu.addEventListener('click', () => budOpen()); const bg = $('btn-tag'); if (bg) bg.addEventListener('click', () => tgOpen()); const bd = $('btn-diner'); if (bd) bd.addEventListener('click', () => dinerOpen()); const bbw = $('btn-bowl'); if (bbw) bbw.addEventListener('click', () => bowlOpen()); const bbt = $('btn-btl'); if (bbt) bbt.addEventListener('click', () => btlOpen()); const bbz = $('btn-blitz'); if (bbz) bbz.addEventListener('click', () => bzOpen({})); const bge = $('btn-gear'); if (bge) bge.addEventListener('click', () => eqpOpen()); const bsv = $('btn-surv'); if (bsv) bsv.addEventListener('click', () => svOpen()); const bi = $('btn-industries'); if (bi) bi.addEventListener('click', () => { if (typeof industriesOpen === 'function') industriesOpen(); }); }
+            { const bbu = $('btn-budokai'); if (bbu) bbu.addEventListener('click', () => budOpen()); const bg = $('btn-tag'); if (bg) bg.addEventListener('click', () => tgOpen()); const bcn = $('btn-construct'); if (bcn) bcn.addEventListener('click', () => constructOpen()); const bd = $('btn-diner'); if (bd) bd.addEventListener('click', () => dinerOpen()); const bbw = $('btn-bowl'); if (bbw) bbw.addEventListener('click', () => bowlOpen()); const bbt = $('btn-btl'); if (bbt) bbt.addEventListener('click', () => btlOpen()); const bbz = $('btn-blitz'); if (bbz) bbz.addEventListener('click', () => bzOpen({})); const bge = $('btn-gear'); if (bge) bge.addEventListener('click', () => eqpOpen()); const bsv = $('btn-surv'); if (bsv) bsv.addEventListener('click', () => svOpen()); const bi = $('btn-industries'); if (bi) bi.addEventListener('click', () => { if (typeof industriesOpen === 'function') industriesOpen(); }); }
             window.addEventListener('keydown', (e) => { if (e.code === 'KeyU' && !e.repeat && !isTyping(e) && !lobbyOpen() && !charModalOpen() && !equipOpen() && !e.ctrlKey && !e.metaKey) { e.preventDefault(); wxToggle(); } else if (e.code === 'Escape' && WX.open) wxToggle(false); });
             setInterval(() => { chip.firstChild.textContent = wxIcon(); chip.lastChild.textContent = wxTempStr(WX.temp); chip.style.display = (activeMap === 'city' || activeMap === 'plot' || activeMap === 'loft' || activeMap === 'galleria' || activeMap === 'school' || activeMap === 'raimon' || activeMap === 'raimonN' || activeMap === 'raimonT' || activeMap === 'nuu') ? '' : 'none'; if (WX.open) wxRenderPanel(); }, 1500);
             wxLiveRefresh(true);
@@ -33728,7 +33825,7 @@ body.bud-on #chat-panel{display:none!important}#bud-pad .mv{border-color:#9ad7ff
         }
 
         // ---- Left stick click (L3) in the open world: draw / put away your weapon. Away = your default animation set (Fists). Not in game modes. ----
-        const CLS_OW = ['city', 'plot', 'galleria', 'school'];
+        const CLS_OW = ['mall', 'city', 'plot', 'galleria', 'school'];
         const clsHolster = () => { try { const w = localStorage.getItem('oasisHolster'); return w === 'sword' || w === 'pistol' || w === 'fighter' ? w : null; } catch (e) { return null; } };
         const clsStowOk = (b) => CLS_OW.includes(activeMap) && !(b && (b[4] || b[5])) && !BLZ.on && !DUEL.s && (CLS.wpn !== 'fists' || !!clsHolster());
         function clsStowToggle() {
@@ -35852,7 +35949,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             q('#hc-bt i').style.width = Math.round(HC.btE * 100) + '%'; q('#hc-hp i').style.width = Math.round(clamp(HC.hp / HC.hpMax, 0, 1) * 100) + '%'; set('btl', (v) => { q('#hc-bt span').textContent = v; }, activeMap === 'construct' ? 'BULLET TIME' : 'SKILL GAUGE'); const gm = gnMode(); if (HC.shown.gm !== gm) { HC.shown.gm = gm; h.classList.toggle('gun', gm); const sb = h.querySelector('[data-a=sword]'); if (sb) sb.innerHTML = gm ? '⟳<small>reload</small>' : '⚔<small>sword</small>'; const setB = (a, html) => { const x = h.querySelector('[data-a=' + a + ']'); if (x) x.innerHTML = html; }; setB('evade', gm ? '🌀<small>roll</small>' : '⚡<small>evade</small>'); setB('guard', gm ? '🧎' : '🛡'); setB('lock', gm ? '🔭' : '🎯'); } set('hpl', (v) => { q('#hc-hp span').textContent = v; }, (gm ? 'GUNNER' : 'HERO') + ' Lv ' + clsLv() + ' · HP ' + Math.ceil(HC.hp) + ' / ' + HC.hpMax + (gm ? ' · ' + GW[GN.cur].name.toUpperCase() + ' ' + (GW[GN.cur].melee ? '' : GN.rel > 0 ? 'RELOADING' : GN.ammo[GN.cur] + ' / ' + GW[GN.cur].mag) : '')); const tn = document.getElementById('hc-tint'); if (tn) tn.style.opacity = HC.btOn ? '1' : '0';
             if (HC.lock) { HC.lockSp.visible = true; HC.lockSp.position.set(HC.lock.g.position.x, HC.lock.g.position.y + 1.05, HC.lock.g.position.z); HC.lockSp.scale.setScalar(0.85 + Math.sin(HC.t * 6) * 0.05); } else HC.lockSp.visible = false;
         }
-        function hcExit() { try { joinRoom('city-01', { label: 'Destiny City • Channel 1', map: 'city' }); } catch (e) { sysChat('Could not leave the room.'); } }
+        function hcExit() { try { joinRoom('plaza-01', { label: 'Central Mall • Channel 1', map: 'mall' }); } catch (e) { sysChat('Could not leave the Construct.'); } }
 
         /* ---- per-frame ---- */
         function hcFrameOthers() {
@@ -35938,9 +36035,11 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         }
         function hcGround() { return 0; }
         function hcSpawn() { return { x: (Math.random() - 0.5) * 3, y: 0, z: 12 + Math.random(), ry: Math.PI }; }
+        MAP_DEFS.construct = { id: 'construct', ground: hcGround, clamp: hcClamp, collide: hcCollide, spawn: hcSpawn, update: hcUpdate };
         window.__gn = { RIG: GN_RIG, blood: gnBlood, GN, GW, GNW, GRIPS: GN_GRIPS, set: (k) => gnSetWeapon(k, true), muzzle: (a, k) => gnMuzzle(a || localActor, k || GN.cur), remote: (m) => gnRemote({}, m), shoot: () => gnShoot(), reload: () => gnReload(), mode: () => gnMode(), GRIP: GN_GRIP, dress: (a) => gnDress(a || localActor, true) };
         window.__cls = { CLS, BASEMV, base: baseMoveSet, DUEL, peers, equip: clsEquip, add: clsAdd, lv: clsLv, begin: duelBegin, onMsg: duelOnMsg, start: CLS_START, xp: CLS_XP };
-        window.__hc = { HC, GRIP: HC_GRIP, sword: () => hcSword(), gun: () => hcShoot(), evade: () => hcEvade(), jump: () => hcJump(), lock: (f) => hcLockToggle(f), bt: (o) => hcBulletTime(o), draw: () => hcDraw(), step: (s) => hcStep(s), taunt: () => hcTaunt(), style: (p, m) => hcStyle(p, m), dress: (a) => hcDress(a || localActor) };   // (handy for tests)
+        window.__hc = { HC, GRIP: HC_GRIP, open: () => constructOpen(), sword: () => hcSword(), gun: () => hcShoot(), evade: () => hcEvade(), jump: () => hcJump(), lock: (f) => hcLockToggle(f), bt: (o) => hcBulletTime(o), draw: () => hcDraw(), step: (s) => hcStep(s), taunt: () => hcTaunt(), style: (p, m) => hcStyle(p, m), dress: (a) => hcDress(a || localActor) };   // (handy for tests)
+        function constructOpen() { try { joinRoom('construct-01', { label: 'The Construct • Hero class', map: 'construct' }); } catch (e) { console.error(e); sysChat('Could not open the Construct.'); } }
         {   // keyboard: capture phase, only in the Construct
             window.addEventListener('keydown', (e) => {
                 if (!hcMine() || e.ctrlKey || e.metaKey || e.altKey || hcUiBlock(e)) return;
@@ -36532,6 +36631,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             $('btn-lobbies').addEventListener('click', openLobby); { const rgb = $('btn-retrogift'); if (rgb) rgb.addEventListener('click', () => rgOpen()); } { const ab = $('btn-airship'); if (ab) ab.addEventListener('click', () => asShow(true)); }
             $('lobby-close').addEventListener('click', closeLobby);
             $('create-private').addEventListener('click', () => { const c = makeCode(privateMap); ownedAdd(c); joinPrivate(c); });
+            $('pm-mall').addEventListener('click', () => { privateMap = 'mall'; renderPrivateMap(); });
             $('pm-loft').addEventListener('click', () => { privateMap = 'loft'; renderPrivateMap(); });
             $('pm-city').addEventListener('click', () => { privateMap = 'city'; renderPrivateMap(); });
             $('pm-galleria').addEventListener('click', () => { privateMap = 'galleria'; renderPrivateMap(); });
@@ -37429,7 +37529,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
          *  walking behind you, and answering your chat with speech bubbles. Their brains are Claude, using the
          *  persona prompt, memory and relationship from the MuchiGo save. Everything stays on this device.
          * ================================================================================================ */
-        const CMP = { nextSay: 0, list: [], active: new Map(), ai: { key: '', model: 'haiku', ambient: false }, trail: [], map: 'mall', log: [], panel: null, busy: new Set(), warned: 0, nextAmb: 0, ready: false };
+        const CMP = { nextSay: 0, list: [], active: new Map(), ai: { key: '', model: 'haiku', ambient: false, brain: true, shared: true }, trail: [], map: 'mall', log: [], panel: null, busy: new Set(), warned: 0, nextAmb: 0, ready: false };
         const CMP_MODELS = { haiku: ['claude-haiku-4-5-20251001', 'anthropic/claude-haiku-4.5', 'Haiku (fast)'], sonnet: ['claude-sonnet-4-6', 'anthropic/claude-sonnet-4.5', 'Sonnet (smarter)'], free: ['', 'meta-llama/llama-3.3-70b-instruct:free', 'Free key (Gemini AIza… / Groq gsk_… / HuggingFace hf_… / OpenRouter)'] };
         const CMP_MAXCHARS = 260;   // bubble length budget (cmpChunks splits anything longer into several bubbles)
         const CMP_MAPS = { mall: 'the Plaza mall', loft: 'a cozy loft and its garden', city: 'the city', plot: 'a build plot', galleria: 'the galleria', school: 'the school', bowl: 'the Zen Bowl', tag: 'the laser tag arena', btl: 'a battle arena', nuu: 'Adventia, a fantasy forest world with dungeons and camps' };
@@ -37445,7 +37545,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         const cmpEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         function cmpLoad() {
             try { const a = JSON.parse(localStorage.getItem('oasis.cmp.v1') || '[]'); if (Array.isArray(a)) CMP.list = a.filter((c) => c && c.id && c.name); } catch (e) { /* none yet */ }
-            try { const b = JSON.parse(localStorage.getItem('oasis.cmp.ai') || '{}'); if (b && typeof b === 'object') Object.assign(CMP.ai, { key: String(b.key || ''), model: CMP_MODELS[b.model] ? b.model : 'haiku', custom: String(b.custom || '').slice(0, 80), ambient: !!b.ambient }); } catch (e) { /* none yet */ }
+            try { const b = JSON.parse(localStorage.getItem('oasis.cmp.ai') || '{}'); if (b && typeof b === 'object') Object.assign(CMP.ai, { key: String(b.key || ''), model: CMP_MODELS[b.model] ? b.model : 'haiku', custom: String(b.custom || '').slice(0, 80), ambient: !!b.ambient, brain: b.brain !== false, shared: b.shared !== false }); } catch (e) { /* none yet */ }
             CMP.ready = true;
         }
         let _cmpSaveT = 0;
@@ -37537,7 +37637,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             for (const [k, gm] of Object.entries(d.groupMemories || {})) g += cmpApplyGroup(k, gm) ? 1 : 0;
             cmpSave(true); sysChat('Memory pack merged: ' + n + ' companion memories and ' + g + ' group memory. Nothing else was changed.'); try { cmpPanelRender(); } catch (e) { /* panel closed */ } return n + g;
         }
-        function cmpSystem(c, extra) {
+        function cmpSystemBase(c, extra) {
             try { const st = cmpSimText(c); if (st) extra = st + (extra ? '\n' + extra : ''); } catch (e) { /* sim */ }
             const oth = [...CMP.active.values()].filter((x) => x.c.id !== c.id).map((x) => x.c), others = oth.map((x) => x.name);
             const near = [...peers.values()].map((p) => p.name).slice(0, 6);
@@ -37589,15 +37689,27 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             const tk = setInterval(() => { try { a.actor.setTyping(true); } catch (e) { /* ignore */ } }, 2500);
             try {
                 try { const bu = cmpUnit(c); if (bu && BT.phase !== 'idle') extra = (extra ? extra + '\n' : '') + cmpBtState(bu) + '\n(You can see the whole fight. Use it only when it matters to what was said; do not recite numbers.)'; } catch (e) { /* no battle */ }
+                const brain = CMB.on(); if (brain) extra = (extra ? extra + '\n' : '') + brTagRule(!!silent);
                 const hist = (c.hist || []).slice(-20).map((m) => ({ role: m.r === 'user' ? 'user' : 'assistant', content: m.c }));
                 const msgs = hist.concat([{ role: 'user', content: userText }]);
-                let raw = await cmpAI(cmpSystem(c, extra), msgs, 340); const em = raw.match(/\[emote:\s*([A-Za-z0-9_]+)\s*\]/); raw = raw.replace(/\[emote:[^\]]*\]/gi, '').trim(); if (em) setTimeout(() => cmpEmote(c, em[1].toLowerCase()), 600);
-                const reply = cmpClean(raw, c.name), passed = /^\W*\[?\s*PASS\s*\]?\W*$/i.test(String(raw).trim());
-                if (reply && !passed) {
-                    const at = Math.max(Date.now(), CMP.nextSay), wait = at - Date.now(); CMP.nextSay = at + 18000 + Math.random() * 2000 + 1700 * Math.max(0, cmpChunks(reply).length - 1); if (wait > 60) await new Promise((r) => setTimeout(r, wait));   // companions never talk over each other: 18 to 20 seconds between replies
-                    c.hist = (c.hist || []).concat(silent ? [] : [{ r: 'user', c: userText }], [{ r: 'assistant', c: reply }]).slice(-60); c.aff = (c.aff || 0) + 3; c.since = (c.since || 0) + 2; cmpSay(a, c, reply); cmpSave(); result = reply; if (!noCross) cmpCrossNext(c, reply, xd | 0);
-                    if (c.since >= 20) cmpSummarize(c);
+                const isPass = (t) => /^\W*\[?\s*PASS\s*\]?\W*$/i.test(String(t).trim());
+                const ask = async (ex) => { let raw = await cmpAI(cmpSystem(c, ex), msgs, 360); const em = raw.match(/\[emote:\s*([A-Za-z0-9_]+)\s*\]/); raw = raw.replace(/\[emote:[^\]]*\]/gi, '').trim(); const tags = brain ? brTakeTags(raw) : null; if (tags) raw = tags.text.trim(); return { raw, em, tags }; };
+                let r = await ask(extra), reply = cmpClean(r.raw, c.name), passed = isPass(r.raw);
+                if (brain && reply && !passed) {   // repetition guard: one redo, then drop the line and let the topic move on
+                    const dup = brRepeated(c, reply);
+                    if (dup) {
+                        const r2 = await ask((extra ? extra + '\n' : '') + '[REDO: your draft repeated something already said ("' + dup.text.replace(/\s+/g, ' ').slice(0, 80) + '"). Write a different line: a new angle, a new detail, a new question or a different mood. Do not reuse its words.]'), rep2 = cmpClean(r2.raw, c.name);
+                        if (rep2 && !isPass(r2.raw) && !brRepeated(c, rep2)) { r = r2; reply = rep2; } else { passed = true; CMB.stale = Date.now(); }
+                    }
                 }
+                if (reply && !passed) {
+                    if (r.em) setTimeout(() => cmpEmote(c, r.em[1].toLowerCase()), 600);
+                    const at = Math.max(Date.now(), CMP.nextSay), wait = at - Date.now(); CMP.nextSay = at + 18000 + Math.random() * 2000 + 1700 * Math.max(0, cmpChunks(reply).length - 1); if (wait > 60) await new Promise((rs) => setTimeout(rs, wait));   // companions never talk over each other: 18 to 20 seconds between replies
+                    c.hist = (c.hist || []).concat(silent ? [] : [{ r: 'user', c: userText }], [{ r: 'assistant', c: reply }]).slice(-60); c.since = (c.since || 0) + 2;
+                    if (brain) { try { brAfter(c, reply, r.tags, userText, !!silent); } catch (e) { console.warn('brain after', e); c.aff = (c.aff || 0) + 3; } } else c.aff = (c.aff || 0) + 3;
+                    cmpSay(a, c, reply); cmpSave(); result = reply; if (!noCross) { if (brain) brCross(c, reply, xd | 0); else cmpCrossNext(c, reply, xd | 0); }
+                    if (c.since >= 20) cmpSummarize(c);
+                } else if (passed && brain && (xd | 0) > 0) CMB.chainEnd = Date.now() + 45000;
             } catch (e) { if (Date.now() - CMP.warned > 8000) { CMP.warned = Date.now(); sysChat(c.name + ' could not answer: ' + (e.message || e)); } }
             finally { clearInterval(tk); CMP.busy.delete(c.id); try { a.actor.setTyping(false); } catch (e) { /* ignore */ } }
             return result;
@@ -37715,10 +37827,226 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             })();
         }
         setInterval(() => {
+            if (CMB.on() && CMP.ai.ambient) { try { brTick(); } catch (e) { console.warn('brain tick', e); } return; }
             if (!CMP.ai.ambient || !CMP.active.size || document.hidden || Date.now() < CMP.nextAmb) return; if (!CMP.ai.key) return; CMP.nextAmb = Date.now() + 150000 + Math.random() * 150000;
             const act = [...CMP.active.values()].map((x) => x.c), c = act[Math.floor(Math.random() * act.length)];
             cmpReply(c, '(' + me.name + ' says nothing. Make a brief, natural unprompted remark: something about where you are, what is around, or something you remember about them.)', null, true);
         }, 15000);
+
+        /* ======================================================================
+         *  COMPANION BRAIN 2.0  (ported from MuchiGo)
+         *  Why companions went in circles: cross-talk and idle chatter handed them no NEW information, only the same
+         *  shared memory and "answer them directly", so they mirrored each other. This block gives every companion
+         *   - a hidden mood + like rating on each reply (MuchiGo's [mood] / [heart] tags): drives mood and affinity
+         *   - bond ranks (Stranger .. Soulmate) from MuchiGo's XP curve, with behaviour guidance per rank
+         *   - shared minds: each one knows what the others remember and said privately, so they have things to gossip about
+         *   - time awareness: how long since you last spoke
+         *   - a conversation director: every unprompted line gets its own "move" and one fresh seed
+         *     (an unused memory, the place, the weather, another companion), never the same one twice in a row
+         *   - a repetition guard: a reply that echoes a recent line is regenerated once, then dropped
+         *   - world beats: they react when you change map, the weather turns, or another player shows up
+         *  Switch: /cmpbrain on|off|debug|reset, or the checkboxes in the Companions panel.
+         * ====================================================================== */
+        const CMB = { lines: [], sig: null, chainEnd: 0, nextEvent: 0, stale: 0 };
+        CMB.on = () => CMP.ai.brain !== false;
+        CMB.shared = () => CMP.ai.shared !== false;
+        const CMB_STOP = new Set('the and but for with that this its are was were been not yes just really very like well yeah okay then than too also have has had does did will would can could should about from into out what when where who how why there here some any more much your you they them their ours mine himself herself oh'.split(' '));
+        const CMB_XP = (() => { const t = [0, 0]; let tot = 0; for (let i = 1; i < 100; i++) { tot += Math.floor(300 * Math.pow(1.4, i - 1)); t[i + 1] = tot; } return t; })();   // MuchiGo: 300 * 1.4^(n-1) per level
+        const CMB_RANKS = [[1, 'Stranger'], [5, 'Acquaintance'], [10, 'Friend'], [20, 'Close Friend'], [30, 'Confidant'], [45, 'Sweetheart'], [60, 'Beloved'], [80, 'Soulmate'], [100, 'Max Bond']];
+        const CMB_TIER = {
+            'Stranger': 'You are still feeling each other out: polite, curious, a little guarded. No pet names or intimacy unless your memories say you already have them.',
+            'Acquaintance': 'Friendly and easy. Light teasing is fine; you are starting to remember small things about them.',
+            'Friend': 'Comfortable. Inside jokes, honest opinions, you ask real questions and you notice when something is off.',
+            'Close Friend': 'You can tease hard, call them out gently and be protective. You share things about yourself unprompted.',
+            'Confidant': 'They are someone you trust with the real stuff. You say difficult things kindly and you remember what they confided.',
+            'Sweetheart': 'Warm and affectionate. You light up around them and show it in your own style.',
+            'Beloved': 'Deeply attached. You are tender and a little possessive, and you notice every detail of how they are.',
+            'Soulmate': 'Completely at ease and devoted. You finish each other\'s thoughts; comfortable silence and sharp banter are both natural.',
+            'Max Bond': 'Completely at ease and devoted. You finish each other\'s thoughts; comfortable silence and sharp banter are both natural.'
+        };
+        function brLevel(xp) { xp = xp || 0; let lv = 1; for (let i = 2; i <= 100; i++) { if (xp >= CMB_XP[i]) lv = i; else break; } return lv; }
+        function brRank(lv) { let r = 'Stranger'; for (const [t, n] of CMB_RANKS) if (lv >= t) r = n; return r; }
+        function brHash(s) { let h = 0; s = String(s); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+        function brMind(c) { return c.mind || (c.mind = { used: {}, moves: [], mood: '', moodAt: 0, seen: 0, base: null }); }
+        function brGap(ms) { const m = Math.round(ms / 60000); if (m < 60) return m + ' minutes'; const h = Math.round(m / 60); if (h < 36) return h + ' hours'; return Math.round(h / 24) + ' days'; }
+        function brSentences(t) { return String(t || '').replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 30 && s.length < 260); }
+        /* ---- repetition guard ---- */
+        function brToks(s) { return String(s || '').toLowerCase().replace(/\*[^*]*\*/g, ' ').replace(/[^a-z0-9' ]+/g, ' ').split(/\s+/).filter((w) => w.length > 3 && !CMB_STOP.has(w)); }
+        function brSim(a, b) {
+            const ta = brToks(a), tb = brToks(b), A = new Set(ta), B = new Set(tb); if (A.size < 3 || B.size < 3) return 0;
+            let n = 0; for (const w of A) if (B.has(w)) n++;
+            const grams = (t) => { const g = new Set(); for (let i = 0; i + 2 < t.length; i++) g.add(t[i] + ' ' + t[i + 1] + ' ' + t[i + 2]); return g; }, ga = grams(ta), gb = grams(tb); let m = 0; for (const g of ga) if (gb.has(g)) m++;
+            return Math.max(n / (A.size + B.size - n), m ? 0.6 : 0);
+        }
+        function brRepeated(c, text) {
+            for (const l of CMB.lines.slice(-12)) { const s = brSim(text, l.text); if (l.who === c.name ? s >= 0.42 : s >= 0.55) return l; }
+            return null;
+        }
+        function brHotWords() {
+            const last = CMB.lines.slice(-4); if (last.length < 3) return []; const f = new Map();
+            last.forEach((l) => new Set(brToks(l.text).filter((w) => w.length > 4)).forEach((w) => f.set(w, (f.get(w) || 0) + 1)));
+            return [...f.entries()].filter((e) => e[1] >= 3).map((e) => e[0]).slice(0, 4);
+        }
+        const brTopicStale = () => brHotWords().length >= 2 || (Date.now() - CMB.stale < 120000);
+        /* ---- hidden tags: [mood:word] and the MuchiGo heart rating ---- */
+        function brTagRule(silent) {
+            return '[HIDDEN TAGS: after your words (and after any [emote:KEY]), on the very last line add [mood:one lowercase word for how you feel right now, such as happy, teasing, shy, tired, wistful, annoyed, excited, calm]'
+                + (silent ? '' : ' and then [♥0], [♥1], [♥2] or [♥3] for how much YOU liked what ' + me.name + ' just said (0 = neutral, boring, hurtful or annoying; 1 = pleasant; 2 = you really enjoyed it or it touched you; 3 = it made your heart skip; effort, kindness and sincerity earn more, low-effort or rude earns 0)')
+                + '. Never mention, explain or quote these tags.]';
+        }
+        function brTakeTags(raw) {
+            let like = null, mood = '';
+            let t = String(raw || '').replace(/\[\s*[♥❤💕]️?\s*([0-3])\s*\]/g, (m, d) => { like = +d; return ''; }).replace(/\[\s*mood\s*:\s*([A-Za-z' -]{2,24})\s*\]/gi, (m, w) => { mood = w.trim().toLowerCase(); return ''; });
+            t = t.replace(/\[\s*[♥❤💕]️?\s*[0-3]?\s*$/, '').replace(/\[\s*mood\s*:?[^\]]*$/i, '');
+            return { text: t.replace(/\s+$/, ''), like, mood };
+        }
+        function brEffort(text) {   // MuchiGo AFF_TUNE.effort
+            text = String(text || '').trim(); if (!text) return 0; let eff;
+            if (/[぀-ヿ一-鿿]/.test(text)) eff = Math.min(text.length * 3, new Set(text).size * 8); else eff = Math.min(text.length, new Set(text.toLowerCase().split(/\s+/).filter(Boolean)).size * 8);
+            for (const [max, pts] of [[15, 1], [40, 2], [100, 3], [200, 4], [Infinity, 5]]) if (eff < max) return pts; return 5;
+        }
+        const brLocalLike = (t) => /\b(love|miss|like|cute|pretty|beautiful|gorgeous|thank|thanks|proud|happy|great|amazing|awesome|wonderful|care|sweet|adorable|best|glad|sorry|appreciate)\b|❤|💕|♥|😊|🥰|😘/i.test(t || '') ? 1 : 0;
+        function brAfter(c, reply, tags, userText, silent) {
+            const mind = brMind(c), now = Date.now();
+            if (tags && tags.mood) { if (mind.base === null) mind.base = typeof c.mood === 'string' ? c.mood : ''; mind.mood = tags.mood; mind.moodAt = now; c.mood = tags.mood + ' (it shifts with the moment)'; }
+            if (silent) c.aff = (c.aff || 0) + 1;
+            else { mind.seen = now; const lk = tags && typeof tags.like === 'number' ? tags.like : brLocalLike(userText); c.aff = (c.aff || 0) + brEffort(userText) + [0, 3, 7, 12][lk]; }
+            CMB.lines.push({ who: c.name, text: reply, t: now }); if (CMB.lines.length > 24) CMB.lines.shift();
+        }
+        /* ---- shared minds (MuchiGo): they know what the others remember and said privately ---- */
+        function brSharedBlock(c, others) {
+            if (!others.length || !CMB.shared()) return '';
+            let out = '[SHARED MINDS: you and the others are close friends who talk about ' + me.name + ' when they are not around. You genuinely know what each of you has been through with them (below), like friends comparing notes. Bring it up naturally: gossip, tease, compare who is closest, react to what someone admitted, ask for details. Stay in your own voice. Only refer to things actually written below, never invent events, and drop one or two details at a time, not a recital.]';
+            others.slice(0, 3).forEach((o) => {
+                const lv = brLevel(o.aff), mem = o.summary ? String(o.summary).replace(/\s+/g, ' ').slice(0, 380) : '', mind = o.mind || {};
+                const facts = (o.facts || []).slice(-6).filter((f) => !((brMind(c).used['s:' + o.id + brHash(f)] || 0) > Date.now() - 20 * 60000)).slice(0, 3);
+                const last = (o.hist || []).filter((m) => m.r === 'assistant' && !cmpJunk(m)).slice(-1)[0];
+                out += '\n\n- ' + o.name + ' (bond Lv ' + lv + ' ' + brRank(lv) + (mind.mood && Date.now() - mind.moodAt < 25 * 60000 ? ', mood: ' + mind.mood : '') + ')'
+                    + (mem ? '\n  What ' + o.name + ' remembers: ' + mem : '') + (facts.length ? '\n  ' + o.name + ' knows: ' + facts.join(' / ') : '') + (last ? '\n  ' + o.name + '\'s latest words to ' + me.name + ': "' + String(last.c).replace(/\s+/g, ' ').slice(0, 130) + '"' : '');
+            });
+            return out;
+        }
+        function brContext(c) {
+            const mind = brMind(c), now = Date.now(), parts = [], others = [...CMP.active.values()].map((x) => x.c).filter((x) => x.id !== c.id);
+            if (mind.mood && now - mind.moodAt > 25 * 60000) { c.mood = mind.base || ''; mind.mood = ''; }   // moods fade back to the baseline
+            const lv = brLevel(c.aff), rk = brRank(lv);
+            parts.push('[BOND: Lv ' + lv + ' ' + rk + ' with ' + me.name + '. ' + CMB_TIER[rk] + ' Your persona and your memories always win over this guide.]');
+            if (mind.seen && now - mind.seen > 20 * 60000) parts.push('[TIME: you last spoke with ' + me.name + ' ' + brGap(now - mind.seen) + ' ago.' + (now - mind.seen > 3 * 3600000 ? ' Greet them accordingly and do not pretend no time has passed.' : '') + ']');
+            const sb = brSharedBlock(c, others); if (sb) parts.push(sb);
+            const mine = CMB.lines.filter((l) => l.who === c.name).slice(-4), rest = CMB.lines.filter((l) => l.who !== c.name).slice(-3);
+            if (mine.length || rest.length) parts.push('[NO REPEATS: these lines were already said. Do not reuse their ideas, jokes, pet names or opening words; say something new.]\n' + mine.map((l) => '- you: "' + l.text.replace(/\s+/g, ' ').slice(0, 90) + '"').concat(rest.map((l) => '- ' + l.who + ': "' + l.text.replace(/\s+/g, ' ').slice(0, 90) + '"')).join('\n'));
+            return parts.join('\n\n');
+        }
+        function cmpSystem(c, extra) {
+            if (!CMB.on()) return cmpSystemBase(c, extra);
+            let add = ''; try { add = brContext(c); } catch (e) { console.warn('brain context', e); }
+            return cmpSystemBase(c, add ? (extra ? add + '\n\n' + extra : add) : extra);
+        }
+        /* ---- the conversation director: every unprompted line gets a move and ONE fresh seed ---- */
+        const CMB_MOVES = {
+            observe: { solo: 1, pool: 'world', say: 'Notice something specific about where you are or what is going on around you right now, and say it the way you would.' },
+            recall: { solo: 1, pool: 'mem', say: 'Bring up ONE specific thing you remember about {me} (the material below) from a fresh angle: how it still makes you feel, a detail nobody has mentioned yet, or what you want to do about it. Do not retell it.' },
+            ask_user: { solo: 1, pool: 'mem', say: 'Ask {me} one concrete, specific question that follows from the material below (not "how are you"), and let your own opinion show.' },
+            ask_friend: { solo: 0, pool: 'friend', say: 'Turn to {other} and ask or tell them something specific, using the material below, as someone who knows them.' },
+            tease: { solo: 0, pool: 'friend', say: 'Tease {other} lightly about the material below, in your own style, then let it go.' },
+            opinion: { solo: 1, pool: 'world', say: 'Give a strong, specific opinion or hot take about something here or about what you two are doing, with a reason. You may be wrong.' },
+            plan: { solo: 1, pool: 'world', say: 'Suggest one concrete thing you want to do next together, and say why you want that.' },
+            feeling: { solo: 1, pool: 'none', say: 'Say honestly how you feel right now and what is behind it.' }
+        };
+        function brWorld() {
+            const out = [], d = new Date(), hr = d.getHours(), tod = hr < 5 ? 'late night' : hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : hr < 21 ? 'evening' : 'night';
+            out.push({ key: 'w:map:' + activeMap, text: 'You are in ' + (CMP_MAPS[activeMap] || activeMap) + ': pick one specific thing about it (a sight, a sound, how it feels, what you could do here).' });
+            out.push({ key: 'w:tod:' + tod + ':' + d.getDate(), text: 'It is ' + tod + '.' });
+            try { if (typeof WX !== 'undefined' && WX.kind && WX.kind !== 'none') out.push({ key: 'w:wx:' + WX.kind, text: 'The weather is ' + (WX.storm > 0.5 ? 'stormy' : WX.kind) + ' right now.' }); } catch (e) { /* no weather */ }
+            try { [...peers.values()].slice(0, 4).forEach((p) => p && p.name && out.push({ key: 'w:peer:' + p.name, text: p.name + ' is nearby.' })); } catch (e) { /* no peers */ }
+            return out;
+        }
+        function brSeed(c, pool, others) {
+            const mind = brMind(c), now = Date.now(), items = [], add = (key, text, other) => items.push({ key, text, other });
+            if (pool === 'mem') {
+                (c.facts || []).forEach((f) => add('f:' + brHash(f), 'You know for sure: ' + f));
+                (c.groupFacts || []).forEach((f) => add('g:' + brHash(f), 'Shared group history: ' + f));
+                brSentences(c.summary).forEach((s) => add('m:' + brHash(s), 'From your memory: ' + s));
+                (c.hist || []).filter((m) => m.r === 'user' && m.c && m.c.length > 25 && m.c.charAt(0) !== '[' && m.c.charAt(0) !== '(').slice(-6).forEach((m) => add('u:' + brHash(m.c), me.name + ' once told you: "' + m.c.slice(0, 160) + '"'));
+            } else if (pool === 'friend') {
+                others.forEach((o) => {
+                    (o.facts || []).slice(-6).forEach((f) => add('s:' + o.id + brHash(f), o.name + ' knows this about ' + me.name + ': ' + f, o.name));
+                    brSentences(o.summary).slice(0, 5).forEach((s) => add('s:' + o.id + brHash(s), o.name + ' remembers: ' + s, o.name));
+                    const tr = String(o.trait || o.prompt || '').replace(/\s+/g, ' ').slice(0, 140); if (tr) add('t:' + o.id + brHash(tr), o.name + ' is like this: ' + tr, o.name);
+                });
+            } else if (pool === 'world') brWorld().forEach((w) => add(w.key, w.text));
+            if (!items.length) return null;
+            let best = null, bs = -1;
+            for (const it of items) { const u = mind.used[it.key], s = (u ? Math.min((now - u) / 60000, 90) : 100) + Math.random() * 6; if (s > bs) { bs = s; best = it; } }
+            mind.used[best.key] = now;
+            const ks = Object.keys(mind.used); if (ks.length > 80) ks.sort((x, y) => mind.used[x] - mind.used[y]).slice(0, ks.length - 80).forEach((k) => delete mind.used[k]);
+            return best;
+        }
+        function brDirect(c, o) {
+            o = o || {}; const mind = brMind(c), others = [...CMP.active.values()].map((x) => x.c).filter((x) => x.id !== c.id), md = String(mind.mood || '').toLowerCase();
+            let keys = Object.keys(CMB_MOVES).filter((k) => (others.length || CMB_MOVES[k].solo) && !mind.moves.slice(-2).includes(k)); if (!keys.length) keys = ['feeling'];
+            if (o.shift) { keys = keys.filter((k) => k !== 'ask_friend' && k !== 'tease'); if (!keys.length) keys = ['observe']; }
+            if (o.force && CMB_MOVES[o.force] && others.length) keys = [o.force];
+            const wt = (k) => (/tease|play|flirt|mischiev|smug/.test(md) && k === 'tease' ? 3 : /sad|tired|wist|lonel|worr/.test(md) && k === 'feeling' ? 3 : /excit|happy|giddy/.test(md) && k === 'plan' ? 2 : 1);
+            let tot = keys.reduce((s, k) => s + wt(k), 0), r = Math.random() * tot, mv = keys[0]; for (const k of keys) { r -= wt(k); if (r <= 0) { mv = k; break; } }
+            const def = CMB_MOVES[mv]; let seed = def.pool === 'none' ? null : brSeed(c, def.pool, others);
+            if (!seed && def.pool !== 'none' && def.pool !== 'world') seed = brSeed(c, 'world', others);
+            mind.moves.push(mv); mind.moves = mind.moves.slice(-6);
+            let out = '[ON YOUR MIND: this thread is yours, nobody handed it to you]\n' + def.say.split('{me}').join(me.name).split('{other}').join((seed && seed.other) || (others[0] && others[0].name) || 'them');
+            if (seed) out += '\nMaterial: ' + seed.text;
+            out += '\nSay it naturally, as yourself, in 1 to 3 sentences. Never announce a change of subject and never mention this note.';
+            const hot = brHotWords(); if (o.shift || hot.length >= 2) out += '\n[The talk has been circling "' + hot.join(', ') + '". Leave that subject now.]';
+            return out;
+        }
+        /* ---- companions answering each other: they must ADD something, and chains rest afterwards ---- */
+        function brCross(c, reply, depth) {
+            depth = depth | 0; const now = Date.now();
+            if (depth >= 2) { CMB.chainEnd = now + 45000; return; }
+            if (CMP.active.size < 2 || (!CMP.ai.key && !CMP.keyless) || CMP.crossOff || now < CMB.chainEnd) return;
+            if (Math.random() > (depth === 0 ? 0.6 : 0.3)) { if (depth) CMB.chainEnd = now + 45000; return; }
+            const pool = [...CMP.active.values()].map((x) => x.c).filter((o) => o.id !== c.id && !CMP.busy.has(o.id)); if (!pool.length) return;
+            const named = pool.filter((o) => new RegExp('\\b' + o.name.split(' ')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(reply));
+            const o = (named.length ? named : pool).slice().sort((x, y) => (x.lastSpoke || 0) - (y.lastSpoke || 0))[0]; o.lastSpoke = now;
+            const shift = brTopicStale();
+            setTimeout(() => {
+                cmpReply(o, '[' + c.name + ' just said out loud: "' + String(reply).slice(0, 220) + '". React in at most one short clause, then add something NEW from what is on your mind. Never restate, paraphrase or simply agree with it ("exactly", "totally", "same"). If you truly have nothing new, reply exactly [PASS].]', brDirect(o, { shift }), true, false, depth + 1);
+            }, 900);
+        }
+        /* ---- idle chatter and world beats ---- */
+        const brQuiet = () => { try { return activeMap === 'btl' || (typeof CSN !== 'undefined' && CSN.on) || (typeof BT !== 'undefined' && BT.phase && BT.phase !== 'idle'); } catch (e) { return false; } };
+        function brTick() {
+            if (!CMP.active.size || document.hidden || Date.now() < CMP.nextAmb || (!CMP.ai.key && !CMP.keyless) || brQuiet()) return;
+            CMP.nextAmb = Date.now() + 150000 + Math.random() * 150000;
+            const act = [...CMP.active.values()].map((x) => x.c).filter((x) => !CMP.busy.has(x.id)); if (!act.length) return;
+            const gossip = act.length > 1 && CMB.shared() && Math.random() < 0.45, c = gossip ? act.slice().sort((x, y) => (x.lastSpoke || 0) - (y.lastSpoke || 0))[0] : act[Math.floor(Math.random() * act.length)];
+            c.lastSpoke = Date.now();
+            const extra = gossip ? '[Nobody has asked you anything. You and the others start chatting among yourselves about ' + me.name + ': what has been going on lately, things they told each of you, who has been closest to them. Speak directly TO one of the others by name and react to what you know. 1 to 3 sentences, in character, with one specific detail you actually know.]\n' + brDirect(c, { force: Math.random() < 0.5 ? 'ask_friend' : 'tease' }) : brDirect(c, { shift: brTopicStale() });
+            cmpReply(c, '(' + me.name + ' is quiet for a moment. This is your own moment to say something.)', extra, true);
+        }
+        function brSigNow() {
+            let wx = 'clear'; try { if (typeof WX !== 'undefined') wx = WX.storm > 0.5 ? 'storm' : (WX.kind === 'rain' || WX.kind === 'snow' || WX.kind === 'sleet') && WX.precip > 0.1 ? WX.kind : 'clear'; } catch (e) { /* none */ }
+            const hr = new Date().getHours(), names = []; try { peers.forEach((p) => p && p.name && names.push(p.name)); } catch (e) { /* none */ }
+            return { map: activeMap, wx, tod: hr < 5 ? 'late night' : hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : hr < 21 ? 'evening' : 'night', peers: names };
+        }
+        function brWatch() {
+            const s = brSigNow(), p = CMB.sig; CMB.sig = s; if (!p) return;
+            if (!CMB.on() || !CMP.ai.ambient || !CMP.active.size || document.hidden || brQuiet() || (!CMP.ai.key && !CMP.keyless) || Date.now() < CMB.nextEvent) return;
+            let ev = '';
+            if (s.map !== p.map) ev = 'You and ' + me.name + ' just arrived in ' + (CMP_MAPS[s.map] || s.map) + '.';
+            else if (s.wx !== p.wx) ev = s.wx === 'clear' ? 'The weather just cleared up.' : 'The weather just turned: ' + s.wx + ' has started.';
+            else { const nw = s.peers.filter((n) => !p.peers.includes(n)); if (nw.length) ev = nw[0] + ' just showed up nearby.'; else if (s.tod !== p.tod) ev = 'It just turned ' + s.tod + '.'; }
+            if (!ev) return;
+            const act = [...CMP.active.values()].map((x) => x.c).filter((x) => !CMP.busy.has(x.id)); if (!act.length) return;
+            const c = act.slice().sort((x, y) => (x.lastSpoke || 0) - (y.lastSpoke || 0))[0]; c.lastSpoke = Date.now(); CMB.nextEvent = Date.now() + 70000;
+            setTimeout(() => { try { if (CMP.active.has(c.id)) cmpReply(c, '[What just happened: ' + ev + ']', '[WHAT JUST HAPPENED: ' + ev + ']\nReact the way you naturally would: a passing remark in one or two sentences, with a specific detail about the moment. It is not a speech.', true); } catch (e) { console.warn('world beat', e); } }, 3500 + Math.random() * 2500);
+        }
+        setInterval(() => { try { brWatch(); } catch (e) { console.warn('brain watch', e); } }, 4000);
+        function brSlash(arg) {
+            if (arg === 'on' || arg === 'off') { CMP.ai.brain = arg === 'on'; cmpSave(true); }
+            if (arg === 'reset') { CMP.list.forEach((c) => { if (c.mind) { c.mind.used = {}; c.mind.moves = []; } }); CMB.lines.length = 0; CMB.chainEnd = 0; CMB.stale = 0; cmpSave(true); }
+            if (arg === 'debug') { const hot = brHotWords(); sysChat('Brain: ' + (CMB.on() ? 'on' : 'off') + ', shared minds ' + (CMB.shared() ? 'on' : 'off') + ', ' + CMB.lines.length + ' lines tracked, circling: ' + (hot.join(', ') || 'nothing') + '. ' + [...CMP.active.values()].map((r) => { const m = brMind(r.c); return r.c.name + ' (Lv ' + brLevel(r.c.aff) + ' ' + brRank(brLevel(r.c.aff)) + (m.mood ? ', ' + m.mood : '') + ', last moves: ' + (m.moves.slice(-3).join('>') || 'none') + ')'; }).join('; ')); return; }
+            sysChat('Companion brain is ' + (CMB.on() ? 'ON: mood and bond ranks, shared minds, a conversation director, a repetition guard and world beats.' : 'OFF: the original companion chat is used.') + ' /cmpbrain on, off, debug or reset.');
+        }
 
         /* ---- bodies and following ---- */
         /* ---- GLB / FBX / zip characters as companions: baked to a GLB with the same 3D importer the avatar dialog uses, stored on this device ---- */
@@ -37921,8 +38249,6 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             }
             if (SPK.map.size) SPK.raf = requestAnimationFrame(spkLoop);
         }
-        /* how companions trail you: base/gap = how far behind (first companion / extra per companion), start = how far you must get ahead before they begin walking, stop = how close they get before they rest again */
-        const CMP_FOLLOW = { base: 2.8, gap: 1.4, start: 2.6, stop: 0.35 };
         function cmpFrame(dt) {
             if (!CMP.active.size) { CMP.trail.length = 0; return; }
             try { cmpSimTick(dt); } catch (e) { /* needs are cosmetic */ }
@@ -37933,15 +38259,13 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             let i = 0;
             for (const r of CMP.active.values()) {
                 if (!r.actor) { i++; continue; }
-                if (CSN.on) { r.moving = false; r.actor.group.visible = activeMap !== 'btl'; r.actor.update(dt); i++; continue; }      // during a scene nobody follows you: the camera is built from where they stand, so they must stay put (csnFace turns them)
-                const ag = r.actor.group, D = CMP_FOLLOW.base + CMP_FOLLOW.gap * i; let t = cmpTrailPoint(D, P); if (!t) { const an = cmpAnchor(i); t = an; }
+                const ag = r.actor.group, D = 2.0 + 1.3 * i; let t = cmpTrailPoint(D, P); if (!t) { const an = cmpAnchor(i); t = an; }
                 let fo = null; if (activeMap === 'nuu' && NU.ready && !NF.dead) { try { fo = nfCmpFoe(r); } catch (e) { fo = null; } }
                 if (fo) { const K = nfCmpK((r.c && r.c.cls) || 'hero'), fdx = ag.position.x - fo.x, fdz = ag.position.z - fo.z, fl = Math.hypot(fdx, fdz) || 1, stop = K.rng * 0.8 + (fo.big || 1) * 0.7 + i * 0.5; t = { x: fo.x + fdx / fl * stop, z: fo.z + fdz / fl * stop, y: nuH(fo.x + fdx / fl * stop, fo.z + fdz / fl * stop) }; }
                 r.actor.group.visible = activeMap !== 'btl';
                 let flee = false; try { const dg = cmpDodge(r, ag, t); if (dg) { t = dg; flee = true; } } catch (e) { /* dodge is a bonus */ }
                 let dx = t.x - ag.position.x, dz = t.z - ag.position.z, d = Math.hypot(dx, dz);
                 if (snap || d > 45) { const an = cmpAnchor(i); ag.position.set(an.x, an.y, an.z); r.actor.firstFrame = true; dx = dz = d = 0; }
-                if (!fo && !flee && !snap) { if (r.moving) { if (d < CMP_FOLLOW.stop) r.moving = false; } else if (d > CMP_FOLLOW.start) r.moving = true; if (!r.moving) { dx = dz = d = 0; } } else r.moving = true;      // rest until you are a few steps ahead, then walk until caught up
                 let step = 0; if (d > 0.12) { const spd = flee ? 11.5 : Math.min(fo ? 9 : 7.2, 0.5 + d * 2.6) * cmpSimMods(r.c).move; step = Math.min(d, spd * dt); ag.position.x += dx / d * step; ag.position.z += dz / d * step; }
                 ag.position.y += (t.y - ag.position.y) * (1 - Math.exp(-dt * 10));
                 const want = fo && d < 3 ? Math.atan2(fo.x - ag.position.x, fo.z - ag.position.z) : step > 0.004 ? Math.atan2(dx, dz) : Math.atan2(P.x - ag.position.x, P.z - ag.position.z);
@@ -38067,8 +38391,8 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         function nuTagSync() { try { const d = DISTRICTS.find((x) => x.map === 'nuu'); if (d) d.tag = 'Field \u2022 ' + nuWhere(); } catch (e) { /* lobby */ } }
         function pgRooms() {
             nuTagSync();
-            const PGM = ['city', 'galleria', 'school', 'raimon', 'nuu', 'bowl', 'btl', 'blitz', 'survivor', 'survivor2', 'survivor3', 'outbreak', 'ryderx', 'diner', 'tag', 'budokai'];
-            const out = DISTRICTS.filter((d) => d.id === 'city-01' || d.pub || PGM.includes(d.map)).map((d) => ({ id: d.id, name: d.name, tag: d.id === 'city-01' ? 'The main hub' : d.tag, d }));
+            const PGM = ['city', 'galleria', 'school', 'raimon', 'nuu', 'jv', 'bowl', 'btl', 'blitz', 'survivor', 'survivor2', 'survivor3', 'outbreak', 'ryderx', 'diner', 'tag', 'budokai', 'construct'];
+            const out = DISTRICTS.filter((d) => d.id === 'plaza-01' || d.pub || PGM.includes(d.map)).map((d) => ({ id: d.id, name: d.name, tag: d.id === 'plaza-01' ? 'The main hub' : d.tag, d }));
             out.splice(1, 0, { id: 'studio', name: 'Harbor Studio', tag: 'Your private home', studio: true });
             return out;
         }
@@ -38215,7 +38539,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         }
         function pgGo(r) {
             const pr = PG.portal; PG.portal = null; if (pr) { pr.closing = 0.001; PG.dying = pr; }
-            try { if (PARTY.code && PARTY.net && PARTY.members.size > 1) { const rm = r.studio ? { c: myLoftCode(), l: 'Harbor Studio', m: 'loft', p: 1 } : { c: r.d.id, l: `${r.d.name} • ${r.d.tag}`.slice(0, 40), m: r.d.map || 'city', p: 0 }; PARTY.net.send({ t: 'pfol', rm }); sysParty('The party is following you through the portal.'); } } catch (e) { /* party is optional */ }
+            try { if (PARTY.code && PARTY.net && PARTY.members.size > 1) { const rm = r.studio ? { c: myLoftCode(), l: 'Harbor Studio', m: 'loft', p: 1 } : { c: r.d.id, l: `${r.d.name} • ${r.d.tag}`.slice(0, 40), m: r.d.map || 'mall', p: 0 }; PARTY.net.send({ t: 'pfol', rm }); sysParty('The party is following you through the portal.'); } } catch (e) { /* party is optional */ }
             pgTitle(r, () => { if (r.studio) acHome(); else districtGo(r.d); });
         }
         function pgFrame(dt) {
@@ -38294,7 +38618,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             let h = '<h3>👥 Companions</h3><div class="sub">Import characters from MuchiGo, give each a VRM, and bring them along. Talk in the normal chat: they answer out loud with a bubble over their head. Say a name to talk to one, or "everyone". Up to four at once. Companions are only visible to you.</div>';
             h += '<div class="row"><button class="pri" data-a="import">⬆ Import MuchiGo save</button><button data-a="new">＋ New companion</button><button data-a="close" style="margin-left:auto">Close</button></div>';
             h += '<div class="row"><span>Characters</span>' + Object.keys(CMP_PRESETS).map((k) => '<button data-a="preset" data-p="' + k + '">' + CMP_PRESETS[k][0].split(' ')[0] + '</button>').join('') + '</div>';
-            h += '<div class="row"><span>API key</span><input type="password" id="cmp-key" placeholder="sk-ant-… · OpenRouter sk-or-… · free Gemini AIza… / AQ.… · Groq gsk_… · HuggingFace hf_…" value="' + cmpEsc(CMP.ai.key) + '" style="flex:1;min-width:180px"><select id="cmp-model">' + Object.keys(CMP_MODELS).map((k) => '<option value="' + k + '"' + (CMP.ai.model === k ? ' selected' : '') + '>' + CMP_MODELS[k][2] + '</option>').join('') + '</select><input id="cmp-custom" list="cmp-mdls" placeholder="model id (optional)" value="' + cmpEsc(CMP.ai.custom || '') + '" style="width:170px"><datalist id="cmp-mdls"><option value="gemini-flash-latest"><option value="gemini-flash-lite-latest"><option value="gemini-2.5-flash"><option value="gemini-2.5-flash-lite"><option value="gemini-2.5-pro"><option value="llama-3.3-70b-versatile"><option value="Gryphe/MythoMax-L2-13b:featherless-ai"></datalist><label><input type="checkbox" id="cmp-amb"' + (CMP.ai.ambient ? ' checked' : '') + '> they chat on their own now and then</label></div>';
+            h += '<div class="row"><span>API key</span><input type="password" id="cmp-key" placeholder="sk-ant-… · OpenRouter sk-or-… · free Gemini AIza… / AQ.… · Groq gsk_… · HuggingFace hf_…" value="' + cmpEsc(CMP.ai.key) + '" style="flex:1;min-width:180px"><select id="cmp-model">' + Object.keys(CMP_MODELS).map((k) => '<option value="' + k + '"' + (CMP.ai.model === k ? ' selected' : '') + '>' + CMP_MODELS[k][2] + '</option>').join('') + '</select><input id="cmp-custom" list="cmp-mdls" placeholder="model id (optional)" value="' + cmpEsc(CMP.ai.custom || '') + '" style="width:170px"><datalist id="cmp-mdls"><option value="gemini-flash-latest"><option value="gemini-flash-lite-latest"><option value="gemini-2.5-flash"><option value="gemini-2.5-flash-lite"><option value="gemini-2.5-pro"><option value="llama-3.3-70b-versatile"><option value="Gryphe/MythoMax-L2-13b:featherless-ai"></datalist><label><input type="checkbox" id="cmp-amb"' + (CMP.ai.ambient ? ' checked' : '') + '> they chat on their own now and then</label></div><div class="row"><label><input type="checkbox" id="cmp-brain"' + (CMP.ai.brain !== false ? ' checked' : '') + '> smarter brains (mood, bond ranks, topic director, no repeating)</label><label><input type="checkbox" id="cmp-shared"' + (CMP.ai.shared !== false ? ' checked' : '') + '> they know each other\'s memories</label></div>';
             if (!CMP.list.length) h += '<div class="sub" style="margin-top:14px">No companions yet. Use <b>Import MuchiGo save</b> with your exported .json, or create one.</div>';
             for (const c of CMP.list) {
                 const on = CMP.active.has(c.id), vname = c.model ? (c.modelName || '3D model') : c.vrm ? ((bag.find((b) => b.id === c.vrm) || {}).name || c.vrmName || 'VRM') : 'no model yet (robot)';
@@ -38331,7 +38655,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         });
         document.addEventListener('change', (e) => {
             const t = e.target; if (!t.closest || !t.closest('#cmp-box')) return;
-            if (t.id === 'cmp-key') { CMP.ai.key = t.value.trim(); cmpSave(true); } else if (t.id === 'cmp-model') { CMP.ai.model = t.value; cmpSave(true); } else if (t.id === 'cmp-amb') { CMP.ai.ambient = t.checked; cmpSave(true); } else if (t.id === 'cmp-custom') { CMP.ai.custom = t.value.trim().slice(0, 80); cmpSave(true); }
+            if (t.id === 'cmp-key') { CMP.ai.key = t.value.trim(); cmpSave(true); } else if (t.id === 'cmp-model') { CMP.ai.model = t.value; cmpSave(true); } else if (t.id === 'cmp-amb') { CMP.ai.ambient = t.checked; cmpSave(true); } else if (t.id === 'cmp-brain') { CMP.ai.brain = t.checked; cmpSave(true); } else if (t.id === 'cmp-shared') { CMP.ai.shared = t.checked; cmpSave(true); } else if (t.id === 'cmp-custom') { CMP.ai.custom = t.value.trim().slice(0, 80); cmpSave(true); }
             else if (t.dataset.a === 'vrmpick') { const id = t.closest('.cmp-card').dataset.id, c = cmpFind(id); if (t.value === '__up') { CMP.vrmFor = id; $('cmp-vrm').click(); t.value = c.vrm || ''; } else { if (t.value) { c.model = null; c.modelName = ''; } c.vrm = t.value || null; c.vrmName = ''; cmpSave(true); cmpPanelRender(); cmpRespawn(id); } }
         });
         document.addEventListener('input', (e) => { if (e.target && e.target.id === 'cmp-key') { CMP.ai.key = e.target.value.trim(); cmpSave(); } });
@@ -38688,7 +39012,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             buildTarget = scene;
             toonify(mallGroup); outlineAll(mallGroup, { min: 0.45, thick: 0.04 });    // cel shading + ink outlines, like the MToon avatars
             toonify(loftGroup); outlineAll(LOFT.groups.outdoors, { min: 0.25, thick: 0.013, color: 0x3a2b20 });   // indoors stays clean; the garden gets thin warm outlines
-            setMap('loft');
+            setMap('mall');
             LOFT.floorOrig = LOFT.floor.material;
 
             localActor = new Actor(me.id, me.name);
