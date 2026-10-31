@@ -4539,6 +4539,7 @@ function kbModel(THREE, mk) {
                     if (!p || typeof m.text !== 'string') return;
                     if (room && Number.isFinite(m.ts) && m.ts < room.joinedAt - 90000) return;      // an old message a relay held on to: you only see chat from after you arrived
                     const text = m.text.slice(0, 140);
+                    try { if (CSN.on) { const sp = csnCastFor('peer', { id: from }); if (sp) { csnSpot(sp, text); break; } } } catch (e) { /* the scene is optional */ }
                     addChat(p.name, text, colorFor(p.id));
                     window.__lastChatC = validHex(m.c);   // (handy for tests)
                     p.actor.showBubble(text, validHex(m.c));
@@ -19263,6 +19264,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
            over-the-shoulder 50 / 100 mm, profile, long lens, forward, low and high dramatic angles, wide high / low. Type your own replies, pick emotes that fire as you speak. ================= */
         const CSN = { on: false, cast: [], sid: '', host: false, q: [], cur: null, shot: null, side: 1, state: '', sv: null, hid: [], el: null, t: 0, nLine: 0, lastShot: {}, seq: 0, emo: null, thinking: 0, invites: new Map(), starter: null, hist: [], opts: [], npcs: [], endT: 0, intro: 0, mm: [], tgtCache: null, spr: [] };
         const csnLock = () => CSN.on;
+        const CSN_TYPE_CPS = 38, CSN_READ_CPS = 20, CSN_READ_MAX = 12;      // typing speed, comfortable reading speed (characters per second, typing time included), longest a single line stays up
         const csnFov = (mm) => 2 * Math.atan(12 / mm) * 180 / Math.PI;      // vertical field of view of a lens on a 24 mm tall frame
         const csnEase = (x) => x * x * (3 - 2 * x);
         const csnA = (p) => p.actor || null;
@@ -19304,9 +19306,9 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
         function csnShotFor(kind, S, L, side) {      // try the wanted shot, then the same lens from the other side, then tighter, so the camera is never buried
             for (const sc of [1, 0.7, 0.45]) for (const sd of [side, -side]) {
-                const o = csnBuild(kind, S, L, sd); if (sc !== 1) { const sp = csnPos(S); o.px = sp.x + (o.px - sp.x) * sc; o.pz = sp.z + (o.pz - sp.z) * sc; } if (csnShotOk(o)) { o.side = sd; return o; }
+                const o = csnBuild(kind, S, L, sd); if (sc !== 1) { const sp = csnPos(S); o.px = sp.x + (o.px - sp.x) * sc; o.pz = sp.z + (o.pz - sp.z) * sc; } if (csnShotOk(o)) { o.side = sd; o.sc = sc; o.kb = kind; return o; }
             }
-            const o = csnBuild('ots50', S, L, side); csnShotOk(o); return o;
+            const o = csnBuild('ots50', S, L, side); csnShotOk(o); o.side = side; o.sc = 1; o.kb = 'ots50'; return o;
         }
         const csnTone = (t) => { const s = String(t); if (/!{2,}/.test(s) || /\b[A-Z]{4,}\b/.test(s)) return 'angry'; if (/!/.test(s)) return 'excited'; if (/(\.\.\.|…)/.test(s) || /\b(sorry|miss|lost|alone|gone|cry|sad)\b/i.test(s)) return 'sad'; if (/\b(afraid|scared|please|help|can't|cannot)\b/i.test(s)) return 'afraid'; return 'calm'; };
         function csnPlan(line, spk, adr) {      // the cinematography: which shots cover this line (kind, share of the line's time)
@@ -19326,7 +19328,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
         function csnStartShot(kind, spk, adr, dur) {
             const rk = kind === 'react', S = rk ? adr : spk, L = rk ? spk : adr, k = rk ? 'ots50' : kind;
-            const o = csnShotFor(k, S, L, CSN.side); o.S = S; o.L = L; o.t = 0; o.dur = dur; o.k0 = kind; CSN.shot = o; CSN.lastShot[spk.id] = rk ? CSN.lastShot[spk.id] : kind;
+            const o = csnShotFor(k, S, L, CSN.side); o.S = S; o.L = L; o.t = 0; o.dur = dur; o.k0 = kind; o.snap = true; CSN.shot = o; CSN.lastShot[spk.id] = rk ? CSN.lastShot[spk.id] : kind;
         }
         /* ---- the conversation: lines arrive (typed, from AI companions, or over the net) and play one at a time ---- */
         const csnById = (id) => CSN.cast.find((p) => p.id === id) || null;
@@ -19337,7 +19339,10 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function csnAdr(spk, to) { return csnById(to) || CSN.cast.find((p) => p.id !== spk.id && p.id === (CSN.cur && CSN.cur.who)) || CSN.cast.find((p) => p.id !== spk.id) || spk; }
         function csnNextLine() {
             const ln = CSN.q.shift(); if (!ln) return false; const spk = csnById(ln.who); if (!spk) return true; const adr = csnAdr(spk, ln.to); ln.spk = spk; ln.adr = adr; ln.n = 0; ln.hold = 0; ln.plan = csnPlan(ln, spk, adr); ln.pi = 0; ln.pt = 0;
-            ln.dur = Math.max(2.2, ln.text.length / 26 + 0.9); CSN.cur = ln; CSN.opts = ln.opts || []; csnShow(ln); csnStartShot(ln.plan[0][0], spk, adr, ln.dur * ln.plan[0][1]);
+            const len = ln.text.length, same = !!(CSN.cur && CSN.cur.spk === spk && CSN.cur.adr === adr && CSN.shot && CSN.shot.k0 !== 'react' && !CSN.cur.idle && CSN.nLine > 0);
+            ln.read = Math.min(CSN_READ_MAX, Math.max(2.4, 0.8 + len / CSN_READ_CPS)); ln.need = Math.max(0.8, ln.read - len / CSN_TYPE_CPS); ln.dur = ln.read; ln.cont = same; ln.fin = false; ln.gone = false; ln.gap = 0;
+            if (same) ln.plan = [[CSN.shot.k0, 1]];      // the same person carrying on: keep the shot, no cut
+            CSN.cur = ln; CSN.opts = ln.opts || []; CSN.busyT = 0; csnShow(ln); if (!same) csnStartShot(ln.plan[0][0], spk, adr, ln.dur * ln.plan[0][1]); csnUiSync();
             if (ln.emo) csnEmote(spk, ln.emo); else if (CSN.nLine === 0 && spk.kind !== 'me' && /\b(hello|hi|hey|greetings|welcome)\b/i.test(ln.text) && EMOTES.greet) csnEmote(spk, 'greet');
             CSN.nLine++; CSN.hist.push({ who: spk.name, text: ln.text }); if (CSN.hist.length > 30) CSN.hist.shift(); try { addChat(ln.name || spk.name, ln.text, spk.color); } catch (e) { /* chat */ }
             return true;
@@ -19369,6 +19374,20 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             CSN.lastAns = { p, text: res.text };
             { const parts = p.kind === 'cmp' ? cmpChunks(res.text) : [res.text]; parts.forEach((t, i) => { const last = i === parts.length - 1; csnFeed(p.id, t, { tone: res.tone, emo: i === 0 ? res.emo : null, opts: last ? res.opts : null, to: from ? from.id : null }); if (CSN.host || p.kind === 'cmp') csnNetLine(p, { text: t, emo: null, tone: res.tone }); }); }
         }
+        /* ---- the spotlight: anyone who speaks while a scene runs (a companion chiming in on her own, a party member's companion, a party member typing in chat) joins the cast and the camera goes to them, in the order they spoke ---- */
+        function csnCastFor(kind, o) {
+            if (!CSN.on) return null; let id, p;
+            if (kind === 'cmp') { id = 'cmp:' + o.c.id; p = csnById(id); if (p && p.actor) return p; const r = CMP.active.get(o.c.id); if (!r || !r.actor || !r.actor.group) return null; p = csnMakeP({ kind: 'cmp', id, name: o.c.name, c: o.c }); }
+            else if (kind === 'peer') { p = csnById(o.id); return p && p.actor ? p : null; }      // a player is on camera only after they accepted the scene
+            else if (kind === 'pcmp') { if (!csnById(o.from)) return null; id = 'pc:' + o.from + ':' + o.cid; p = csnById(id); if (p && p.actor) return p; const pe = peers.get(o.from), r = pe && pe.cm && pe.cm.get(o.cid); if (!r || !r.actor || !r.actor.group) return null; p = { id, name: o.name, kind: 'peer', actor: r.actor, color: csnCol(o.name), fill: o.col }; }
+            if (!p || !p.actor || CSN.cast.length >= 8) return null; CSN.cast.push(p); csnUiSync(); return p;
+        }
+        function csnSpot(p, text, opt) {      // queue a line for someone who spoke on their own; returns the chunks it queued
+            opt = opt || {}; const prev = CSN.q.length ? CSN.q[CSN.q.length - 1] : CSN.cur, to = opt.to || (prev && prev.who !== p.id && csnById(prev.who) ? prev.who : CSN.cast[0].id);
+            const parts = typeof cmpChunks === 'function' ? cmpChunks(text) : [String(text)]; parts.forEach((t, i) => csnFeed(p.id, t, { to, tone: opt.tone || null, emo: i === 0 ? (opt.emo || null) : null, name: p.name })); return parts;
+        }
+        function csnBusy() { try { return CSN.thinking > 0 || CSN.askBusy > 0 || CMP.busy.size > 0; } catch (e) { return CSN.thinking > 0 || CSN.askBusy > 0; } }
+        function csnSet(st) { if (CSN.state === st) return; CSN.state = st; try { csnUiSync(); } catch (e) { /* ui */ } }
         function csnTyping(p, on) { const a = csnA(p); if (a && a.setTyping) a.setTyping(on); }
         function csnNetLine(p, ln) { try { if (net && CSN.cast.some((x) => x.kind === 'peer')) net.send({ t: 'csn', k: 'line', sid: CSN.sid, who: p.kind === 'me' || p.kind === 'cmp' ? me.id : p.id, nm: p.name, text: String(ln.text).slice(0, 260), emo: ln.emo || null, tone: ln.tone || null }); } catch (e) { /* offline */ } }
         function csnSay(text, emo) {      // you speak (typed, or a suggested reply)
@@ -19378,7 +19397,8 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             csnAskAll(text, mp, adr); CSN.emo = null; CSN.opts = []; csnUiSync();
         }
         /* everyone who can answer does so one after another, so each one hears what the one before said; now and then two of them talk to each other */
-        async function csnAskAll(text, mp, adr) {
+        async function csnAskAll(text, mp, adr) { const sid = CSN.sid; CSN.askBusy++; try { await csnAskAll0(text, mp, adr); } finally { if (CSN.sid === sid && CSN.askBusy > 0) CSN.askBusy--; } }
+        async function csnAskAll0(text, mp, adr) {
             const sid = CSN.sid; let ai = CSN.cast.filter((p) => p.kind === 'cmp' || (p.npc && p.npc.say)); if (!ai.length) return;
             if (adr && ai.includes(adr)) ai = [adr].concat(ai.filter((p) => p !== adr)); const seq = (CSN.askSeq = (CSN.askSeq || 0) + 1); let prev = null;
             for (const p of ai) {
@@ -19393,81 +19413,94 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         /* ---- start / end ---- */
         function csnStart(cast, opt) {
             opt = opt || {}; if (CSN.on || !localActor || cast.length < 1) return false; try { if (fpOn) fpToggle(); } catch (e) { /* camera */ }
-            const mp = { id: me.id, name: me.name, kind: 'me', actor: localActor, color: '#38bdf8' }; CSN.cast = [mp].concat(cast); CSN.sid = opt.sid || (me.id + ':' + Date.now().toString(36)); CSN.host = opt.host !== false; CSN.q = []; CSN.cur = null; CSN.shot = null; CSN.nLine = 0; CSN.lastShot = {}; CSN.seq = 0; CSN.hist = []; CSN.opts = []; CSN.thinking = 0; CSN.t = 0; CSN.endT = 0; CSN.side = Math.random() < 0.5 ? 1 : -1; CSN.emo = null;
+            const mp = { id: me.id, name: me.name, kind: 'me', actor: localActor, color: '#38bdf8' }; CSN.cast = [mp].concat(cast); CSN.sid = opt.sid || (me.id + ':' + Date.now().toString(36)); CSN.host = opt.host !== false; CSN.q = []; CSN.cur = null; CSN.shot = null; CSN.nLine = 0; CSN.lastShot = {}; CSN.seq = 0; CSN.hist = []; CSN.opts = []; CSN.thinking = 0; CSN.askBusy = 0; CSN.busyT = 0; CSN.cam = null; CSN.typing = false; CSN.t = 0; CSN.endT = 0; CSN.side = Math.random() < 0.5 ? 1 : -1; CSN.emo = null;
             CSN.sv = { p: camera.position.clone(), t: controls.target.clone(), f: camera.fov, en: controls.enabled, up: camera.up.clone() }; controls.enabled = false;
             csnUi(); CSN.on = true; CSN.state = 'intro'; CSN.intro = 2.3; document.body.classList.add('csn-on'); CSN.hid = [];
             for (const el of document.body.children) { if (el === CSN.el || el.tagName === 'CANVAS' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.id === 'csn') continue; const cs = getComputedStyle(el); if (cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden') { CSN.hid.push([el, el.style.visibility]); el.style.visibility = 'hidden'; } }
             CSN.el.classList.add('on'); const A = csnPos(cast[0]); const first = cast[0]; csnStartShot((CSN.side > 0 || (activeMap === 'nuu' && !ZN.on && !DG.on)) ? 'wideHigh' : 'wideLow', mp, first, CSN.intro); csnUiSync();
             if (opt.greet) { const g = opt.greet; setTimeout(() => { if (CSN.on) csnFeed(first.id, g.text || g, { tone: g.tone, emo: g.emo, opts: g.opts, to: mp.id }); }, 1500); }
-            else for (const p of cast) if (p.kind === 'cmp' || (p.npc && p.npc.say)) { setTimeout(() => { if (CSN.on && !CSN.hist.length) csnAsk(p, '[The scene begins. ' + me.name + ' turns to you to talk. Open the conversation in your own voice with one short greeting or remark.]', mp); }, 1400); break; }
+            else for (const p of cast) if (p.kind === 'cmp' || (p.npc && p.npc.say)) { const sid0 = CSN.sid; CSN.askBusy++; setTimeout(() => { const fin = () => { if (CSN.sid === sid0 && CSN.askBusy > 0) CSN.askBusy--; }; if (CSN.on && CSN.sid === sid0 && !CSN.hist.length) csnAsk(p, '[The scene begins. ' + me.name + ' turns to you to talk. Open the conversation in your own voice with one short greeting or remark.]', mp).then(fin, fin); else fin(); }, 1400); break; }
             return true;
         }
         function csnEnd(notify) {
             if (!CSN.on) return; if (notify !== false) { try { net && CSN.cast.some((x) => x.kind === 'peer') && net.send({ t: 'csn', k: 'leave', sid: CSN.sid }); } catch (e) { /* offline */ } }
             for (const p of CSN.cast) { if (p.mm && p.actor && p.actor.dispose) { try { p.actor.dispose(); } catch (e) { /* gone */ } } try { csnTyping(p, false); } catch (e) { /* none */ } }
             CSN.on = false; CSN.state = ''; document.body.classList.remove('csn-on'); if (CSN.el) { CSN.el.classList.remove('on'); } for (const [el, v] of CSN.hid) el.style.visibility = v; CSN.hid = [];
-            for (const o of CSN.spr) o.visible = true; CSN.spr = []; const s = CSN.sv; if (s) { camera.position.copy(s.p); controls.target.copy(s.t); camera.fov = s.f; camera.up.copy(s.up); camera.updateProjectionMatrix(); controls.enabled = s.en; camera.lookAt(s.t); } try { NU.camLast = null; } catch (e) { /* none */ } CSN.sv = null; CSN.cast = []; CSN.q = []; CSN.cur = null; CSN.shot = null;
+            for (const o of CSN.spr) o.visible = true; CSN.spr = []; const s = CSN.sv; if (s) { camera.position.copy(s.p); controls.target.copy(s.t); camera.fov = s.f; camera.up.copy(s.up); camera.updateProjectionMatrix(); controls.enabled = s.en; camera.lookAt(s.t); } try { NU.camLast = null; } catch (e) { /* none */ } CSN.sv = null; CSN.cam = null; CSN.askBusy = 0; CSN.invited = null; CSN.cast = []; CSN.q = []; CSN.cur = null; CSN.shot = null;
         }
         function csnTick(dt) {
-            if (!CSN.on) return; CSN.t += dt; const mp = CSN.cast[0]; csnFace(dt);
-            if (CSN.state === 'intro') { CSN.intro -= dt; if (CSN.intro <= 0) CSN.state = 'run'; }
+            if (!CSN.on) return; dt = Math.min(dt, 0.1); CSN.t += dt; csnFace(dt);
+            if (CSN.state === 'intro') { CSN.intro -= dt; if (CSN.intro <= 0) csnSet('run'); }
             const ln = CSN.cur;
             if (CSN.state === 'run') {
-                if (ln) {
-                    ln.n = Math.min(ln.text.length, ln.n + dt * 34); ln.pt += dt; if (ln.n >= ln.text.length) ln.hold += dt;
-                    const done = ln.n >= ln.text.length && ln.hold > Math.min(2.6, 0.6 + ln.text.length * 0.012);
+                if (ln && !ln.fin) {      // the line types out, then stays up long enough to read
+                    ln.n = Math.min(ln.text.length, ln.n + dt * CSN_TYPE_CPS); ln.pt += dt; if (ln.n >= ln.text.length) ln.hold += dt;
+                    if (ln.n >= ln.text.length && ln.hold >= ln.need) ln.fin = true;
                     let acc = 0; for (let i = 0; i < ln.plan.length; i++) { acc += ln.plan[i][1] * ln.dur; if (ln.pt < acc || i === ln.plan.length - 1) { if (i !== ln.pi) { ln.pi = i; csnStartShot(ln.plan[i][0], ln.spk, ln.adr, Math.max(0.7, ln.plan[i][1] * ln.dur)); } break; } }
-                    if (done) { if (!csnNextLine()) { CSN.cur = ln; CSN.state = 'wait'; } }
-                } else if (!csnNextLine()) CSN.state = 'wait';
-            } else if (CSN.state === 'wait' && CSN.q.length) { CSN.state = 'run'; CSN.cur = null; }
-            if (CSN.state === 'wait' && ln && ln.shot !== 1) { ln.shot = 1; csnUiSync(); }
-            // the camera: cut to the shot, drift slowly, keep the lens honest
+                } else if (ln && ln.fin) {
+                    if (CSN.q.length) {      // a short beat between speakers (a shorter one when the same person carries on), then the next line: nobody is cut off
+                        if (!ln.gone) { ln.gone = true; CSN.busyT = 0; } ln.gap += dt; const nx = CSN.q[0]; if (ln.gap >= (nx && nx.who === ln.who ? 0.18 : 0.45)) csnNextLine();
+                    } else if (csnBusy()) {      // someone is still thinking of what to say: hold the scene, do not hand you the floor yet
+                        const hard = CSN.thinking > 0 || CSN.askBusy > 0; CSN.busyT += dt;
+                        if (CSN.busyT > 2.2 && !ln.idle && ln.spk) { ln.idle = true; const ls = CSN.lastShot[ln.spk.id]; csnStartShot('profile2', ln.spk, ln.adr, 99); CSN.lastShot[ln.spk.id] = ls; }
+                        if (CSN.busyT > (hard ? 9 : 3.5)) csnSet('wait');
+                    } else csnSet('wait');
+                } else if (!ln) {
+                    if (!csnNextLine()) { if (csnBusy()) { CSN.busyT += dt; if (CSN.busyT > 9) csnSet('wait'); } else csnSet('wait'); }
+                }
+            } else if (CSN.state === 'wait' && CSN.q.length) csnSet('run');
+            // the camera: each shot is a hard cut, then it follows the actors with a soft ease and a slow drift (the side and distance are settled once, at the cut, so the lens never flips)
             const s = CSN.shot; if (s) {
-                s.t += dt; const S = s.S, L = s.L, f = csnBuild(s.k0 === 'react' ? 'ots50' : s.k0, S, L, s.side || CSN.side); const k = s.t;
-                if (CSN.state !== 'intro' || true) { const o = csnShotFor(s.k0 === 'react' ? 'ots50' : s.k0, S, L, CSN.side); s.px = o.px; s.py = o.py; s.pz = o.pz; s.tx = o.tx; s.ty = o.ty; s.tz = o.tz; s.mm = o.mm; s.roll = o.roll; s.dr = o.dr; s.df = o.df; }
-                camera.position.set(s.px + s.dr[0] * k, s.py + s.dr[1] * k, s.pz + s.dr[2] * k); camera.up.set(0, 1, 0); camera.lookAt(s.tx, s.ty, s.tz); if (s.roll) camera.rotateZ(s.roll * Math.PI / 180);
-                const fov = csnFov(s.mm + (s.df || 0) * k * 10); if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); } controls.target.set(s.tx, s.ty, s.tz);
+                s.t += dt; const k = s.t, o = csnBuild(s.kb || (s.k0 === 'react' ? 'ots50' : s.k0), s.S, s.L, s.side || CSN.side);
+                if (s.sc != null && s.sc !== 1) { const sp = csnPos(s.S); o.px = sp.x + (o.px - sp.x) * s.sc; o.pz = sp.z + (o.pz - sp.z) * s.sc; }
+                csnShotOk(o);      // only keeps the lens off the ground and under the ceiling
+                const px = o.px + o.dr[0] * k, py = o.py + o.dr[1] * k, pz = o.pz + o.dr[2] * k, fv = o.mm + (o.df || 0) * k * 10;
+                let C = CSN.cam; if (!C) C = CSN.cam = { p: new THREE.Vector3(), t: new THREE.Vector3(), f: fv };
+                if (s.snap) { C.p.set(px, py, pz); C.t.set(o.tx, o.ty, o.tz); C.f = fv; s.snap = false; }
+                else { const a = 1 - Math.exp(-dt * 7); C.p.x += (px - C.p.x) * a; C.p.y += (py - C.p.y) * a; C.p.z += (pz - C.p.z) * a; C.t.x += (o.tx - C.t.x) * a; C.t.y += (o.ty - C.t.y) * a; C.t.z += (o.tz - C.t.z) * a; C.f += (fv - C.f) * a; }
+                camera.position.copy(C.p); camera.up.set(0, 1, 0); camera.lookAt(C.t); if (o.roll) camera.rotateZ(o.roll * Math.PI / 180);
+                const fov = csnFov(C.f); if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); } controls.target.copy(C.t);
             }
             for (const p of CSN.cast) { const a = csnA(p); if (!a || !a.group) continue; if (a.label) a.label.visible = false; a.group.traverse((o) => { if (o.isSprite && o.visible && o !== a.typingSprite && !(a.bubbles && a.bubbles.some((b) => b.sprite === o))) { o.visible = false; CSN.spr.push(o); } }); }
-            csnUiTick();
+            csnUiTick(dt);
         }
         /* ---- the screen: bars, the speech panel beside the speaker, your reply options, emote chips ---- */
         function csnUi() {
             if (CSN.el) return; const st = document.createElement('style');
             st.textContent = '#csn{position:fixed;inset:0;z-index:58;pointer-events:none;display:none;font-family:Nunito,Inter,system-ui,sans-serif;color:#eaf3ff}#csn.on{display:block}#csn .b{position:absolute;left:0;right:0;background:#000;height:0;transition:height .5s cubic-bezier(.2,.8,.2,1)}#csn .b.t{top:0}#csn .b.m{bottom:0}#csn.on .b{height:11vh}'
                 + '#csn-box{position:absolute;max-width:min(470px,46vw);min-width:90px;padding:14px 22px;border-radius:22px;background:var(--f,#fff);color:var(--k,#0f172a);box-shadow:0 6px 22px rgba(0,0,0,.45);opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:auto;cursor:pointer;font:600 20px/1.4 Inter,system-ui,sans-serif;word-break:break-word}#csn-box.v{opacity:1;transform:none}'
-                + '#csn-box::after{content:"";position:absolute;bottom:-14px;width:0;height:0;border:12px solid transparent;border-top-color:var(--f,#fff);border-bottom:0}#csn-box.tl::after{left:26px}#csn-box.tr::after{right:26px}#csn-box p{margin:0;font:inherit;color:inherit}#csn-box p a{color:inherit}#csn-box i{display:none}'
+                + '#csn-box::after{content:"";position:absolute;bottom:-14px;width:0;height:0;border:12px solid transparent;border-top-color:var(--f,#fff);border-bottom:0}#csn-box.tl::after{left:26px}#csn-box.tr::after{right:26px}#csn-box p{margin:0;font:inherit;color:inherit}#csn-box p a{color:inherit}#csn-box i{display:none}#csn-box .nm{font:800 11px Nunito,sans-serif;letter-spacing:.12em;text-transform:uppercase;opacity:.65;margin-bottom:4px}'
                 + '#csn-ui{position:absolute;left:0;right:0;bottom:0;padding:34px max(3vw,calc(50vw - 310px)) calc(11vh + 10px);background:linear-gradient(to top,#000 0,#000 11vh,rgba(4,8,18,.82) calc(11vh + 10px),rgba(4,8,18,.55) 70%,rgba(4,8,18,0) 100%);display:none;pointer-events:auto}#csn-ui.v{display:block}#csn-opts{display:grid;gap:5px;margin-bottom:6px}#csn-opts button{display:flex;gap:8px;align-items:center;text-align:left;font:700 14px Nunito,sans-serif;color:#eaf3ff;background:linear-gradient(90deg,rgba(14,32,66,.92),rgba(8,16,36,.88));border:1px solid rgba(150,190,255,.45);padding:7px 12px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}#csn-opts button:hover,#csn-opts button:focus{background:linear-gradient(90deg,rgba(40,90,170,.95),rgba(14,30,66,.9));outline:2px solid #ffe27a}#csn-opts em{font:900 12px Nunito;color:#ffd27a;font-style:normal}'
                 + '#csn-row{display:flex;gap:6px}#csn-in{flex:1;min-width:0;font:600 15px Nunito,sans-serif;color:#fff;background:rgba(6,12,28,.9);border:1px solid rgba(150,190,255,.55);padding:8px 10px;outline:none}#csn-in:focus{border-color:#ffe27a}#csn-ui button.s{font:800 13px Nunito;color:#fff;background:#2a6fd0;border:0;padding:0 14px;cursor:pointer}#csn-emo{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}#csn-emo button{font:700 11px Nunito;color:#dbe9ff;background:rgba(20,40,80,.8);border:1px solid rgba(150,190,255,.35);padding:3px 8px;cursor:pointer;border-radius:10px}#csn-emo button.on{background:#d9a21a;color:#111;border-color:#ffe27a}#csn-emo button:focus{outline:2px solid #ffe27a}'
                 + '#csn-hint{position:absolute;right:14px;bottom:calc(11vh - 22px);font:700 11px Nunito;letter-spacing:.08em;color:rgba(230,240,255,.6);pointer-events:none;text-shadow:0 1px 2px #000}body.csn-on #ni-q{display:none!important}';
-            document.head.appendChild(st); const el = document.createElement('div'); el.id = 'csn'; el.innerHTML = '<div class="b t"></div><div class="b m"></div><div id="csn-box"><p></p></div><div id="csn-ui"><div id="csn-opts"></div><div id="csn-row"><input id="csn-in" maxlength="240" placeholder="Type your own reply and press Enter…" autocomplete="off"><button class="s" type="button">Say</button><button class="s" id="csn-end" type="button" style="background:#7a2a2a">Leave</button></div><div id="csn-emo"></div></div><div id="csn-hint">Esc leave · 1-3 choose · Enter type</div>';
+            document.head.appendChild(st); const el = document.createElement('div'); el.id = 'csn'; el.innerHTML = '<div class="b t"></div><div class="b m"></div><div id="csn-box"><div class="nm"></div><p></p></div><div id="csn-ui"><div id="csn-opts"></div><div id="csn-row"><input id="csn-in" maxlength="240" placeholder="Type your own reply and press Enter…" autocomplete="off"><button class="s" type="button">Say</button><button class="s" id="csn-end" type="button" style="background:#7a2a2a">Leave</button></div><div id="csn-emo"></div></div><div id="csn-hint">Esc leave · 1-3 choose · Enter type</div>';
             document.body.appendChild(el); CSN.el = el; const inp = el.querySelector('#csn-in');
-            const send = () => { const v = inp.value; const em = CSN.emo; inp.value = ''; csnSay(v, em); try { inp.blur(); } catch (e) { /* focus */ } };
-            el.querySelector('.s').addEventListener('click', send); el.querySelector('#csn-end').addEventListener('click', () => csnEnd(true)); inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } else if (e.key === 'Escape') { e.preventDefault(); inp.blur(); } });
+            const send = () => { CSN.typing = false; const v = inp.value; const em = CSN.emo; inp.value = ''; csnSay(v, em); try { inp.blur(); } catch (e) { /* focus */ } };
+            el.querySelector('.s').addEventListener('click', send); el.querySelector('#csn-end').addEventListener('click', () => csnEnd(true)); inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } else if (e.key === 'Escape') { e.preventDefault(); CSN.typing = false; inp.blur(); csnUiSync(); } });
             el.querySelector('#csn-box').addEventListener('pointerdown', (e) => { e.preventDefault(); csnSkip(); });
             const keys = ['greet', 'cheer', 'peace', 'spin', 'shoot', 'modelpose', 'squat', 'show'].concat(typeof CMP_DANCES !== 'undefined' ? CMP_DANCES : []).filter((k) => EMOTES[k]); const lab = {}; try { for (const [, list] of EMOTE_MENU) for (const [k, ic, nm] of list) lab[k] = ic + ' ' + nm; } catch (e) { /* menu */ }
             const row = el.querySelector('#csn-emo'); for (const k of keys) { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = k; b.textContent = lab[k] || k; b.addEventListener('click', () => { CSN.emo = CSN.emo === k ? null : k; if (CSN.emo && !inp.value.trim()) { csnSay('', k); CSN.emo = null; } csnUiSync(); }); row.appendChild(b); }
             window.addEventListener('keydown', (e) => {
                 if (!CSN.on) return; if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); csnEnd(true); return; } if (e.target && e.target.id === 'csn-in') return;
-                if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) { if (CSN.state === 'wait' || CSN.thinking === 0 && !CSN.q.length) { try { inp.focus(); } catch (x) { /* focus */ } } else csnSkip(); } return; }
+                if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) { if (CSN.state === 'wait' || !csnBusy() && !CSN.q.length) { try { CSN.typing = true; csnUiSync(); inp.focus(); } catch (x) { /* focus */ } } else csnSkip(); } return; }
                 if (e.code === 'Space') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) csnSkip(); return; }
                 if (/^[1-3]$/.test(e.key) && CSN.opts[+e.key - 1]) { e.preventDefault(); e.stopImmediatePropagation(); csnSay(CSN.opts[+e.key - 1], CSN.emo); return; }
                 if (/^(Key[WASDQE]|Arrow|Digit|Tab)/.test(e.code)) { e.stopImmediatePropagation(); }
             }, true);
         }
         function csnSkip() { const ln = CSN.cur; if (!CSN.on || !ln) return; if (ln.n < ln.text.length) ln.n = ln.text.length; else ln.hold = 99; }
-        function csnFill(p) { try { if (p.kind === 'me') return validHex(myBubble) || colorFor(me.id); if (p.kind === 'cmp') return cmpColor(p.c); if (p.kind === 'npc') return validHex(p.npc.color) || colorFor('npc_' + p.npc.id); return colorFor(p.id); } catch (e) { return '#ffffff'; } }
-        function csnShow(ln) { const bx = CSN.el.querySelector('#csn-box'), f = csnFill(ln.spk); ln.fill = f; bx.style.setProperty('--f', f); try { bx.style.setProperty('--k', textOn(f, 0.72)); } catch (e) { /* ink */ } ln.last = null; bx.classList.add('v'); }
+        function csnFill(p) { try { if (p.fill) return p.fill; if (p.kind === 'me') return validHex(myBubble) || colorFor(me.id); if (p.kind === 'cmp') return cmpColor(p.c); if (p.kind === 'npc') return validHex(p.npc.color) || colorFor('npc_' + p.npc.id); return colorFor(p.id); } catch (e) { return '#ffffff'; } }
+        function csnShow(ln) { const bx = CSN.el.querySelector('#csn-box'), f = csnFill(ln.spk); ln.fill = f; bx.style.setProperty('--f', f); try { bx.style.setProperty('--k', textOn(f, 0.72)); } catch (e) { /* ink */ } ln.last = null; const nmEl = bx.querySelector('.nm'); if (nmEl) nmEl.textContent = ln.name || ln.spk.name; bx.classList.add('v'); }
         function csnUiSync() {
-            if (!CSN.el) return; const ui = CSN.el.querySelector('#csn-ui'), human = CSN.cast.filter((p) => p.kind === 'me' || p.kind === 'peer').length > 1, show = CSN.on && (CSN.state === 'wait' || human || (CSN.state === 'run' && !CSN.cur));
+            if (!CSN.el) return; const ui = CSN.el.querySelector('#csn-ui'), human = CSN.cast.filter((p) => p.kind === 'me' || p.kind === 'peer').length > 1, typing = !!CSN.typing || document.activeElement === CSN.el.querySelector('#csn-in') || !!CSN.el.querySelector('#csn-in').value.trim(), show = CSN.on && (CSN.state === 'wait' || human || typing);
             ui.classList.toggle('v', !!show); const ol = CSN.el.querySelector('#csn-opts'); ol.innerHTML = ''; if (show && CSN.opts && CSN.opts.length && CSN.state === 'wait') CSN.opts.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = '<em>' + (i + 1) + '</em>'; b.append(o); b.addEventListener('click', () => csnSay(o, CSN.emo)); ol.appendChild(b); });
             CSN.el.querySelectorAll('#csn-emo button').forEach((b) => b.classList.toggle('on', b.dataset.k === CSN.emo));
         }
-        function csnUiTick() {
-            const ln = CSN.cur, bx = CSN.el.querySelector('#csn-box'); if (!ln || CSN.state === 'intro') { bx.classList.remove('v'); return; }
+        function csnUiTick(dt) {
+            const ln = CSN.cur, bx = CSN.el.querySelector('#csn-box'); if (!ln || CSN.state === 'intro' || ln.gone) { bx.classList.remove('v'); return; }
             const p = bx.querySelector('p'), txt = ln.text.slice(0, Math.floor(ln.n)); if (ln.last !== txt) { ln.last = txt; try { p.replaceChildren(...mdNodes(txt)); } catch (e) { p.textContent = txt; } } bx.classList.add('v');
             const sp = csnPos(ln.spk), v = new THREE.Vector3(sp.x, csnHead(ln.spk) + 0.15, sp.z).project(camera), W = innerWidth, H = innerHeight; let sx = (v.x * 0.5 + 0.5) * W, sy = (-v.y * 0.5 + 0.5) * H; if (v.z > 1) { sx = W / 2; sy = H * 0.4; }
-            const bw = bx.offsetWidth || 300, bh = bx.offsetHeight || 90, right = sx < W * 0.5; let x = right ? sx + 70 : sx - 70 - bw; x = Math.max(18, Math.min(W - bw - 18, x)); let y = Math.max(H * 0.13, Math.min(H * 0.86 - bh - 90, sy - bh * 0.5)); bx.style.left = x + 'px'; bx.style.top = y + 'px'; bx.classList.toggle('tl', right); bx.classList.toggle('tr', !right);
+            const bw = bx.offsetWidth || 300, bh = bx.offsetHeight || 90, right = sx < W * 0.5; let x = right ? sx + 70 : sx - 70 - bw; x = Math.max(18, Math.min(W - bw - 18, x)); let y = Math.max(H * 0.13, Math.min(H * 0.86 - bh - 90, sy - bh * 0.5)); if (ln.bx == null) { ln.bx = x; ln.by = y; } else { const ea = 1 - Math.exp(-(dt || 0.016) * 10); ln.bx += (x - ln.bx) * ea; ln.by += (y - ln.by) * ea; } x = ln.bx; y = ln.by; bx.style.left = x + 'px'; bx.style.top = y + 'px'; bx.classList.toggle('tl', right); bx.classList.toggle('tr', !right);
         }
         /* ---- who can be in a scene: the starter panel (like the hug request), party members first ---- */
         function csnCandidates() {
@@ -19482,26 +19515,38 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             if (cd.kind === 'cmp') { const r = CMP.active.get(cd.id.slice(4)); return { id: cd.id, name: cd.name, kind: 'cmp', c: cd.c, actor: r && r.actor, color: cmpColor(cd.c) }; }
             return { id: cd.id, name: cd.name, kind: 'npc', npc: cd.npc, actor: cd.npc.actor, color: cd.npc.color || '#ffd27a' };
         }
+        /* ---- the "who is in the scene" list: the Scene emote opens it as a submenu inside the emote panel, /scene opens it as a pop-up. Players get a Join prompt, companions join at once. ---- */
+        function csnPicker(el, close, title) {
+            const ids = el._ids || (el._ids = new Set());
+            const draw = () => {
+                el.replaceChildren(); const list = csnCandidates(); for (const id of [...ids]) if (!list.some((c) => c.id === id && c.ok)) ids.delete(id);
+                const mk = (t, bg) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.style.cssText = 'font:800 13px Nunito,sans-serif;color:#fff;border:0;border-radius:9px;padding:8px 14px;cursor:pointer;background:' + bg; return b; };
+                const go = mk('Start scene', '#2a6fd0'), no = mk('Cancel', '#555'), all = mk('Select all', '#3b4a66'), re = mk('\u21bb', '#3b4a66'), sync = () => { go.disabled = !ids.size; go.style.opacity = ids.size ? '1' : '.5'; all.textContent = list.filter((c) => c.ok).every((c) => ids.has(c.id)) && ids.size ? 'Clear' : 'Select all'; };
+                if (title) { const t = document.createElement('div'); t.style.cssText = 'font:900 16px Nunito,sans-serif;letter-spacing:.06em;margin-bottom:4px'; t.textContent = title; el.appendChild(t); }
+                const h = document.createElement('div'); h.style.cssText = 'opacity:.7;margin-bottom:8px;font-weight:600;font-size:12px'; h.textContent = 'Pick the players and companions who are in the conversation. Players only appear in the scene if they press Join. Companions join at once.'; el.appendChild(h);
+                if (!list.length) { const e = document.createElement('div'); e.style.cssText = 'padding:10px;opacity:.8'; e.textContent = 'Nobody is here to talk to yet. Join a party, bring a friend into the room, or summon a companion (/companions).'; el.appendChild(e); }
+                let lastParty = null; for (const c of list) {
+                    if (lastParty !== c.party) { lastParty = c.party; const g = document.createElement('div'); g.style.cssText = 'margin:8px 0 3px;font:800 11px Nunito,sans-serif;letter-spacing:.14em;opacity:.6'; g.textContent = c.party ? 'YOUR PARTY \u00b7 COMPANIONS' : 'NEARBY'; el.appendChild(g); }
+                    const row = document.createElement('label'); row.style.cssText = 'display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;background:rgba(40,70,130,.25);margin:3px 0' + (c.ok ? '' : ';opacity:.4'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.disabled = !c.ok; cb.checked = ids.has(c.id); cb.addEventListener('change', () => { if (cb.checked) ids.add(c.id); else ids.delete(c.id); sync(); });
+                    row.append(cb, document.createTextNode((c.kind === 'cmp' ? '\ud83d\udcac ' : c.kind === 'npc' ? '\ud83d\udde8 ' : '\ud83e\uddcd ') + c.name + (c.party && c.kind === 'peer' ? ' \u00b7 party' : '') + (c.ok ? '' : ' \u00b7 too far'))); el.appendChild(row);
+                }
+                const bar = document.createElement('div'); bar.style.cssText = 'display:flex;gap:8px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap'; if (list.length) bar.append(re, all); bar.append(no, go); el.appendChild(bar); sync();
+                re.onclick = draw; all.onclick = () => { const on = all.textContent === 'Select all'; for (const c of list) if (c.ok) { if (on) ids.add(c.id); else ids.delete(c.id); } draw(); };
+                no.onclick = () => { ids.clear(); close(false); };
+                go.onclick = () => { const sel = csnCandidates().filter((c) => ids.has(c.id) && c.ok); ids.clear(); close(true); if (sel.length) csnBegin(sel); };
+            };
+            draw();
+        }
         function csnOpenStarter() {
             if (CSN.on) { csnEnd(true); return true; } if (CSN.starter) { CSN.starter.remove(); CSN.starter = null; return true; }
-            const list = csnCandidates(), el = document.createElement('div'); CSN.starter = el; el.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5000;width:min(420px,92vw);max-height:80vh;overflow:auto;background:rgba(8,14,30,.96);border:2px solid #8fb4ff;border-radius:14px;padding:14px;color:#eaf3ff;font:700 13px Nunito,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.7)';
-            el.innerHTML = '<div style="font:900 16px Nunito;letter-spacing:.06em;margin-bottom:4px">🎬 Start a scene</div><div style="opacity:.7;margin-bottom:10px;font-weight:600">Pick who is in the conversation. Players get a Join prompt, like a hug. Companions join at once.</div>'; const sel = new Set();
-            if (!list.length) el.insertAdjacentHTML('beforeend', '<div style="padding:10px;opacity:.8">Nobody is here to talk to yet. Join a party, bring a friend into the room, or summon a companion (/companions).</div>');
-            let lastParty = null; for (const c of list) {
-                if (lastParty !== c.party) { lastParty = c.party; el.insertAdjacentHTML('beforeend', '<div style="margin:8px 0 3px;font:800 11px Nunito;letter-spacing:.14em;opacity:.6">' + (c.party ? 'YOUR PARTY · COMPANIONS' : 'NEARBY') + '</div>'); }
-                const row = document.createElement('label'); row.style.cssText = 'display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;background:rgba(40,70,130,.25);margin:3px 0' + (c.ok ? '' : ';opacity:.4'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.disabled = !c.ok; cb.addEventListener('change', () => { if (cb.checked) sel.add(c); else sel.delete(c); go.disabled = !sel.size; });
-                row.append(cb, document.createTextNode((c.kind === 'cmp' ? '💬 ' : c.kind === 'npc' ? '🗨 ' : '🧍 ') + c.name + (c.party && c.kind === 'peer' ? ' · party' : '') + (c.ok ? '' : ' · too far'))); el.appendChild(row);
-            }
-            const bar = document.createElement('div'); bar.style.cssText = 'display:flex;gap:8px;margin-top:12px;justify-content:flex-end'; const mk = (t, bg) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.style.cssText = 'font:800 13px Nunito;color:#fff;border:0;border-radius:9px;padding:8px 16px;cursor:pointer;background:' + bg; return b; };
-            const go = mk('Start scene', '#2a6fd0'), no = mk('Cancel', '#555'); go.disabled = true; go.style.opacity = '1'; bar.append(no, go); el.appendChild(bar); document.body.appendChild(el);
-            no.onclick = () => { el.remove(); CSN.starter = null; }; go.onclick = () => { el.remove(); CSN.starter = null; csnBegin([...sel]); };
-            return true;
+            const el = document.createElement('div'); CSN.starter = el; el.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5000;width:min(420px,92vw);max-height:80vh;overflow:auto;background:rgba(8,14,30,.96);border:2px solid #8fb4ff;border-radius:14px;padding:14px;color:#eaf3ff;font:700 13px Nunito,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.7)';
+            document.body.appendChild(el); csnPicker(el, () => { el.remove(); if (CSN.starter === el) CSN.starter = null; }, '\ud83c\udfac Start a scene'); return true;
         }
         function csnBegin(sel) {
             if (!sel.length) return; const local = sel.filter((c) => c.kind !== 'peer').map(csnMakeP), peersSel = sel.filter((c) => c.kind === 'peer');
             if (!local.length && peersSel.length) { const sid = me.id + ':' + Date.now().toString(36); CSN.pending = { sid, want: peersSel.map((c) => c.id), local: [] }; }
             else CSN.pending = { sid: me.id + ':' + Date.now().toString(36), want: peersSel.map((c) => c.id), local };
-            const P = CSN.pending; P.joined = []; P.ts = Date.now();
+            const P = CSN.pending; P.joined = []; P.ts = Date.now(); if (peersSel.length) setTimeout(() => { if (CSN.pending === P) { CSN.pending = null; if (!CSN.on) sysChat('Nobody joined the scene.'); } }, 30000);      // invites expire
             if (!peersSel.length) { csnStart(local, { sid: P.sid }); CSN.pending = null; return; }
             for (const c of peersSel) { try { net && net.send({ t: 'csn', k: 'inv', to: c.id, sid: P.sid, cast: [me.id].concat(sel.map((x) => x.kind === 'peer' ? x.id : '')).filter(Boolean) }); } catch (e) { /* offline */ } }
             sysChat('Scene invite sent to ' + peersSel.map((c) => c.name).join(', ') + '. It starts when the first person joins' + (local.length ? '.' : ' (companions come along).')); 
@@ -19509,21 +19554,29 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function csnToast(from, m) {
             const q = peers.get(from); if (!q) return; if (CSN.invites.has(from)) { clearTimeout(CSN.invites.get(from).tm); CSN.invites.get(from).el.remove(); }
             const el = document.createElement('div'); el.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:5000;background:rgba(10,18,40,.95);border:2px solid #8fb4ff;border-radius:14px;padding:8px 12px;color:#fff;font:800 13px Nunito,sans-serif;display:flex;gap:8px;align-items:center;box-shadow:0 4px 18px rgba(0,0,0,.5)';
-            const t = document.createElement('span'); t.textContent = '🎬 ' + (q.name || 'Someone') + ' invites you to a scene'; el.appendChild(t);
+            const t = document.createElement('span'); t.textContent = '🎬 ' + (q.name || 'Someone') + ' invites you to a scene (you are on camera until you leave)'; el.appendChild(t);
             const mk = (txt, bg, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.style.cssText = 'font:800 12px Nunito,sans-serif;color:#fff;border:0;border-radius:9px;padding:5px 11px;cursor:pointer;background:' + bg; b.addEventListener('click', () => { el.remove(); clearTimeout(rec.tm); CSN.invites.delete(from); fn(); }); el.appendChild(b); };
-            const rec = { el, m, tm: setTimeout(() => { el.remove(); CSN.invites.delete(from); }, 25000) }; CSN.invites.set(from, rec);
+            const rec = { el, m, tm: setTimeout(() => { el.remove(); CSN.invites.delete(from); try { net && net.send({ t: 'csn', k: 'no', to: from, sid: m.sid, r: 't' }); } catch (e) { /* offline */ } }, 25000) }; CSN.invites.set(from, rec);
             mk('Join', '#2a6fd0', () => csnJoin(from, m)); mk('No thanks', '#555', () => { try { net && net.send({ t: 'csn', k: 'no', to: from, sid: m.sid }); } catch (e) { /* offline */ } }); document.body.appendChild(el);
         }
         function csnJoin(from, m) {
-            if (CSN.on) return; const ids = Array.isArray(m.cast) ? m.cast : [from]; const cast = []; for (const id of ids.slice(0, 8)) { if (id === me.id) continue; const q = peers.get(id); if (q && q.actor) cast.push({ id, name: q.name || 'Guest', kind: 'peer', actor: q.actor, color: csnCol(q.name || id) }); }
-            if (!cast.length) return; csnStart(cast, { sid: m.sid, host: false }); try { net && net.send({ t: 'csn', k: 'yes', sid: m.sid }); } catch (e) { /* offline */ }
+            if (CSN.on) return; const ids = Array.isArray(m.cast) ? m.cast : [from]; const cast = []; { const q = peers.get(from); if (q && q.actor) cast.push({ id: from, name: q.name || 'Guest', kind: 'peer', actor: q.actor, color: csnCol(q.name || from) }); }      // only the person who invited you; the others show up when they accept
+            if (!cast.length) return; csnStart(cast, { sid: m.sid, host: false }); CSN.invited = new Set(ids.filter((x) => x !== me.id).slice(0, 8)); try { net && net.send({ t: 'csn', k: 'yes', sid: m.sid }); } catch (e) { /* offline */ }
         }
         function csnNet(from, m) {
             if (!m || typeof m.k !== 'string') return; const q = peers.get(from);
-            if (m.k === 'inv') { if (m.to !== me.id || !q || CSN.on || typeof m.sid !== 'string') return; csnToast(from, { sid: String(m.sid).slice(0, 60), cast: Array.isArray(m.cast) ? m.cast.map((x) => String(x).slice(0, 64)) : [from] }); }
-            else if (m.k === 'yes') { const P = CSN.pending; if (!P || P.sid !== m.sid || !q) return; if (!CSN.on) { const cast = P.local.slice(); cast.unshift({ id: from, name: q.name || 'Guest', kind: 'peer', actor: q.actor, color: csnCol(q.name || from) }); csnStart(cast, { sid: P.sid }); } else if (!csnById(from)) { CSN.cast.push({ id: from, name: q.name || 'Guest', kind: 'peer', actor: q.actor, color: csnCol(q.name || from) }); csnUiSync(); } }
-            else if (m.k === 'no') { sysChat((q && q.name || 'They') + ' passed on the scene.'); }
-            else if (m.k === 'line') { if (!CSN.on || m.sid !== CSN.sid || !q) return; const p = csnById(from) || { id: from, name: q.name, kind: 'peer', actor: q.actor, color: csnCol(q.name) }; if (!csnById(from)) CSN.cast.push(p); const emo = typeof m.emo === 'string' && EMOTES[m.emo] ? m.emo : null; CSN.q.push({ who: from, text: String(m.text || '').slice(0, 260), emo: null, tone: typeof m.tone === 'string' ? m.tone.slice(0, 12) : null, to: null, name: String(m.nm || p.name).slice(0, 24), opts: null }); }
+            if (m.k === 'inv') {
+                if (m.to !== me.id || !q || typeof m.sid !== 'string') return;
+                if (CSN.on) { try { net && net.send({ t: 'csn', k: 'no', to: from, sid: String(m.sid).slice(0, 60), r: 'b' }); } catch (e) { /* offline */ } return; }      // already in a scene: tell them
+                csnToast(from, { sid: String(m.sid).slice(0, 60), cast: Array.isArray(m.cast) ? m.cast.map((x) => String(x).slice(0, 64)) : [from] });
+            }
+            else if (m.k === 'yes') {      // someone accepted: they only join the scene because they pressed Join, and only if they were invited
+                if (!q) return; const P = CSN.pending, pp = { id: from, name: q.name || 'Guest', kind: 'peer', actor: q.actor, color: csnCol(q.name || from) };
+                if (P && P.sid === m.sid) { if (!P.want.includes(from)) return; if (!CSN.on) { const cast = P.local.slice(); cast.unshift(pp); csnStart(cast, { sid: P.sid }); } else if (!csnById(from)) { CSN.cast.push(pp); csnUiSync(); } }
+                else if (CSN.on && m.sid === CSN.sid && CSN.invited && CSN.invited.has(from) && !csnById(from) && CSN.cast.length < 8) { CSN.cast.push(pp); csnUiSync(); }
+            }
+            else if (m.k === 'no') { const P = CSN.pending; if (!P || P.sid !== m.sid) return; sysChat((q && q.name || 'They') + (m.r === 't' ? ' did not answer the scene invite.' : m.r === 'b' ? ' is already in a scene.' : ' passed on the scene.')); }
+            else if (m.k === 'line') { if (!CSN.on || m.sid !== CSN.sid || !q) return; const p = csnById(from); if (!p) return; const emo = typeof m.emo === 'string' && EMOTES[m.emo] ? m.emo : null; CSN.q.push({ who: from, text: String(m.text || '').slice(0, 260), emo: null, tone: typeof m.tone === 'string' ? m.tone.slice(0, 12) : null, to: null, name: String(m.nm || p.name).slice(0, 24), opts: null }); }
             else if (m.k === 'leave') { if (!CSN.on || m.sid !== CSN.sid) return; const i = CSN.cast.findIndex((p) => p.id === from); if (i > 0) CSN.cast.splice(i, 1); if (CSN.cast.filter((p) => p.kind !== 'me').length === 0 || (CSN.cast.length < 2)) csnEnd(false); }
         }
         // anything that stands somewhere in the world can be talked to: csnAddNpc({ id, name, color, actor|null, x, z, say: async (text, ctx) => ({ text, tone, emo, opts }), greet })
@@ -30293,7 +30346,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                 case 'prm': if (id === partyLeaderId() && m.id && String(m.id) !== me.id) { PARTY.members.delete(String(m.id)); partyRosterSave(); partyRender(); } break;
                 case 'plead': if (id === partyLeaderId() && m.to === me.id) { PARTY.myLead = true; PARTY.era = partyEra() + 1; partyAnnounce(); } break;
                 case 'pkick': if (id === partyLeaderId() && m.to === me.id) { partyLeave(true); sysChat('The party leader removed you from the party.'); } break;
-                case 'pcs': { if (!cur) break; const t = String(m.text || '').slice(0, 240); if (!t || Date.now() - (cur.lastPcs || 0) < 500) break; cur.lastPcs = Date.now(); const nm = String(m.n || 'Companion').slice(0, 24), col = validHex(m.col) || '#c4b5fd'; addChat(nm + ' (' + cur.name + ')', t, col); const pe = peers.get(id), r = pe && pe.cm && pe.cm.get(String(m.i || '').slice(0, 40)); if (r) r.actor.showBubble(t, col); break; }
+                case 'pcs': { if (!cur) break; const t = String(m.text || '').slice(0, 240); if (!t || Date.now() - (cur.lastPcs || 0) < 500) break; cur.lastPcs = Date.now(); const nm = String(m.n || 'Companion').slice(0, 24), col = validHex(m.col) || '#c4b5fd'; try { if (CSN.on) { const sp = csnCastFor('pcmp', { from: id, cid: String(m.i || '').slice(0, 40), name: nm, col }); if (sp) { csnSpot(sp, t); break; } } } catch (e) { /* the scene is optional */ } addChat(nm + ' (' + cur.name + ')', t, col); const pe = peers.get(id), r = pe && pe.cm && pe.cm.get(String(m.i || '').slice(0, 40)); if (r) r.actor.showBubble(t, col); break; }
                 case 'ppg': {   // a party member opened a portal: show it to us too
                     if (!cur || !room || m.cr !== room.id || m.m !== activeMap || Date.now() - (cur.lastPpg || 0) < 1500) break; cur.lastPpg = Date.now();
                     if (![m.x, m.y, m.z, m.yaw].every((v) => Number.isFinite(v) && Math.abs(v) < 1e4)) break; const rr = pgRooms().find((q) => q.id === String(m.rid)); if (!rr || rr.id === room.id) break;
@@ -36422,14 +36475,22 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             // Emotes
             setupStartMenu();
             $('btn-emotes').addEventListener('click', () => { closeScreenPanel(); toggleStart('emotes'); });
-            const ep = $('emote-panel');
+            const ep = $('emote-panel'); let sceneSub = null;      // the Scene tile opens an inline submenu: pick the players and companions in the conversation
             for (const [title, list] of EMOTE_MENU) {
                 const h = document.createElement('div'); h.className = 'text-[10px] uppercase tracking-widest text-gray-400 mt-3 mb-1.5 first:mt-0'; h.textContent = title; ep.append(h);
                 const g = document.createElement('div'); g.className = 'sm-grid';
                 for (const [key, ico, lab, hint] of list) {
                     const b = document.createElement('button'); b.type = 'button'; b.dataset.emote = key; b.className = 'emote-btn sm-tile';
                     b.innerHTML = `<span class="sm-ico">${ico}</span><span class="sm-lab"></span>` + (/^\d$/.test(hint || '') ? `<kbd>${hint}</kbd>` : '');
-                    b.querySelector('.sm-lab').textContent = lab; b.addEventListener('click', () => performEmote(key)); g.append(b);
+                    b.querySelector('.sm-lab').textContent = lab + (key === 'scene' ? ' \u25be' : '');
+                    b.addEventListener('click', () => {
+                        if (key !== 'scene') { performEmote(key); return; }
+                        if (CSN.on) { csnEnd(true); return; }
+                        if (sceneSub) { sceneSub.remove(); sceneSub = null; b.classList.remove('on'); return; }
+                        const sub = sceneSub = document.createElement('div'); sub.style.cssText = 'grid-column:1/-1;margin:8px 0 2px;padding:10px;border-radius:12px;background:rgba(8,14,30,.96);border:1px solid #8fb4ff;color:#eaf3ff;font:700 13px Nunito,sans-serif'; g.after(sub); b.classList.add('on');
+                        csnPicker(sub, (started) => { sub.remove(); if (sceneSub === sub) sceneSub = null; b.classList.remove('on'); if (started) { try { closeStart(); } catch (e) { /* menu */ } } }, '\uD83C\uDFAC Scene \u00b7 who is in it?');
+                    });
+                    g.append(b);
                 }
                 ep.append(g);
             }
@@ -37581,6 +37642,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         }
         function cmpChunks(t) { const MAX = 230, out = []; let cur = ''; const pieces = []; for (const s of String(t).trim().split(/(?<=[.!?…~*])\s+/)) { if (s.length <= MAX) { pieces.push(s); continue; } let rest = s; while (rest.length > MAX) { let k = rest.lastIndexOf(', ', MAX); if (k < 40) k = rest.lastIndexOf(' ', MAX); if (k < 20) k = MAX; pieces.push(rest.slice(0, k + 1).trim()); rest = rest.slice(k + 1).trim(); } if (rest) pieces.push(rest); } for (const s of pieces) { if (cur && (cur + ' ' + s).length > MAX) { out.push(cur.trim()); cur = s; } else cur = (cur + ' ' + s).trim(); } if (cur) out.push(cur.trim()); return out.slice(0, 6); }
         function cmpSay(a, c, text) {
+            try { if (CSN.on) { const sp = csnCastFor('cmp', { c }); if (sp) { const parts = csnSpot(sp, text), peerIn = CSN.cast.some((x) => x.kind === 'peer'); parts.forEach((t) => { if (peerIn) csnNetLine(sp, { text: t }); else cmpnTell(c, t); }); CMP.log.push({ who: c.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift(); return; } } } catch (e) { /* the scene is optional */ }
             const parts = cmpChunks(text); let delay = 0; parts.forEach((p) => { const d = delay; delay += Math.max(1700, p.length * 38); setTimeout(() => { try { if (!CMP.active.has(c.id) && !cmpUnit(c)) return; a.actor.showBubble(p, cmpColor(c)); addChat(c.name, p, cmpColor(c)); cmpnTell(c, p); } catch (e) { /* actor gone */ } }, d); });
             CMP.log.push({ who: c.name, text: text.slice(0, 160) }); if (CMP.log.length > 12) CMP.log.shift();
         }
