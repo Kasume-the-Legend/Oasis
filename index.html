@@ -19267,7 +19267,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         const CSN_TYPE_CPS = 38;      // how fast a line types out
         const CSN_PACE = [['Quick', 22, 0.8, 12], ['Normal', 14, 1.4, 20], ['Relaxed', 10, 2.2, 30]];      // name, reading speed (characters per second, typing time included), base seconds, longest a single line stays up
         let csnPaceI = 1; try { const v = parseInt(localStorage.getItem('csnPace'), 10); if (v >= 0 && v < 3) csnPaceI = v; } catch (e) { /* storage blocked */ }
-        const csnFov = (mm) => 2 * Math.atan(12 / mm) * 180 / Math.PI;      // vertical field of view of a lens on a 24 mm tall frame
+        const csnFov = (mm) => 2 * Math.atan(12 / Math.max(mm, 14)) * 180 / Math.PI;      // vertical field of view of a lens on a 24 mm tall frame
         const csnEase = (x) => x * x * (3 - 2 * x);
         const csnA = (p) => p.actor || null;
         const csnPos = (p) => { const a = csnA(p); return a && a.group ? a.group.position : { x: 0, y: 0, z: 0 }; };
@@ -19454,7 +19454,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             } else if (CSN.state === 'wait' && CSN.q.length) csnSet('run');
             // the camera: each shot is a hard cut, then it follows the actors with a soft ease and a slow drift (the side and distance are settled once, at the cut, so the lens never flips)
             const s = CSN.shot; if (s) {
-                s.t += dt; const k = s.t, o = csnBuild(s.kb || (s.k0 === 'react' ? 'ots50' : s.k0), s.S, s.L, s.side || CSN.side);
+                s.t += dt; const k = Math.min(s.t, 10), o = csnBuild(s.kb || (s.k0 === 'react' ? 'ots50' : s.k0), s.S, s.L, s.side || CSN.side);
                 if (s.sc != null && s.sc !== 1) { const sp = csnPos(s.S); o.px = sp.x + (o.px - sp.x) * s.sc; o.pz = sp.z + (o.pz - sp.z) * s.sc; }
                 csnShotOk(o);      // only keeps the lens off the ground and under the ceiling
                 const px = o.px + o.dr[0] * k, py = o.py + o.dr[1] * k, pz = o.pz + o.dr[2] * k, fv = o.mm + (o.df || 0) * k * 10;
