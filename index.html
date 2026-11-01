@@ -16025,12 +16025,14 @@ stopfield|Stop Field|⏸️|FF12|time|x|2.0|mage,mech|Stills the target area`;
             if ((!remote || m.mine) && Math.random() < (m.boss ? 0.3 : (m.rankMul > 1 || m.fate) ? 0.05 : 0.012)) { try { ttPackDrop(m.boss ? 'boss' : ''); } catch (e) { /* cards not ready */ } }     // uncommon drop
             try { mgOnKill(m, remote); } catch (e) { /* magic */ } try { dsKill(m, remote); } catch (e) { /* dragon lore */ }
             if (m.group && !m.group.dg && m.group.mobs.every((o) => o.dead)) nuKill(m.group); if (m.dgBoss) { try { dgBossDown(); } catch (e) { console.warn('boss down', e); } } if (m.fate) { m.fate.kills++; }
+            try { styOnKill(m, remote); } catch (e) { /* story */ }
             try { SMF.drop(m, remote); } catch (e) { /* forge */ }
             if (m.hb) { try { HB.kill(m, remote); } catch (e) { console.warn('hb', e); } }
             if (m.hunt) { try { nuHuntKilled(m, remote); } catch (e) { console.warn('hunt', e); } }
         }
         function nfRumble(strong, weak, ms) { try { if (activeMap === 'nuu' && typeof padRumble === 'function') padRumble(strong, weak, ms); } catch (e) { /* no rumble */ } }      // controller rumble for Adventia (Budokai > Rumble sets Normal / Low / Off)
         function nfPlayerHurt(d, from) {
+            if (STY.on) return;      // Story Mode: safe while a chapter plays
             try { if (!NF.dead && !(NF.inv > 0)) { NSX.playerHit(); try { nfFighterReact('hit'); } catch (e) { /* cosmetic */ } nfRumble(Math.min(1, 0.4 + d / Math.max(1, NF.hpMax) * 3), 0.65, 130 + Math.min(260, d * 3)); } } catch (e) { /* audio */ }
             if (NF.dead) return; try { if (NF.inv > 0 && NF.blinkAt && performance.now() - NF.blinkAt < 200) { nfPerfectDodge(); return; } } catch (e) { /* cosmetic */ } if (NF.inv > 0 || Math.random() * 100 < (NF.gEva || 0) || (function () { try { return mgEvade(); } catch (e) { return false; } })()) { nfPop(nfPos().clone().setY(nfPos().y + 2), 'Dodge', '#cfd8e0'); return; } if (NF.guard > 0) d = Math.round(d * (1 - (NF.gRed || 0.5))); try { d = d * mgHurtMul(from); } catch (e) { /* magic */ } if (nfMyRole() === 'tank') d = Math.round(d * nfStOn().tk); if (NF.def > 0) d = Math.round(d * (1 - Math.min(0.6, NF.def / (NF.def + 260)))); if (nfBf() && nfBf().def) d = Math.round(d * (1 - nfBf().def)); d = Math.max(1, Math.round(dsHurt(d))); NF.hp -= d; if (nfStHas('sleep')) { delete NF.st.sleep; try { nfStUi(); nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Awake!', '#cfe0ff'); } catch (e) { /* ui */ } } try { nfStMp('hurt'); } catch (e) { /* stance */ } try { if (from && from.cls && d > 0) nfStHit(from); } catch (e) { /* status */ } NF.lastHit = performance.now(); NF.comb = 6; NF.lb = Math.min(100, NF.lb + 4); nfPop(nfPos().clone().setY(nfPos().y + 2.1), String(d), '#ff6a5a'); if (NF.cast && NF.cast.s.cast && Math.random() < 0.35) { NF.cast = null; nfPop(nfPos().clone().setY(nfPos().y + 2.6), 'Interrupted', '#ffb347'); }
             if (NF.tele) nfTeleCancel('Teleport interrupted'); try { nfLogAdd('hurt', 'You took ' + Math.round(d) + ' damage from ' + String((from && (from.name || from.cls)) || 'an enemy') + ' (' + Math.max(0, Math.round(NF.hp)) + '/' + Math.round(NF.hpMax) + ' HP)', { d, aoe: !!NFLOG.aoe, frac: Math.max(0, NF.hp) / Math.max(1, NF.hpMax) }); } catch (e) { /* log */ } if (NF.hp <= 0 && nfG('autolife') && (NF.alT || 0) < performance.now()) { NF.alT = performance.now() + 300000; NF.hp = Math.round(NF.hpMax * 0.5); nfPop(nfPos().clone().setY(nfPos().y + 2.6), '✨ Auto-Life', '#ffe08a', true); try { nfFx('heal', nfPos(), nfPos()); } catch (e) { /* fx */ } } else if (NF.hp <= 0) nfDie();
@@ -16652,7 +16654,7 @@ window.addEventListener('keyup', (e) => { if (F.st && belKey(e)) F.st.bel = fals
                 css();
                 A.head = $('<div id="au-head"><div class="pt"><span data-k="ic">⚔️</span><b data-k="lv">1</b></div><div class="bx"><div class="nm"><span data-k="nm">Hero</span><small data-k="cl"></small></div><div class="r hp"><span>HP</span><div class="g"><i data-k="hp"></i><em data-k="hpt"></em></div></div><div class="r mp"><span>MP</span><div class="g"><i data-k="mp"></i><em data-k="mpt"></em></div></div><div class="r xp"><span>EXP</span><div class="g"><i data-k="xp"></i></div></div><div class="r lb"><span>LB</span><div class="g"><i data-k="lb"></i></div></div></div></div>');
                 document.body.appendChild(A.head);
-                const H = [['map', '🗺️', 'Map', () => nfTeleMenu()], ['inv', '🎒', 'Inventory', () => bagToggle(true)], ['chr', '🧙', 'Character', () => openChar()], ['jr', '📜', 'Journal', () => openJournal()], ['du', '⚔️', 'Duties', () => { try { HB.open(); } catch (e) { /* hunt board */ } }], ['so', '👥', 'Social', () => { try { cmpOpen(); } catch (e) { /* companions */ } }], ['sy', '⚙️', 'System', () => openSystem()]];
+                const H = [['map', '🗺️', 'Map', () => nfTeleMenu()], ['inv', '🎒', 'Inventory', () => bagToggle(true)], ['chr', '🧙', 'Character', () => openChar()], ['jr', '📜', 'Journal', () => openJournal()], ['st', '📖', 'Story', () => { try { styOpen(); } catch (e) { console.warn('story', e); } }], ['du', '⚔️', 'Duties', () => { try { HB.open(); } catch (e) { /* hunt board */ } }], ['so', '👥', 'Social', () => { try { cmpOpen(); } catch (e) { /* companions */ } }], ['sy', '⚙️', 'System', () => openSystem()]];
                 A.hub = $('<div id="au-hub">' + H.map((h) => '<button type="button" data-h="' + h[0] + '" title="' + h[2] + '"><i>' + h[1] + '</i><u>' + h[2] + '</u></button>').join('') + '</div>');
                 A.hub.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const h = H.find((x) => x[0] === b.dataset.h); if (h) { try { h[3](); } catch (er) { console.warn('hub', er); } } }); A.hub.addEventListener('pointerdown', (e) => e.stopPropagation());
                 document.body.appendChild(A.hub);
@@ -17134,6 +17136,7 @@ window.addEventListener('keyup', (e) => { if (F.st && belKey(e)) F.st.bel = fals
             const xp = Math.round((120 + 60 * lv) * mul), gil = Math.round((80 + 45 * lv) * mul); nfXp(xp); try { window.oasisGil.add(gil, true); } catch (e) { /* gil */ }
             try { sysChat('◆ FATE ' + rank + ': +' + xp + ' XP, +' + gil + ' Gil.'); btBagAdd('hipotion', 1); btBagAdd('ether', 2); } catch (e) { /* bag */ }
             if (f.zn) znChestSpawn(ZN.zones.reach, { x: fx, z: fz, d: lv * 55, lv, reg: 3, cool: 0, on: false, fate: true, zn: true }); else nuChestSpawn({ x: fx, z: fz, d: lv * 55, lv, reg: f.reg, cool: 0, on: false, fate: true });
+            try { styOnFate({ x: fx, z: fz, def: f.def }, rank); } catch (e) { /* story */ }
         }
         /* ---- aether crystals: attune one to use the Adventia network ---- */
         function nuMakeCrystals() {
@@ -19263,7 +19266,8 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         /* ================= CSN: cinematic conversation scenes (Mass Effect style). Pick who is in it (party members, companions), they accept like a hug, and the camera cuts between speakers:
            over-the-shoulder 50 / 100 mm, profile, long lens, forward, low and high dramatic angles, wide high / low. Type your own replies, pick emotes that fire as you speak. ================= */
         const CSN = { on: false, cast: [], sid: '', host: false, q: [], cur: null, shot: null, side: 1, state: '', sv: null, hid: [], el: null, t: 0, nLine: 0, lastShot: {}, seq: 0, emo: null, thinking: 0, invites: new Map(), starter: null, hist: [], opts: [], npcs: [], endT: 0, intro: 0, mm: [], tgtCache: null, spr: [] };
-        const csnLock = () => CSN.on;
+        const STY = { on: false };      // Story Mode runtime state (filled in by the STORY MODE block further down)
+        const csnLock = () => CSN.on || STY.on;
         const CSN_TYPE_CPS = 38;      // how fast a line types out
         const CSN_PACE = [['Quick', 22, 0.8, 12], ['Normal', 14, 1.4, 20], ['Relaxed', 10, 2.2, 30]];      // name, reading speed (characters per second, typing time included), base seconds, longest a single line stays up
         let csnPaceI = 1; try { const v = parseInt(localStorage.getItem('csnPace'), 10); if (v >= 0 && v < 3) csnPaceI = v; } catch (e) { /* storage blocked */ }
@@ -19415,7 +19419,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
         /* ---- start / end ---- */
         function csnStart(cast, opt) {
-            opt = opt || {}; if (CSN.on || !localActor || cast.length < 1) return false; try { if (fpOn) fpToggle(); } catch (e) { /* camera */ }
+            opt = opt || {}; if (CSN.on || STY.on || !localActor || cast.length < 1) return false; try { if (fpOn) fpToggle(); } catch (e) { /* camera */ }
             const mp = { id: me.id, name: me.name, kind: 'me', actor: localActor, color: '#38bdf8' }; CSN.cast = [mp].concat(cast); CSN.sid = opt.sid || (me.id + ':' + Date.now().toString(36)); CSN.host = opt.host !== false; CSN.q = []; CSN.cur = null; CSN.shot = null; CSN.nLine = 0; CSN.lastShot = {}; CSN.seq = 0; CSN.hist = []; CSN.opts = []; CSN.thinking = 0; CSN.askBusy = 0; CSN.busyT = 0; CSN.cam = null; CSN.lift = 0; CSN.typing = false; CSN.t = 0; CSN.endT = 0; CSN.side = Math.random() < 0.5 ? 1 : -1; CSN.emo = null;
             CSN.sv = { p: camera.position.clone(), t: controls.target.clone(), f: camera.fov, en: controls.enabled, up: camera.up.clone() }; controls.enabled = false;
             csnUi(); CSN.on = true; CSN.state = 'intro'; CSN.intro = 2.3; document.body.classList.add('csn-on'); CSN.hid = [];
@@ -19624,6 +19628,574 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             _csnPill.style.display = 'block'; _csnPill.style.transform = 'translate(' + Math.round(sx - 23) + 'px,' + Math.round(sy - 56) + 'px)'; const li = _csnPill.querySelector('i'); if (li.textContent !== lb) li.textContent = lb;
         }
         window.__csn = { CSN, csnStart, csnEnd, csnFeed, csnMannequin, csnAddNpc, csnSay, csnOpenStarter, csnMakeP, csnTick, csnNear };
+        /* =====================================================================================================
+         *  STORY MODE (STY): your own Final Fantasy episode. A prompt (or a FATE, or a dungeon) becomes a short anime-style cutscene: a chapter title
+         *  card, B-roll camera work over the world you are standing in (establishing cranes, tilt-down reveals, hero low angles, orbits, eye close-ups,
+         *  whip pans, impact frames), narration and dialogue in Final Fantasy windows, and a reward window that hands out items and the next task.
+         *  Tasks chain forever from the Quest Forge: pick enemies, dungeons, items or locations and the story keeps writing the next chapter.
+         *  It reuses the scene director's helpers (csnPos, csnShotOk ...) so the lens never ends up inside a wall. Text comes from the companion AI
+         *  (cmpAI) and falls back to a built-in storyteller when no key is set, so it always works. Everything saves in this browser.
+         * ===================================================================================================== */
+        const STY_K = 'oasis.story.v1';
+        const STY_TONES = [['epic', 'Epic', 'heroic, sweeping and mythic'], ['dark', 'Dark', 'grim, haunted, high stakes'], ['hope', 'Hopeful', 'warm, tender and uplifting'], ['mystery', 'Mystery', 'eerie, curious, full of secrets'], ['comic', 'Lighthearted', 'witty and playful, with banter'], ['tragic', 'Bittersweet', 'wistful and emotional']];
+        const STY_PACE = [['Quick', 24], ['Normal', 16], ['Relaxed', 11]];      // reading speed in characters per second
+        const STY_TYPE_CPS = 46, STY_EMO_OK = ['greet', 'cheer', 'peace', 'spin', 'show', 'squat'];
+        const STY_GRADE = {
+            day: 'linear-gradient(180deg,rgba(255,244,214,.10),rgba(255,255,255,0))', dawn: 'linear-gradient(0deg,rgba(255,150,90,.30),rgba(255,214,150,.10) 55%,rgba(120,150,255,.10))',
+            dusk: 'linear-gradient(0deg,rgba(255,92,60,.26),rgba(160,60,160,.16) 60%,rgba(40,30,110,.20))', night: 'linear-gradient(0deg,rgba(10,20,80,.36),rgba(10,16,60,.30))',
+            cold: 'linear-gradient(0deg,rgba(120,190,255,.20),rgba(190,230,255,.08))', dread: 'radial-gradient(ellipse at 50% 60%,rgba(80,0,20,.10),rgba(70,0,16,.40))',
+            triumph: 'radial-gradient(ellipse at 78% 12%,rgba(255,226,140,.36),rgba(255,200,90,.10) 45%,rgba(255,255,255,0))', memory: 'linear-gradient(0deg,rgba(210,190,150,.24),rgba(230,214,180,.18))'
+        };
+        const sClamp = (v, a, b) => Math.max(a, Math.min(b, v)), sL = (a, b, u) => a + (b - a) * u;
+        const styEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const styTxt = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+        const styTitleCase = (s) => String(s || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+        const styHash = (s) => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h; };
+        const styRng = (seed) => { let h = (seed >>> 0) || 1; return () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+        function styDefaults() { return { v: 1, on: false, prem: '', tone: 'epic', pov: 'third', ch: 0, tier: 0, pool: [], pi: 0, q: null, log: [], fc: 0, last: 0, opt: { fate: 1, dg: 1, vo: 0, pace: 1, auto: 1, bars: 1 } }; }
+        function styLoad() {
+            let o = null; try { o = JSON.parse(localStorage.getItem(STY_K) || 'null'); } catch (e) { o = null; }
+            const d = styDefaults(); if (!o || typeof o !== 'object') return d; const s = Object.assign(d, o); s.opt = Object.assign(styDefaults().opt, o.opt || {});
+            if (!Array.isArray(s.pool)) s.pool = []; s.pool = s.pool.filter((t) => t && typeof t.kind === 'string').slice(0, 40); if (!Array.isArray(s.log)) s.log = []; s.log = s.log.slice(-14);
+            s.ch = s.ch | 0; s.tier = s.tier | 0; s.pi = s.pi | 0; s.fc = s.fc | 0; s.last = +s.last || 0; s.prem = styTxt(s.prem, 600); if (!STY_TONES.some((t) => t[0] === s.tone)) s.tone = 'epic'; if (s.pov !== 'second') s.pov = 'third'; return s;
+        }
+        let STYS = styLoad();      // the saved chronicle: premise, tone, quest pool, current quest, past chapters, settings
+        function stySave() { try { const n = STYS.log.length; STYS.log.forEach((e, i) => { if (i < n - 6) delete e.sc; }); localStorage.setItem(STY_K, JSON.stringify(STYS)); } catch (e) { /* storage blocked or full */ } }
+        /* ---------- where the hero is, in words ---------- */
+        const styFloor = () => { try { return ZN.on || (DG.on && DG.floor === 2) ? 2 : (DG.on ? DG.floor || 1 : 1); } catch (e) { return 1; } };
+        function styFloorInfo(f) {
+            const o = f === 1 ? { name: 'the Forest of Nuu', dg: 'the Shadowveil Depths', boss: 'Malachar, the Hollow One', fm: 1, accent: '#b070ff' } : f === 2 ? { name: 'Carvernia', dg: 'the Carvernia Caverns', boss: 'Cryo-Behemoth Valdrix', fm: 2.3, accent: '#7fe6ff' } : { name: 'Floor ' + f, dg: 'the dungeon of Floor ' + f, boss: 'the guardian of Floor ' + f, fm: 1 + 0.65 * f, accent: '#ffd24a' };
+            try { const th = DG_TH[f]; if (th) { o.dg = 'the ' + styTitleCase(th.name); o.boss = styTitleCase(th.boss.title); } } catch (e) { /* theme table */ } return o;
+        }
+        function styWhere() {
+            const f = styFloor(), fi = styFloorInfo(f); let n = fi.name, key = 'field', accent = fi.accent;
+            try {
+                if (DG.on) { n = fi.dg; key = 'cave'; }
+                else if (ZN.on) { key = ZN.key === 'reach' ? 'reach' : 'town'; n = ZN.key === 'town' ? 'Carvernia Hold' : ZN.key === 'reach' ? 'Carvernia Reach' : ZN.key === 'inn' ? 'the Inn at Carvernia Hold' : ZN.key === 'guild' ? "the Adventurers' Guild" : ZN.key === 'tent' ? 'a camp tent' : 'Carvernia'; }
+                else { const p = nfPos(); let best = null, bd = 1e9; for (const c of NU.cry || []) { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d < bd) { bd = d; best = c; } } if (best && bd < 260) { if (best.hub) { n = 'the Starting Plaza'; key = 'hub'; } else { const R = NU_REG[best.reg]; n = R.name; key = R.id; accent = R.accent; } } }
+            } catch (e) { /* world not ready */ }
+            return { f, n, key, accent };
+        }
+        const STY_MOOD_BY = { cave: 'dread', reach: 'cold', town: 'dusk', hub: 'dawn', verdant: 'day', crystal: 'night', infernal: 'dusk', glacial: 'cold', shadow: 'dread', field: 'day' };
+        const STY_FLAVOR = {
+            verdant: 'Green light filtered through the canopy, and the tall grass hummed with insects.', crystal: 'Crystals chimed softly in the earth, like glass bells in a distant wind.', infernal: 'Embers rose from the cracked ground, and the air shimmered like beaten copper.',
+            glacial: 'Frost clung to every edge, and the wind had learned to whisper in ice.', shadow: 'Shadows pooled thick as ink, and even the light seemed afraid to linger.', hub: 'The Starting Plaza hummed with the quiet confidence of a place that has seen many beginnings.',
+            town: 'Lamplight pooled in the snowy lanes of the Hold, and chimney smoke rose in thin gray ribbons.', reach: 'Snow drove sideways across the Reach, and the road vanished into white a few paces ahead.', cave: 'Pale light crawled across the stone, and every drip of water sounded like a footstep.', field: 'The land rolled out in every direction, wide and patient.'
+        };
+        /* ---------- the camera: an anime shot library. Each shot is a function of where the subject stands and how far into the shot we are (u 0..1). ---------- */
+        const styFr = (c, a, b) => [c.P.x + c.fx * a + c.qx * b, c.P.z + c.fz * a + c.qz * b];
+        const STY_SHOTS = {
+            establish: { n: 'Establishing crane', fn: (c) => { const [x, z] = styFr(c, -sL(26, 11, c.e) * c.k, c.side * 7 * c.k); return { p: [x, c.g + sL(22, 6.2, c.e) * Math.max(c.k, 0.6), z], t: [c.P.x + c.fx * 6, c.g + sL(0.2, 1.3, c.e), c.P.z + c.fz * 6], mm: sL(21, 30, c.e), roll: 0 }; } },
+            skyTilt: { n: 'Tilt-down reveal', fn: (c) => { const [x, z] = styFr(c, 4.2 * c.k, c.side * 1.4 * c.k); return { p: [x, c.g + 0.3, z], t: [c.P.x, sL(c.H + 34, c.H - 0.05, Math.min(1, c.e * 1.15)), c.P.z], mm: sL(20, 30, c.e), roll: c.side * sL(-3, 0, c.e) }; } },
+            skyUp: { n: 'Sky B-roll', fn: (c) => { const a = c.ry + c.side * c.u * 0.6; return { p: [c.P.x - c.fx, c.g + 0.4, c.P.z - c.fz], t: [c.P.x + Math.sin(a) * 18, c.g + sL(14, 22, c.e), c.P.z + Math.cos(a) * 18], mm: sL(22, 28, c.e), roll: c.side * 2 }; } },
+            heroLow: { n: 'Hero low angle', fn: (c) => { const [x, z] = styFr(c, 3.4 * c.k, c.side * 1.5 * c.k); return { p: [x, c.g + 0.22, z], t: [c.P.x, sL(c.H - 0.35, c.H + 0.25, c.e), c.P.z], mm: sL(20, 25, c.e), roll: c.side * sL(4, 1.5, c.e), flare: 1 }; } },
+            eyes: { n: 'Eye close-up', fn: (c) => { const [x, z] = styFr(c, Math.max(0.95, sL(1.55, 1.25, c.e) * c.k), c.side * 0.3 * c.k); return { p: [x, c.H + 0.02, z], t: [c.P.x, c.H, c.P.z], mm: sL(100, 125, c.e), roll: 0 }; } },
+            pushIn: { n: 'Slow push-in', fn: (c) => { const [x, z] = styFr(c, Math.max(1.5, sL(5.4, 2.3, c.e) * c.k), c.side * sL(1.6, 0.6, c.e) * c.k); return { p: [x, c.H + sL(0.35, 0.02, c.e), z], t: [c.P.x, c.H - 0.05, c.P.z], mm: sL(38, 62, c.e), roll: 0 }; } },
+            orbit: { n: 'Hero orbit', fn: (c) => { const a = c.ry + 0.5 * c.side + c.side * c.u * 2.4, r = Math.max(2.4, sL(4.8, 3.9, c.e) * c.k); return { p: [c.P.x + Math.sin(a) * r, c.H + sL(0, 1.1, c.e), c.P.z + Math.cos(a) * r], t: [c.P.x, c.H - 0.2, c.P.z], mm: sL(28, 36, c.e), roll: 0 }; } },
+            crane: { n: 'Rising crane', fn: (c) => { const [x, z] = styFr(c, 3.8 * c.k, c.side * 1.2 * c.k); return { p: [x, c.g + sL(0.2, c.H - c.g + 3.4, c.e), z], t: [c.P.x, sL(c.H - 0.6, c.H - 0.15, c.e), c.P.z], mm: sL(28, 24, c.e), roll: 0 }; } },
+            trackBack: { n: 'Following the hero', fn: (c) => { const [x, z] = styFr(c, -sL(4.3, 3.0, c.u) * c.k, c.side * 0.6); return { p: [x, c.H + 0.3, z], t: [c.P.x + c.fx * 16, c.H - 0.3, c.P.z + c.fz * 16], mm: 30, roll: 0 }; } },
+            povLook: { n: 'Point of view', fn: (c) => { const [x, z] = styFr(c, 0.5, 0), tx = c.T ? c.T.x : c.P.x + c.fx * 30, tz = c.T ? c.T.z : c.P.z + c.fz * 30, ty = c.T ? c.T.y + 1.5 : c.H - 0.1, sw = sL(-0.55, 0, c.e), dx = tx - x, dz = tz - z, cs = Math.cos(sw), sn = Math.sin(sw); return { p: [x, c.H + 0.05, z], t: [x + dx * cs - dz * sn, ty + sL(2, 0, c.e), z + dx * sn + dz * cs], mm: sL(26, 34, c.e), roll: 0 }; } },
+            landmark: { n: 'Over the shoulder to a landmark', fn: (c) => { const T = c.T || { x: c.P.x + c.fx * 40, y: c.P.y + 3, z: c.P.z + c.fz * 40 }, dx = T.x - c.P.x, dz = T.z - c.P.z, D = Math.hypot(dx, dz) || 1, ux = dx / D, uz = dz / D; return { p: [c.P.x - ux * 1.9 * c.k - uz * c.side * 0.75 * c.k, c.H + 0.12, c.P.z - uz * 1.9 * c.k + ux * c.side * 0.75 * c.k], t: [T.x, sL(c.H, T.y + 2.5, c.e), T.z], mm: sL(26, 32, c.e), roll: 0 }; } },
+            dutch: { n: 'Dutch angle', fn: (c) => { const [x, z] = styFr(c, 2.3 * c.k, c.side * 0.9 * c.k); return { p: [x, c.H - 0.1, z], t: [c.P.x, c.H, c.P.z], mm: sL(34, 42, c.e), roll: c.side * sL(12, 17, c.e) }; } },
+            birdseye: { n: "Bird's-eye", fn: (c) => { const a = c.ry + c.side * c.u * 0.9, r = 3.2 * c.k; return { p: [c.P.x + Math.sin(a) * r, c.g + sL(17, 24, c.e) * Math.max(c.k, 0.6), c.P.z + Math.cos(a) * r], t: [c.P.x, c.g, c.P.z], mm: sL(26, 30, c.e), roll: 0 }; } },
+            parallax: { n: 'Lateral truck', fn: (c) => { const s = c.side * sL(-6.5, 6.5, c.u) * c.k, [x, z] = styFr(c, 7.5 * c.k, s); return { p: [x, c.H - 0.15, z], t: [c.P.x + c.qx * s * 0.55, c.H - 0.1, c.P.z + c.qz * s * 0.55], mm: 40, roll: 0 }; } },
+            skyline: { n: 'Lonely wide', fn: (c) => { const [x, z] = styFr(c, -15 * c.k, c.side * 3); return { p: [x, c.g + 0.7, z], t: [c.P.x + c.fx * 6, c.g + sL(3.2, 2.6, c.e), c.P.z + c.fz * 6], mm: sL(20, 23, c.e), roll: 0 }; } },
+            profile: { n: 'Profile', fn: (c) => { const [x, z] = styFr(c, 0.3, c.side * 3.0 * c.k); return { p: [x, c.H + 0.02, z], t: [c.P.x + c.fx * 0.3, c.H - 0.04, c.P.z + c.fz * 0.3], mm: sL(80, 92, c.e), roll: 0 }; } },
+            front: { n: 'Face-on medium', fn: (c) => { const [x, z] = styFr(c, 2.4 * c.k, c.side * 0.5 * c.k); return { p: [x, c.H + 0.05, z], t: [c.P.x, c.H - 0.06, c.P.z], mm: sL(50, 60, c.e), roll: 0 }; } },
+            low: { n: 'Low menace', fn: (c) => { const [x, z] = styFr(c, 1.9 * c.k, c.side * 0.8 * c.k); return { p: [x, c.g + 0.22, z], t: [c.P.x, c.H + 0.15, c.P.z], mm: 28, roll: -4 * c.side }; } },
+            ots: { n: 'Over the shoulder', fn: (c) => { if (!c.T) return STY_SHOTS.front.fn(c); const dx = c.T.x - c.P.x, dz = c.T.z - c.P.z, D = Math.hypot(dx, dz) || 1, ux = dx / D, uz = dz / D, nx = -uz * c.side, nz = ux * c.side; return { p: [c.T.x + ux * 1.7 * c.k + nx * 0.85 * c.k, c.TH + 0.08, c.T.z + uz * 1.7 * c.k + nz * 0.85 * c.k], t: [c.P.x - nx * 0.05, c.H - 0.06, c.P.z - nz * 0.05], mm: sL(50, 58, c.e), roll: 0 }; } },
+            twoShot: { n: 'Two-shot', fn: (c) => { if (!c.T) return STY_SHOTS.profile.fn(c); const mx = (c.P.x + c.T.x) / 2, mz = (c.P.z + c.T.z) / 2, my = (c.H + c.TH) / 2, dx = c.T.x - c.P.x, dz = c.T.z - c.P.z, D = Math.hypot(dx, dz) || 1, r = (D * 1.1 + 2.6) * c.k; return { p: [mx - dz / D * c.side * r, my, mz + dx / D * c.side * r], t: [mx, my - 0.1, mz], mm: sL(38, 44, c.e), roll: 0 }; } },
+            groupWide: { n: 'Group wide', fn: (c) => { const [x, z] = styFr(c, (c.rad + 6) * c.k, c.side * 2 * c.k); return { p: [x, c.g + 2.0 + c.rad * 0.15, z], t: [c.P.x, c.g + 1.1, c.P.z], mm: 26, roll: 0 }; } },
+            pullback: { n: 'Pull-back finale', fn: (c) => { const [x, z] = styFr(c, -sL(2.8, 18, c.e) * c.k, c.side * sL(0.8, 5, c.e) * c.k); return { p: [x, c.H + sL(0.2, 8, c.e) * Math.max(c.k, 0.6), z], t: [c.P.x + c.fx * 5 * c.e, sL(c.H - 0.1, c.g + 1.2, c.e), c.P.z + c.fz * 5 * c.e], mm: sL(40, 22, c.e), roll: 0 }; } }
+        };
+        const STY_SIB = { eyes: ['pushIn', 'profile'], pushIn: ['eyes', 'profile'], profile: ['eyes', 'ots'], heroLow: ['crane', 'orbit'], crane: ['heroLow', 'orbit'], orbit: ['heroLow', 'crane'], parallax: ['trackBack', 'skyline'], trackBack: ['parallax', 'skyline'], skyline: ['parallax', 'skyTilt'], skyTilt: ['skyline', 'crane'], ots: ['front', 'profile'], front: ['ots', 'eyes'], establish: ['crane', 'birdseye'], birdseye: ['establish', 'skyline'], landmark: ['establish', 'trackBack'], dutch: ['low', 'pushIn'], low: ['dutch', 'heroLow'], twoShot: ['profile', 'ots'], pullback: ['crane', 'skyline'], groupWide: ['twoShot', 'establish'], povLook: ['landmark', 'trackBack'], skyUp: ['skyTilt', 'skyline'] };
+        const STY_KW = [
+            [/\b(eyes?|heart|memor(?:y|ies)|remember(?:ed)?|promise[ds]?|vow(?:ed|s)?|oath|tears?|whisper(?:ed|s)?|alone|lost|grief|mother|father|brother|sister)\b/i, ['eyes', 'pushIn', 'profile']],
+            [/\b(fear|dread|shadows?|darkness|silence|cold|ominous|wrong|watching|blood|doom|curse[ds]?)\b/i, ['dutch', 'low', 'pushIn']],
+            [/\b(sky|stars?|moon|sun|dawn|dusk|clouds?|storm|rain|snow|wind|blizzard|aurora|horizon)\b/i, ['skyTilt', 'skyline', 'skyUp']],
+            [/\b(road|path|trail|journey|march(?:ed)?|walk(?:ed|ing)?|travel(?:ed|ing)?|footsteps?|ahead|beyond)\b/i, ['trackBack', 'parallax', 'skyline']],
+            [/\b(door|gate|crystal|temple|cavern|cave|portal|tower|beacon|light|ruins?|bridge|throne)\b/i, ['landmark', 'establish', 'birdseye']],
+            [/\b(rise|rose|stood|stand|sword|blade|champion|hero|victory|triumph|legend|won)\b/i, ['heroLow', 'crane', 'orbit']]
+        ];
+        /* ---------- the built-in storyteller (used when no AI key is set, or the AI answers badly) ---------- */
+        const STY_GUESTS = ['Maren', 'Old Tobin', 'Sister Isolde', 'Kael', 'Wren', 'Brannoch', 'Ysolde', 'Captain Vey', 'Pip', 'Oswin'];
+        const STY_BANK = {
+            open: {
+                bright: ['Light spilled across {P} like the first page of a long-awaited story, and {N} stood at the edge of it.', '{P} was quiet in the way that only comes after something great has ended, and before something greater begins.', 'Wind carried the scent of rain and iron over {P}. Somewhere past the horizon, the world was turning a page.', 'The road through {P} had seen a thousand travelers. Today it was {N}\'s turn to be remembered.'],
+                dark: ['{P} held its breath. The shadows here had a way of listening.', 'Nothing in {P} moved without permission, and tonight nothing moved at all.', 'The dust had not yet settled over {P}, and already the silence felt like a held blade.', 'Some places keep the memory of violence like a stain. {P} remembered everything.'],
+                mystery: ['There is a quiet in {P} that does not belong to silence. It belongs to secrets.', 'The air over {P} shimmered once, like a page turning in a book no one had written yet.', 'In {P} the light fell at the wrong angle, as though something unseen were standing in it.', '{N} felt it before seeing it: the gentle wrongness of a place that knew more than it said.']
+            },
+            fate: {
+                bright: ['The beacon over {E} guttered and went dark. What had been a battle was now only a story, and stories need tellers.', 'Behind {N}, the last echoes of {E} faded into the wind. Victory was louder in memory than it had been in the moment.', '{E} was over. The ground still trembled, the way a heart does after a long run.'],
+                dark: ['{E} was over, but the quiet that followed felt borrowed. Something had been paid for this victory, and {N} could not yet tell what.', 'The beacon of {E} died, and the dark that rushed in to fill it was patient.'],
+                mystery: ['As {E} ended, {N} could not shake the feeling that it had been staged for someone watching.', 'The echoes of {E} faded, and in their place came a sound like a distant door unlatching.']
+            },
+            dungeon: {
+                bright: ['{B} was gone. The deep stone of {D} exhaled for the first time in a thousand years.', 'Where {B} had fallen, light crept in at last, thin and uncertain, like a promise.'],
+                dark: ['{B} fell, and {D} did not rejoice. It only grew quiet, the way a wound does when the blade is finally drawn out.', 'With {B} gone, the dark in {D} had nothing left to guard, and it looked, for the first time, at {N}.'],
+                mystery: ['{B} dissolved into the air of {D} like breath on glass, and in the silence something old noted the hero\'s name.', 'The throne of {D} stood empty. Somewhere, someone was already writing the next page.']
+            },
+            quest: {
+                bright: ['Another debt of the road was paid: {Q}. For a moment the world felt a little more orderly.', '{Q} was done. {N} had learned long ago that small victories were the stones a great road is built from.'],
+                dark: ['{Q} was finished, and the world did not thank anyone for it. It never did.', 'The work called {Q} was done. Whatever it had stirred up would be somebody else\'s problem soon enough.'],
+                mystery: ['With {Q} complete, a pattern began to show itself, the way constellations do once you know where to look.', '{Q} was done, and every thread of it seemed to lead to the same dark knot.']
+            },
+            begin: {
+                bright: ['Every legend begins with a single step taken for no better reason than that someone had to take it. {N}\'s began here.', 'Nobody announces the start of a great story. It simply arrives, wearing ordinary boots.'],
+                dark: ['Some journeys begin with hope. This one began with a debt that could not be paid any other way.', 'The first step of any road is the only one you can still take back. {N} did not look behind.'],
+                mystery: ['The story did not begin with a bang. It began with a question, and {N} was the only one who had heard it.', 'A letter without a sender, a map with one wrong line: this is how the strangest journeys begin.']
+            },
+            hook: ['There is work yet. {O}. Do this, and the road ahead will open.', 'Before you rest, there is one more thing. {O}.', 'If you have the heart for it: {O}. I would not ask if there were anyone else.', 'The next step is plain. {O}. The rest will reveal itself.'],
+            gift: ['Take these. A traveler\'s thanks is worth little, but a traveler\'s supplies are worth a great deal.', 'Here, I was saving these for a day like this. Do not make me regret it.', 'These will serve you better than they served me. Go on, take them.'],
+            talk: {
+                bright: ['Well. That was either very brave or very foolish, {N}. I will decide once my hands stop shaking.', 'You make it look easy. It is not easy. Please never tell anyone I said so.', 'I will remember this day for the rest of my life. Mostly the parts where we did not die.'],
+                dark: ['Do not thank me. Gratitude is how the dark learns your name.', 'We were lucky. Remember that when you feel brave.', 'There is more behind this than a single monster. I would stake my life on it. I may have to.'],
+                mystery: ['You were not meant to find this place. Yet here you are, which means it wanted you here.', 'Did you hear that? No. Of course not. Forget I said anything.', 'Every answer we find only seems to grow another question. I am beginning to suspect that is the point.']
+            },
+            close: {
+                epic: 'Above, the sky widened. Whatever waited ahead, {N} would meet it standing.', dark: 'Far off, something old turned its head toward {N}. The road ahead would not be kind.', hope: 'Somewhere, someone was waiting for good news. {N} meant to be the one who brought it.',
+                mystery: 'Behind the horizon, a door that had been closed for centuries quietly came unlatched.', comic: '{N} tightened a boot strap, sighed dramatically at no one, and walked on. Heroism, as it turns out, is ninety percent footwear.', tragic: 'Some victories leave a hollow where something used to be. {N} carried it forward gently, like a lantern.'
+            },
+            scene: ['The moment stretched. {N} let it, because moments like this are rare and do not come back.', 'Nothing happened, and yet everything shifted, the way a river changes course without a sound.']
+        };
+        const STY_BANKGROUP = { epic: 'bright', hope: 'bright', comic: 'bright', dark: 'dark', tragic: 'dark', mystery: 'mystery' };
+        function styProc(ctx) {
+            const R = styRng(styHash(ctx.name + ':' + ctx.ch + ':' + ctx.kind + ':' + (ctx.ev && ctx.ev.title || '') + ':' + (ctx.where && ctx.where.n || ''))), pick = (a) => a[Math.floor(R() * a.length)], g = STY_BANKGROUP[ctx.tone] || 'bright';
+            const N = ctx.name, P = ctx.where.n, ev = ctx.ev || {}, fill = (s) => s.replace(/\{N\}/g, N).replace(/\{P\}/g, P).replace(/\{E\}/g, ev.title ? '\u201c' + ev.title + '\u201d' : 'the battle').replace(/\{B\}/g, ev.boss || 'the guardian').replace(/\{D\}/g, ev.dg || 'the dungeon').replace(/\{Q\}/g, ev.quest ? '\u201c' + ev.quest + '\u201d' : 'the task').replace(/\{O\}/g, ctx.q ? ctx.q.text : 'The road will show the way');
+            const guest = pick(STY_GUESTS), cmp = ctx.comps && ctx.comps[0] || null, spk = cmp || guest, beats = [];
+            const kindBank = ctx.kind === 'scene' ? null : STY_BANK[ctx.kind];
+            beats.push({ t: 'narr', text: fill(pick(STY_BANK.open[g])), shot: 'establish', on: 'me' });
+            beats.push({ t: 'narr', text: STY_FLAVOR[ctx.where.key] || STY_FLAVOR.field, shot: ctx.where.key === 'cave' ? 'pushIn' : pick(['skyTilt', 'parallax', 'skyline']), on: 'me' });
+            if (kindBank) beats.push({ t: 'narr', text: fill(pick(kindBank[g] || kindBank.bright)), shot: pick(['heroLow', 'orbit', 'crane']), on: 'me', fx: ctx.kind === 'dungeon' || ctx.kind === 'fate' ? 'impact' : '' });
+            else if (ctx.userPrompt) beats.push({ t: 'narr', text: fill(pick(STY_BANK.scene)) + ' (' + styTxt(ctx.userPrompt, 90) + ')', shot: 'pushIn', on: 'me' });
+            if (ctx.prem) { const clip = styTxt(ctx.prem.split(/[.!?\n]/)[0], 90); beats.push({ t: 'narr', text: N + ' touched the worn charm of an old vow, "' + clip + '", and found it still held.', shot: 'eyes', on: 'me', tone: 'sad' }); }
+            if (ctx.kind !== 'scene') {
+                beats.push({ t: 'say', who: spk, text: fill(pick(STY_BANK.talk[g])), shot: pick(['ots', 'front', 'twoShot']), on: spk, tone: g === 'dark' ? 'afraid' : 'calm' });
+                if (ctx.rw && ctx.rw.items && ctx.rw.items.length) beats.push({ t: 'give', who: spk, text: fill(pick(STY_BANK.gift)), shot: pick(['front', 'profile']), on: spk, tone: 'excited' });
+                if (ctx.q) beats.push({ t: 'say', who: spk, text: fill(pick(STY_BANK.hook)), shot: 'landmark', on: spk });
+            }
+            beats.push({ t: 'narr', text: fill(STY_BANK.close[ctx.tone] || STY_BANK.close.epic), shot: 'pullback', on: 'me' });
+            const titles = { begin: ['The First Step', 'A Road Without a Name', 'Where the Legend Starts'], fate: ['After ' + (ev.title || 'the Battle'), 'Embers of the Horde', 'What the Beacon Left'], dungeon: [(ev.boss || 'The Guardian') + ' Falls', 'The Silence After', 'Light in the Deep'], quest: ['A Debt Repaid', 'The Next Thread', 'What the Road Asks'], scene: ['A Moment Between Battles', 'The Stillness', 'Unwritten'] };
+            return { title: pick(titles[ctx.kind] || titles.scene), sum: fill(kindBank ? pick(kindBank[g] || kindBank.bright) : STY_BANK.scene[0]), mood: ctx.kind === 'dungeon' ? 'triumph' : ctx.kind === 'fate' ? 'dusk' : (STY_MOOD_BY[ctx.where.key] || 'day'), guests: cmp ? [] : [{ name: guest, color: '#' + ((styHash(guest) & 0xffffff) | 0x404040).toString(16).slice(0, 6).padStart(6, '4') }], beats };
+        }
+        /* ---------- who is in the story ---------- */
+        const styHero = () => { try { return styTxt(me.name, 24) || 'The Hero'; } catch (e) { return 'The Hero'; } };
+        function styCmpList() { const out = []; try { for (const [id, r] of CMP.active) if (r.actor && r.actor.group && r.actor.group.visible !== false) out.push({ id: 'cmp:' + id, name: styTxt(r.c.name, 24), kind: 'cmp', c: r.c, actor: r.actor }); } catch (e) { /* no companions */ } return out; }
+        function styLandmark() {      // something worth pointing the lens at: the dungeon exit, the nearest aether crystal, or the place a FATE was fought
+            try {
+                if (STY.lm && Date.now() - STY.lm.t < 600000) return STY.lm;
+                if (DG.on) { const b = DG.rooms[DG.rooms.length - 1]; if (b) return { x: b.x + 12, y: 0, z: b.z }; return null; }
+                const p = nfPos(); let best = null, bd = 140; const list = ZN.on ? NU_ZCRY.filter((c) => c.zone === ZN.key && c.x != null) : (NU.cry || []);
+                for (const c of list) { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d > 6 && d < bd) { bd = d; best = c; } } if (best) return { x: best.x, y: best.y != null ? best.y : csnGround(best.x, best.z) || 0, z: best.z };
+            } catch (e) { /* none */ } return null;
+        }
+        /* ---------- asking the AI for a chapter ---------- */
+        function styCtx(kind, ex) {
+            ex = ex || {}; const where = styWhere(), fi = styFloorInfo(where.f), lastLog = STYS.log.slice(-3).map((e) => ({ title: e.title, sum: e.sum }));
+            return Object.assign({ kind, name: styHero(), comps: styCmpList().map((x) => x.name), where, fi, prem: STYS.on ? STYS.prem : '', tone: STYS.tone, pov: STYS.pov, ch: STYS.ch + (kind === 'begin' || kind === 'quest' ? 1 : 0), recent: lastLog, ev: {}, q: null, rw: null, userPrompt: '' }, ex);
+        }
+        const STY_SHOT_HELP = 'establish (high crane down to the hero), skyTilt (sky then tilt down), skyUp (pure sky), heroLow (low hero angle), eyes (extreme close-up on the face), pushIn (slow push-in), orbit (circle the hero), crane (rise up the hero), trackBack (follow from behind toward the road ahead), povLook (through the hero\'s eyes), landmark (over the shoulder to a landmark), dutch (tilted, uneasy), birdseye (from above), parallax (sideways truck across the scene), skyline (small hero, wide lonely view), profile, front, low, ots (over the shoulder, for talking), twoShot, groupWide (whole party), pullback (finale)';
+        function styPrompt(ctx) {
+            const tone = STY_TONES.find((t) => t[0] === ctx.tone) || STY_TONES[0], q = ctx.q, rw = ctx.rw;
+            const sys = 'You are the story director of an anime-style JRPG (think a Final Fantasy episode). You write ONE short cutscene chapter as JSON. A camera system plays it like cinematic B-roll with narration: an unseen narrator speaks over the scenery, and named characters speak in dialogue windows.\n'
+                + 'Reply with ONLY one JSON object. No markdown fences, no commentary.\n'
+                + 'SCHEMA: {"title":"2-6 words","sum":"one sentence","mood":"dawn|day|dusk|night|cold|dread|triumph|memory","guests":[{"name":"short name","color":"#rrggbb"}],"beats":[{"t":"narr|say|give","who":"speaker name (say/give only)","text":"...","shot":"<shot>","on":"me|party|sky|landmark|<character name>","tone":"calm|sad|angry|excited|afraid","fx":"impact|flash|whip|fade","emo":"cheer|greet|peace|spin|show|squat"}]}\n'
+                + 'RULES:\n- 6 to 9 beats, each text under 170 characters. "narr" is the narrator. "say" is a line by a named character. "give" is a character handing the hero the listed reward (use it once if a reward is listed).\n- Open with narration that establishes the place and end with narration that points toward the next task. Never contradict the engine facts below.\n'
+                + '- Direct the camera like an anime episode: vary the shots, never use the same shot twice in a row, use close-ups for emotion and wide shots for scale. Shots: ' + STY_SHOT_HELP + '.\n'
+                + '- The hero is a silent protagonist: never write dialogue for the hero. ' + (ctx.pov === 'second' ? 'Narrate in second person ("you").' : 'Narrate in third person using the hero\'s name or "the hero"; avoid gendered pronouns for the hero.') + '\n'
+                + '- Only use these characters: the hero, the listed companions, and up to 2 new guests you declare in "guests". Do not invent items, gold or rewards: the engine grants exactly what is listed.\n- Keep it PG-13. Tone: ' + tone[1] + ' (' + tone[2] + ').';
+            const L = ['HERO: ' + ctx.name, 'COMPANIONS PRESENT: ' + (ctx.comps.length ? ctx.comps.join(', ') : 'none'), 'WORLD: Adventia. Floor 1 is the Forest of Nuu (Verdant Fields, Crystal Depths, Infernal Wastes, Glacial Heights, Shadowveil Sanctum, with the Shadowveil Depths dungeon). Floor 2 is Carvernia (the walled Carvernia Hold, the snowbound Carvernia Reach, the Carvernia Caverns dungeon).', 'LOCATION NOW: Floor ' + ctx.where.f + ', ' + ctx.where.n, 'CHAPTER: ' + ctx.ch + ' (trigger: ' + ctx.kind + ')'];
+            if (ctx.prem) L.push('THE PLAYER\'S STORY PREMISE (their own words): ' + ctx.prem);
+            if (ctx.ev && ctx.ev.title) L.push('JUST HAPPENED: a FATE event "' + ctx.ev.title + '" was won'); if (ctx.ev && ctx.ev.boss) L.push('JUST HAPPENED: the dungeon ' + ctx.ev.dg + ' was cleared and its boss ' + ctx.ev.boss + ' defeated'); if (ctx.ev && ctx.ev.quest) L.push('JUST HAPPENED: the hero completed the task "' + ctx.ev.quest + '"');
+            if (q) L.push('NEXT TASK (the engine tracks it): ' + q.title + ' - ' + q.text); if (rw && rw.items && rw.items.length) L.push('REWARD THE ENGINE GRANTS (have a character hand these over): ' + rw.items.map(([k, n]) => n + ' ' + BT_ITEMS[k].n).join(', '));
+            if (ctx.recent.length) L.push('PREVIOUS CHAPTERS: ' + ctx.recent.map((r) => r.title + ' (' + r.sum + ')').join(' | '));
+            if (ctx.userPrompt) L.push('THE PLAYER ASKS FOR THIS SCENE: ' + ctx.userPrompt);
+            return { system: sys, user: L.join('\n') };
+        }
+        function styParse(txt) {
+            let s = String(txt || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, ''); const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a < 0 || b <= a) return null; s = s.slice(a, b + 1);
+            try { return JSON.parse(s); } catch (e) { /* try a repair */ }
+            try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1').replace(/[\u201c\u201d]/g, '"')); } catch (e) { return null; }
+        }
+        function styClean(o, ctx) {      // whatever came in (AI or local) becomes a safe, playable script
+            if (!o || typeof o !== 'object' || !Array.isArray(o.beats)) return null;
+            const hero = ctx.name, comps = ctx.comps, guests = [];
+            for (const g of (Array.isArray(o.guests) ? o.guests : []).slice(0, 2)) { const nm = styTxt(g && g.name, 24); if (nm && nm.toLowerCase() !== hero.toLowerCase() && !comps.some((c) => c.toLowerCase() === nm.toLowerCase())) guests.push({ name: nm, color: /^#[0-9a-f]{6}$/i.test(String(g.color || '')) ? g.color : '#' + ((styHash(nm) & 0xffffff) | 0x404040).toString(16).slice(0, 6).padStart(6, '4') }); }
+            const known = (n) => { const l = String(n || '').toLowerCase(); return l && (hero.toLowerCase() === l || comps.some((c) => c.toLowerCase() === l) || guests.some((g) => g.name.toLowerCase() === l)); };
+            const match = (n) => { const l = String(n || '').toLowerCase().trim(); if (!l) return ''; if (l === 'me' || l === 'hero') return hero; for (const nm of [hero].concat(comps, guests.map((g) => g.name))) { const m = nm.toLowerCase(); if (m === l || m.startsWith(l) || l.startsWith(m) || m.split(' ')[0] === l.split(' ')[0]) return nm; } return ''; };
+            const beats = [], cps = STY_PACE[sClamp(STYS.opt.pace | 0, 0, 2)][1];
+            for (const b of o.beats.slice(0, 12)) {
+                if (!b || typeof b !== 'object') continue; let t = ['narr', 'say', 'give'].includes(b.t) ? b.t : 'narr'; const text = styTxt(b.text, 200); if (text.length < 3) continue;
+                let who = ''; if (t !== 'narr') { who = match(b.who); if (!who) { const nm = styTxt(b.who, 24); if (nm && guests.length < 2 && nm.toLowerCase() !== hero.toLowerCase()) { guests.push({ name: nm, color: '#' + ((styHash(nm) & 0xffffff) | 0x404040).toString(16).slice(0, 6).padStart(6, '4') }); who = nm; } else t = 'narr'; } if (who === hero) { t = 'narr'; who = ''; } }
+                const on = styTxt(b.on, 24).toLowerCase(), tone = ['calm', 'sad', 'angry', 'excited', 'afraid'].includes(b.tone) ? b.tone : (typeof csnTone === 'function' ? csnTone(text) : 'calm');
+                beats.push({ t, who, text, shot: STY_SHOTS[b.shot] ? b.shot : '', on: who || (['me', 'party', 'sky', 'landmark'].includes(on) ? on : (match(on) || 'me')), tone, fx: ['impact', 'flash', 'whip', 'fade'].includes(b.fx) ? b.fx : '', emo: STY_EMO_OK.includes(b.emo) ? b.emo : '', dur: sClamp(text.length / cps + 1.1, 2.6, 11) });
+            }
+            if (beats.length < 3) return null; void known;
+            return { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), kind: ctx.kind, ch: ctx.ch, title: styTxt(o.title, 48) || 'Untitled', sum: styTxt(o.sum, 160) || styTxt(beats[0].text, 120), mood: STY_GRADE[o.mood] ? o.mood : (STY_MOOD_BY[ctx.where.key] || 'day'), floor: ctx.where.f, place: ctx.where.n, accent: ctx.where.accent, guests, beats, rw: ctx.rw || null, q: ctx.q || null, done: ctx.ev && ctx.ev.quest || null, paid: false };
+        }
+        async function styGenerate(kind, ex) {
+            const ctx = styCtx(kind, ex); let sc = null, src = 'local';
+            if (!(STY.aiOff && Date.now() < STY.aiOff)) {
+                try { const p = styPrompt(ctx); const txt = await Promise.race([cmpAI(p.system, [{ role: 'user', content: p.user }], 1500), new Promise((_, rj) => setTimeout(() => rj(new Error('The storyteller took too long.')), 30000))]); sc = styClean(styParse(txt), ctx); if (sc) { src = 'ai'; STY.aiFails = 0; } else throw new Error('The storyteller answered in a form I could not read.'); }
+                catch (e) { STY.aiFails = (STY.aiFails || 0) + 1; STY.aiErr = String((e && e.message) || e).slice(0, 120); if (STY.aiFails >= 2) STY.aiOff = Date.now() + 300000; sc = null; }
+            }
+            if (!sc) sc = styClean(styProc(ctx), ctx); if (sc) sc.src = src; return sc;
+        }
+        /* ---------- the Quest Forge: what the endless chain can ask of you ---------- */
+        const STY_ITEM_IC = { potion: '🧪', hipotion: '⚗️', ether: '🔷', elixir: '🌟', phoenix: '🪶' };
+        function styForgeChips() {
+            const enemies = [{ kind: 'kill', sel: 'any', label: 'Any monster', ic: '👾' }, { kind: 'kill', sel: 'boss', label: 'Bosses', ic: '👑' }, { kind: 'kill', sel: 'fate', label: 'FATE monsters', ic: '◆' }];
+            try { for (const k of Object.keys(NU_CLS)) enemies.push({ kind: 'kill', sel: 'cls:' + k, label: NU_CLS[k].sfx + 's', ic: '⚔️' }); NU_REG.forEach((r, i) => enemies.push({ kind: 'kill', sel: 'reg:' + i, label: r.name + ' monsters', ic: r.icon })); } catch (e) { /* tables */ }
+            const dungeons = []; try { for (const f of Object.keys(DG_TH)) dungeons.push({ kind: 'dungeon', floor: +f, label: 'Floor ' + f + ' · ' + styTitleCase(DG_TH[f].name), ic: '🏰' }); } catch (e) { /* tables */ }
+            const items = []; try { for (const k of Object.keys(BT_ITEMS)) items.push({ kind: 'item', item: k, label: BT_ITEMS[k].n, ic: STY_ITEM_IC[k] || '🎒' }); } catch (e) { /* tables */ }
+            const places = []; try { for (const c of (NU.cry || []).concat(NU_ZCRY)) if (c.x != null) places.push({ kind: 'place', id: c.id, label: c.name, ic: '💠' }); } catch (e) { /* not built yet */ }
+            return { enemies, dungeons, items, places };
+        }
+        const styKey = (t) => t.kind + '|' + (t.sel || t.floor || t.item || t.id || '');
+        function styMatch(sel, m) { if (sel === 'any') return true; if (sel === 'boss') return !!m.boss; if (sel === 'fate') return !!m.fate; if (sel.startsWith('cls:')) return m.cls === sel.slice(4); if (sel.startsWith('reg:')) return m.reg === +sel.slice(4); return false; }
+        function styPlaceXY(id) { try { const c = (NU.cry || []).concat(NU_ZCRY).find((q) => q.id === id); return c && c.x != null ? c : null; } catch (e) { return null; } }
+        function styAtZone(c) { try { return c.zone ? (ZN.on && ZN.key === c.zone) : (activeMap === 'nuu' && !ZN.on && !DG.on); } catch (e) { return false; } }
+        function styRw(kind, tier, fl, w) {
+            const lv = sClamp(NF.lv | 0, 1, 100), fm = styFloorInfo(fl).fm, sc = 1 + 0.1 * Math.min(tier, 30), km = { kill: 1, dungeon: 2.4, item: 0.7, place: 0.8, fate: 0.35, dg: 0.7, begin: 0.3, scene: 0 }[kind] || 0.5, ww = w || 1;
+            const out = { gil: Math.round((120 + lv * 11) * fm * sc * km * ww), xp: Math.round((70 + lv * 8) * fm * sc * km * ww), items: [] }; if (km <= 0) return out;
+            out.items.push(['potion', 1 + Math.min(3, (tier / 3) | 0)]); if (km >= 0.7 && tier >= 1) out.items.push(['hipotion', 1 + Math.min(2, (tier / 5) | 0)]); if (km >= 0.7 && tier >= 2) out.items.push(['ether', 1 + Math.min(2, (tier / 4) | 0)]); if (km >= 1 && tier >= 5) out.items.push([tier % 2 ? 'phoenix' : 'elixir', 1]);
+            out.items = out.items.filter(([k]) => BT_ITEMS[k]); return out;
+        }
+        function styQuestFrom(tg, tier) {
+            const f = styFloor(), q = { kind: tg.kind, tg, n: 1, p: 0, done: false, floor: f, id: Math.random().toString(36).slice(2, 7), tier };
+            if (tg.kind === 'kill') {
+                const sel = tg.sel; q.n = sel === 'boss' ? Math.min(5, 1 + Math.floor(tier / 3)) : sel === 'fate' ? Math.min(24, 4 + tier) : sel === 'any' ? Math.min(60, 10 + tier * 2) : Math.min(50, 8 + tier * 2);
+                const what = tg.label.replace(/ monsters$/, ' monsters'); q.title = (sel === 'boss' ? 'Slay' : 'Cull') + ' · ' + what; q.text = 'Defeat ' + q.n + ' ' + (sel === 'any' ? 'monsters' : sel === 'boss' ? (q.n > 1 ? 'bosses' : 'boss') : what.toLowerCase()); q.rw = styRw('kill', tier, f, sel === 'boss' ? 1.4 : 1);
+            } else if (tg.kind === 'dungeon') {
+                const fi = styFloorInfo(tg.floor); q.floor = tg.floor; q.title = 'Into ' + styTitleCase(fi.dg.replace(/^the /, '')); q.text = 'Clear ' + fi.dg + ' and defeat ' + fi.boss; q.rw = styRw('dungeon', tier, tg.floor, 1);
+            } else if (tg.kind === 'item') {
+                const it = BT_ITEMS[tg.item]; if (!it) return null; q.n = Math.min(12, { potion: 5, hipotion: 3, ether: 4, elixir: 1, phoenix: 1 }[tg.item] + Math.floor(tier / 2) || 3); q.base = btBagLoad()[tg.item] | 0; q.title = 'Supplies · ' + it.n; q.text = 'Gather ' + q.n + ' ' + it.n + (q.n > 1 ? 's' : '') + ' (drops, chests, shops)'; q.rw = styRw('item', tier, f, 1); q.rw.gil = Math.min(q.rw.gil, Math.round(0.5 * q.n * (it.price || 50)));
+            } else if (tg.kind === 'place') {
+                const c = styPlaceXY(tg.id); if (!c) return null; q.floor = c.zone ? 2 : 1; if (q.floor === styFloor() && styAtZone(c)) { const p = nfPos(); if (Math.hypot(c.x - p.x, c.z - p.z) < 90) return null; } q.title = 'Pilgrimage · ' + c.name; q.text = 'Travel to ' + c.name + (q.floor === 2 ? ' (Floor 2)' : ''); q.rw = styRw('place', tier, q.floor, 1);
+            } else return null;
+            return q;
+        }
+        function styNextQuest(tier) {
+            const pool = STYS.pool.length ? STYS.pool : [{ kind: 'kill', sel: 'any', label: 'Any monster' }];
+            for (let i = 0; i < pool.length; i++) { const q = styQuestFrom(pool[(STYS.pi + i) % pool.length], tier); if (q) { STYS.pi = (STYS.pi + i + 1) % pool.length; return q; } }
+            STYS.pi = (STYS.pi + 1) % pool.length; return styQuestFrom({ kind: 'kill', sel: 'any', label: 'Any monster' }, tier);
+        }
+        function styProg(q) {      // progress changed: update the tracker, and finish the quest when the count is full
+            if (!q || q.done) return; q.p = Math.min(q.n, q.p); stySave(); styTrkUpdate(true);
+            if (q.p >= q.n) { q.done = true; stySave(); try { nuShowBanner('TASK COMPLETE', q.title.toUpperCase()); } catch (e) { /* banner */ } stySfx('quest'); styQueue('quest', { ev: { quest: q.title }, rw: q.rw }); }
+            else if (q.kind === 'kill' && q.n >= 8 && q.p === Math.ceil(q.n / 2)) { try { sysChat('◆ Story: ' + q.title + ' (' + q.p + '/' + q.n + ')'); } catch (e) { /* chat */ } }
+        }
+        function styOnKill(m, remote) {
+            const q = STYS.q; if (!STYS.on || !q || q.done || q.kind !== 'kill' || (remote && !m.mine)) return; if (!styMatch(q.tg.sel, m)) return; q.p++; styProg(q);
+        }
+        function styObjectives() {      // item and location tasks are watched, not event-driven
+            const q = STYS.q; if (!STYS.on || !q || q.done || STY.on || activeMap !== 'nuu') return;
+            if (q.kind === 'item') { const have = (btBagLoad()[q.tg.item] | 0) - (q.base | 0); if (have > q.p) { q.p = Math.min(q.n, have); styProg(q); } }
+            else if (q.kind === 'place') { const c = styPlaceXY(q.tg.id); if (c && styAtZone(c) && !DG.on) { const p = nfPos(); if (Math.hypot(c.x - p.x, c.z - p.z) < 9) { q.p = 1; styProg(q); } } }
+        }
+        function styOnDungeon(floor) {
+            if (!STYS.on) return; const q = STYS.q;
+            if (q && !q.done && q.kind === 'dungeon' && q.tg.floor === floor) { q.p = 1; styProg(q); return; }
+            if (STYS.opt.dg) { const fi = styFloorInfo(floor); styQueue('dungeon', { ev: { boss: fi.boss, dg: fi.dg }, rw: styRw('dg', STYS.tier, floor, 1) }); }
+        }
+        function styOnFate(f, rank) {
+            if (!STYS.on || !STYS.opt.fate) return; STYS.fc++; stySave(); if (STYS.opt.fate > 1 && STYS.fc % STYS.opt.fate !== 0) return; if (Date.now() - STYS.last < 60000) return;
+            try { STY.lm = { x: f.x, y: csnGround(f.x, f.z) || 0, z: f.z, t: Date.now() }; } catch (e) { /* none */ }
+            styQueue('fate', { ev: { title: f.def.title }, rw: styRw('fate', STYS.tier, styFloor(), rank === 'GOLD' ? 1.4 : rank === 'SILVER' ? 1.15 : 1) });
+        }
+        /* ---------- chapters wait in a queue until it is safe to take the camera (no fight, no menu, not dead) ---------- */
+        function styQueue(kind, ex, opt) {
+            opt = opt || {}; ex = ex || {}; if (kind === 'quest' || kind === 'begin') { /* the next task is chosen now, announced in the chapter, and committed when it ends */ }
+            if (STY.qu.length >= 3 && kind !== 'quest' && kind !== 'begin') return; const it = { kind, ex, sc: null, t0: Date.now(), manual: !!opt.manual, loading: true };
+            if (kind === 'quest' || kind === 'begin') { const tier = kind === 'quest' ? STYS.tier + 1 : 0; it.nq = styNextQuest(tier); ex.q = it.nq; if (kind === 'begin') ex.rw = styRw('begin', 0, styFloor(), 1); }
+            if (kind === 'quest') STY.qu.unshift(it); else STY.qu.push(it);
+            styGenerate(kind, ex).then((sc) => { it.sc = sc; it.loading = false; }, () => { it.loading = false; it.sc = styClean(styProc(styCtx(kind, ex)), styCtx(kind, ex)); });
+            if (opt.manual) styToast('Weaving your story...');
+        }
+        function styCanPlay() {
+            try {
+                if (STY.on || CSN.on || FIN.on || !localActor || activeMap !== 'nuu' || !NU.ready) return false; if (NF.dead || NF.tele || NF.comb > 0.1 || AR.busy || DG.busy || ZN.busy) return false;
+                if (BT && BT.phase && BT.phase !== 'idle') return false; if (document.querySelector('#au-win.on,#nf-tele.on,#sty-menu.on')) return false; return true;
+            } catch (e) { return false; }
+        }
+        function styQueueTick(dt) {
+            if (STY.on || !STY.qu.length) { STY.safeT = 0; return; } const now = Date.now(); STY.qu = STY.qu.filter((i) => now - i.t0 < 900000);
+            const it = STY.qu[0]; if (!it) return; if (it.loading && now - it.t0 < 32000) return; if (it.loading) { it.loading = false; it.sc = styClean(styProc(styCtx(it.kind, it.ex)), styCtx(it.kind, it.ex)); } if (!it.sc) { STY.qu.shift(); return; }
+            if (!styCanPlay()) { STY.safeT = 0; return; } STY.safeT = (STY.safeT || 0) + dt; if (STY.safeT < (it.manual ? 0.4 : 2.2)) return; if (!it.manual && now - STYS.last < 20000 && it.kind !== 'quest' && it.kind !== 'begin') return;
+            STY.qu.shift(); styPlay(it.sc, { it });
+        }
+        function styCommit(sc, it) {      // the chapter is over: the quest ledger and the log move on
+            if (sc.replay || (!STYS.on && sc.kind !== 'scene')) return; STYS.last = Date.now();
+            if (sc.kind === 'begin') { STYS.ch = 1; STYS.tier = 0; STYS.q = it && it.nq || styNextQuest(0); }
+            else if (sc.kind === 'quest') { STYS.ch++; STYS.tier++; STYS.q = it && it.nq || styNextQuest(STYS.tier); }
+            else if (sc.kind !== 'scene' && !STYS.q) STYS.q = styNextQuest(STYS.tier);
+            if (STYS.q && STYS.q.kind === 'item') STYS.q.base = btBagLoad()[STYS.q.tg.item] | 0;
+            STYS.log.push({ n: STYS.ch, t: Date.now(), title: sc.title, sum: sc.sum, f: sc.floor, kind: sc.kind, sc: { title: sc.title, sum: sc.sum, mood: sc.mood, floor: sc.floor, place: sc.place, accent: sc.accent, guests: sc.guests, beats: sc.beats, kind: sc.kind, ch: sc.ch } }); STYS.log = STYS.log.slice(-14); stySave(); styTrkUpdate(true);
+        }
+        function styPay(sc) {      // hand over what the chapter promised, once
+            if (sc.paid || sc.replay) return; sc.paid = true; const rw = sc.rw; if (!rw) return; const got = [];
+            try { if (rw.gil > 0) { window.oasisGil.add(rw.gil, true); got.push(rw.gil + ' Gil'); } } catch (e) { /* gil */ } try { if (rw.xp > 0) { nfXp(rw.xp); got.push(rw.xp + ' XP'); } } catch (e) { /* xp */ }
+            for (const [k, n] of rw.items || []) { try { btBagAdd(k, n); got.push(n + 'x ' + BT_ITEMS[k].n); } catch (e) { /* bag */ } } try { sysChat('◆ Story reward: ' + got.join(', ') + '.'); } catch (e) { /* chat */ }
+        }
+        /* ---------- subjects the camera can look at: the hero, companions, guests (stand-in figures), the whole party, or a point in the world ---------- */
+        Object.assign(STY, { on: false, state: '', sc: null, it: null, t: 0, bi: -1, beat: null, ln: null, shot: null, cam: null, side: 1, recent: [], guests: new Map(), hid: [], spr: [], qu: [], acc: 0, punch: 0, shake: 0, hover: false, speaking: false, vtk: 0, lm: null, aiFails: 0, aiOff: 0, committed: false, outT: 0, lastSpk: '' });
+        const styMe = () => ({ id: 'me', name: styHero(), kind: 'me', actor: localActor, color: '#38bdf8' });
+        const styPos = (S) => S.pt ? S.pt : (S.actor && S.actor.group ? S.actor.group.position : { x: 0, y: 0, z: 0 });
+        const styHt = (S) => S.pt ? 0 : csnHt({ actor: S.actor });
+        const styRy = (S) => S.ry != null ? S.ry : (S.actor && S.actor.group ? S.actor.group.rotation.y : 0);
+        function styParty() {
+            const m = [styMe()].concat(styCmpList()); if (m.length < 2) return m[0]; const hero = m[0];
+            return { id: 'party', name: 'party', kind: 'party', get pt() { let x = 0, y = 0, z = 0; for (const s of m) { const p = styPos(s); x += p.x; y += p.y; z += p.z; } return { x: x / m.length, y: y / m.length, z: z / m.length }; }, get ry() { return styRy(hero); }, get rad() { const c = this.pt; let r = 1; for (const s of m) { const p = styPos(s); r = Math.max(r, Math.hypot(p.x - c.x, p.z - c.z)); } return r; } };
+        }
+        function styGuest(name) {      // a stand-in figure walks into the story the first time someone speaks
+            const key = String(name).toLowerCase(); let G = STY.guests.get(key); if (G) return G; const def = STY.sc && STY.sc.guests.find((g) => g.name.toLowerCase() === key); if (!def) return null;
+            const hp = localActor.group.position, ry = localActor.group.rotation.y, idx = STY.guests.size; let pos = null;
+            search: for (const r of [3.6, 2.8, 2.0]) for (const da of [0.9, 1.5, 0.3, 2.1]) { const a = ry + (idx ? -1 : 1) * da, x = hp.x + Math.sin(a) * r, z = hp.z + Math.cos(a) * r; if (!csnFree(x, z)) continue; const gy = csnGround(x, z); if (gy == null || Math.abs(gy - hp.y) > 1.5) continue; pos = { x, y: gy, z }; break search; }
+            if (!pos) return null; let a = null; try { a = csnMannequin(parseInt(def.color.slice(1), 16), def.name); } catch (e) { return null; }
+            a.group.position.set(pos.x, pos.y, pos.z); a.group.rotation.y = Math.atan2(hp.x - pos.x, hp.z - pos.z); a.group.scale.setScalar(0.01); G = { id: 'g:' + key, name: def.name, kind: 'guest', actor: a, color: def.color, born: STY.t }; STY.guests.set(key, G); try { stySfx('pop'); } catch (e) { /* audio */ } return G;
+        }
+        function styResolve(key) {
+            const k = String(key || 'me').toLowerCase().trim(), hero = styMe(); if (k === 'me' || k === 'sky') return hero; if (k === 'party') return styParty();
+            if (k === 'landmark') { const lm = styLandmark(); return lm ? { id: 'lm', name: 'landmark', pt: lm, ry: styRy(hero), isLm: true } : hero; }
+            for (const c of styCmpList()) if (c.name.toLowerCase() === k) return c; return styGuest(k) || hero;
+        }
+        /* ---------- shot construction and safety ---------- */
+        function styCtxPose(S, T, side, k, u) {
+            const P = styPos(S), ry = styRy(S), fx = Math.sin(ry), fz = Math.cos(ry), TP = T ? styPos(T) : null;
+            return { P, ry, fx, fz, qx: -fz, qz: fx, H: P.y + styHt(S) * 0.9, g: P.y, side, k, u, e: csnEase(u), T: TP, TH: TP ? TP.y + styHt(T) * 0.9 : 0, rad: S.rad || 0 };
+        }
+        function styPoseOk(pose) {      // csnShotOk lifts the lens off the ground and under ceilings and says if the spot is open; a lens high above the trees needs no open ground
+            const o = { px: pose.p[0], py: pose.p[1], pz: pose.p[2] }, free = csnShotOk(o); pose.p[1] = o.py; const gy = csnGround(o.px, o.pz); return free || (gy != null && o.py > gy + 5.5 && !DG.on);
+        }
+        function styMakeShot(key, S, T, dur) {
+            const def = STY_SHOTS[key] || STY_SHOTS.pushIn;
+            for (const k of [1, 0.7, 0.5, 0.35]) for (const sd of [STY.side, -STY.side]) { let ok = true; for (const u of [0, 0.5, 1]) { if (!styPoseOk(def.fn(styCtxPose(S, T, sd, k, u)))) { ok = false; break; } } if (ok) return { key, fn: def.fn, S, T, side: sd, k, dur, t: 0, snap: true }; }
+            return { key: 'front', fn: STY_SHOTS.front.fn, S, T: null, side: STY.side, k: 0.5, dur, t: 0, snap: true };
+        }
+        function styPickShot(b, i, n, S) {
+            const rec = STY.recent, bad = (k) => rec.slice(-2).includes(k), ok = (k) => !!STY_SHOTS[k], first = (a) => a.find((k) => ok(k) && !bad(k)) || a.find(ok); let key;
+            if (b.shot && ok(b.shot)) key = bad(b.shot) && !(i === 0) ? (first(STY_SIB[b.shot] || []) || b.shot) : b.shot;
+            else if (i === 0) key = 'establish'; else if (i === n - 1) key = 'pullback'; else if (S.kind === 'party') key = first(['groupWide', 'twoShot']);
+            else if (b.on === 'sky') key = first(['skyUp', 'skyTilt']);
+            else if (b.t !== 'narr') key = first(b.tone === 'sad' || b.tone === 'afraid' ? ['eyes', 'pushIn', 'profile'] : b.tone === 'angry' || b.tone === 'excited' ? ['low', 'heroLow', 'front'] : /\?\s*$/.test(b.text) ? ['ots', 'front', 'twoShot'] : ['ots', 'front', 'profile', 'eyes']);
+            else { let arr = null; for (const [re, a] of STY_KW) if (re.test(b.text)) { arr = a; break; } key = first(arr || ['pushIn', 'trackBack', 'parallax', 'orbit', 'skyline', 'profile', 'crane']); }
+            return key;
+        }
+        /* ---------- audio and voice ---------- */
+        function stySfx(kind) {
+            try {
+                const A = STY.ac || (STY.ac = new (window.AudioContext || window.webkitAudioContext)()), vol = (window.oasisSfx ? window.oasisSfx.get() : 1) * 0.16; if (!vol) return; if (A.state === 'suspended') A.resume();
+                const seq = { reward: [[523, 0], [659, 0.09], [784, 0.18], [1047, 0.3]], quest: [[392, 0], [523, 0.12], [659, 0.24]], pop: [[880, 0], [1320, 0.06]], impact: [[90, 0], [60, 0.05]], title: [[262, 0], [392, 0.2], [523, 0.4]] }[kind] || []; const t0 = A.currentTime;
+                for (const [f, d] of seq) { const o = A.createOscillator(), g = A.createGain(); o.type = kind === 'impact' ? 'sawtooth' : 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(vol, t0 + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + (kind === 'impact' ? 0.35 : 0.55)); o.connect(g); g.connect(A.destination); o.start(t0 + d); o.stop(t0 + d + 0.6); }
+            } catch (e) { /* audio is optional */ }
+        }
+        function styVo(b) {
+            const tk = ++STY.vtk; STY.speaking = false; try {
+                if (!window.speechSynthesis) return; speechSynthesis.cancel(); if (!STYS.opt.vo) return; const u = new SpeechSynthesisUtterance(b.text), h = styHash(b.who || 'narr'), vs = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
+                u.rate = 0.95; u.pitch = b.t === 'narr' ? 0.85 : 0.8 + (h % 7) / 10; if (vs.length) u.voice = vs[b.t === 'narr' ? 0 : h % vs.length]; STY.speaking = true; u.onend = u.onerror = () => { if (STY.vtk === tk) STY.speaking = false; }; setTimeout(() => { if (STY.vtk === tk) STY.speaking = false; }, 15000); speechSynthesis.speak(u);
+            } catch (e) { STY.speaking = false; }
+        }
+        function styEmote(S, key) {
+            try { if (!key || !EMOTES[key] || key === 'hug') return; if (S.kind === 'me') { localActor.playEmote(key); net && net.send({ t: 'emote', name: key }); } else if (S.kind === 'cmp') cmpEmote(S.c, key); } catch (e) { /* cosmetic */ }
+        }
+        /* ---------- beats ---------- */
+        function styBeat(i) {
+            const sc = STY.sc, b = sc.beats[i], n = sc.beats.length, hero = styMe(); STY.bi = i; STY.beat = b; let S = styResolve(b.on), T = null, key = styPickShot(b, i, n, S);
+            if (key === 'landmark' || key === 'povLook') { if (S.isLm) S = hero; const lm = styLandmark(); T = lm ? { id: 'lm', pt: lm, ry: styRy(hero), isLm: true } : null; if (!T && key === 'landmark') key = 'trackBack'; }
+            else if (key === 'ots' || key === 'twoShot') { T = S.kind === 'me' ? (styCmpList()[0] || null) : hero; if (!T || T === S) { T = null; key = 'front'; } }
+            else if (S.isLm && !['establish', 'birdseye', 'parallax', 'skyline', 'skyUp'].includes(key)) key = 'establish';
+            STY.recent.push(key); if (STY.recent.length > 4) STY.recent.shift();
+            if (b.t !== 'narr') { if (STY.lastSpk && STY.lastSpk !== b.who) STY.side = -STY.side; STY.lastSpk = b.who; } else if (Math.random() < 0.35) STY.side = -STY.side;
+            const dur = Math.max(b.dur, 3.2) + 0.8;
+            if (i === 0 && key === 'establish' && STY.shot && STY.shot.key === 'establish') STY.shot.dur = Math.max(STY.shot.dur, STY.shot.t + dur); else STY.shot = styMakeShot(key, S, T, dur);
+            STY.ln = { text: b.text, n: 0, hold: 0, need: Math.max(0.9, b.dur - b.text.length / STY_TYPE_CPS) };
+            const loud = b.fx === 'impact' || ((b.tone === 'angry' || b.tone === 'excited') && /!\s*$/.test(b.text)) || /\b[A-Z]{4,}\b/.test(b.text); let fx = b.fx;
+            if (!fx && i > 0 && !loud && Math.random() < 0.16) fx = 'whip'; if (loud) fx = 'impact'; if (i > 0 || fx === 'impact') styFx(fx);
+            if (b.emo) styEmote(S.kind === 'guest' ? hero : S, b.emo); else if (b.t === 'give') { stySfx('reward'); styFx('glint'); }
+            styVo(b); styWinSet(b);
+        }
+        function styFx(kind) {
+            const el = STY.el; if (!el || !kind) return; const pulse = (id, cls, ms) => { const d = el.querySelector(id); if (!d) return; d.classList.remove(cls); void d.offsetWidth; d.classList.add(cls); setTimeout(() => d.classList.remove(cls), ms); };
+            if (kind === 'whip') pulse('#sty-wh', 'go', 360); else if (kind === 'flash') pulse('#sty-fl', 'go', 420); else if (kind === 'glint') pulse('#sty-fl', 'gl', 700);
+            else if (kind === 'fade') pulse('#sty-bk', 'go', 700); else if (kind === 'fadeout') { const bk = el.querySelector('#sty-bk'); if (bk) { bk.classList.remove('go'); bk.classList.add('end'); } } else if (kind === 'impact') { STY.punch = 1; STY.shake = 1; pulse('#sty-fl', 'go', 420); pulse('#sty-sp', 'go', 520); stySfx('impact'); }
+        }
+        function styAdvance() {      // click / Space / Enter: finish the typing, then go to the next beat
+            if (!STY.on) return; if (STY.state === 'title') { STY.t = Math.max(STY.t, 3.2); return; } if (STY.state !== 'run') return; const ln = STY.ln; if (!ln) return;
+            if (ln.n < ln.text.length) { ln.n = ln.text.length; return; } if (STY.bi + 1 < STY.sc.beats.length) styBeat(STY.bi + 1); else styFinish();
+        }
+        function styFinish() {
+            if (STY.state !== 'run') return; STY.state = 'end'; const sc = STY.sc, replay = !!sc.replay; try { speechSynthesis.cancel(); } catch (e) { /* voice */ } STY.speaking = false;
+            if (!STY.committed) { STY.committed = true; try { styCommit(sc, STY.it); } catch (e) { console.warn('story commit', e); } try { styPay(sc); } catch (e) { console.warn('story pay', e); } }
+            const rows = [], rw = replay ? null : sc.rw; if (rw) { for (const [k, n] of rw.items || []) rows.push('<span>' + (STY_ITEM_IC[k] || '🎒') + ' ' + styEsc(BT_ITEMS[k].n) + ' <b>x' + n + '</b></span>'); if (rw.gil) rows.push('<span>💰 <b>' + rw.gil.toLocaleString('en-US') + '</b> Gil</span>'); if (rw.xp) rows.push('<span>⭐ <b>' + rw.xp.toLocaleString('en-US') + '</b> XP</span>'); }
+            const nq = !replay && (sc.kind === 'begin' || sc.kind === 'quest') ? STYS.q : null; if (!rows.length && !nq) { STY.state = 'out'; STY.outT = 0; styFx('fadeout'); return; }
+            const head = replay ? '' : sc.kind === 'quest' ? 'TASK COMPLETE' : sc.kind === 'begin' ? 'A JOURNEY BEGINS' : sc.kind === 'fate' ? 'FATE INTERLUDE' : sc.kind === 'dungeon' ? 'DUNGEON EPILOGUE' : 'SCENE END';
+            const rd = STY.el.querySelector('#sty-rw'); rd.innerHTML = '<div class="h">' + head + '</div>' + (rows.length ? '<div class="g">' + rows.join('') + '</div>' : '') + (nq ? '<div class="q"><i>NEW TASK</i><b>' + styEsc(nq.title) + '</b><span>' + styEsc(nq.text) + '</span></div>' : '') + '<button type="button" id="sty-rw-ok">Continue ▶</button>'; rd.classList.add('on'); STY.el.querySelector('#sty-win').classList.remove('on'); stySfx(nq ? 'quest' : 'reward'); styFx('glint');
+            rd.querySelector('#sty-rw-ok').onclick = (e) => { e.stopPropagation(); styEndSoft(); };
+        }
+        function styEndSoft() { if (STY.state === 'out') return; STY.state = 'out'; STY.outT = 0; styFx('fadeout'); }
+        /* ---------- start / end ---------- */
+        function styPlay(sc, opt) {
+            opt = opt || {}; if (STY.on || !sc || !sc.beats || !sc.beats.length) return false; if (!opt.force && !styCanPlay()) return false; try { if (fpOn) fpToggle(); } catch (e) { /* camera */ } styUi();
+            STY.sc = sc; STY.it = opt.it || null; STY.t = 0; STY.bi = -1; STY.beat = null; STY.ln = null; STY.state = 'title'; STY.guests = new Map(); STY.recent = []; STY.cam = null; STY.punch = 0; STY.shake = 0; STY.spr = []; STY.lastSpk = ''; STY.committed = !!sc.replay; STY.side = Math.random() < 0.5 ? 1 : -1; STY.hover = false;
+            STY.sv = { p: camera.position.clone(), t: controls.target.clone(), f: camera.fov, en: controls.enabled, up: camera.up.clone() }; controls.enabled = false; STY.on = true; document.body.classList.add('sty-on'); STY.hid = [];
+            for (const el of document.body.children) { if (el === STY.el || el.tagName === 'CANVAS' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.id === 'sty-menu' || el.id === 'sty-toast') continue; const cs = getComputedStyle(el); if (cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden') { STY.hid.push([el, el.style.visibility]); el.style.visibility = 'hidden'; } }
+            const el = STY.el; el.classList.add('on'); el.classList.toggle('nobars', !STYS.opt.bars); el.querySelector('#sty-gr').style.background = STY_GRADE[sc.mood] || STY_GRADE.day; el.classList.toggle('memory', sc.mood === 'memory'); el.querySelector('#sty-rw').classList.remove('on'); el.querySelector('#sty-bk').classList.remove('end', 'go'); el.querySelector('#sty-win').classList.remove('on');
+            const lab = sc.replay ? 'REPLAY' : sc.kind === 'begin' || sc.kind === 'quest' ? 'CHAPTER ' + sc.ch : sc.kind === 'scene' ? 'SCENE' : 'INTERLUDE', tt = el.querySelector('#sty-title'); tt.style.setProperty('--ac', sc.accent || '#8fb4ff');
+            tt.querySelector('.ch').textContent = lab; tt.querySelector('.tt').textContent = sc.title; tt.querySelector('.st').textContent = 'FLOOR ' + sc.floor + '  ·  ' + String(sc.place).toUpperCase(); tt.classList.remove('on'); void tt.offsetWidth; tt.classList.add('on'); stySfx('title');
+            const hero = styMe(); STY.shot = styMakeShot('establish', hero, null, 9); styTrkUpdate(true); return true;
+        }
+        function styEnd(commit) {
+            if (!STY.on) return; try { speechSynthesis.cancel(); } catch (e) { /* voice */ } STY.speaking = false;
+            if (commit !== false && STY.sc && !STY.committed) { STY.committed = true; try { styCommit(STY.sc, STY.it); styPay(STY.sc); } catch (e) { console.warn('story end', e); } }
+            for (const g of STY.guests.values()) { try { g.actor.dispose(); } catch (e) { /* gone */ } } STY.guests = new Map(); STY.on = false; STY.state = ''; document.body.classList.remove('sty-on'); if (STY.el) STY.el.classList.remove('on'); for (const [el, v] of STY.hid) el.style.visibility = v; STY.hid = [];
+            for (const o of STY.spr) o.visible = true; STY.spr = []; const s = STY.sv; if (s) { camera.position.copy(s.p); controls.target.copy(s.t); camera.fov = s.f; camera.up.copy(s.up); camera.updateProjectionMatrix(); controls.enabled = s.en; camera.lookAt(s.t); } try { NU.camLast = null; } catch (e) { /* none */ }
+            STY.sv = null; STY.cam = null; STY.shot = null; STY.sc = null; STY.it = null; STY.lm = null; styTrkUpdate(true);
+            try { if (STYS.q && !STYS.q.done) nuShowBanner('TASK', STYS.q.title.toUpperCase()); } catch (e) { /* banner */ }
+        }
+        /* ---------- the frame loop ---------- */
+        function styTick(dt) {
+            if (!STY.on) { STY.acc += dt; if (STY.acc < 0.25) return; const d = STY.acc; STY.acc = 0; STY.oc = (STY.oc || 0) + d; if (STY.oc >= 0.5) { STY.oc = 0; styObjectives(); } styQueueTick(d); styTrkUpdate(false); return; }
+            dt = Math.min(dt, 0.1); STY.t += dt; const sc = STY.sc;
+            if (STY.state === 'title') { if (STY.t >= 3.2) { STY.state = 'run'; styBeat(0); } }
+            else if (STY.state === 'run') {
+                const ln = STY.ln; if (ln) { if (!STY.hover) { ln.n = Math.min(ln.text.length, ln.n + dt * STY_TYPE_CPS); if (ln.n >= ln.text.length) ln.hold += dt; } if (STYS.opt.auto && ln.n >= ln.text.length && ln.hold >= ln.need && !STY.speaking) { if (STY.bi + 1 < sc.beats.length) styBeat(STY.bi + 1); else styFinish(); } }
+            } else if (STY.state === 'out') { STY.outT += dt; if (STY.outT > 0.7) { styEnd(true); return; } }
+            for (const g of STY.guests.values()) { const s = Math.min(1, (STY.t - g.born) / 0.45), e = 1 - Math.pow(1 - s, 3); g.actor.group.scale.setScalar(Math.max(0.01, e * (1 + 0.15 * Math.sin(s * Math.PI)))); }
+            const s = STY.shot; if (s) {
+                s.t += dt; const u = Math.min(1, s.t / s.dur), pose = s.fn(styCtxPose(s.S, s.T, s.side, s.k, u)), o = { px: pose.p[0], py: pose.p[1], pz: pose.p[2] }; csnShotOk(o); STY.punch *= Math.exp(-dt * 5); STY.shake *= Math.exp(-dt * 6);
+                const sh = STY.shake > 0.02 ? STY.shake * 0.1 : 0, px = o.px + (sh ? (Math.random() - 0.5) * sh : 0), py = o.py + (sh ? (Math.random() - 0.5) * sh : 0), pz = o.pz + (sh ? (Math.random() - 0.5) * sh : 0), mm = pose.mm * (1 + STY.punch * 0.4); let C = STY.cam; if (!C) C = STY.cam = { p: new THREE.Vector3(), t: new THREE.Vector3(), f: mm, r: 0 };
+                if (s.snap) { C.p.set(px, py, pz); C.t.set(pose.t[0], pose.t[1], pose.t[2]); C.f = mm; C.r = pose.roll || 0; s.snap = false; } else { const a = 1 - Math.exp(-dt * 14); C.p.x += (px - C.p.x) * a; C.p.y += (py - C.p.y) * a; C.p.z += (pz - C.p.z) * a; C.t.x += (pose.t[0] - C.t.x) * a; C.t.y += (pose.t[1] - C.t.y) * a; C.t.z += (pose.t[2] - C.t.z) * a; C.f += (mm - C.f) * a; C.r += ((pose.roll || 0) - C.r) * a; }
+                camera.position.copy(C.p); camera.up.set(0, 1, 0); camera.lookAt(C.t.x, C.t.y, C.t.z); if (C.r) camera.rotateZ(C.r * Math.PI / 180); const fov = csnFov(C.f); if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); } controls.target.copy(C.t);
+                const fr2 = STY.el.querySelector('#sty-fr'); if (fr2) fr2.style.opacity = pose.flare ? '1' : '0';
+            }
+            for (const p of [styMe()].concat(styCmpList(), [...STY.guests.values()])) { const a = p.actor; if (!a || !a.group) continue; if (a.label) a.label.visible = false; a.group.traverse((q) => { if (q.isSprite && q.visible && q !== a.typingSprite && !(a.bubbles && a.bubbles.some((b) => b.sprite === q))) { q.visible = false; STY.spr.push(q); } }); }
+            styUiTick(dt);
+        }
+        /* ---------- the screen: letterbox, grade, title card, Final Fantasy dialogue window, reward window ---------- */
+        function styUi() {
+            if (STY.el) return; const st = document.createElement('style');
+            st.textContent = '#sty{position:fixed;inset:0;z-index:6100;display:none;pointer-events:none;font-family:Nunito,Inter,system-ui,sans-serif;color:#fff;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}#sty.on{display:block;pointer-events:auto}#sty>div{position:absolute}'
+                + '#sty .b{left:0;right:0;background:#000;height:0;transition:height .6s cubic-bezier(.2,.8,.2,1);z-index:3}#sty .b.t{top:0}#sty .b.m{bottom:0}#sty.on .b{height:12vh}#sty.nobars.on .b{height:0}body.sty-on #ni-q{display:none!important}'
+                + '#sty-gr{inset:0;pointer-events:none;transition:background 1s}#sty.memory #sty-gr{backdrop-filter:saturate(.55) sepia(.35);-webkit-backdrop-filter:saturate(.55) sepia(.35)}#sty-vg{inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,0) 55%,rgba(0,0,0,.5) 100%)}'
+                + '#sty-fr{inset:0;pointer-events:none;opacity:0;transition:opacity .6s;mix-blend-mode:screen;background:radial-gradient(circle at 82% 14%,rgba(255,244,200,.85),rgba(255,230,160,.25) 14%,rgba(255,220,140,0) 34%),linear-gradient(100deg,rgba(255,240,190,0) 30%,rgba(255,240,190,.28) 50%,rgba(255,240,190,0) 70%) 0 14%/100% 5% no-repeat}'
+                + '#sty-sp{inset:0;pointer-events:none;opacity:0;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,0) 0deg 3deg,rgba(255,255,255,.75) 3.2deg 3.6deg,rgba(255,255,255,0) 3.8deg 7deg);-webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 30%,#000 78%);mask-image:radial-gradient(circle at 50% 50%,transparent 30%,#000 78%)}#sty-sp.go{animation:styFl .52s ease-out}'
+                + '#sty-wh{inset:0;pointer-events:none;opacity:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,0) 0 12px,rgba(255,255,255,.4) 12px 14px),linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 50%,rgba(255,255,255,0));backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}#sty-wh.go{animation:styWh .36s ease-in-out}'
+                + '#sty-fl{inset:0;pointer-events:none;opacity:0;background:#fff}#sty-fl.go{animation:styFl .42s ease-out}#sty-fl.gl{background:radial-gradient(circle at 50% 55%,rgba(255,240,170,.85),rgba(255,240,170,0) 62%);animation:styFl .7s ease-out}#sty-bk{inset:0;pointer-events:none;opacity:0;background:#000;z-index:9}#sty-bk.go{animation:styBk .7s ease-in-out}#sty-bk.end{animation:styBkEnd .6s ease-in forwards}'
+                + '@keyframes styFl{0%{opacity:.9}100%{opacity:0}}@keyframes styWh{0%{opacity:0;transform:translateX(-28%)}45%{opacity:1}100%{opacity:0;transform:translateX(28%)}}@keyframes styBk{0%{opacity:0}45%{opacity:1}100%{opacity:0}}@keyframes styBkEnd{0%{opacity:0}100%{opacity:1}}'
+                + '#sty-title{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:0;pointer-events:none;z-index:4;text-align:center;padding:0 6vw;text-shadow:0 2px 18px rgba(0,0,0,.9),0 0 3px #000}#sty-title.on{animation:styT 3.5s ease-in-out forwards}@keyframes styT{0%{opacity:0;transform:scale(1.04)}22%{opacity:1;transform:none}74%{opacity:1}100%{opacity:0}}'
+                + '#sty-title .ch{font:800 clamp(12px,2.2vw,16px)/1 Nunito,sans-serif;letter-spacing:.55em;color:var(--ac,#8fb4ff)}#sty-title .tt{font:900 clamp(30px,7vw,72px)/1.1 Georgia,"Times New Roman",serif;letter-spacing:.1em;font-style:italic}#sty-title .ln{height:2px;width:0;background:linear-gradient(90deg,transparent,var(--ac,#8fb4ff),transparent)}#sty-title.on .ln{animation:styLn 2.4s .3s ease-out forwards}@keyframes styLn{to{width:min(70vw,520px)}}#sty-title .st{font:700 clamp(10px,1.8vw,14px)/1 Nunito,sans-serif;letter-spacing:.38em;opacity:.85}'
+                + '#sty-win{left:50%;bottom:calc(12vh + 14px);transform:translateX(-50%);width:min(900px,94vw);min-height:96px;padding:16px 28px 22px;border-radius:10px;background:linear-gradient(180deg,#2e48b8 0%,#17267d 55%,#0b1250 100%);border:2px solid #dfe6ff;box-shadow:0 0 0 2px #0a0f3a,inset 0 0 0 2px rgba(255,255,255,.2),0 8px 28px rgba(0,0,0,.65);opacity:0;pointer-events:none;transition:opacity .25s;z-index:5}#sty-win.on{opacity:1}#sty.nobars #sty-win{bottom:22px}'
+                + '#sty-win p{margin:0;font:700 clamp(15px,2.5vw,21px)/1.55 Nunito,system-ui,sans-serif;text-shadow:1px 1px 0 #000;min-height:3.1em;word-break:break-word}#sty-win.narr p{font-style:italic;font-family:Georgia,"Times New Roman",serif;text-align:center;font-weight:600}#sty-win .nm{position:absolute;left:18px;top:-17px;padding:3px 18px;border-radius:7px;background:linear-gradient(180deg,#3b56d6,#1a2a86);border:2px solid #dfe6ff;font:900 13px/1.2 Nunito,sans-serif;letter-spacing:.12em;text-shadow:1px 1px 0 #000;display:none}#sty-win.say .nm{display:block}'
+                + '#sty-win .adv{position:absolute;right:16px;bottom:7px;font-style:normal;font-size:15px;opacity:0;animation:styAdv .9s infinite}#sty-win.done .adv{opacity:1}@keyframes styAdv{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}'
+                + '#sty-ctl{top:calc(6vh - 14px);right:14px;display:flex;gap:6px;z-index:6}#sty-ctl button{font:800 11px Nunito,sans-serif;letter-spacing:.08em;color:#dbe9ff;background:rgba(10,18,60,.78);border:1px solid rgba(160,190,255,.55);border-radius:8px;padding:5px 10px;cursor:pointer}#sty-ctl button.on{background:#3b56d6;color:#fff}'
+                + '#sty-rw{left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);width:min(520px,92vw);padding:18px 24px 20px;border-radius:12px;background:linear-gradient(180deg,#2e48b8,#17267d 55%,#0b1250);border:2px solid #dfe6ff;box-shadow:0 0 0 2px #0a0f3a,inset 0 0 0 2px rgba(255,255,255,.2),0 14px 44px rgba(0,0,0,.7);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;z-index:7;text-align:center;text-shadow:1px 1px 0 #000}#sty-rw.on{opacity:1;transform:translate(-50%,-50%);pointer-events:auto}'
+                + '#sty-rw .h{font:900 15px Nunito,sans-serif;letter-spacing:.35em;color:#ffe9a8;margin-bottom:12px}#sty-rw .g{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center;font:700 16px Nunito,sans-serif;margin-bottom:12px}#sty-rw .g b{color:#ffe9a8}#sty-rw .q{margin:6px 0 12px;padding:10px 12px;border:1px solid rgba(223,230,255,.55);background:rgba(5,10,50,.55);display:flex;flex-direction:column;gap:3px}#sty-rw .q i{font:900 10px Nunito,sans-serif;letter-spacing:.3em;color:#9fe6ff;font-style:normal}#sty-rw .q b{font:900 18px Georgia,serif;font-style:italic}#sty-rw .q span{font:600 13px Nunito,sans-serif;opacity:.9}'
+                + '#sty-rw button{font:900 14px Nunito,sans-serif;letter-spacing:.1em;color:#fff;background:linear-gradient(180deg,#4c6af0,#1d2f9a);border:2px solid #dfe6ff;border-radius:8px;padding:8px 26px;cursor:pointer}'
+                + '#sty-trk{position:fixed;right:12px;top:238px;width:232px;z-index:56;padding:8px 12px 9px;border-right:3px solid #8fb4ff;background:linear-gradient(270deg,rgba(12,22,80,.86),rgba(12,22,80,.06));text-align:right;text-shadow:0 1px 2px #000;font:700 11px Nunito,sans-serif;color:#eaf3ff;cursor:pointer;display:none;pointer-events:auto}#sty-trk i{font:900 9px Nunito,sans-serif;letter-spacing:.25em;color:#9fe6ff;font-style:normal}#sty-trk b{display:block;font:900 13px Georgia,serif;font-style:italic;margin-top:1px}#sty-trk .o{opacity:.9;margin-top:1px}#sty-trk .br{height:6px;margin:4px 0 2px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);border-radius:4px;overflow:hidden}#sty-trk .br u{display:block;height:100%;background:linear-gradient(180deg,#b8e6ff,#4c8cf0);width:0;text-decoration:none}#sty-trk small{opacity:.8;font-size:10px}'
+                + '#sty-toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:6300;padding:8px 20px;border-radius:9px;background:linear-gradient(180deg,#2e48b8,#0b1250);border:2px solid #dfe6ff;color:#fff;font:800 13px Nunito,sans-serif;letter-spacing:.06em;box-shadow:0 6px 22px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .3s}#sty-toast.on{opacity:1}';
+            document.head.appendChild(st); const el = document.createElement('div'); el.id = 'sty';
+            el.innerHTML = '<div class="b t"></div><div class="b m"></div><div id="sty-gr"></div><div id="sty-vg"></div><div id="sty-fr"></div><div id="sty-sp"></div><div id="sty-wh"></div><div id="sty-fl"></div><div id="sty-title"><div class="ch"></div><div class="tt"></div><div class="ln"></div><div class="st"></div></div>'
+                + '<div id="sty-win"><div class="nm"></div><p></p><i class="adv">▼</i></div><div id="sty-ctl"><button type="button" data-a="auto"></button><button type="button" data-a="vo">🔊</button><button type="button" data-a="skip">SKIP ▸▸</button></div><div id="sty-rw"></div><div id="sty-bk"></div>';
+            document.body.appendChild(el); STY.el = el; STY.win = el.querySelector('#sty-win');
+            el.addEventListener('pointerdown', (e) => { e.stopPropagation(); const b = e.target.closest('button'); if (b) return; e.preventDefault(); if (STY.state === 'end') return; styAdvance(); });
+            el.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('#sty-ctl button'); if (!b) return; const a = b.dataset.a; if (a === 'auto') STYS.opt.auto = STYS.opt.auto ? 0 : 1; else if (a === 'vo') { STYS.opt.vo = STYS.opt.vo ? 0 : 1; if (STY.beat && STYS.opt.vo) styVo(STY.beat); else { try { speechSynthesis.cancel(); } catch (x) { /* voice */ } STY.speaking = false; } } else if (a === 'skip') { if (STY.state === 'run') styFinish(); else if (STY.state === 'title') { STY.state = 'run'; styBeat(0); styFinish(); } } stySave(); });
+            STY.win.addEventListener('pointerenter', () => { STY.hover = true; }); STY.win.addEventListener('pointerleave', () => { STY.hover = false; });
+            window.addEventListener('keydown', (e) => {
+                if (!STY.on) return; if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (STY.state === 'run') styFinish(); else if (STY.state === 'title') { STY.state = 'run'; styBeat(0); styFinish(); } else if (STY.state === 'end') styEndSoft(); return; }
+                if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); if (e.repeat) return; if (STY.state === 'end') styEndSoft(); else styAdvance(); return; }
+                if (/^(Key|Arrow|Digit|Tab|Numpad)/.test(e.code)) e.stopImmediatePropagation();
+            }, true);
+        }
+        function styWinSet(b) {
+            const w = STY.win; w.classList.add('on'); w.classList.remove('done'); w.classList.toggle('narr', b.t === 'narr'); w.classList.toggle('say', b.t !== 'narr'); const nm = w.querySelector('.nm'); nm.textContent = b.who || ''; w.querySelector('p').textContent = '';
+            let col = '#8fb4ff'; try { const g = STY.sc.guests.find((x) => x.name === b.who); if (g) col = g.color; } catch (e) { /* none */ } nm.style.borderColor = col;
+        }
+        function styUiTick() {
+            const ln = STY.ln, w = STY.win; if (!w) return; if (ln && STY.state === 'run') { const t = ln.text.slice(0, Math.floor(ln.n)), p = w.querySelector('p'); if (p.textContent !== t) p.textContent = t; w.classList.toggle('done', ln.n >= ln.text.length); }
+            const c = STY.el.querySelector('#sty-ctl'); c.style.display = STY.state === 'run' || STY.state === 'title' ? 'flex' : 'none'; const a = c.querySelector('[data-a="auto"]'), v = c.querySelector('[data-a="vo"]'); a.textContent = STYS.opt.auto ? 'AUTO ▸' : 'MANUAL'; a.classList.toggle('on', !!STYS.opt.auto); v.classList.toggle('on', !!STYS.opt.vo); v.style.display = window.speechSynthesis ? '' : 'none';
+        }
+        function styToast(msg, ms) { let t = document.getElementById('sty-toast'); if (!t) { t = document.createElement('div'); t.id = 'sty-toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('on'); clearTimeout(STY.toastT); STY.toastT = setTimeout(() => t.classList.remove('on'), ms || 3200); }
+        /* ---------- the quest tracker (under the FATE panel) ---------- */
+        function styTrkUpdate(force) {
+            let el = STY.trk; if (!el) { el = STY.trk = document.createElement('div'); el.id = 'sty-trk'; el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); styOpen('chron'); }); document.body.appendChild(el); try { styUi(); } catch (e) { /* ui */ } }
+            const q = STYS.q, show = !!(STYS.on && q && activeMap === 'nuu' && !STY.on && !CSN.on); if (!show) { if (el.style.display !== 'none') el.style.display = 'none'; STY.trkH = ''; return; }
+            let ex = ''; if (q.kind === 'place') { const c = styPlaceXY(q.tg.id); if (c && styAtZone(c) && !DG.on) { const p = nfPos(), dx = c.x - p.x, dz = c.z - p.z, d = Math.round(Math.hypot(dx, dz)), dirs = ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'], a = Math.atan2(-dz, dx), di = dirs[(Math.round(a / (Math.PI / 4)) + 8) % 8]; ex = d + ' m ' + di; } else ex = 'Floor ' + q.floor; } else if (q.kind === 'dungeon') ex = 'Floor ' + q.floor;
+            const h = q.done ? 'DONE|' + q.title : q.title + '|' + q.text + '|' + q.p + '|' + q.n + '|' + ex; if (!force && h === STY.trkH) return; STY.trkH = h;
+            el.innerHTML = '<i>◆ STORY · CHAPTER ' + (STYS.ch | 0) + '</i><b>' + styEsc(q.title) + '</b><div class="o">' + styEsc(q.done ? 'Complete! The story continues soon...' : q.text) + '</div><div class="br"><u style="width:' + Math.round(100 * q.p / Math.max(1, q.n)) + '%"></u></div><small>' + q.p + ' / ' + q.n + (ex ? ' · ' + styEsc(ex) : '') + '</small>'; el.style.display = 'block';
+        }
+        /* ---------- the Story panel: Chronicle, Forge, Scene, Settings ---------- */
+        function styOpen(tab) {
+            styUi(); let m = STY.menu; if (m && m.classList.contains('on') && !tab) { m.classList.remove('on'); return; } if (!m) styBuildMenu(); m = STY.menu;
+            if (!STY.ui) STY.ui = { tab: STYS.on ? 'chron' : 'forge', scene: '', confirm: false, draft: { prem: STYS.prem, tone: STYS.tone, pov: STYS.pov, pool: STYS.pool.slice() } };
+            if (tab) STY.ui.tab = tab; m.classList.add('on'); styMenuRender();
+        }
+        function styBuildMenu() {
+            const st = document.createElement('style');
+            st.textContent = '#sty-menu{position:fixed;inset:0;z-index:6200;display:none;align-items:center;justify-content:center;background:rgba(2,6,22,.62);font-family:Nunito,system-ui,sans-serif;color:#dbe9ff}#sty-menu.on{display:flex}#sty-menu .w{width:min(880px,96vw);height:min(650px,94vh);display:flex;flex-direction:column;overflow:hidden;padding:12px;background:linear-gradient(180deg,rgba(14,30,96,.97),rgba(5,10,40,.98));border:2px solid #b9c9ff;border-radius:12px;box-shadow:0 0 0 2px #070c30,0 18px 60px rgba(0,0,0,.75)}'
+                + '#sty-menu .hd{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 8px;font:900 18px Georgia,serif;font-style:italic;letter-spacing:.2em;color:#fff;text-shadow:0 0 12px rgba(120,160,255,.7)}#sty-menu .hd button{width:30px;height:30px;border-radius:50%;border:1px solid #b9c9ff;background:rgba(20,40,110,.8);color:#fff;cursor:pointer}'
+                + '#sty-menu .tb{display:flex;gap:6px;padding:0 2px 8px}#sty-menu .tb button{flex:1;height:34px;font:800 12px Nunito,sans-serif;letter-spacing:.1em;color:#cfe0ff;background:rgba(20,40,110,.6);border:1px solid rgba(160,190,255,.45);cursor:pointer}#sty-menu .tb button.on{background:linear-gradient(180deg,#4c6af0,#1d2f9a);color:#fff;box-shadow:0 0 12px rgba(110,150,255,.6)}'
+                + '#sty-menu .bd{flex:1;min-height:0;overflow:auto;padding:4px 4px 8px}#sty-menu h4{margin:14px 0 6px;font:800 11px Nunito,sans-serif;letter-spacing:.2em;color:#9fc4f5;text-transform:uppercase}#sty-menu p.hint{margin:4px 0 8px;font-size:12px;line-height:1.5;opacity:.82}'
+                + '#sty-menu textarea{width:100%;box-sizing:border-box;min-height:84px;resize:vertical;padding:9px 11px;font:600 14px/1.45 Nunito,sans-serif;color:#fff;background:rgba(3,8,34,.9);border:1px solid rgba(160,190,255,.6);outline:none}#sty-menu textarea:focus{border-color:#ffe27a}'
+                + '#sty-menu .ch{display:flex;flex-wrap:wrap;gap:6px}#sty-menu .ch button{font:700 12px Nunito,sans-serif;color:#dbe9ff;background:rgba(20,40,110,.55);border:1px solid rgba(160,190,255,.4);border-radius:14px;padding:5px 11px;cursor:pointer}#sty-menu .ch button.on{background:linear-gradient(180deg,#d9a21a,#a06c08);color:#111;border-color:#ffe27a}'
+                + '#sty-menu .go{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}#sty-menu .go button,#sty-menu .card button{font:900 13px Nunito,sans-serif;letter-spacing:.06em;color:#fff;background:linear-gradient(180deg,#4c6af0,#1d2f9a);border:2px solid #dfe6ff;border-radius:8px;padding:9px 18px;cursor:pointer}#sty-menu .go button.alt,#sty-menu .card button.alt{background:rgba(40,60,120,.7);border-color:rgba(160,190,255,.5)}#sty-menu .go button.bad{background:#7a2a2a}#sty-menu button:disabled{opacity:.45;cursor:default}'
+                + '#sty-menu .card{margin:8px 0;padding:10px 12px;background:rgba(8,20,70,.7);border:1px solid rgba(160,190,255,.45)}#sty-menu .card b{font:900 15px Georgia,serif;font-style:italic;color:#fff}#sty-menu .card .bar{height:8px;margin:8px 0 4px;background:#030814;border:1px solid rgba(160,190,255,.5);border-radius:4px;overflow:hidden}#sty-menu .card .bar u{display:block;height:100%;background:linear-gradient(180deg,#b8e6ff,#4c8cf0);text-decoration:none}#sty-menu .card small{opacity:.8}#sty-menu .card span.rw{display:block;margin-top:6px;font-size:12px;color:#ffe9a8}'
+                + '#sty-menu .lg{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 10px;border-bottom:1px solid rgba(160,190,255,.2)}#sty-menu .lg span{grid-column:1;font-size:12px;opacity:.8}#sty-menu .lg small{opacity:.65}#sty-menu .lg button{grid-column:2;grid-row:1/3;align-self:center;font:800 11px Nunito,sans-serif;color:#fff;background:rgba(40,60,120,.8);border:1px solid rgba(160,190,255,.5);padding:6px 10px;cursor:pointer}'
+                + '#sty-menu .row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(160,190,255,.2);font-size:13px}';
+            document.head.appendChild(st); const m = document.createElement('div'); m.id = 'sty-menu'; m.innerHTML = '<div class="w"><div class="hd"><span>📖 STORY CHRONICLE</span><button type="button" data-a="x">✕</button></div><div class="tb"></div><div class="bd"></div></div>'; document.body.appendChild(m); STY.menu = m;
+            for (const ev of ['pointerdown', 'keydown', 'keyup', 'keypress']) m.addEventListener(ev, (e) => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') { m.classList.remove('on'); e.preventDefault(); } });
+            m.addEventListener('input', (e) => { const t = e.target; if (!STY.ui) return; if (t.id === 'sty-prem') STY.ui.draft.prem = t.value.slice(0, 600); else if (t.id === 'sty-scn') STY.ui.scene = t.value.slice(0, 300); });
+            m.addEventListener('click', (e) => { if (e.target === m) { m.classList.remove('on'); return; } const b = e.target.closest('[data-a]'); if (b) styMenuAct(b); });
+        }
+        function styRwText(rw) { if (!rw) return ''; const p = []; for (const [k, n] of rw.items || []) p.push((STY_ITEM_IC[k] || '🎒') + ' ' + BT_ITEMS[k].n + ' x' + n); if (rw.gil) p.push('💰 ' + rw.gil.toLocaleString('en-US') + ' Gil'); if (rw.xp) p.push('⭐ ' + rw.xp.toLocaleString('en-US') + ' XP'); return p.join('  ·  '); }
+        function styMenuRender() {
+            const U = STY.ui, m = STY.menu, tabs = [['chron', 'CHRONICLE'], ['forge', 'QUEST FORGE'], ['scene', 'PLAY A SCENE'], ['set', 'SETTINGS']]; m.querySelector('.tb').innerHTML = tabs.map((t) => '<button type="button" data-a="tab" data-t="' + t[0] + '" class="' + (U.tab === t[0] ? 'on' : '') + '">' + t[1] + '</button>').join(''); let h = '';
+            if (U.tab === 'chron') {
+                if (!STYS.on) h = '<p class="hint">No chronicle is running. Open the <b>Quest Forge</b>, describe your story, pick what the endless tasks are made of, and press Begin. Chapters then play after every FATE and dungeon you finish.</p><div class="go"><button type="button" data-a="tab" data-t="forge">Open the Quest Forge ▶</button></div>';
+                else {
+                    const q = STYS.q, tn = (STY_TONES.find((t) => t[0] === STYS.tone) || STY_TONES[0])[1]; h = '<div class="card"><b>Chapter ' + (STYS.ch | 0) + '</b> <small>· ' + styEsc(tn) + ' · ' + (STYS.pov === 'second' ? 'second person' : 'third person') + '</small><p class="hint">“' + styEsc(STYS.prem || 'No premise written yet.') + '”</p></div>';
+                    if (q) h += '<h4>Current task</h4><div class="card"><b>' + styEsc(q.title) + '</b><br>' + styEsc(q.text) + '<div class="bar"><u style="width:' + Math.round(100 * q.p / Math.max(1, q.n)) + '%"></u></div><small>' + q.p + ' / ' + q.n + (q.done ? ' · complete, the next chapter is on its way' : '') + '</small><span class="rw">' + styEsc(styRwText(q.rw)) + '</span></div>'; else h += '<p class="hint">No task right now. Press “New task”.</p>';
+                    h += '<div class="go"><button type="button" data-a="now">▶ Play a scene now</button><button type="button" class="alt" data-a="reroll">New task</button><button type="button" class="' + (U.confirm ? 'bad' : 'alt') + '" data-a="end">' + (U.confirm ? 'Really end it?' : 'End chronicle') + '</button></div>';
+                    h += '<h4>Past chapters</h4>' + (STYS.log.length ? STYS.log.slice().reverse().map((e, ri) => { const i = STYS.log.length - 1 - ri; return '<div class="lg"><b>' + (e.kind === 'begin' || e.kind === 'quest' ? 'Ch ' + e.n : e.kind === 'scene' ? 'Scene' : 'Interlude') + ' · ' + styEsc(e.title) + '</b><span>' + styEsc(e.sum) + '</span><small>Floor ' + (e.f | 0) + ' · ' + new Date(e.t).toLocaleDateString() + '</small>' + (e.sc ? '<button type="button" data-a="replay" data-i="' + i + '">▶ Replay</button>' : '') + '</div>'; }).join('') : '<p class="hint">Nothing yet.</p>');
+                }
+            } else if (U.tab === 'forge') {
+                const D = U.draft, C = styForgeChips(); STY.chips = new Map(); const grp = (title, arr) => '<h4>' + title + '</h4><div class="ch">' + (arr.length ? arr.map((c) => { const k = styKey(c); STY.chips.set(k, c); return '<button type="button" data-a="chip" data-k="' + styEsc(k) + '" class="' + (D.pool.some((t) => styKey(t) === k) ? 'on' : '') + '">' + c.ic + ' ' + styEsc(c.label) + '</button>'; }).join('') : '<span class="hint">Visit Adventia to see these.</span>') + '</div>';
+                h = '<h4>Your story, in your words</h4><textarea id="sty-prem" maxlength="600" placeholder="Who are you, and what do you want? e.g. A disgraced royal knight chasing the thing that burned my homeland, and the stranger who knows why.">' + styEsc(D.prem) + '</textarea>'
+                    + '<h4>Tone</h4><div class="ch">' + STY_TONES.map((t) => '<button type="button" data-a="tone" data-v="' + t[0] + '" class="' + (D.tone === t[0] ? 'on' : '') + '">' + t[1] + '</button>').join('') + '</div><h4>Narration</h4><div class="ch"><button type="button" data-a="pov" data-v="third" class="' + (D.pov === 'third' ? 'on' : '') + '">Third person</button><button type="button" data-a="pov" data-v="second" class="' + (D.pov === 'second' ? 'on' : '') + '">Second person (“you”)</button></div>'
+                    + '<h4>Endless tasks: pick what the story can ask of you</h4><p class="hint">The story rotates through your picks, and each task is a little harder and pays a little better than the last. Pick nothing for “any monster”.</p>' + grp('⚔️ Enemies', C.enemies) + grp('🏰 Dungeons', C.dungeons) + grp('🎒 Items', C.items) + grp('📍 Locations', C.places)
+                    + '<div class="go">' + (STYS.on ? '<button type="button" data-a="begin" data-v="save">Save changes</button><button type="button" class="alt" data-a="begin" data-v="restart">Restart chronicle</button>' : '<button type="button" data-a="begin" data-v="restart">Begin chronicle ▶</button>') + '</div>';
+            } else if (U.tab === 'scene') {
+                h = '<p class="hint">Describe a moment and it plays at once, right where you stand, with the camera work of an anime episode. Scenes give no rewards and never touch your tasks.</p><textarea id="sty-scn" maxlength="300" placeholder="e.g. The hero kneels at a frozen shrine and remembers the promise made there.">' + styEsc(U.scene) + '</textarea><h4>Ideas</h4><div class="ch">' + ['A quiet moment before the storm', 'A stranger watches from the ridge', 'An omen on the horizon', 'Remembering someone who is gone', 'Steeling ourselves for the next fight'].map((s) => '<button type="button" data-a="quick" data-v="' + styEsc(s) + '">' + styEsc(s) + '</button>').join('') + '</div><div class="go"><button type="button" data-a="scene">▶ Play scene</button></div>';
+            } else {
+                const o = STYS.opt, seg = (key, vals) => '<div class="ch">' + vals.map(([v, l]) => '<button type="button" data-a="opt" data-o="' + key + '" data-v="' + v + '" class="' + ((o[key] | 0) === v ? 'on' : '') + '">' + l + '</button>').join('') + '</div>';
+                h = '<div class="row"><span>Play a chapter after a FATE you joined</span>' + seg('fate', [[0, 'Off'], [1, 'Every FATE'], [3, 'Every 3rd']]) + '</div><div class="row"><span>Play an epilogue after a dungeon</span>' + seg('dg', [[0, 'Off'], [1, 'On']]) + '</div><div class="row"><span>Advance by itself</span>' + seg('auto', [[0, 'Manual (click)'], [1, 'Auto']]) + '</div><div class="row"><span>Reading speed</span>' + seg('pace', STY_PACE.map((p, i) => [i, p[0]])) + '</div><div class="row"><span>Voice-over (your browser reads the narration)</span>' + seg('vo', [[0, 'Off'], [1, 'On']]) + '</div><div class="row"><span>Widescreen letterbox bars</span>' + seg('bars', [[0, 'Off'], [1, 'On']]) + '</div><p class="hint">While a chapter plays you are safe from harm, and you can press Esc or SKIP at any time: rewards are still paid. In a FATE or dungeon the chapter waits until the fight is over.' + (STY.aiErr ? ' Last storyteller note: ' + styEsc(STY.aiErr) + ' (the built-in storyteller fills in).' : ' The storyteller uses your Companion AI key when one is set, and a built-in storyteller otherwise.') + '</p>';
+            }
+            const bd = m.querySelector('.bd'), sc = bd.scrollTop; bd.innerHTML = h; bd.scrollTop = sc;
+        }
+        function styMenuAct(b) {
+            const a = b.dataset.a, U = STY.ui, D = U.draft, v = b.dataset.v;
+            if (a === 'x') { STY.menu.classList.remove('on'); return; } if (a === 'tab') { U.tab = b.dataset.t; U.confirm = false; }
+            else if (a === 'tone') D.tone = v; else if (a === 'pov') D.pov = v;
+            else if (a === 'chip') { const k = b.dataset.k, i = D.pool.findIndex((t) => styKey(t) === k); if (i >= 0) D.pool.splice(i, 1); else if (STY.chips.get(k) && D.pool.length < 30) D.pool.push(Object.assign({}, STY.chips.get(k))); }
+            else if (a === 'begin') {
+                const fresh = v === 'restart' || !STYS.on; STYS.prem = styTxt(D.prem, 600); STYS.tone = D.tone; STYS.pov = D.pov; STYS.pool = D.pool.slice(); STYS.pi = 0;
+                if (fresh) { STYS.on = true; STYS.ch = 0; STYS.tier = 0; STYS.q = null; STYS.log = []; STYS.fc = 0; stySave(); STY.menu.classList.remove('on'); STY.qu = STY.qu.filter((i) => i.kind !== 'begin'); styQueue('begin', {}, { manual: true }); styToast(styCanPlay() ? 'Your chronicle begins...' : 'Your story begins as soon as it is safe.', 3800); return; }
+                stySave(); styToast('Chronicle updated.'); U.tab = 'chron';
+            }
+            else if (a === 'quick') { U.scene = v; }
+            else if (a === 'scene') { const t = styTxt(U.scene, 300); if (t.length < 3) { styToast('Describe the moment first.'); return; } STY.menu.classList.remove('on'); styQueue('scene', { userPrompt: t }, { manual: true }); styToast(styCanPlay() ? 'Playing your scene...' : 'Your scene plays as soon as it is safe.', 3800); return; }
+            else if (a === 'now') { STY.menu.classList.remove('on'); styQueue('scene', { userPrompt: '' }, { manual: true }); return; }
+            else if (a === 'reroll') { STYS.q = styNextQuest(STYS.tier); stySave(); styTrkUpdate(true); styToast('A new task is set.'); }
+            else if (a === 'end') { if (!U.confirm) { U.confirm = true; } else { STYS.on = false; STYS.q = null; U.confirm = false; STY.qu = []; stySave(); styTrkUpdate(true); styToast('Chronicle ended. Your chapters stay in the log.'); U.tab = 'forge'; } }
+            else if (a === 'replay') { const e = STYS.log[+b.dataset.i]; if (e && e.sc) { if (!styCanPlay()) { styToast('Not now. Finish what you are doing first.'); return; } STY.menu.classList.remove('on'); styPlay(Object.assign({}, e.sc, { replay: true, rw: null, q: null, id: 'r' + Date.now() })); return; } }
+            else if (a === 'opt') { STYS.opt[b.dataset.o] = +v; stySave(); }
+            styMenuRender();
+        }
+        function stySlash(text) {
+            const m = /^\/(?:story|chronicle)(?:\s+(.*))?$/i.exec(text); if (!m) return false; const arg = styTxt(m[1] || '', 300);
+            if (!arg) { styOpen(); return true; } if (/^skip$/i.test(arg)) { if (STY.on) { if (STY.state === 'run') styFinish(); else if (STY.state === 'end') styEndSoft(); } return true; }
+            styQueue('scene', { userPrompt: arg }, { manual: true }); return true;
+        }
+        window.__sty = { STY, get S() { return STYS; }, play: styPlay, queue: styQueue, generate: styGenerate, open: styOpen, end: styEnd, clean: styClean, proc: styProc, parse: styParse, shots: STY_SHOTS, ctx: styCtx, prompt: styPrompt, onKill: styOnKill, onFate: styOnFate, onDungeon: styOnDungeon, tick: styTick, nextQuest: styNextQuest, slash: stySlash, reload: () => { STYS = styLoad(); } };
         // clicking the door itself also uses it when you are close enough
         window.addEventListener('pointerdown', (e) => {
             try {
@@ -19825,6 +20397,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             return arGo({ mode: r.mode || 'forest', key: r.key, at: r });
         }
         function dgBossDown() {
+            try { styOnDungeon(DG.floor); } catch (e) { /* story */ }
             NF.fl = Math.max(NF.fl | 0, DG.floor); try { nfSave(); } catch (e) { /* storage */ } nuShowBanner('FLOOR ' + DG.floor + ' CLEARED', DG.th.boss.title + ' IS DEFEATED'); try { HBD.dungeon(DG.floor); } catch (e) { /* daily */ } try { dgLoreEnd(); } catch (e) { /* lore */ }
             const b = DG.rooms[DG.rooms.length - 1], x = b.x + 12, z = b.z, G = new THREE.Group(); G.position.set(x, 0, z);
             const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.14, 8, 40), new THREE.MeshBasicMaterial({ color: 0x7fe6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.2; G.add(ring);
@@ -28165,6 +28738,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             try { nfGunTick(dt); } catch (e) { if (!window.__ngErr) { window.__ngErr = e; console.error('nf gun', e); } }
             try { finTick(FIN.rawDt || dt); } catch (e) { if (!window.__finErr) { window.__finErr = e; console.error('finishing shot', e); finEnd(); } }
             try { csnTick(dt); } catch (e) { if (!window.__csnErr) { window.__csnErr = e; console.error('scene', e); try { csnEnd(false); } catch (x) { /* ended */ } } }
+            try { styTick(dt); } catch (e) { if (!window.__styErr) { window.__styErr = e; console.error('story', e); try { styEnd(true); } catch (x) { /* ended */ } } }
             try { mmTick(dt); } catch (e) { if (!window.__mmErr) { window.__mmErr = e; console.error('minimap', e); } }
         }
 
@@ -28246,6 +28820,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             { const mm = /^\/name\s+(.+)$/i.exec(text); if (mm) { setMyName(mm[1]); return true; } }
             if (/^\/hug$/i.test(text)) { hugAsk(); return true; }
             if (/^\/(scene|cutscene|talk)$/i.test(text)) { csnOpenStarter(); return true; }
+            if (/^\/(story|chronicle)(?:\s+.*)?$/i.test(text)) return stySlash(text);
             { const wm = /^\/(weather|season)(?:\s+(.*))?$/i.exec(text); if (wm) return wxCommand(wm[1].toLowerCase(), wm[2]); }
             if (/^\/(camp|tent)\s*$/i.test(text)) { tnPitch(); return true; }
             if (/^\/blue\s*$/i.test(text)) { blBook(); return true; }
@@ -28939,7 +29514,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
         const SELF = { on: false };
         const HOLO2 = { mesh: null, cv: null, ctx: null, tex: null, drawAt: 0, k: 0, id: null };
         const HOLO = { mesh: null, cv: null, ctx: null, tex: null, k: 0, drawAt: 0, gaze: new THREE.Vector3() };
-        const holoWanted = () => !CSN.on && !(activeMap === 'budokai' && BUD.me) && (SELF.on || !!padOverlay() || !$('pcard').classList.contains('hidden') || !!document.querySelector('.xmb-col.open'));
+        const holoWanted = () => !CSN.on && !STY.on && !(activeMap === 'budokai' && BUD.me) && (SELF.on || !!padOverlay() || !$('pcard').classList.contains('hidden') || !!document.querySelector('.xmb-col.open'));
         function holoDraw(t) {
             const c = HOLO.ctx, W = 512, H = 320;
             c.clearRect(0, 0, W, H);
@@ -38024,7 +38599,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
             }, 900);
         }
         /* ---- idle chatter and world beats ---- */
-        const brQuiet = () => { try { return activeMap === 'btl' || (typeof CSN !== 'undefined' && CSN.on) || (typeof BT !== 'undefined' && BT.phase && BT.phase !== 'idle'); } catch (e) { return false; } };
+        const brQuiet = () => { try { return activeMap === 'btl' || (typeof CSN !== 'undefined' && CSN.on) || (typeof STY !== 'undefined' && STY.on) || (typeof BT !== 'undefined' && BT.phase && BT.phase !== 'idle'); } catch (e) { return false; } };
         function brTick() {
             if (!CMP.active.size || document.hidden || Date.now() < CMP.nextAmb || (!CMP.ai.key && !CMP.keyless) || brQuiet()) return;
             CMP.nextAmb = Date.now() + 150000 + Math.random() * 150000;
