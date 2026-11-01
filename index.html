@@ -19652,7 +19652,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         const styTitleCase = (s) => String(s || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
         const styHash = (s) => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h; };
         const styRng = (seed) => { let h = (seed >>> 0) || 1; return () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
-        function styDefaults() { return { v: 1, on: false, prem: '', tone: 'epic', pov: 'third', ch: 0, tier: 0, pool: [], pi: 0, q: null, log: [], fc: 0, last: 0, opt: { fate: 1, dg: 1, vo: 0, pace: 1, auto: 1, bars: 1 } }; }
+        function styDefaults() { return { v: 1, on: false, prem: '', tone: 'epic', pov: 'third', ch: 0, tier: 0, pool: [], pi: 0, q: null, log: [], fc: 0, last: 0, opt: { fate: 1, dg: 1, vo: 0, pace: 1, auto: 1, bars: 1, share: 1, party: 1 } }; }
         function styLoad() {
             let o = null; try { o = JSON.parse(localStorage.getItem(STY_K) || 'null'); } catch (e) { o = null; }
             const d = styDefaults(); if (!o || typeof o !== 'object') return d; const s = Object.assign(d, o); s.opt = Object.assign(styDefaults().opt, o.opt || {});
@@ -19756,6 +19756,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                 epic: 'Above, the sky widened. Whatever waited ahead, {N} would meet it standing.', dark: 'Far off, something old turned its head toward {N}. The road ahead would not be kind.', hope: 'Somewhere, someone was waiting for good news. {N} meant to be the one who brought it.',
                 mystery: 'Behind the horizon, a door that had been closed for centuries quietly came unlatched.', comic: '{N} tightened a boot strap, sighed dramatically at no one, and walked on. Heroism, as it turns out, is ninety percent footwear.', tragic: 'Some victories leave a hollow where something used to be. {N} carried it forward gently, like a lantern.'
             },
+            party: ['{M} stood shoulder to shoulder with {N}, and the road ahead felt a little shorter.', 'Nobody in the party spoke. {M} and {N} had fought too long side by side to need to.', 'With {M} at {N}\'s side, this was no longer a lone traveler\'s tale. It was a story with more than one author.'],
             scene: ['The moment stretched. {N} let it, because moments like this are rare and do not come back.', 'Nothing happened, and yet everything shifted, the way a river changes course without a sound.']
         };
         const STY_BANKGROUP = { epic: 'bright', hope: 'bright', comic: 'bright', dark: 'dark', tragic: 'dark', mystery: 'mystery' };
@@ -19769,6 +19770,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             if (kindBank) beats.push({ t: 'narr', text: fill(pick(kindBank[g] || kindBank.bright)), shot: pick(['heroLow', 'orbit', 'crane']), on: 'me', fx: ctx.kind === 'dungeon' || ctx.kind === 'fate' ? 'impact' : '' });
             else if (ctx.userPrompt) beats.push({ t: 'narr', text: fill(pick(STY_BANK.scene)) + ' (' + styTxt(ctx.userPrompt, 90) + ')', shot: 'pushIn', on: 'me' });
             if (ctx.prem) { const clip = styTxt(ctx.prem.split(/[.!?\n]/)[0], 90); beats.push({ t: 'narr', text: N + ' touched the worn charm of an old vow, "' + clip + '", and found it still held.', shot: 'eyes', on: 'me', tone: 'sad' }); }
+            const crew = (ctx.comps || []).concat(ctx.mates || []); if (crew.length) { const M = crew.length > 1 ? crew.slice(0, -1).join(', ') + ' and ' + crew[crew.length - 1] : crew[0]; beats.push({ t: 'narr', text: fill(pick(STY_BANK.party)).replace(/\{M\}/g, M), shot: 'groupWide', on: 'party', tone: 'calm' }); }
             if (ctx.kind !== 'scene') {
                 beats.push({ t: 'say', who: spk, text: fill(pick(STY_BANK.talk[g])), shot: pick(['ots', 'front', 'twoShot']), on: spk, tone: g === 'dark' ? 'afraid' : 'calm' });
                 if (ctx.rw && ctx.rw.items && ctx.rw.items.length) beats.push({ t: 'give', who: spk, text: fill(pick(STY_BANK.gift)), shot: pick(['front', 'profile']), on: spk, tone: 'excited' });
@@ -19781,6 +19783,14 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         /* ---------- who is in the story ---------- */
         const styHero = () => { try { return styTxt(me.name, 24) || 'The Hero'; } catch (e) { return 'The Hero'; } };
         function styCmpList() { const out = []; try { for (const [id, r] of CMP.active) if (r.actor && r.actor.group && r.actor.group.visible !== false) out.push({ id: 'cmp:' + id, name: styTxt(r.c.name, 24), kind: 'cmp', c: r.c, actor: r.actor }); } catch (e) { /* no companions */ } return out; }
+        const styCast = () => styCmpList().concat(styPeers());
+        function styPeers() {      // real players in your party who are standing close enough to be on screen
+            const out = []; try {
+                if (!PARTY.code) return out; const hp = localActor.group.position;
+                for (const m of PARTY.members.values()) { if (m.id === me.id || !partyFresh(m)) continue; const q = peers.get(m.id); if (!q || !q.actor || !q.actor.group || q.actor.group.visible === false) continue; const p = q.actor.group.position; if (Math.hypot(hp.x - p.x, hp.z - p.z) > 70 || Math.abs(hp.y - p.y) > 25) continue; out.push({ id: 'peer:' + m.id, pid: m.id, name: nmClean(m.name || q.name, 24) || 'Ally', kind: 'peer', actor: q.actor, color: '#9be7ff' }); }
+            } catch (e) { /* no party */ } return out;
+        }
+        const styPartyNames = () => { try { return PARTY.code ? [...PARTY.members.values()].filter((m) => m.id !== me.id && partyFresh(m)).map((m) => nmClean(m.name, 24)) : []; } catch (e) { return []; } };
         function styLandmark() {      // something worth pointing the lens at: the dungeon exit, the nearest aether crystal, or the place a FATE was fought
             try {
                 if (STY.lm && Date.now() - STY.lm.t < 600000) return STY.lm;
@@ -19792,7 +19802,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         /* ---------- asking the AI for a chapter ---------- */
         function styCtx(kind, ex) {
             ex = ex || {}; const where = styWhere(), fi = styFloorInfo(where.f), lastLog = STYS.log.slice(-3).map((e) => ({ title: e.title, sum: e.sum }));
-            return Object.assign({ kind, name: styHero(), comps: styCmpList().map((x) => x.name), where, fi, prem: STYS.on ? STYS.prem : '', tone: STYS.tone, pov: STYS.pov, ch: STYS.ch + (kind === 'begin' || kind === 'quest' ? 1 : 0), recent: lastLog, ev: {}, q: null, rw: null, userPrompt: '' }, ex);
+            return Object.assign({ kind, name: styHero(), comps: styCmpList().map((x) => x.name), mates: styPeers().map((x) => x.name), where, fi, prem: STYS.on ? STYS.prem : '', tone: STYS.tone, pov: STYS.pov, ch: STYS.ch + (kind === 'begin' || kind === 'quest' ? 1 : 0), recent: lastLog, ev: {}, q: null, rw: null, userPrompt: '' }, ex);
         }
         const STY_SHOT_HELP = 'establish (high crane down to the hero), skyTilt (sky then tilt down), skyUp (pure sky), heroLow (low hero angle), eyes (extreme close-up on the face), pushIn (slow push-in), orbit (circle the hero), crane (rise up the hero), trackBack (follow from behind toward the road ahead), povLook (through the hero\'s eyes), landmark (over the shoulder to a landmark), dutch (tilted, uneasy), birdseye (from above), parallax (sideways truck across the scene), skyline (small hero, wide lonely view), profile, front, low, ots (over the shoulder, for talking), twoShot, groupWide (whole party), pullback (finale)';
         function styPrompt(ctx) {
@@ -19803,8 +19813,8 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                 + 'RULES:\n- 6 to 9 beats, each text under 170 characters. "narr" is the narrator. "say" is a line by a named character. "give" is a character handing the hero the listed reward (use it once if a reward is listed).\n- Open with narration that establishes the place and end with narration that points toward the next task. Never contradict the engine facts below.\n'
                 + '- Direct the camera like an anime episode: vary the shots, never use the same shot twice in a row, use close-ups for emotion and wide shots for scale. Shots: ' + STY_SHOT_HELP + '.\n'
                 + '- The hero is a silent protagonist: never write dialogue for the hero. ' + (ctx.pov === 'second' ? 'Narrate in second person ("you").' : 'Narrate in third person using the hero\'s name or "the hero"; avoid gendered pronouns for the hero.') + '\n'
-                + '- Only use these characters: the hero, the listed companions, and up to 2 new guests you declare in "guests". Do not invent items, gold or rewards: the engine grants exactly what is listed.\n- Keep it PG-13. Tone: ' + tone[1] + ' (' + tone[2] + ').';
-            const L = ['HERO: ' + ctx.name, 'COMPANIONS PRESENT: ' + (ctx.comps.length ? ctx.comps.join(', ') : 'none'), 'WORLD: Adventia. Floor 1 is the Forest of Nuu (Verdant Fields, Crystal Depths, Infernal Wastes, Glacial Heights, Shadowveil Sanctum, with the Shadowveil Depths dungeon). Floor 2 is Carvernia (the walled Carvernia Hold, the snowbound Carvernia Reach, the Carvernia Caverns dungeon).', 'LOCATION NOW: Floor ' + ctx.where.f + ', ' + ctx.where.n, 'CHAPTER: ' + ctx.ch + ' (trigger: ' + ctx.kind + ')'];
+                + '- Only use these characters: the hero, the listed companions, the listed party members, and up to 2 new guests you declare in "guests". Party members are real players and are silent like the hero: name them in narration and give them actions, but NEVER write dialogue for them. Do not invent items, gold or rewards: the engine grants exactly what is listed.\n- Keep it PG-13. Tone: ' + tone[1] + ' (' + tone[2] + ').';
+            const L = ['HERO: ' + ctx.name, 'COMPANIONS PRESENT: ' + (ctx.comps.length ? ctx.comps.join(', ') : 'none'), 'PARTY MEMBERS PRESENT (real players): ' + (ctx.mates.length ? ctx.mates.join(', ') : 'none'), 'WORLD: Adventia. Floor 1 is the Forest of Nuu (Verdant Fields, Crystal Depths, Infernal Wastes, Glacial Heights, Shadowveil Sanctum, with the Shadowveil Depths dungeon). Floor 2 is Carvernia (the walled Carvernia Hold, the snowbound Carvernia Reach, the Carvernia Caverns dungeon).', 'LOCATION NOW: Floor ' + ctx.where.f + ', ' + ctx.where.n, 'CHAPTER: ' + ctx.ch + ' (trigger: ' + ctx.kind + ')'];
             if (ctx.prem) L.push('THE PLAYER\'S STORY PREMISE (their own words): ' + ctx.prem);
             if (ctx.ev && ctx.ev.title) L.push('JUST HAPPENED: a FATE event "' + ctx.ev.title + '" was won'); if (ctx.ev && ctx.ev.boss) L.push('JUST HAPPENED: the dungeon ' + ctx.ev.dg + ' was cleared and its boss ' + ctx.ev.boss + ' defeated'); if (ctx.ev && ctx.ev.quest) L.push('JUST HAPPENED: the hero completed the task "' + ctx.ev.quest + '"');
             if (q) L.push('NEXT TASK (the engine tracks it): ' + q.title + ' - ' + q.text); if (rw && rw.items && rw.items.length) L.push('REWARD THE ENGINE GRANTS (have a character hand these over): ' + rw.items.map(([k, n]) => n + ' ' + BT_ITEMS[k].n).join(', '));
@@ -19819,14 +19829,14 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
         function styClean(o, ctx) {      // whatever came in (AI or local) becomes a safe, playable script
             if (!o || typeof o !== 'object' || !Array.isArray(o.beats)) return null;
-            const hero = ctx.name, comps = ctx.comps, guests = [];
-            for (const g of (Array.isArray(o.guests) ? o.guests : []).slice(0, 2)) { const nm = styTxt(g && g.name, 24); if (nm && nm.toLowerCase() !== hero.toLowerCase() && !comps.some((c) => c.toLowerCase() === nm.toLowerCase())) guests.push({ name: nm, color: /^#[0-9a-f]{6}$/i.test(String(g.color || '')) ? g.color : '#' + ((styHash(nm) & 0xffffff) | 0x404040).toString(16).slice(0, 6).padStart(6, '4') }); }
+            const hero = ctx.name, comps = ctx.comps, mates = ctx.mates || [], guests = [];
+            for (const g of (Array.isArray(o.guests) ? o.guests : []).slice(0, 2)) { const nm = styTxt(g && g.name, 24); if (nm && nm.toLowerCase() !== hero.toLowerCase() && !comps.concat(mates).some((c) => c.toLowerCase() === nm.toLowerCase())) guests.push({ name: nm, color: /^#[0-9a-f]{6}$/i.test(String(g.color || '')) ? g.color : '#' + ((styHash(nm) & 0xffffff) | 0x404040).toString(16).slice(0, 6).padStart(6, '4') }); }
             const known = (n) => { const l = String(n || '').toLowerCase(); return l && (hero.toLowerCase() === l || comps.some((c) => c.toLowerCase() === l) || guests.some((g) => g.name.toLowerCase() === l)); };
-            const match = (n) => { const l = String(n || '').toLowerCase().trim(); if (!l) return ''; if (l === 'me' || l === 'hero') return hero; for (const nm of [hero].concat(comps, guests.map((g) => g.name))) { const m = nm.toLowerCase(); if (m === l || m.startsWith(l) || l.startsWith(m) || m.split(' ')[0] === l.split(' ')[0]) return nm; } return ''; };
+            const match = (n) => { const l = String(n || '').toLowerCase().trim(); if (!l) return ''; if (l === 'me' || l === 'hero') return hero; for (const nm of [hero].concat(comps, mates, guests.map((g) => g.name))) { const m = nm.toLowerCase(); if (m === l || m.startsWith(l) || l.startsWith(m) || m.split(' ')[0] === l.split(' ')[0]) return nm; } return ''; };
             const beats = [], cps = STY_PACE[sClamp(STYS.opt.pace | 0, 0, 2)][1];
             for (const b of o.beats.slice(0, 12)) {
                 if (!b || typeof b !== 'object') continue; let t = ['narr', 'say', 'give'].includes(b.t) ? b.t : 'narr'; const text = styTxt(b.text, 200); if (text.length < 3) continue;
-                let who = ''; if (t !== 'narr') { who = match(b.who); if (!who) { const nm = styTxt(b.who, 24); if (nm && guests.length < 2 && nm.toLowerCase() !== hero.toLowerCase()) { guests.push({ name: nm, color: '#' + ((styHash(nm) & 0xffffff) | 0x404040).toString(16).slice(0, 6).padStart(6, '4') }); who = nm; } else t = 'narr'; } if (who === hero) { t = 'narr'; who = ''; } }
+                let who = ''; if (t !== 'narr') { who = match(b.who); if (!who) { const nm = styTxt(b.who, 24); if (nm && guests.length < 2 && nm.toLowerCase() !== hero.toLowerCase()) { guests.push({ name: nm, color: '#' + ((styHash(nm) & 0xffffff) | 0x404040).toString(16).slice(0, 6).padStart(6, '4') }); who = nm; } else t = 'narr'; } if (who === hero || mates.includes(who)) { t = 'narr'; who = ''; } }
                 const on = styTxt(b.on, 24).toLowerCase(), tone = ['calm', 'sad', 'angry', 'excited', 'afraid'].includes(b.tone) ? b.tone : (typeof csnTone === 'function' ? csnTone(text) : 'calm');
                 beats.push({ t, who, text, shot: STY_SHOTS[b.shot] ? b.shot : '', on: who || (['me', 'party', 'sky', 'landmark'].includes(on) ? on : (match(on) || 'me')), tone, fx: ['impact', 'flash', 'whip', 'fade'].includes(b.fx) ? b.fx : '', emo: STY_EMO_OK.includes(b.emo) ? b.emo : '', dur: sClamp(text.length / cps + 1.1, 2.6, 11) });
             }
@@ -19886,7 +19896,10 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             else if (q.kind === 'kill' && q.n >= 8 && q.p === Math.ceil(q.n / 2)) { try { sysChat('◆ Story: ' + q.title + ' (' + q.p + '/' + q.n + ')'); } catch (e) { /* chat */ } }
         }
         function styOnKill(m, remote) {
-            const q = STYS.q; if (!STYS.on || !q || q.done || q.kind !== 'kill' || (remote && !m.mine)) return; if (!styMatch(q.tg.sel, m)) return; q.p++; styProg(q);
+            const q = STYS.q; if (!STYS.on || !q || q.done || q.kind !== 'kill' || (remote && !m.mine && !styPartyCredit(m))) return; if (!styMatch(q.tg.sel, m)) return; q.p++; styProg(q);
+        }
+        function styPartyCredit(m) {      // in a party, a kill by someone fighting near you counts for your kill tasks too
+            try { if (!PARTY.code || PARTY.members.size < 2 || !Number.isFinite(m.x) || !Number.isFinite(m.z)) return false; const p = nfPos(); return Math.hypot(m.x - p.x, m.z - p.z) < 60; } catch (e) { return false; }
         }
         function styObjectives() {      // item and location tasks are watched, not event-driven
             const q = STYS.q; if (!STYS.on || !q || q.done || STY.on || activeMap !== 'nuu') return;
@@ -19896,17 +19909,64 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function styOnDungeon(floor) {
             if (!STYS.on) return; const q = STYS.q;
             if (q && !q.done && q.kind === 'dungeon' && q.tg.floor === floor) { q.p = 1; styProg(q); return; }
-            if (STYS.opt.dg) { const fi = styFloorInfo(floor); styQueue('dungeon', { ev: { boss: fi.boss, dg: fi.dg }, rw: styRw('dg', STYS.tier, floor, 1) }); }
+            if (STYS.opt.dg) { const fi = styFloorInfo(floor), ex = { ev: { boss: fi.boss, dg: fi.dg }, rw: styRw('dg', STYS.tier, floor, 1) }; if (styIsHost()) styQueue('dungeon', ex, { share: true }); else styAwaitHost('dungeon', ex); }
         }
         function styOnFate(f, rank) {
             if (!STYS.on || !STYS.opt.fate) return; STYS.fc++; stySave(); if (STYS.opt.fate > 1 && STYS.fc % STYS.opt.fate !== 0) return; if (Date.now() - STYS.last < 60000) return;
             try { STY.lm = { x: f.x, y: csnGround(f.x, f.z) || 0, z: f.z, t: Date.now() }; } catch (e) { /* none */ }
-            styQueue('fate', { ev: { title: f.def.title }, rw: styRw('fate', STYS.tier, styFloor(), rank === 'GOLD' ? 1.4 : rank === 'SILVER' ? 1.15 : 1) });
+            const ex = { ev: { title: f.def.title }, rw: styRw('fate', STYS.tier, styFloor(), rank === 'GOLD' ? 1.4 : rank === 'SILVER' ? 1.15 : 1) }; if (styIsHost()) styQueue('fate', ex, { share: true }); else styAwaitHost('fate', ex);
+        }
+        /* ---------- party: real players share chapters, one member hosts, kills near you count for everyone ---------- */
+        function styHi() {      // tell the party whether my chronicle runs and whether I share chapters
+            try { if (!PARTY.net || !PARTY.code || PARTY.members.size < 2) return; STY.annT = Date.now(); PARTY.net.send({ t: 'sty', k: 'hi', on: STYS.on ? 1 : 0, sh: STYS.opt.share ? 1 : 0 }); } catch (e) { /* offline */ }
+        }
+        function styIsHost() {      // the lowest-id member who runs a chronicle and shares it writes the party's FATE and dungeon chapters; the others watch
+            try {
+                if (!STYS.opt.share || !PARTY.code) return true; const now = Date.now(); let best = me.id;
+                for (const m of PARTY.members.values()) { if (m.id === me.id || !partyFresh(m)) continue; const i = STY.mates.get(m.id); if (i && i.on && i.sh && now - i.ts < 240000 && m.id < best) best = m.id; }
+                return best === me.id;
+            } catch (e) { return true; }
+        }
+        function styAwaitHost(kind, ex) {      // someone else hosts. If their chapter never reaches me (they were not in this fight), I tell my own
+            const t = Date.now(); setTimeout(() => { if (STY.gotShared >= t - 8000 || !STYS.on) return; styQueue(kind, ex, {}); }, 40000);
+        }
+        function styShareOut(sc) {
+            try {
+                if (!PARTY.net || !PARTY.code || !STYS.opt.share || !sc.share || sc.shared || sc.replay || !['fate', 'dungeon', 'scene'].includes(sc.kind)) return;
+                if (![...PARTY.members.values()].some((m) => m.id !== me.id && partyFresh(m))) return;
+                PARTY.net.send({ t: 'sty', k: 'inv', sid: sc.id, nm: nmClean(me.name, 16), kind: sc.kind, title: sc.title, sum: sc.sum, mood: sc.mood, guests: sc.guests.map((g) => ({ name: g.name, color: g.color })), beats: sc.beats.map((b) => ({ t: b.t, who: b.who, text: b.text, shot: b.shot, on: b.on, tone: b.tone, fx: b.fx })) });
+            } catch (e) { /* offline */ }
+        }
+        function styNet(from, m, cur) {      // anything that arrives from the network is checked as if a stranger wrote it
+            if (!cur || !m || typeof m.k !== 'string' || !PARTY.code) return;
+            if (m.k === 'hi') { const had = STY.mates.has(from); STY.mates.set(from, { on: m.on ? 1 : 0, sh: m.sh ? 1 : 0, ts: Date.now() }); if (!had && Date.now() - STY.annT > 4000) styHi(); return; }
+            if (m.k === 'inv') styNetInv(from, m, cur);
+        }
+        function styNetInv(from, m, cur) {
+            const now = Date.now(), mode = STYS.opt.party | 0; if (mode === 0 || now - (cur.lastSty || 0) < 20000 || !Array.isArray(m.beats) || m.beats.length > 14) return; cur.lastSty = now;
+            const kind = ['fate', 'dungeon', 'scene'].includes(m.kind) ? m.kind : 'scene', nm = nmClean(cur.name, 16) || 'Ally';      // the roster's name, never the message's own claim
+            const mates = styPeers().filter((p) => p.pid !== from).map((p) => p.name).concat([styHero()]);
+            const ctx = styCtx(kind, { name: nm, mates, rw: null, q: null, ev: {}, userPrompt: '', prem: '' });
+            const guests = (Array.isArray(m.guests) ? m.guests : []).slice(0, 2).map((g) => ({ name: styTxt(g && g.name, 24), color: g && g.color })).filter((g) => g.name);
+            const nb = (v, n) => styTxt(v, n).replace(/[<>]/g, ''), beats = m.beats.filter((x) => x && typeof x === 'object').map((x) => ({ t: x.t, who: nb(x.who, 24), text: nb(x.text, 200), shot: x.shot, on: nb(x.on, 24), tone: x.tone, fx: x.fx }));
+            const sc = styClean({ title: nb(m.title, 48), sum: nb(m.sum, 160), mood: m.mood, guests: guests.map((g) => ({ name: nb(g.name, 24), color: g.color })), beats }, ctx); if (!sc) return;
+            sc.shared = { pid: from, name: nm }; sc.kind = kind; sc.id = 's' + now.toString(36); sc.q = null; sc.rw = null;
+            if (STYS.on && kind !== 'scene' && now - (STYS.sharedPay || 0) > 120000) { STYS.sharedPay = now; sc.rw = kind === 'fate' ? styRw('fate', STYS.tier, styFloor(), 1) : styRw('dg', STYS.tier, styFloor(), 1); stySave(); }      // rewards are worked out here, never taken from the sender
+            STY.gotShared = now;
+            if (mode === 2) STY.qu.unshift({ kind, ex: {}, sc, t0: now, manual: false, loading: false });
+            else styInviteCard(nm, sc);
+        }
+        function styInviteCard(nm, sc) {
+            styUi(); let el = document.getElementById('sty-inv'); if (!el) { el = document.createElement('div'); el.id = 'sty-inv'; document.body.appendChild(el); }
+            el.innerHTML = '<i>📖 PARTY CHAPTER</i><b></b><span></span><div><button type="button" data-a="w">Watch</button><button type="button" data-a="n" class="alt">Not now</button></div>';
+            el.querySelector('b').textContent = '“' + sc.title + '”'; el.querySelector('span').textContent = nm + ' is playing a chapter for the party.'; el.classList.add('on'); clearTimeout(STY.invT); STY.invT = setTimeout(() => el.classList.remove('on'), 25000);
+            el.onpointerdown = (ev) => ev.stopPropagation();
+            el.onclick = (ev) => { const b = ev.target.closest('button'); if (!b) return; ev.stopPropagation(); el.classList.remove('on'); clearTimeout(STY.invT); if (b.dataset.a === 'w') STY.qu.unshift({ kind: sc.kind, ex: {}, sc, t0: Date.now(), manual: true, loading: false }); };
         }
         /* ---------- chapters wait in a queue until it is safe to take the camera (no fight, no menu, not dead) ---------- */
         function styQueue(kind, ex, opt) {
-            opt = opt || {}; ex = ex || {}; if (kind === 'quest' || kind === 'begin') { /* the next task is chosen now, announced in the chapter, and committed when it ends */ }
-            if (STY.qu.length >= 3 && kind !== 'quest' && kind !== 'begin') return; const it = { kind, ex, sc: null, t0: Date.now(), manual: !!opt.manual, loading: true };
+            opt = opt || {}; ex = ex || {};
+            if (STY.qu.length >= 3 && kind !== 'quest' && kind !== 'begin') return; const it = { kind, ex, sc: null, t0: Date.now(), manual: !!opt.manual, loading: true, share: !!opt.share };
             if (kind === 'quest' || kind === 'begin') { const tier = kind === 'quest' ? STYS.tier + 1 : 0; it.nq = styNextQuest(tier); ex.q = it.nq; if (kind === 'begin') ex.rw = styRw('begin', 0, styFloor(), 1); }
             if (kind === 'quest') STY.qu.unshift(it); else STY.qu.push(it);
             styGenerate(kind, ex).then((sc) => { it.sc = sc; it.loading = false; }, () => { it.loading = false; it.sc = styClean(styProc(styCtx(kind, ex)), styCtx(kind, ex)); });
@@ -19920,12 +19980,12 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
         function styQueueTick(dt) {
             if (STY.on || !STY.qu.length) { STY.safeT = 0; return; } const now = Date.now(); STY.qu = STY.qu.filter((i) => now - i.t0 < 900000);
-            const it = STY.qu[0]; if (!it) return; if (it.loading && now - it.t0 < 32000) return; if (it.loading) { it.loading = false; it.sc = styClean(styProc(styCtx(it.kind, it.ex)), styCtx(it.kind, it.ex)); } if (!it.sc) { STY.qu.shift(); return; }
+            const it = STY.qu[0]; if (!it) return; if (it.loading && now - it.t0 < 32000) return; if (it.loading) { it.loading = false; it.sc = styClean(styProc(styCtx(it.kind, it.ex)), styCtx(it.kind, it.ex)); } if (!it.sc) { STY.qu.shift(); return; } if (it.sc.shared && (STYS.opt.party | 0) === 0) { STY.qu.shift(); return; }
             if (!styCanPlay()) { STY.safeT = 0; return; } STY.safeT = (STY.safeT || 0) + dt; if (STY.safeT < (it.manual ? 0.4 : 2.2)) return; if (!it.manual && now - STYS.last < 20000 && it.kind !== 'quest' && it.kind !== 'begin') return;
-            STY.qu.shift(); styPlay(it.sc, { it });
+            STY.qu.shift(); if (!it.sc.shared) it.sc.share = !!it.share; styPlay(it.sc, { it });
         }
         function styCommit(sc, it) {      // the chapter is over: the quest ledger and the log move on
-            if (sc.replay || (!STYS.on && sc.kind !== 'scene')) return; STYS.last = Date.now();
+            if (sc.replay) return; if (sc.shared) { if (STYS.on) { STYS.log.push({ n: STYS.ch, t: Date.now(), title: sc.title, sum: sc.sum, f: sc.floor, kind: 'shared', sc: { title: sc.title, sum: sc.sum, mood: sc.mood, floor: sc.floor, place: sc.place, accent: sc.accent, guests: sc.guests, beats: sc.beats, kind: sc.kind, ch: sc.ch } }); STYS.log = STYS.log.slice(-14); stySave(); } return; } if (!STYS.on && sc.kind !== 'scene') return; STYS.last = Date.now();
             if (sc.kind === 'begin') { STYS.ch = 1; STYS.tier = 0; STYS.q = it && it.nq || styNextQuest(0); }
             else if (sc.kind === 'quest') { STYS.ch++; STYS.tier++; STYS.q = it && it.nq || styNextQuest(STYS.tier); }
             else if (sc.kind !== 'scene' && !STYS.q) STYS.q = styNextQuest(STYS.tier);
@@ -19938,13 +19998,18 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             for (const [k, n] of rw.items || []) { try { btBagAdd(k, n); got.push(n + 'x ' + BT_ITEMS[k].n); } catch (e) { /* bag */ } } try { sysChat('◆ Story reward: ' + got.join(', ') + '.'); } catch (e) { /* chat */ }
         }
         /* ---------- subjects the camera can look at: the hero, companions, guests (stand-in figures), the whole party, or a point in the world ---------- */
-        Object.assign(STY, { on: false, state: '', sc: null, it: null, t: 0, bi: -1, beat: null, ln: null, shot: null, cam: null, side: 1, recent: [], guests: new Map(), hid: [], spr: [], qu: [], acc: 0, punch: 0, shake: 0, hover: false, speaking: false, vtk: 0, lm: null, aiFails: 0, aiOff: 0, committed: false, outT: 0, lastSpk: '' });
-        const styMe = () => ({ id: 'me', name: styHero(), kind: 'me', actor: localActor, color: '#38bdf8' });
+        Object.assign(STY, { on: false, state: '', sc: null, it: null, t: 0, bi: -1, beat: null, ln: null, shot: null, cam: null, side: 1, recent: [], guests: new Map(), hid: [], spr: [], qu: [], acc: 0, punch: 0, shake: 0, hover: false, speaking: false, vtk: 0, lm: null, aiFails: 0, aiOff: 0, committed: false, outT: 0, lastSpk: '', mates: new Map(), gotShared: 0, annT: 0, pn: 0 });
+        const styLocal = () => ({ id: 'me', name: styHero(), kind: 'me', actor: localActor, color: '#38bdf8' });
+        function styMe() {      // the story's hero: you, or the member who hosts the chapter you are watching
+            const sh = STY.sc && STY.sc.shared; if (sh) { const q = peers.get(sh.pid); if (q && q.actor && q.actor.group && q.actor.group.visible !== false) return { id: 'peer:' + sh.pid, pid: sh.pid, name: sh.name, kind: 'peer', actor: q.actor, color: '#ffd27a' }; }
+            return styLocal();
+        }
+        function styCastAll() { const hero = styMe(), out = [hero], loc = styLocal(); if (loc.id !== hero.id) out.push(loc); for (const c of styCast()) if (c.id !== hero.id) out.push(c); return out; }
         const styPos = (S) => S.pt ? S.pt : (S.actor && S.actor.group ? S.actor.group.position : { x: 0, y: 0, z: 0 });
         const styHt = (S) => S.pt ? 0 : csnHt({ actor: S.actor });
         const styRy = (S) => S.ry != null ? S.ry : (S.actor && S.actor.group ? S.actor.group.rotation.y : 0);
         function styParty() {
-            const m = [styMe()].concat(styCmpList()); if (m.length < 2) return m[0]; const hero = m[0];
+            const m = styCastAll(); if (m.length < 2) return m[0]; const hero = m[0];
             return { id: 'party', name: 'party', kind: 'party', get pt() { let x = 0, y = 0, z = 0; for (const s of m) { const p = styPos(s); x += p.x; y += p.y; z += p.z; } return { x: x / m.length, y: y / m.length, z: z / m.length }; }, get ry() { return styRy(hero); }, get rad() { const c = this.pt; let r = 1; for (const s of m) { const p = styPos(s); r = Math.max(r, Math.hypot(p.x - c.x, p.z - c.z)); } return r; } };
         }
         function styGuest(name) {      // a stand-in figure walks into the story the first time someone speaks
@@ -19957,7 +20022,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function styResolve(key) {
             const k = String(key || 'me').toLowerCase().trim(), hero = styMe(); if (k === 'me' || k === 'sky') return hero; if (k === 'party') return styParty();
             if (k === 'landmark') { const lm = styLandmark(); return lm ? { id: 'lm', name: 'landmark', pt: lm, ry: styRy(hero), isLm: true } : hero; }
-            for (const c of styCmpList()) if (c.name.toLowerCase() === k) return c; return styGuest(k) || hero;
+            for (const c of styCast()) if (c.name.toLowerCase() === k) return c; const loc = styLocal(); if (loc.id !== hero.id && loc.name.toLowerCase() === k) return loc; return styGuest(k) || hero;
         }
         /* ---------- shot construction and safety ---------- */
         function styCtxPose(S, T, side, k, u) {
@@ -20002,7 +20067,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         function styBeat(i) {
             const sc = STY.sc, b = sc.beats[i], n = sc.beats.length, hero = styMe(); STY.bi = i; STY.beat = b; let S = styResolve(b.on), T = null, key = styPickShot(b, i, n, S);
             if (key === 'landmark' || key === 'povLook') { if (S.isLm) S = hero; const lm = styLandmark(); T = lm ? { id: 'lm', pt: lm, ry: styRy(hero), isLm: true } : null; if (!T && key === 'landmark') key = 'trackBack'; }
-            else if (key === 'ots' || key === 'twoShot') { T = S.kind === 'me' ? (styCmpList()[0] || null) : hero; if (!T || T === S) { T = null; key = 'front'; } }
+            else if (key === 'ots' || key === 'twoShot') { T = S.id === hero.id ? (styCastAll().find((x) => x.id !== hero.id) || null) : hero; if (!T || T.id === S.id) { T = null; key = 'front'; } }
             else if (S.isLm && !['establish', 'birdseye', 'parallax', 'skyline', 'skyUp'].includes(key)) key = 'establish';
             STY.recent.push(key); if (STY.recent.length > 4) STY.recent.shift();
             if (b.t !== 'narr') { if (STY.lastSpk && STY.lastSpk !== b.who) STY.side = -STY.side; STY.lastSpk = b.who; } else if (Math.random() < 0.35) STY.side = -STY.side;
@@ -20028,7 +20093,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             if (!STY.committed) { STY.committed = true; try { styCommit(sc, STY.it); } catch (e) { console.warn('story commit', e); } try { styPay(sc); } catch (e) { console.warn('story pay', e); } }
             const rows = [], rw = replay ? null : sc.rw; if (rw) { for (const [k, n] of rw.items || []) rows.push('<span>' + (STY_ITEM_IC[k] || '🎒') + ' ' + styEsc(BT_ITEMS[k].n) + ' <b>x' + n + '</b></span>'); if (rw.gil) rows.push('<span>💰 <b>' + rw.gil.toLocaleString('en-US') + '</b> Gil</span>'); if (rw.xp) rows.push('<span>⭐ <b>' + rw.xp.toLocaleString('en-US') + '</b> XP</span>'); }
             const nq = !replay && (sc.kind === 'begin' || sc.kind === 'quest') ? STYS.q : null; if (!rows.length && !nq) { STY.state = 'out'; STY.outT = 0; styFx('fadeout'); return; }
-            const head = replay ? '' : sc.kind === 'quest' ? 'TASK COMPLETE' : sc.kind === 'begin' ? 'A JOURNEY BEGINS' : sc.kind === 'fate' ? 'FATE INTERLUDE' : sc.kind === 'dungeon' ? 'DUNGEON EPILOGUE' : 'SCENE END';
+            const head = replay ? '' : sc.shared ? 'PARTY CHAPTER' : sc.kind === 'quest' ? 'TASK COMPLETE' : sc.kind === 'begin' ? 'A JOURNEY BEGINS' : sc.kind === 'fate' ? 'FATE INTERLUDE' : sc.kind === 'dungeon' ? 'DUNGEON EPILOGUE' : 'SCENE END';
             const rd = STY.el.querySelector('#sty-rw'); rd.innerHTML = '<div class="h">' + head + '</div>' + (rows.length ? '<div class="g">' + rows.join('') + '</div>' : '') + (nq ? '<div class="q"><i>NEW TASK</i><b>' + styEsc(nq.title) + '</b><span>' + styEsc(nq.text) + '</span></div>' : '') + '<button type="button" id="sty-rw-ok">Continue ▶</button>'; rd.classList.add('on'); STY.el.querySelector('#sty-win').classList.remove('on'); stySfx(nq ? 'quest' : 'reward'); styFx('glint');
             rd.querySelector('#sty-rw-ok').onclick = (e) => { e.stopPropagation(); styEndSoft(); };
         }
@@ -20040,9 +20105,9 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             STY.sv = { p: camera.position.clone(), t: controls.target.clone(), f: camera.fov, en: controls.enabled, up: camera.up.clone() }; controls.enabled = false; STY.on = true; document.body.classList.add('sty-on'); STY.hid = [];
             for (const el of document.body.children) { if (el === STY.el || el.tagName === 'CANVAS' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.id === 'sty-menu' || el.id === 'sty-toast') continue; const cs = getComputedStyle(el); if (cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden') { STY.hid.push([el, el.style.visibility]); el.style.visibility = 'hidden'; } }
             const el = STY.el; el.classList.add('on'); el.classList.toggle('nobars', !STYS.opt.bars); el.querySelector('#sty-gr').style.background = STY_GRADE[sc.mood] || STY_GRADE.day; el.classList.toggle('memory', sc.mood === 'memory'); el.querySelector('#sty-rw').classList.remove('on'); el.querySelector('#sty-bk').classList.remove('end', 'go'); el.querySelector('#sty-win').classList.remove('on');
-            const lab = sc.replay ? 'REPLAY' : sc.kind === 'begin' || sc.kind === 'quest' ? 'CHAPTER ' + sc.ch : sc.kind === 'scene' ? 'SCENE' : 'INTERLUDE', tt = el.querySelector('#sty-title'); tt.style.setProperty('--ac', sc.accent || '#8fb4ff');
-            tt.querySelector('.ch').textContent = lab; tt.querySelector('.tt').textContent = sc.title; tt.querySelector('.st').textContent = 'FLOOR ' + sc.floor + '  ·  ' + String(sc.place).toUpperCase(); tt.classList.remove('on'); void tt.offsetWidth; tt.classList.add('on'); stySfx('title');
-            const hero = styMe(); STY.shot = styMakeShot('establish', hero, null, 9); styTrkUpdate(true); return true;
+            const lab = sc.replay ? 'REPLAY' : sc.shared ? 'PARTY CHAPTER' : sc.kind === 'begin' || sc.kind === 'quest' ? 'CHAPTER ' + sc.ch : sc.kind === 'scene' ? 'SCENE' : 'INTERLUDE', tt = el.querySelector('#sty-title'); tt.style.setProperty('--ac', sc.accent || '#8fb4ff');
+            tt.querySelector('.ch').textContent = lab; tt.querySelector('.tt').textContent = sc.title; if (sc.shared) { const w = styWhere(); sc.floor = w.f; sc.place = w.n; sc.accent = w.accent; tt.style.setProperty('--ac', w.accent || '#8fb4ff'); } tt.querySelector('.st').textContent = 'FLOOR ' + sc.floor + '  ·  ' + String(sc.place).toUpperCase(); tt.classList.remove('on'); void tt.offsetWidth; tt.classList.add('on'); stySfx('title');
+            const hero = styMe(); STY.shot = styMakeShot('establish', hero, null, 9); styTrkUpdate(true); if (!sc.shared) styShareOut(sc); return true;
         }
         function styEnd(commit) {
             if (!STY.on) return; try { speechSynthesis.cancel(); } catch (e) { /* voice */ } STY.speaking = false;
@@ -20054,7 +20119,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         }
         /* ---------- the frame loop ---------- */
         function styTick(dt) {
-            if (!STY.on) { STY.acc += dt; if (STY.acc < 0.25) return; const d = STY.acc; STY.acc = 0; STY.oc = (STY.oc || 0) + d; if (STY.oc >= 0.5) { STY.oc = 0; styObjectives(); } styQueueTick(d); styTrkUpdate(false); return; }
+            if (!STY.on) { STY.acc += dt; if (STY.acc < 0.25) return; const d = STY.acc; STY.acc = 0; STY.oc = (STY.oc || 0) + d; if (STY.oc >= 0.5) { STY.oc = 0; styObjectives(); } styQueueTick(d); styTrkUpdate(false); try { const n = PARTY.code ? PARTY.members.size : 0; if (n !== STY.pn || (n > 1 && Date.now() - STY.annT > 60000)) { STY.pn = n; styHi(); } } catch (x) { /* party */ } return; }
             dt = Math.min(dt, 0.1); STY.t += dt; const sc = STY.sc;
             if (STY.state === 'title') { if (STY.t >= 3.2) { STY.state = 'run'; styBeat(0); } }
             else if (STY.state === 'run') {
@@ -20068,7 +20133,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                 camera.position.copy(C.p); camera.up.set(0, 1, 0); camera.lookAt(C.t.x, C.t.y, C.t.z); if (C.r) camera.rotateZ(C.r * Math.PI / 180); const fov = csnFov(C.f); if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); } controls.target.copy(C.t);
                 const fr2 = STY.el.querySelector('#sty-fr'); if (fr2) fr2.style.opacity = pose.flare ? '1' : '0';
             }
-            for (const p of [styMe()].concat(styCmpList(), [...STY.guests.values()])) { const a = p.actor; if (!a || !a.group) continue; if (a.label) a.label.visible = false; a.group.traverse((q) => { if (q.isSprite && q.visible && q !== a.typingSprite && !(a.bubbles && a.bubbles.some((b) => b.sprite === q))) { q.visible = false; STY.spr.push(q); } }); }
+            for (const p of styCastAll().concat([...STY.guests.values()])) { const a = p.actor; if (!a || !a.group) continue; if (a.label) a.label.visible = false; a.group.traverse((q) => { if (q.isSprite && q.visible && q !== a.typingSprite && !(a.bubbles && a.bubbles.some((b) => b.sprite === q))) { q.visible = false; STY.spr.push(q); } }); }
             styUiTick(dt);
         }
         /* ---------- the screen: letterbox, grade, title card, Final Fantasy dialogue window, reward window ---------- */
@@ -20092,6 +20157,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                 + '#sty-rw .h{font:900 15px Nunito,sans-serif;letter-spacing:.35em;color:#ffe9a8;margin-bottom:12px}#sty-rw .g{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center;font:700 16px Nunito,sans-serif;margin-bottom:12px}#sty-rw .g b{color:#ffe9a8}#sty-rw .q{margin:6px 0 12px;padding:10px 12px;border:1px solid rgba(223,230,255,.55);background:rgba(5,10,50,.55);display:flex;flex-direction:column;gap:3px}#sty-rw .q i{font:900 10px Nunito,sans-serif;letter-spacing:.3em;color:#9fe6ff;font-style:normal}#sty-rw .q b{font:900 18px Georgia,serif;font-style:italic}#sty-rw .q span{font:600 13px Nunito,sans-serif;opacity:.9}'
                 + '#sty-rw button{font:900 14px Nunito,sans-serif;letter-spacing:.1em;color:#fff;background:linear-gradient(180deg,#4c6af0,#1d2f9a);border:2px solid #dfe6ff;border-radius:8px;padding:8px 26px;cursor:pointer}'
                 + '#sty-trk{position:fixed;right:12px;top:238px;width:232px;z-index:56;padding:8px 12px 9px;border-right:3px solid #8fb4ff;background:linear-gradient(270deg,rgba(12,22,80,.86),rgba(12,22,80,.06));text-align:right;text-shadow:0 1px 2px #000;font:700 11px Nunito,sans-serif;color:#eaf3ff;cursor:pointer;display:none;pointer-events:auto}#sty-trk i{font:900 9px Nunito,sans-serif;letter-spacing:.25em;color:#9fe6ff;font-style:normal}#sty-trk b{display:block;font:900 13px Georgia,serif;font-style:italic;margin-top:1px}#sty-trk .o{opacity:.9;margin-top:1px}#sty-trk .br{height:6px;margin:4px 0 2px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);border-radius:4px;overflow:hidden}#sty-trk .br u{display:block;height:100%;background:linear-gradient(180deg,#b8e6ff,#4c8cf0);width:0;text-decoration:none}#sty-trk small{opacity:.8;font-size:10px}'
+                + '#sty-inv{position:fixed;left:14px;bottom:120px;z-index:6150;width:min(300px,86vw);padding:10px 14px 12px;border-radius:10px;background:linear-gradient(180deg,#2e48b8,#0b1250);border:2px solid #dfe6ff;color:#fff;font:700 12px Nunito,sans-serif;box-shadow:0 8px 26px rgba(0,0,0,.65);display:none;flex-direction:column;gap:4px;text-shadow:1px 1px 0 #000}#sty-inv.on{display:flex}#sty-inv i{font:900 9px Nunito,sans-serif;letter-spacing:.25em;color:#9fe6ff;font-style:normal}#sty-inv b{font:900 15px Georgia,serif;font-style:italic}#sty-inv div{display:flex;gap:8px;margin-top:6px}#sty-inv button{flex:1;font:900 12px Nunito,sans-serif;color:#fff;background:linear-gradient(180deg,#4c6af0,#1d2f9a);border:2px solid #dfe6ff;border-radius:7px;padding:6px 8px;cursor:pointer}#sty-inv button.alt{background:rgba(40,60,120,.7);border-color:rgba(160,190,255,.5)}'
                 + '#sty-toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:6300;padding:8px 20px;border-radius:9px;background:linear-gradient(180deg,#2e48b8,#0b1250);border:2px solid #dfe6ff;color:#fff;font:800 13px Nunito,sans-serif;letter-spacing:.06em;box-shadow:0 6px 22px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .3s}#sty-toast.on{opacity:1}';
             document.head.appendChild(st); const el = document.createElement('div'); el.id = 'sty';
             el.innerHTML = '<div class="b t"></div><div class="b m"></div><div id="sty-gr"></div><div id="sty-vg"></div><div id="sty-fr"></div><div id="sty-sp"></div><div id="sty-wh"></div><div id="sty-fl"></div><div id="sty-title"><div class="ch"></div><div class="tt"></div><div class="ln"></div><div class="st"></div></div>'
@@ -20126,7 +20192,7 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
         /* ---------- the Story panel: Chronicle, Forge, Scene, Settings ---------- */
         function styOpen(tab) {
             styUi(); let m = STY.menu; if (m && m.classList.contains('on') && !tab) { m.classList.remove('on'); return; } if (!m) styBuildMenu(); m = STY.menu;
-            if (!STY.ui) STY.ui = { tab: STYS.on ? 'chron' : 'forge', scene: '', confirm: false, draft: { prem: STYS.prem, tone: STYS.tone, pov: STYS.pov, pool: STYS.pool.slice() } };
+            if (!STY.ui) STY.ui = { tab: STYS.on ? 'chron' : 'forge', scene: '', confirm: false, share: 1, draft: { prem: STYS.prem, tone: STYS.tone, pov: STYS.pov, pool: STYS.pool.slice() } };
             if (tab) STY.ui.tab = tab; m.classList.add('on'); styMenuRender();
         }
         function styBuildMenu() {
@@ -20154,8 +20220,9 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                 else {
                     const q = STYS.q, tn = (STY_TONES.find((t) => t[0] === STYS.tone) || STY_TONES[0])[1]; h = '<div class="card"><b>Chapter ' + (STYS.ch | 0) + '</b> <small>· ' + styEsc(tn) + ' · ' + (STYS.pov === 'second' ? 'second person' : 'third person') + '</small><p class="hint">“' + styEsc(STYS.prem || 'No premise written yet.') + '”</p></div>';
                     if (q) h += '<h4>Current task</h4><div class="card"><b>' + styEsc(q.title) + '</b><br>' + styEsc(q.text) + '<div class="bar"><u style="width:' + Math.round(100 * q.p / Math.max(1, q.n)) + '%"></u></div><small>' + q.p + ' / ' + q.n + (q.done ? ' · complete, the next chapter is on its way' : '') + '</small><span class="rw">' + styEsc(styRwText(q.rw)) + '</span></div>'; else h += '<p class="hint">No task right now. Press “New task”.</p>';
+                    { const pn = styPartyNames(); if (pn.length) h += '<p class="hint">👥 Party: ' + styEsc(pn.join(', ')) + '. ' + (STYS.opt.share ? (styIsHost() ? 'You write the party\u2019s FATE and dungeon chapters and they watch with you.' : 'A party member writes the shared FATE and dungeon chapters; you watch them with the party.') : 'Sharing is off.') + ' Kills by party members fighting near you count toward your kill tasks.</p>'; }
                     h += '<div class="go"><button type="button" data-a="now">▶ Play a scene now</button><button type="button" class="alt" data-a="reroll">New task</button><button type="button" class="' + (U.confirm ? 'bad' : 'alt') + '" data-a="end">' + (U.confirm ? 'Really end it?' : 'End chronicle') + '</button></div>';
-                    h += '<h4>Past chapters</h4>' + (STYS.log.length ? STYS.log.slice().reverse().map((e, ri) => { const i = STYS.log.length - 1 - ri; return '<div class="lg"><b>' + (e.kind === 'begin' || e.kind === 'quest' ? 'Ch ' + e.n : e.kind === 'scene' ? 'Scene' : 'Interlude') + ' · ' + styEsc(e.title) + '</b><span>' + styEsc(e.sum) + '</span><small>Floor ' + (e.f | 0) + ' · ' + new Date(e.t).toLocaleDateString() + '</small>' + (e.sc ? '<button type="button" data-a="replay" data-i="' + i + '">▶ Replay</button>' : '') + '</div>'; }).join('') : '<p class="hint">Nothing yet.</p>');
+                    h += '<h4>Past chapters</h4>' + (STYS.log.length ? STYS.log.slice().reverse().map((e, ri) => { const i = STYS.log.length - 1 - ri; return '<div class="lg"><b>' + (e.kind === 'begin' || e.kind === 'quest' ? 'Ch ' + e.n : e.kind === 'scene' ? 'Scene' : e.kind === 'shared' ? 'Party chapter' : 'Interlude') + ' · ' + styEsc(e.title) + '</b><span>' + styEsc(e.sum) + '</span><small>Floor ' + (e.f | 0) + ' · ' + new Date(e.t).toLocaleDateString() + '</small>' + (e.sc ? '<button type="button" data-a="replay" data-i="' + i + '">▶ Replay</button>' : '') + '</div>'; }).join('') : '<p class="hint">Nothing yet.</p>');
                 }
             } else if (U.tab === 'forge') {
                 const D = U.draft, C = styForgeChips(); STY.chips = new Map(); const grp = (title, arr) => '<h4>' + title + '</h4><div class="ch">' + (arr.length ? arr.map((c) => { const k = styKey(c); STY.chips.set(k, c); return '<button type="button" data-a="chip" data-k="' + styEsc(k) + '" class="' + (D.pool.some((t) => styKey(t) === k) ? 'on' : '') + '">' + c.ic + ' ' + styEsc(c.label) + '</button>'; }).join('') : '<span class="hint">Visit Adventia to see these.</span>') + '</div>';
@@ -20164,10 +20231,10 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
                     + '<h4>Endless tasks: pick what the story can ask of you</h4><p class="hint">The story rotates through your picks, and each task is a little harder and pays a little better than the last. Pick nothing for “any monster”.</p>' + grp('⚔️ Enemies', C.enemies) + grp('🏰 Dungeons', C.dungeons) + grp('🎒 Items', C.items) + grp('📍 Locations', C.places)
                     + '<div class="go">' + (STYS.on ? '<button type="button" data-a="begin" data-v="save">Save changes</button><button type="button" class="alt" data-a="begin" data-v="restart">Restart chronicle</button>' : '<button type="button" data-a="begin" data-v="restart">Begin chronicle ▶</button>') + '</div>';
             } else if (U.tab === 'scene') {
-                h = '<p class="hint">Describe a moment and it plays at once, right where you stand, with the camera work of an anime episode. Scenes give no rewards and never touch your tasks.</p><textarea id="sty-scn" maxlength="300" placeholder="e.g. The hero kneels at a frozen shrine and remembers the promise made there.">' + styEsc(U.scene) + '</textarea><h4>Ideas</h4><div class="ch">' + ['A quiet moment before the storm', 'A stranger watches from the ridge', 'An omen on the horizon', 'Remembering someone who is gone', 'Steeling ourselves for the next fight'].map((s) => '<button type="button" data-a="quick" data-v="' + styEsc(s) + '">' + styEsc(s) + '</button>').join('') + '</div><div class="go"><button type="button" data-a="scene">▶ Play scene</button></div>';
+                h = '<p class="hint">Describe a moment and it plays at once, right where you stand, with the camera work of an anime episode. Scenes give no rewards and never touch your tasks.</p><textarea id="sty-scn" maxlength="300" placeholder="e.g. The hero kneels at a frozen shrine and remembers the promise made there.">' + styEsc(U.scene) + '</textarea><h4>Ideas</h4><div class="ch">' + ['A quiet moment before the storm', 'A stranger watches from the ridge', 'An omen on the horizon', 'Remembering someone who is gone', 'Steeling ourselves for the next fight'].map((s) => '<button type="button" data-a="quick" data-v="' + styEsc(s) + '">' + styEsc(s) + '</button>').join('') + '</div>' + (styPartyNames().length ? '<h4>Party</h4><div class="ch"><button type="button" data-a="shr" data-v="1" class="' + (U.share !== 0 ? 'on' : '') + '">👥 Invite my party to watch</button><button type="button" data-a="shr" data-v="0" class="' + (U.share === 0 ? 'on' : '') + '">Just me</button></div>' : '') + '<div class="go"><button type="button" data-a="scene">▶ Play scene</button></div>';
             } else {
                 const o = STYS.opt, seg = (key, vals) => '<div class="ch">' + vals.map(([v, l]) => '<button type="button" data-a="opt" data-o="' + key + '" data-v="' + v + '" class="' + ((o[key] | 0) === v ? 'on' : '') + '">' + l + '</button>').join('') + '</div>';
-                h = '<div class="row"><span>Play a chapter after a FATE you joined</span>' + seg('fate', [[0, 'Off'], [1, 'Every FATE'], [3, 'Every 3rd']]) + '</div><div class="row"><span>Play an epilogue after a dungeon</span>' + seg('dg', [[0, 'Off'], [1, 'On']]) + '</div><div class="row"><span>Advance by itself</span>' + seg('auto', [[0, 'Manual (click)'], [1, 'Auto']]) + '</div><div class="row"><span>Reading speed</span>' + seg('pace', STY_PACE.map((p, i) => [i, p[0]])) + '</div><div class="row"><span>Voice-over (your browser reads the narration)</span>' + seg('vo', [[0, 'Off'], [1, 'On']]) + '</div><div class="row"><span>Widescreen letterbox bars</span>' + seg('bars', [[0, 'Off'], [1, 'On']]) + '</div><p class="hint">While a chapter plays you are safe from harm, and you can press Esc or SKIP at any time: rewards are still paid. In a FATE or dungeon the chapter waits until the fight is over.' + (STY.aiErr ? ' Last storyteller note: ' + styEsc(STY.aiErr) + ' (the built-in storyteller fills in).' : ' The storyteller uses your Companion AI key when one is set, and a built-in storyteller otherwise.') + '</p>';
+                h = '<div class="row"><span>Play a chapter after a FATE you joined</span>' + seg('fate', [[0, 'Off'], [1, 'Every FATE'], [3, 'Every 3rd']]) + '</div><div class="row"><span>Play an epilogue after a dungeon</span>' + seg('dg', [[0, 'Off'], [1, 'On']]) + '</div><div class="row"><span>Share my FATE, dungeon and scene chapters with my party</span>' + seg('share', [[0, 'Off'], [1, 'On']]) + '</div><div class="row"><span>Chapters shared by party members</span>' + seg('party', [[0, 'Never'], [1, 'Ask me'], [2, 'Auto-watch']]) + '</div><div class="row"><span>Advance by itself</span>' + seg('auto', [[0, 'Manual (click)'], [1, 'Auto']]) + '</div><div class="row"><span>Reading speed</span>' + seg('pace', STY_PACE.map((p, i) => [i, p[0]])) + '</div><div class="row"><span>Voice-over (your browser reads the narration)</span>' + seg('vo', [[0, 'Off'], [1, 'On']]) + '</div><div class="row"><span>Widescreen letterbox bars</span>' + seg('bars', [[0, 'Off'], [1, 'On']]) + '</div><p class="hint">While a chapter plays you are safe from harm, and you can press Esc or SKIP at any time: rewards are still paid. In a FATE or dungeon the chapter waits until the fight is over.' + (STY.aiErr ? ' Last storyteller note: ' + styEsc(STY.aiErr) + ' (the built-in storyteller fills in).' : ' The storyteller uses your Companion AI key when one is set, and a built-in storyteller otherwise.') + '</p>';
             }
             const bd = m.querySelector('.bd'), sc = bd.scrollTop; bd.innerHTML = h; bd.scrollTop = sc;
         }
@@ -20178,25 +20245,25 @@ const faI = (k, px) => FA.img('i', k, px), faD = (key, px) => FA.img('d', key, p
             else if (a === 'chip') { const k = b.dataset.k, i = D.pool.findIndex((t) => styKey(t) === k); if (i >= 0) D.pool.splice(i, 1); else if (STY.chips.get(k) && D.pool.length < 30) D.pool.push(Object.assign({}, STY.chips.get(k))); }
             else if (a === 'begin') {
                 const fresh = v === 'restart' || !STYS.on; STYS.prem = styTxt(D.prem, 600); STYS.tone = D.tone; STYS.pov = D.pov; STYS.pool = D.pool.slice(); STYS.pi = 0;
-                if (fresh) { STYS.on = true; STYS.ch = 0; STYS.tier = 0; STYS.q = null; STYS.log = []; STYS.fc = 0; stySave(); STY.menu.classList.remove('on'); STY.qu = STY.qu.filter((i) => i.kind !== 'begin'); styQueue('begin', {}, { manual: true }); styToast(styCanPlay() ? 'Your chronicle begins...' : 'Your story begins as soon as it is safe.', 3800); return; }
+                if (fresh) { STYS.on = true; STYS.ch = 0; STYS.tier = 0; STYS.q = null; STYS.log = []; STYS.fc = 0; stySave(); styHi(); STY.menu.classList.remove('on'); STY.qu = STY.qu.filter((i) => i.kind !== 'begin'); styQueue('begin', {}, { manual: true }); styToast(styCanPlay() ? 'Your chronicle begins...' : 'Your story begins as soon as it is safe.', 3800); return; }
                 stySave(); styToast('Chronicle updated.'); U.tab = 'chron';
             }
-            else if (a === 'quick') { U.scene = v; }
-            else if (a === 'scene') { const t = styTxt(U.scene, 300); if (t.length < 3) { styToast('Describe the moment first.'); return; } STY.menu.classList.remove('on'); styQueue('scene', { userPrompt: t }, { manual: true }); styToast(styCanPlay() ? 'Playing your scene...' : 'Your scene plays as soon as it is safe.', 3800); return; }
-            else if (a === 'now') { STY.menu.classList.remove('on'); styQueue('scene', { userPrompt: '' }, { manual: true }); return; }
+            else if (a === 'quick') { U.scene = v; } else if (a === 'shr') { U.share = +v; }
+            else if (a === 'scene') { const t = styTxt(U.scene, 300); if (t.length < 3) { styToast('Describe the moment first.'); return; } STY.menu.classList.remove('on'); styQueue('scene', { userPrompt: t }, { manual: true, share: U.share !== 0 }); styToast(styCanPlay() ? 'Playing your scene...' : 'Your scene plays as soon as it is safe.', 3800); return; }
+            else if (a === 'now') { STY.menu.classList.remove('on'); styQueue('scene', { userPrompt: '' }, { manual: true, share: true }); return; }
             else if (a === 'reroll') { STYS.q = styNextQuest(STYS.tier); stySave(); styTrkUpdate(true); styToast('A new task is set.'); }
-            else if (a === 'end') { if (!U.confirm) { U.confirm = true; } else { STYS.on = false; STYS.q = null; U.confirm = false; STY.qu = []; stySave(); styTrkUpdate(true); styToast('Chronicle ended. Your chapters stay in the log.'); U.tab = 'forge'; } }
+            else if (a === 'end') { if (!U.confirm) { U.confirm = true; } else { STYS.on = false; STYS.q = null; U.confirm = false; STY.qu = []; stySave(); styHi(); styTrkUpdate(true); styToast('Chronicle ended. Your chapters stay in the log.'); U.tab = 'forge'; } }
             else if (a === 'replay') { const e = STYS.log[+b.dataset.i]; if (e && e.sc) { if (!styCanPlay()) { styToast('Not now. Finish what you are doing first.'); return; } STY.menu.classList.remove('on'); styPlay(Object.assign({}, e.sc, { replay: true, rw: null, q: null, id: 'r' + Date.now() })); return; } }
-            else if (a === 'opt') { STYS.opt[b.dataset.o] = +v; stySave(); }
+            else if (a === 'opt') { STYS.opt[b.dataset.o] = +v; stySave(); if (b.dataset.o === 'share') styHi(); }
             styMenuRender();
         }
         function stySlash(text) {
             const m = /^\/(?:story|chronicle)(?:\s+(.*))?$/i.exec(text); if (!m) return false; const arg = styTxt(m[1] || '', 300);
             if (!arg) { styOpen(); return true; } if (/^skip$/i.test(arg)) { if (STY.on) { if (STY.state === 'run') styFinish(); else if (STY.state === 'end') styEndSoft(); } return true; }
-            styQueue('scene', { userPrompt: arg }, { manual: true }); return true;
+            styQueue('scene', { userPrompt: arg }, { manual: true, share: true }); return true;
         }
         try { const sb = document.getElementById('btn-story'); if (sb) sb.addEventListener('click', () => { try { styOpen(); } catch (x) { console.warn('story', x); } }); } catch (e) { /* menu button */ }      // the Start-menu and XMB entries both route through this hidden-or-visible #btn-story
-        window.__sty = { STY, get S() { return STYS; }, play: styPlay, queue: styQueue, generate: styGenerate, open: styOpen, end: styEnd, clean: styClean, proc: styProc, parse: styParse, shots: STY_SHOTS, ctx: styCtx, prompt: styPrompt, onKill: styOnKill, onFate: styOnFate, onDungeon: styOnDungeon, tick: styTick, nextQuest: styNextQuest, slash: stySlash, reload: () => { STYS = styLoad(); } };
+        window.__sty = { styNet, isHost: styIsHost, peers: styPeers, STY, get S() { return STYS; }, play: styPlay, queue: styQueue, generate: styGenerate, open: styOpen, end: styEnd, clean: styClean, proc: styProc, parse: styParse, shots: STY_SHOTS, ctx: styCtx, prompt: styPrompt, onKill: styOnKill, onFate: styOnFate, onDungeon: styOnDungeon, tick: styTick, nextQuest: styNextQuest, slash: stySlash, reload: () => { STYS = styLoad(); } };
         // clicking the door itself also uses it when you are close enough
         window.addEventListener('pointerdown', (e) => {
             try {
@@ -30952,6 +31019,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
                     for (const [oid, om] of [...PARTY.members]) if (oid !== id && om.name === name && !partyFresh(om)) PARTY.members.delete(oid);
                     PARTY.members.set(id, e); if (!cur) sysParty(`${name} joined the party.`); partyRender(); break;
                 }
+                case 'sty': { try { styNet(id, m, cur); } catch (e) { console.warn('story', e); } break; }
                 case 'pbye': if (cur) { PARTY.members.delete(id); sysParty(`${cur.name} left the party.`); partyRender(); } break;
                 case 'pdis': if (id === partyLeaderId()) { partyLeave(true); sysChat('The party leader disbanded the party.'); } break;
                 case 'prm': if (id === partyLeaderId() && m.id && String(m.id) !== me.id) { PARTY.members.delete(String(m.id)); partyRosterSave(); partyRender(); } break;
