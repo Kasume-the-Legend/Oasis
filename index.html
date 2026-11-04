@@ -38958,7 +38958,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         function animate() {
             requestAnimationFrame(animate);
             if (gfxFrame(performance.now()) === false) return;
-            if (EMU.focus) { if (tvTheaterOn) { try { padUpdate(Math.min(clock.getDelta(), 0.1)); } catch (e) { /* pad sampling must never stop the loop */ } return; } EMU.focus = false; }   // game focus: only the controller is read, nothing else is drawn or updated
+            if (EMU.focus) { if (tvTheaterOn) { const fdt = Math.min(clock.getDelta(), 0.1); try { padUpdate(fdt); } catch (e) { /* pad sampling must never stop the loop */ } try { sendState(fdt); } catch (e) { /* keep-alive: without it the others drop us after 8 s and the game closes */ } return; } EMU.focus = false; }   // game focus: only the controller is read, nothing else is drawn or updated
             const rawDt = Math.min(clock.getDelta(), 0.1), dt = FIN.on ? rawDt * FIN.ts : rawDt; FIN.rawDt = rawDt;
             try { perfTick(dt); } catch (e) { /* governor must never stop the loop */ }
 
