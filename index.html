@@ -8017,8 +8017,8 @@ function kbModel(THREE, mk) {
          *  its picture and sound are streamed to everyone in the room over the same peer-to-peer connections, and each person who "plugs in"
          *  as player 1-4 sends their own keyboard / controller presses back to the host, who feeds them into that player's port.
          * ------------------------------------------------------------------ */
-        const EMU_SYS = { nes: 'Nintendo (NES)', snes: 'Super Nintendo', segaMD: 'Sega Genesis / Mega Drive', segaMS: 'Sega Master System', gb: 'Game Boy / Color', gba: 'Game Boy Advance', n64: 'Nintendo 64', psx: 'PlayStation', ps2: 'PlayStation 2', arcade: 'Arcade / Neo Geo' };
-        const EMU_EXT = { nes: 'nes', fds: 'nes', unf: 'nes', sfc: 'snes', smc: 'snes', fig: 'snes', md: 'segaMD', gen: 'segaMD', smd: 'segaMD', sms: 'segaMS', gb: 'gb', gbc: 'gb', gba: 'gba', z64: 'n64', n64: 'n64', v64: 'n64', cue: 'psx', pbp: 'psx', chd: 'psx', iso: 'psx', zip: 'arcade', cso: 'ps2', isz: 'ps2' };
+        const EMU_SYS = { nes: 'Nintendo (NES)', snes: 'Super Nintendo', segaMD: 'Sega Genesis / Mega Drive', segaMS: 'Sega Master System', gb: 'Game Boy / Color', gba: 'Game Boy Advance', n64: 'Nintendo 64', psx: 'PlayStation', ps2: 'PlayStation 2', arcade: 'Arcade / Neo Geo', openbor: 'OpenBOR (.pak, up to 4 players)' };
+        const EMU_EXT = { nes: 'nes', fds: 'nes', unf: 'nes', sfc: 'snes', smc: 'snes', fig: 'snes', md: 'segaMD', gen: 'segaMD', smd: 'segaMD', sms: 'segaMS', gb: 'gb', gbc: 'gb', gba: 'gba', z64: 'n64', n64: 'n64', v64: 'n64', cue: 'psx', pbp: 'psx', chd: 'psx', iso: 'psx', zip: 'arcade', cso: 'ps2', isz: 'ps2', pak: 'openbor' };
         // keyboard -> RetroPad button numbers (0 B, 1 Y, 2 Select, 3 Start, 4-7 up/down/left/right, 8 A, 9 X, 10 L, 11 R, 12 L2, 13 R2, 14 L3, 15 R3)
         const EMU_KEYS = { ArrowUp: 4, KeyW: 4, ArrowDown: 5, KeyS: 5, ArrowLeft: 6, KeyA: 6, ArrowRight: 7, KeyD: 7, KeyZ: 0, KeyJ: 0, KeyX: 8, KeyK: 8, KeyC: 1, KeyU: 1, KeyV: 9, KeyI: 9, KeyQ: 10, KeyE: 11, Digit1: 12, Digit3: 13, Enter: 3, Space: 3, ShiftLeft: 2, ShiftRight: 2, Backspace: 2 };
         const EMU_PAD = [[0, 0], [1, 8], [2, 1], [3, 9], [4, 10], [5, 11], [6, 12], [7, 13], [8, 2], [9, 3], [10, 14], [11, 15], [12, 4], [13, 5], [14, 6], [15, 7]];   // standard gamepad button -> RetroPad button
@@ -8118,6 +8118,72 @@ function kbModel(THREE, mk) {
                 } catch (e) { fail(e); }
             })();
         }
+
+        // ---- OpenBOR: the engine compiled to WebAssembly (openbor/openbor.js + openbor.wasm, next to this page; no special headers needed).
+        // Up to 4 players. The host's hidden frame runs the game; every player's RetroPad state arrives as key presses on that player's own
+        // layout (the engine's web build binds P2-P4 to these keys, see engine/openbor.c). Pad layout: B attack, Y attack 2, A jump, X special, L/R attack 3/4, Start join.
+        const OB_BASE = () => { let b = new URL(window.__OB_ENGINE || './openbor/', location.href).href; if (!b.endsWith('/')) b += '/'; return b; };
+        // per player: up, down, left, right, attack, attack 2, attack 3, attack 4, jump, special, start  ->  [code, keyCode]
+        const OB_KEYS = [
+            [['ArrowUp', 38], ['ArrowDown', 40], ['ArrowLeft', 37], ['ArrowRight', 39], ['KeyA', 65], ['KeyS', 83], ['KeyZ', 90], ['KeyX', 88], ['KeyD', 68], ['KeyF', 70], ['Enter', 13]],
+            [['KeyI', 73], ['KeyK', 75], ['KeyJ', 74], ['KeyL', 76], ['Digit1', 49], ['Digit2', 50], ['Digit3', 51], ['Digit4', 52], ['Digit5', 53], ['Digit6', 54], ['Digit7', 55]],
+            [['Numpad8', 104], ['Numpad2', 98], ['Numpad4', 100], ['Numpad6', 102], ['Numpad1', 97], ['Numpad3', 99], ['Numpad7', 103], ['Numpad9', 105], ['Numpad0', 96], ['NumpadDecimal', 110], ['NumpadEnter', 13]],
+            [['Home', 36], ['End', 35], ['Delete', 46], ['PageDown', 34], ['F1', 112], ['F2', 113], ['F3', 114], ['F4', 115], ['F5', 116], ['F6', 117], ['F7', 118]]
+        ];
+        const OB_MAP = [[4, 0], [5, 1], [6, 2], [7, 3], [0, 4], [1, 5], [10, 6], [11, 7], [8, 8], [9, 9], [3, 10]];   // RetroPad bit -> index into a player's key list
+        function obFire(win, type, k) {
+            try { win.dispatchEvent(new win.KeyboardEvent(type, { key: k[0], code: k[0], keyCode: k[1], which: k[1], location: k[0].indexOf('Numpad') === 0 ? 3 : 0, bubbles: true, cancelable: true, view: win })); } catch (e) { /* engine not ready yet */ }
+        }
+        function obApply(slot, mask) {
+            const w = EMU.frame && EMU.frame.contentWindow; if (!w || slot < 0 || slot > 3) return;
+            const have = (EMU.obKeys || (EMU.obKeys = [new Set(), new Set(), new Set(), new Set()]))[slot], want = new Set();
+            for (const [bit, idx] of OB_MAP) if ((mask >> bit) & 1) want.add(idx);
+            for (const idx of Array.from(have)) if (!want.has(idx)) { obFire(w, 'keyup', OB_KEYS[slot][idx]); have.delete(idx); }
+            for (const idx of want) if (!have.has(idx)) { obFire(w, 'keydown', OB_KEYS[slot][idx]); have.add(idx); }
+        }
+        // runs INSIDE the hidden frame: tap the audio (so it can be streamed), load the engine, hand it the .pak and start it
+        function obInner(cfg) {
+            var Orig = AudioNode.prototype.connect; window.__taps = [];
+            function setup(c) {
+                if (c.__oasis) return; c.__oasis = true;
+                var d = c.createMediaStreamDestination(), g = c.createGain(); g.gain.value = 0; Orig.call(g, c.destination);
+                c.__tap = d; c.__sil = g; window.__taps.push(d.stream);
+                try { c.resume(); } catch (e) { /* needs a gesture */ }
+            }
+            AudioNode.prototype.connect = function (dest) {
+                try { var c = this.context; if (dest && c && dest === c.destination && c.createMediaStreamDestination) { setup(c); Orig.call(this, c.__tap); Orig.call(this, c.__sil); return dest; } } catch (e) { /* fall through */ }
+                return Orig.apply(this, arguments);
+            };
+            function post(v, text) { try { var o = {}; o[cfg.msg] = v; if (text) o.text = String(text); parent.postMessage(o, '*'); } catch (e) { /* parent gone */ } }
+            function fail(m) { console.error('OpenBOR:', m); post('error', (m && m.message) || m); }
+            (async function () {
+                try {
+                    var canvas = document.getElementById('canvas');
+                    var data = new Uint8Array(await (await fetch(cfg.url)).arrayBuffer());
+                    window.Module = {
+                        canvas: canvas, noInitialRun: true,
+                        locateFile: function (p) { return cfg.base + p; },
+                        print: function (t) { console.log(t); }, printErr: function (t) { console.warn(t); },
+                        onAbort: function (w) { fail('the engine stopped: ' + w); },
+                        onRuntimeInitialized: function () {
+                            try {
+                                Module.FS.writeFile('/game.pak', data); data = null;
+                                Module.callMain(['/game.pak']);
+                                setTimeout(function () { post('start'); }, 1200);
+                            } catch (e) { fail(e); }
+                        }
+                    };
+                    var sc = document.createElement('script');
+                    sc.src = cfg.base + 'openbor.js';
+                    sc.onerror = function () { fail('could not load ' + cfg.base + 'openbor.js (is the openbor folder next to this page?)'); };
+                    document.head.appendChild(sc);
+                } catch (e) { fail(e); }
+            })();
+        }
+        function obDoc(cfg) {
+            const j = JSON.stringify(cfg).replace(/</g, '\\u003c');
+            return '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{width:100%;height:100%;display:block;object-fit:contain;image-rendering:pixelated;outline:0;background:#000}</style></head><body><canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas><script>(' + obInner.toString() + ')(' + j + ');<\/script></body></html>';
+        }
         function ps2Doc(cfg) {
             const j = JSON.stringify(cfg).replace(/</g, '\\u003c');
             return '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{width:100%;height:100%;display:block;object-fit:contain;outline:0;background:#000}</style></head><body><canvas id="outputCanvas" width="640" height="480" tabindex="0"></canvas><script>(' + ps2Inner.toString() + ')(' + j + ');<\/script></body></html>';
@@ -8156,22 +8222,23 @@ function kbModel(THREE, mk) {
             const sys = $('emu-sys').value || emuGuessSys(file);
             if (!sys) { emuSetStatus('I cannot tell which console that file is for. Pick the console from the list, then load it again.'); return; }
             if (sys === 'ps2') { const why = ps2Unavailable(); if (why) { emuSetStatus(why); return; } }
+            if (sys === 'openbor' && file.size > 6e8) { emuSetStatus('That .pak is over 600 MB, which is too large for the browser version.'); return; }
             if (file.size > (sys === 'ps2' ? 9e9 : 1.2e9)) { emuSetStatus(sys === 'ps2' ? 'That file is over 9 GB, which is too large.' : 'That file is over 1.2 GB, which is too large.'); return; }
             const token = ++EMU.token;
             const url = URL.createObjectURL(file), urls = [url]; let bios = '';
             if (EMU.bios && sys !== 'ps2') { bios = URL.createObjectURL(EMU.bios); urls.push(bios); }
             Object.assign(EMU, { on: true, isHost: true, host: me.id, hostName: me.name, sys, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), slots: [me.id, '', '', ''], mine: 0, wantPlay: false, urls, stream: null, started: false, applied: [], last: '', err: '', ps2Keys: null });
             const f = document.createElement('iframe');
-            f.id = 'emu-frame'; f.setAttribute('allow', 'autoplay; gamepad; fullscreen');
+            f.id = 'emu-frame'; f.setAttribute('allow', sys === 'openbor' ? 'autoplay; fullscreen' : 'autoplay; gamepad; fullscreen');
             f.style.cssText = 'position:fixed;left:-700px;top:0;width:640px;height:480px;border:0;pointer-events:none;';
-            f.srcdoc = sys === 'ps2' ? ps2Doc({ url, name: ps2Name(file.name), base: PS2_BASE(), msg: 'oasisEmu' }) : emuDoc({ core: sys, url, bios, name: EMU.name, data: window.__EMU_DATA || EMU_CDN, loader: window.__EMU_LOADER || EMU_CDN + 'loader.js' });
+            f.srcdoc = sys === 'openbor' ? obDoc({ url, base: OB_BASE(), msg: 'oasisEmu' }) : sys === 'ps2' ? ps2Doc({ url, name: ps2Name(file.name), base: PS2_BASE(), msg: 'oasisEmu' }) : emuDoc({ core: sys, url, bios, name: EMU.name, data: window.__EMU_DATA || EMU_CDN, loader: window.__EMU_LOADER || EMU_CDN + 'loader.js' });
             document.body.appendChild(f); EMU.frame = f;
             emuShowOnTv(me.name); emuBroadcast(); renderEmu();
-            emuSetStatus(sys === 'ps2' ? 'Starting PlayStation 2 (loading the emulator engine, this can take a moment)...' : `Loading ${EMU_SYS[sys]}... the first time, the emulator core downloads from cdn.emulatorjs.org (a few MB).`);
+            emuSetStatus(sys === 'openbor' ? 'Starting OpenBOR (loading the engine and your .pak, this can take a moment)...' : sys === 'ps2' ? 'Starting PlayStation 2 (loading the emulator engine, this can take a moment)...' : `Loading ${EMU_SYS[sys]}... the first time, the emulator core downloads from cdn.emulatorjs.org (a few MB).`);
             const t0 = Date.now();
             while (EMU.token === token && !EMU.started && !EMU.err && Date.now() - t0 < 240000) await emuSleep(400);
             if (EMU.token !== token) return;
-            if (EMU.err) { emuSetStatus(`PlayStation 2 did not start: ${EMU.err}. Stop the game and check the setup.`); return; }
+            if (EMU.err) { emuSetStatus(`${EMU_SYS[sys]} did not start: ${EMU.err}. Stop the game and check the setup.`); return; }
             const cv = EMU.started && f.contentDocument && f.contentDocument.querySelector('canvas');
             if (!cv || !cv.captureStream) { emuSetStatus('The game did not start (the core may not support that file, or a BIOS is missing). Stop and try another file.'); return; }
             const tracks = [...cv.captureStream(60).getVideoTracks()];
@@ -8206,10 +8273,23 @@ function kbModel(THREE, mk) {
                 }
             } catch (e) { /* best effort */ }
         }
+        // game focus: while you play, the TV goes full screen and the 3D world stops being drawn and updated, so the game gets the whole frame budget
+        function emuFocus(on) {
+            try { if (on && !tvTheaterOn) tvTheater(true); else if (!on && tvTheaterOn && EMU.focus) tvTheater(false); } catch (e) { /* theater unavailable */ }
+            EMU.focus = !!on && !!tvTheaterOn;
+        }
+        // guest side: ask the browser to play the incoming picture and sound with as little buffering as it allows
+        function emuTuneReceiver(pid) {
+            try {
+                const l = net && net.links.find((x) => x.peers.has(pid) && x.room.addStream); const pc = l && l.room.getPeers && l.room.getPeers()[pid];
+                if (!pc || !pc.getReceivers) return;
+                for (const r of pc.getReceivers()) { try { if ('jitterBufferTarget' in r) r.jitterBufferTarget = 0; if ('playoutDelayHint' in r) r.playoutDelayHint = 0; } catch (e) { /* unsupported */ } }
+            } catch (e) { /* best effort */ }
+        }
         function emuOnPeer(pid) { if (EMU.on && EMU.isHost) { emuBroadcast(pid); emuAddStreamTo(pid); } }
         function emuOnStream(stream, pid) {
             EMU.streams.set(pid, stream);
-            if (EMU.on && !EMU.isHost && EMU.host === pid) { EMU.stream = stream; emuAttach(); }
+            if (EMU.on && !EMU.isHost && EMU.host === pid) { EMU.stream = stream; emuAttach(); for (const ms of [200, 1500, 4000]) setTimeout(() => emuTuneReceiver(pid), ms); }
         }
         function emuAttach() {                                       // point the TV's video at the stream
             const s = activeSrc();
@@ -8239,7 +8319,7 @@ function kbModel(THREE, mk) {
             if (EMU.isHost && EMU.stream) EMU.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) { /* ended */ } });
             if (EMU.frame) { EMU.frame.remove(); EMU.frame = null; }
             EMU.urls.forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* none */ } }); EMU.urls = [];
-            Object.assign(EMU, { on: false, isHost: false, host: null, hostName: '', sys: '', name: '', slots: ['', '', '', ''], mine: -1, wantPlay: false, stream: null, applied: [], last: '', started: false, status: '', err: '', ps2Keys: null });
+            Object.assign(EMU, { on: false, isHost: false, host: null, hostName: '', sys: '', name: '', slots: ['', '', '', ''], mine: -1, wantPlay: false, stream: null, applied: [], last: '', started: false, status: '', err: '', ps2Keys: null, obKeys: null, focus: false });
             emuHideFromTv(); renderEmu();
         }
         const emuReset = () => { if (!EMU.on) return; if (EMU.isHost && net) net.send({ t: 'emu', on: false }); emuTeardown(); };
@@ -8306,6 +8386,7 @@ function kbModel(THREE, mk) {
         // host: press / release this player's buttons in the emulator
         function emuApply(slot, mask, ax) {
             if (EMU.sys === 'ps2') { ps2Apply(slot, mask, ax); return; }
+            if (EMU.sys === 'openbor') { obApply(slot, mask); return; }
             const gm = emuGM(); if (!gm || slot < 0) return;
             const prev = EMU.applied[slot] || { m: 0, a: [0, 0, 0, 0] };
             try {
@@ -8334,6 +8415,7 @@ function kbModel(THREE, mk) {
             EMU.playing = on;
             if (on) { closeScreenPanel(); closeStart(); closeChatBar && closeChatBar(); Object.keys(keys).forEach((k) => (keys[k] = false)); }
             else { EMU.kb.clear(); EMU.padMask = 0; EMU.padAx = [0, 0, 0, 0]; EMU.padHold = 0; }
+            emuFocus(on);
             emuPush(true); renderEmu();
         }
         function emuPadSample(gp, b, dt) {
@@ -28071,6 +28153,7 @@ function rigOf(c, Hh) {   // a bike's seat / hand / foot points, from its saved 
             if (!file) return;
             const sys = $('ob-sys').value || emuGuessSys(file);
             if (!sys) { sysChat('O-Boy: I cannot tell which console that file is for. Pick one from the list.'); return; }
+            if (sys === 'openbor') { sysChat('O-Boy plays console games. Put OpenBOR .pak games on the TV (TV panel, F).'); return; }
             if (sys === 'ps2') { const why = ps2Unavailable(); if (why) { sysChat('O-Boy: ' + why); return; } }
             if (file.size > (sys === 'ps2' ? 9e9 : 1.2e9)) { sysChat(sys === 'ps2' ? 'O-Boy: that file is over 9 GB.' : 'O-Boy: that file is over 1.2 GB.'); return; }
             oboyUnload(); OB.sys = sys; $('ob-sys').value = sys;
@@ -38874,6 +38957,7 @@ ${rg('csw-snd-vol', 'Sound volume', 0.2, 1.6, 0.05)}<button id="csw-snd-test" ty
         function animate() {
             requestAnimationFrame(animate);
             if (gfxFrame(performance.now()) === false) return;
+            if (EMU.focus) { if (tvTheaterOn) { try { padUpdate(Math.min(clock.getDelta(), 0.1)); } catch (e) { /* pad sampling must never stop the loop */ } return; } EMU.focus = false; }   // game focus: only the controller is read, nothing else is drawn or updated
             const rawDt = Math.min(clock.getDelta(), 0.1), dt = FIN.on ? rawDt * FIN.ts : rawDt; FIN.rawDt = rawDt;
             try { perfTick(dt); } catch (e) { /* governor must never stop the loop */ }
 
