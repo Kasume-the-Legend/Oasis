@@ -7557,11 +7557,11 @@ function kbModel(THREE, mk) {
                 if (!pc || !pc.getSenders) return;
                 for (const sd of pc.getSenders()) {
                     if (!sd.track || sd.track.kind !== 'video') continue;
-                    try { sd.track.contentHint = 'detail'; } catch (e) { /* unsupported */ }
+                    try { sd.track.contentHint = 'motion'; } catch (e) { /* unsupported */ }
                     const prm = sd.getParameters();
                     if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}];
-                    prm.encodings[0].maxFramerate = 30; prm.encodings[0].maxBitrate = 3500000;
-                    prm.degradationPreference = 'maintain-resolution';
+                    prm.encodings[0].maxFramerate = 60; prm.encodings[0].maxBitrate = 6000000;
+                    prm.degradationPreference = 'maintain-framerate';
                     sd.setParameters(prm).catch(() => {});
                 }
             } catch (e) { /* best effort */ }
