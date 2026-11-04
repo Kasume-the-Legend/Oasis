@@ -234,5 +234,5 @@ Detailed merged, vertex-painted models shared by all biomes: broadleaf/blossom/a
 ## OpenBOR on the TV
 - System "OpenBOR (.pak, up to 4 players)": host uploads a .pak, engine (WASM, openbor/openbor.js+.wasm) runs in the hidden emu frame, video/audio streamed over WebRTC like other EMU systems. Guest pads arrive as RetroPad masks and are injected as keyboard events per player (OB_KEYS in index.html; engine patch binds P2-P4 to those keys).
 - Engine: DCurrent/openbor @65a7f0b + patches; build script/shim in openbor/engine-patches (needs emcc 3.1.54). 
-- 4-player key injection verified only for the loader path with a test pak; P2-P4 not yet confirmed in-engine.
+- Input path checked by reading SDL source (events go to window, scancodes from event.code, all P1-P4 keys map). Not yet confirmed live in-engine with 4 joined players: needs a real multi-player pak.
 - Ideas: lockstep netcode (engine has seeded RNG + input movie), "OpenBOR Infinite" (mix characters/stages from multiple paks), rea for mechanics study.
