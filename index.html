@@ -8413,9 +8413,10 @@ function kbModel(THREE, mk) {
             if (on && (!EMU.on || EMU.mine < 0)) return;
             if (EMU.playing === on) return;
             EMU.playing = on;
-            if (on) { closeScreenPanel(); closeStart(); closeChatBar && closeChatBar(); Object.keys(keys).forEach((k) => (keys[k] = false)); }
+            if (on) { closeStart(); closeChatBar && closeChatBar(); Object.keys(keys).forEach((k) => (keys[k] = false)); }
             else { EMU.kb.clear(); EMU.padMask = 0; EMU.padAx = [0, 0, 0, 0]; EMU.padHold = 0; }
             emuFocus(on);
+            if (on && !tvTheaterOn) emuSetStatus && emuSetStatus('Plugged in. Stand near the TV, or open it full screen, to see the game.');   // theater could not open: keep the TV panel up instead of leaving a blank screen
             emuPush(true); renderEmu();
         }
         function emuPadSample(gp, b, dt) {
