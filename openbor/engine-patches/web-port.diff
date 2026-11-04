@@ -1,0 +1,191 @@
+diff -ruN '--exclude=obj' '--exclude=out' '--exclude=out_dbg' dcurrent/openbor/engine/openbor.c work/ob/engine/openbor.c
+--- dcurrent/openbor/engine/openbor.c	2026-11-03 20:50:02.606505409 -0500
++++ work/ob/engine/openbor.c	2026-11-03 21:18:17.892878866 -0500
+@@ -2890,6 +2890,34 @@
+             //savedata.keys[3][SDID_ESC]       = CONTROL_DEFAULT4_ESC;
+         #endif
+     }
++
++#ifdef __EMSCRIPTEN__
++    /* Web build: the Oasis feeds every player's controls in as synthetic key
++       presses, so players 2-4 get fixed keyboard layouts (nobody types these). */
++    if (player >= 1 && player <= 3)
++    {
++        static const int web_keys[3][11] = {
++            { SDL_SCANCODE_I, SDL_SCANCODE_K, SDL_SCANCODE_J, SDL_SCANCODE_L,
++              SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4, SDL_SCANCODE_5, SDL_SCANCODE_6, SDL_SCANCODE_7 },
++            { SDL_SCANCODE_KP_8, SDL_SCANCODE_KP_2, SDL_SCANCODE_KP_4, SDL_SCANCODE_KP_6,
++              SDL_SCANCODE_KP_1, SDL_SCANCODE_KP_3, SDL_SCANCODE_KP_7, SDL_SCANCODE_KP_9, SDL_SCANCODE_KP_0, SDL_SCANCODE_KP_PERIOD, SDL_SCANCODE_KP_ENTER },
++            { SDL_SCANCODE_HOME, SDL_SCANCODE_END, SDL_SCANCODE_DELETE, SDL_SCANCODE_PAGEDOWN,
++              SDL_SCANCODE_F1, SDL_SCANCODE_F2, SDL_SCANCODE_F3, SDL_SCANCODE_F4, SDL_SCANCODE_F5, SDL_SCANCODE_F6, SDL_SCANCODE_F7 }
++        };
++        const int *k = web_keys[player - 1];
++        savedata.keys[player][SDID_MOVEUP]    = k[0];
++        savedata.keys[player][SDID_MOVEDOWN]  = k[1];
++        savedata.keys[player][SDID_MOVELEFT]  = k[2];
++        savedata.keys[player][SDID_MOVERIGHT] = k[3];
++        savedata.keys[player][SDID_ATTACK]    = k[4];
++        savedata.keys[player][SDID_ATTACK2]   = k[5];
++        savedata.keys[player][SDID_ATTACK3]   = k[6];
++        savedata.keys[player][SDID_ATTACK4]   = k[7];
++        savedata.keys[player][SDID_JUMP]      = k[8];
++        savedata.keys[player][SDID_SPECIAL]   = k[9];
++        savedata.keys[player][SDID_START]     = k[10];
++    }
++#endif
+ }
+ 
+ void clearsettings()
+diff -ruN '--exclude=obj' '--exclude=out' '--exclude=out_dbg' dcurrent/openbor/engine/sdl/sdlport.c work/ob/engine/sdl/sdlport.c
+--- dcurrent/openbor/engine/sdl/sdlport.c	2026-11-03 20:50:02.628974168 -0500
++++ work/ob/engine/sdl/sdlport.c	2026-11-03 22:01:34.808325825 -0500
+@@ -12,6 +12,12 @@
+ #include "video.h"
+ #include "menu.h"
+ #include <time.h>
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#define BC(x) EM_ASM({console.log("[bc] " + UTF8ToString($0));}, x)
++#else
++#define BC(x)
++#endif
+ #include <unistd.h>
+ 
+ #undef usleep
+diff -ruN '--exclude=obj' '--exclude=out' '--exclude=out_dbg' dcurrent/openbor/engine/sdl/video.c work/ob/engine/sdl/video.c
+--- dcurrent/openbor/engine/sdl/video.c	2026-11-03 20:50:02.628974168 -0500
++++ work/ob/engine/sdl/video.c	2026-11-03 22:01:34.807840379 -0500
+@@ -39,10 +39,21 @@
+ int nativeWidth, nativeHeight; // monitor resolution used in fullscreen mode
+ int brightness = 0;
+ 
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#define BC(x) EM_ASM({console.log("[bc] " + UTF8ToString($0));}, x)
++#else
++#define BC(x)
++#endif
+ void initSDL()
+ {
+ 	SDL_DisplayMode video_info;
++#ifdef __EMSCRIPTEN__
++	/* Web build: no timer thread or haptics (no pthreads in the browser build). */
++	int init_flags = SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK;
++#else
+ 	int init_flags = SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC;
++#endif
+ 
+ 	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
+ 
+@@ -157,6 +168,12 @@
+ 	return 1;
+ }
+ 
++#ifdef __EMSCRIPTEN__
++static int web_convert16 = 0;
++static unsigned int *web_buf = NULL;
++static int web_buf_size = 0;
++#endif
++
+ int video_set_mode(s_videomodes videomodes)
+ {
+ 	stored_videomodes = videomodes;
+@@ -193,6 +210,16 @@
+ 	                            pixelformats[videomodes.pixel-1],
+ 	                            SDL_TEXTUREACCESS_STREAMING,
+ 	                            videomodes.hRes, videomodes.vRes);
++#ifdef __EMSCRIPTEN__
++	/* Browser GL renderers cannot make 16-bit (BGR565) textures. Present 32-bit and convert in video_copy_screen. */
++	web_convert16 = 0;
++	if(videomodes.pixel == 2)
++	{
++		if(texture) SDL_DestroyTexture(texture);
++		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, videomodes.hRes, videomodes.vRes);
++		web_convert16 = 1;
++	}
++#endif
+ 
+ 	SDL_ShowCursor(SDL_DISABLE);
+ 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+@@ -253,6 +280,28 @@
+ 
+ 	if(opengl) return video_gl_copy_screen(surface);
+ 
++#ifdef __EMSCRIPTEN__
++	if(web_convert16 && surface && surface->data)
++	{
++		int x, y, w = surface->width, h = surface->height, n = w * h;
++		if(n > web_buf_size) { free(web_buf); web_buf = (unsigned int*)malloc(n * sizeof(unsigned int)); web_buf_size = web_buf ? n : 0; }
++		if(web_buf)
++		{
++			for(y = 0; y < h; y++)
++			{
++				const unsigned short *sp = (const unsigned short*)((const unsigned char*)surface->data + y * surface->pitch);
++				unsigned int *dp = web_buf + y * w;
++				for(x = 0; x < w; x++)
++				{
++					unsigned int p = sp[x], r = p & 0x1F, g = (p >> 5) & 0x3F, b = p >> 11;
++					dp[x] = 0xFF000000u | (((b << 3) | (b >> 2)) << 16) | (((g << 2) | (g >> 4)) << 8) | ((r << 3) | (r >> 2));
++				}
++			}
++			SDL_UpdateTexture(texture, NULL, web_buf, w * 4);
++		}
++	}
++	else
++#endif
+ 	SDL_UpdateTexture(texture, NULL, surface->data, surface->pitch);
+ 	blit();
+ 
+@@ -327,7 +376,8 @@
+     SDL_DisplayMode display_mode;
+     if (SDL_GetCurrentDisplayMode(SDL_GetWindowDisplayIndex(window), &display_mode) != 0)
+         return 60;
+-    return display_mode.refresh_rate;
++    /* Browsers can report 0 Hz; callers divide by this, so never return less than 1. */
++    return display_mode.refresh_rate > 0 ? display_mode.refresh_rate : 60;
+ }
+ 
+ void vga_vwait(void)
+diff -ruN '--exclude=obj' '--exclude=out' '--exclude=out_dbg' dcurrent/openbor/engine/source/openborscript/datetime.c work/ob/engine/source/openborscript/datetime.c
+--- dcurrent/openbor/engine/source/openborscript/datetime.c	2026-11-03 20:50:02.632432093 -0500
++++ work/ob/engine/source/openborscript/datetime.c	2026-11-03 20:59:53.735834127 -0500
+@@ -37,7 +37,7 @@
+ 
+ DATETIME_WINDOWS_IMPORT void DATETIME_WINDOWS_CALL GetSystemTimeAsFileTime(s_datetime_windows_filetime *file_time);
+ 
+-#elif defined(__linux__) || defined(__ANDROID__) || defined(__APPLE__)
++#elif defined(__linux__) || defined(__ANDROID__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
+ #include <sys/time.h>
+ #else
+ #error datetime.c currently supports Windows, Linux, macOS, and Android.
+diff -ruN '--exclude=obj' '--exclude=out' '--exclude=out_dbg' dcurrent/openbor/engine/source/utils.c work/ob/engine/source/utils.c
+--- dcurrent/openbor/engine/source/utils.c	2026-11-03 20:50:02.636758226 -0500
++++ work/ob/engine/source/utils.c	2026-11-03 20:59:53.741689837 -0500
+@@ -286,7 +286,7 @@
+                        "\n*            Shutting Down            *\n\n");
+         writeToLogFile("Out of memory!\n");
+         writeToLogFile("Allocation of size %i failed in function '%s' at %s:%i.\n", size, func, file, line);
+-#if LINUX && !DARWIN && !ANDROID
++#if LINUX && !DARWIN && !ANDROID && !defined(__EMSCRIPTEN__)
+         writeToLogFile("Memory usage at exit: %u\n", mallinfo2().arena);
+ #else
+         writeToLogFile("Memory usage at exit: %u\n", getUsedRam(BYTES));
+diff -ruN '--exclude=obj' '--exclude=out' '--exclude=out_dbg' dcurrent/openbor/engine/web/web_shim.c work/ob/engine/web/web_shim.c
+--- dcurrent/openbor/engine/web/web_shim.c	1969-12-31 19:00:00.000000000 -0500
++++ work/ob/engine/web/web_shim.c	2026-11-03 21:00:47.640621060 -0500
+@@ -0,0 +1,15 @@
++/* Browser/WebAssembly shims for the OpenBOR web port. */
++#include <string.h>
++#include <sys/sysinfo.h>
++#include <emscripten.h>
++
++/* The engine sizes caches from system RAM. Report a fixed, modest budget
++ * (the wasm heap is capped, so real host RAM is irrelevant). */
++int sysinfo(struct sysinfo *info)
++{
++    memset(info, 0, sizeof(*info));
++    info->totalram = 1024UL * 1024UL * 1024UL;
++    info->freeram  = 768UL * 1024UL * 1024UL;
++    info->mem_unit = 1;
++    return 0;
++}
