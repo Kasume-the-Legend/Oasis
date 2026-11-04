@@ -27571,7 +27571,7 @@ window.__scn = { joinCity: () => joinRoom('city-01', { label: 'Destiny City', ma
             _po.set(Math.sin(ph) * Math.sin(th) * r, Math.cos(ph) * r, Math.sin(ph) * Math.cos(th) * r);
             camera.position.copy(controls.target).add(_po);
         }
-        try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* not available */ }
+        try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').then((reg) => { if (!window.crossOriginIsolated && !sessionStorage.getItem('coiTried')) { sessionStorage.setItem('coiTried', '1'); const go = () => location.reload(); if (navigator.serviceWorker.controller) go(); else navigator.serviceWorker.addEventListener('controllerchange', go, { once: true }); } }).catch(() => {}); } catch (e) { /* not available */ }
         window.addEventListener('gamepaddisconnected', () => { PAD.active = false; padMove.x = padMove.z = 0; padMove.run = false; });
 
         /* ------------------------------------------------------------------ *
